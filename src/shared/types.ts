@@ -158,3 +158,73 @@ export interface AccountWithBalance extends Account {
   balanceCents: number
   transactionCount: number
 }
+
+export type ImportRowStatus = 'ready' | 'duplicate' | 'problem' | 'skipped'
+
+export interface ImportRow {
+  index: number
+  line: number
+  bookingDate: string | null
+  amountCents: number | null
+  description: string
+  counterpartyName: string | null
+  counterpartyIban: string | null
+  communication: string | null
+  categoryId: number | null
+  /** Where the category came from. */
+  categorySource: 'rule' | 'assistant' | 'user' | null
+  issues: string[]
+  status: ImportRowStatus
+  /** The person chose to include or skip this row. */
+  decided: 'include' | 'skip' | null
+  note: string | null
+}
+
+export interface ImportColumns {
+  bookingDate: number
+  valueDate?: number
+  amount?: number
+  debit?: number
+  credit?: number
+  currency?: number
+  counterpartyName?: number
+  counterpartyIban?: number
+  description: number[]
+  communication?: number
+  bankReference?: number
+  status?: number
+}
+
+export interface ImportMapping {
+  delimiter: ';' | ',' | '\t' | '|'
+  headerRow: number
+  dateOrder: 'DMY' | 'YMD' | 'MDY'
+  decimal: ',' | '.'
+  invertSign: boolean
+  columns: ImportColumns
+}
+
+export interface ImportPreview {
+  sessionId: string
+  fileName: string
+  accountId: number
+  accountName: string
+  bank: Bank | null
+  encoding: string
+  mappingSource: 'saved' | 'detected' | 'assistant' | 'manual' | 'none'
+  headers: string[]
+  sample: string[][]
+  mapping: ImportMapping | null
+  rows: ImportRow[]
+  stats: { total: number; ready: number; duplicates: number; problems: number; skipped: number; inCents: number; outCents: number; from: string | null; to: string | null }
+  notes: string[]
+}
+
+export interface ImportBatch {
+  id: number
+  fileName: string
+  accountName: string
+  rowCount: number
+  committedAt: string
+  remaining: number
+}

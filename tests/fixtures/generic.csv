@@ -1,0 +1,5 @@
+Date,Payee,Memo,Debit,Credit
+2026-10-01,Landlord,"Rent, October",950.00,
+2026-10-03,Employer,Salary,,"2,850.00"
+not a date,Shop,Broken row,12.00,
+2026-10-04,Shop,,abc,

@@ -4,7 +4,8 @@ import icon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
-import { broadcast, initSession, lock, startAutoLock } from './session'
+import { clearImportSessions } from '@core/import'
+import { broadcast, initSession, lock, onLock, startAutoLock } from './session'
 import { runAutoBackupIfDue } from './transfer/service'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT } from './theme'
 
@@ -87,6 +88,7 @@ app.on('second-instance', () => {
 void app.whenReady().then(async () => {
   harden()
   await initSession()
+  onLock(clearImportSessions)
   initThemeSync()
   applyTheme(getPrefs().theme)
   registerIpc()

@@ -6,8 +6,9 @@
  */
 import { z } from 'zod'
 import { BANKS } from './types'
+import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
-import type { Account, AccountWithBalance, AppInfo, AuthStatus, BackupStatus, BudgetRow, Category, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, AppInfo, AuthStatus, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -198,6 +199,63 @@ export const contract = {
     output: out<BudgetRow[]>()
   },
   'budgets.copyPrevious': { input: z.object({ month }).strict(), output: out<{ copied: number }>() },
+
+  'import.analyze': {
+    input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(14_000_000), accountId: id }).strict(),
+    output: out<ImportPreview>()
+  },
+  'import.preview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'import.current': {
+    description:
+      'The CSV import the person has open: detected bank, column mapping, totals and every row with its status (ready / duplicate / problem / skipped), issues and category. Returns null when no import is open.',
+    input: empty,
+    output: out<ImportPreview | null>()
+  },
+  'import.raw': {
+    description: 'Raw cells of the open CSV import (header row, any info lines above it, and a window of data rows by index). Use it to understand the file before changing the mapping.',
+    input: z.object({ from: z.number().int().min(0).default(0), count: z.number().int().min(1).max(200).default(40) }).strict(),
+    output: out<{ headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preamble: string[][] }>()
+  },
+  'import.remap': {
+    description:
+      'Change the column mapping of the open import: zero-based column indexes, headerRow (index of the header line in the file), dateOrder (DMY/YMD/MDY), decimal mark, invertSign. Nothing is saved until the import is committed.',
+    input: z.object({ sessionId: z.string().uuid().optional(), mapping: mappingSchema }).strict(),
+    output: out<ImportPreview>()
+  },
+  'import.updateRows': {
+    description:
+      'Fix rows of the open import before it is saved: set a category, correct a date (YYYY-MM-DD), amount (cents) or description, include a duplicate on purpose, or skip a row. Add a short note saying why. Nothing is saved until commit.',
+    input: z
+      .object({
+        sessionId: z.string().uuid().optional(),
+        changes: z
+          .array(
+            z
+              .object({
+                index: z.number().int().min(0),
+                decided: z.enum(['include', 'skip']).nullable().optional(),
+                categoryId: id.nullable().optional(),
+                bookingDate: date.optional(),
+                amountCents: cents.optional(),
+                description: z.string().trim().min(1).max(300).optional(),
+                note: z.string().max(200).nullable().optional()
+              })
+              .strict()
+          )
+          .min(1)
+          .max(5000)
+      })
+      .strict(),
+    output: out<ImportPreview>()
+  },
+  'import.commit': {
+    description: 'Save the ready rows of the open import as transactions. Only after the person has reviewed the preview.',
+    input: z.object({ sessionId: z.string().uuid().optional(), saveProfile: z.boolean().default(true) }).strict(),
+    output: out<{ batchId: number; imported: number; skipped: number }>()
+  },
+  'import.discard': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
+  'import.batches': { input: empty, output: out<ImportBatch[]>() },
+  'import.undo': { input: z.object({ batchId: id }).strict(), output: out<{ deleted: number }>() },
 
   'summary.month': {
     description: 'Income, spending, budget left, spending per category and the last 6 months, for one month (cents).',

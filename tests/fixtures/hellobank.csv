@@ -1,0 +1,5 @@
+﻿Volgnummer;Uitvoeringsdatum;Valutadatum;Bedrag;Valuta rekening;Rekeningnummer;Type verrichting;Tegenpartij;Naam van de tegenpartij;Mededeling;Details;Status;Reden van weigering
+2026-0142;14/10/2026;14/10/2026;-32,40;EUR;BE68 5390 0754 7034;Kaartbetaling;;PIZZERIA DA MARIO;;BETALING MET DEBETKAART 14/10 LEUVEN;Geaccepteerd;
+2026-0141;12/10/2026;12/10/2026;-1.250,00;EUR;BE68 5390 0754 7034;Overschrijving;BE43 0682 0000 0101;IMMO VANDENBERGHE;Huur oktober;OVERSCHRIJVING NAAR BE43;Geaccepteerd;
+2026-0140;10/10/2026;10/10/2026;-80,00;EUR;BE68 5390 0754 7034;Domiciliëring;BE10 0000 0000 0404;TELENET;;;Geweigerd;Onvoldoende saldo
+2026-0139;"09/10/2026";09/10/2026;"-19,99";EUR;BE68 5390 0754 7034;Kaartbetaling;;"BOL.COM; ONLINE";;"AANKOOP ""ONLINE""";Geaccepteerd;

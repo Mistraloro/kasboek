@@ -135,7 +135,7 @@ function Shell() {
               {page === 'overview' && <Overview key={navKey} go={go} />}
               {page === 'transactions' && <Transactions key={navKey} go={setPage} initial={txFilter} />}
               {page === 'budgets' && <Budgets />}
-              {page === 'import' && <ImportPage />}
+              {page === 'import' && <ImportPage go={setPage} />}
               {page === 'settings' && <SettingsPage />}
             </div>
           </main>

@@ -5,6 +5,7 @@ import type { Db } from './database'
 import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
 import * as fin from './finance'
+import * as imp from './import'
 
 export interface OpContext {
   db: Db
@@ -168,7 +169,51 @@ export const coreOps: OpTable = {
   'budgets.set': { mutates: true, assistant: true, handler: ({ db }, i) => fin.setBudget(db, i) },
   'budgets.copyPrevious': { mutates: true, assistant: false, handler: ({ db }, { month }) => fin.copyBudgets(db, month) },
 
-  'summary.month': { mutates: false, assistant: true, handler: ({ db }, { month }) => fin.monthSummary(db, month) }
+  'summary.month': { mutates: false, assistant: true, handler: ({ db }, { month }) => fin.monthSummary(db, month) },
+
+  'import.analyze': {
+    mutates: false,
+    assistant: false,
+    handler: ({ db }, i) => imp.analyze(db, { fileName: i.fileName, accountId: i.accountId, bytes: new Uint8Array(Buffer.from(i.contentBase64, 'base64')) })
+  },
+  'import.preview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => imp.preview(db, sessionId) },
+  'import.current': {
+    mutates: false,
+    assistant: true,
+    handler: ({ db }) => {
+      const id = imp.latestSession()
+      return id ? imp.preview(db, id) : null
+    }
+  },
+  'import.raw': { mutates: false, assistant: true, handler: (_c, { from, count }) => imp.rawWindow(openSession(), from, count) },
+  'import.remap': { mutates: false, assistant: true, handler: ({ db, actor }, i) => imp.remap(db, i.sessionId ?? openSession(), i.mapping, actor === 'assistant' ? 'assistant' : 'manual') },
+  'import.updateRows': {
+    mutates: false,
+    assistant: true,
+    handler: ({ db, actor }, i) =>
+      imp.updateRows(
+        db,
+        i.sessionId ?? openSession(),
+        i.changes.map((c) => ({ ...c, ...(c.categoryId !== undefined ? { categorySource: actor === 'assistant' ? ('assistant' as const) : ('user' as const) } : {}) }))
+      )
+  },
+  'import.commit': { mutates: true, assistant: true, handler: ({ db }, i) => imp.commit(db, i.sessionId ?? openSession(), i.saveProfile) },
+  'import.discard': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { sessionId }) => {
+      imp.discard(sessionId)
+      return { ok: true as const }
+    }
+  },
+  'import.batches': { mutates: false, assistant: false, handler: ({ db }) => imp.listBatches(db) },
+  'import.undo': { mutates: true, assistant: false, handler: ({ db }, { batchId }) => imp.undoBatch(db, batchId) }
+}
+
+function openSession(): string {
+  const id = imp.latestSession()
+  if (!id) throw new AppError('import.none', 'No CSV import is open. Ask the person to choose a file on the Import page.')
+  return id
 }
 
 function listCategories(db: Db): Category[] {
