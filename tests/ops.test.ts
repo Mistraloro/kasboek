@@ -33,8 +33,8 @@ describe('operations', () => {
 
   it('rejects unknown fields and unknown operations', async () => {
     const ctx = fresh()
-    expect((await runOp(coreOps, ctx, 'settings.update', { theme: 'dark', evil: 1 })).ok).toBe(false)
+    expect((await runOp(coreOps, ctx, 'settings.update', { currency: 'EUR', evil: 1 })).ok).toBe(false)
     expect((await runOp(coreOps, ctx, 'nope' as 'settings.get', {})).ok).toBe(false)
-    expect(await runOp(coreOps, ctx, 'settings.update', { theme: 'dark' })).toMatchObject({ ok: true, data: { theme: 'dark' } })
+    expect(await runOp(coreOps, ctx, 'settings.update', { currency: 'USD' })).toMatchObject({ ok: true, data: { currency: 'USD' } })
   })
 })

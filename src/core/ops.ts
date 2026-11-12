@@ -1,9 +1,10 @@
 import { z } from 'zod'
 import { contract, type OpName, type OpOutput, type OpParsedInput, type OpResult } from '@shared/contract'
-import type { Account, Actor, Bank, Category } from '@shared/types'
+import type { Account, AccountWithBalance, Actor, Bank, Category } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
+import * as fin from './finance'
 
 export interface OpContext {
   db: Db
@@ -83,8 +84,29 @@ export const coreOps: OpTable = {
   'accounts.list': {
     mutates: false,
     assistant: true,
-    handler: ({ db }) =>
-      (db.prepare('SELECT * FROM accounts ORDER BY archived, name').all() as AccountRow[]).map(toAccount)
+    handler: ({ db }): AccountWithBalance[] => {
+      const bal = fin.accountBalances(db)
+      return (db.prepare('SELECT * FROM accounts ORDER BY archived, name').all() as AccountRow[]).map((r) => ({
+        ...toAccount(r),
+        balanceCents: bal.get(r.id)?.balance ?? r.opening_balance_cents,
+        transactionCount: bal.get(r.id)?.count ?? 0
+      }))
+    }
+  },
+  'accounts.update': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, input) => {
+      const cur = db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow | undefined
+      if (!cur) throw new AppError('accounts.not_found', 'Account not found.')
+      db.prepare('UPDATE accounts SET name = ?, iban = ?, archived = ? WHERE id = ?').run(
+        input.name ?? cur.name,
+        input.iban !== undefined ? normalizeIban(input.iban) : cur.iban,
+        input.archived !== undefined ? (input.archived ? 1 : 0) : cur.archived,
+        input.id
+      )
+      return toAccount(db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow)
+    }
   },
   'accounts.create': {
     mutates: true,
@@ -107,14 +129,50 @@ export const coreOps: OpTable = {
       }
     }
   },
-  'categories.list': {
-    mutates: false,
+  'categories.list': { mutates: false, assistant: true, handler: ({ db }) => listCategories(db) },
+  'categories.create': {
+    mutates: true,
     assistant: true,
-    handler: ({ db }) =>
-      (db.prepare('SELECT * FROM categories ORDER BY kind, sort_order, name').all() as CategoryRow[]).map(
-        toCategory
-      )
-  }
+    handler: ({ db }, input) => {
+      fin.createCategory(db, input)
+      return listCategories(db)
+    }
+  },
+  'categories.update': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, input) => {
+      fin.updateCategory(db, input)
+      return listCategories(db)
+    }
+  },
+
+  'transactions.list': { mutates: false, assistant: true, handler: ({ db }, f) => fin.listTransactions(db, f) },
+  'transactions.create': { mutates: true, assistant: false, handler: ({ db }, t) => fin.createTransaction(db, t) },
+  'transactions.update': { mutates: true, assistant: false, handler: ({ db }, t) => fin.updateTransaction(db, t) },
+  'transactions.categorize': { mutates: true, assistant: true, handler: ({ db }, i) => fin.categorizeTransactions(db, i.ids, i.categoryId) },
+  'transactions.delete': { mutates: true, assistant: false, handler: ({ db }, i) => fin.deleteTransactions(db, i.ids) },
+
+  'rules.list': { mutates: false, assistant: true, handler: ({ db }) => fin.listRules(db) },
+  'rules.create': { mutates: true, assistant: true, handler: ({ db }, i) => fin.createRule(db, i) },
+  'rules.delete': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { id }) => {
+      fin.deleteRule(db, id)
+      return fin.listRules(db)
+    }
+  },
+
+  'budgets.list': { mutates: false, assistant: true, handler: ({ db }, { month }) => fin.listBudgets(db, month) },
+  'budgets.set': { mutates: true, assistant: true, handler: ({ db }, i) => fin.setBudget(db, i) },
+  'budgets.copyPrevious': { mutates: true, assistant: false, handler: ({ db }, { month }) => fin.copyBudgets(db, month) },
+
+  'summary.month': { mutates: false, assistant: true, handler: ({ db }, { month }) => fin.monthSummary(db, month) }
+}
+
+function listCategories(db: Db): Category[] {
+  return (db.prepare('SELECT * FROM categories ORDER BY kind, sort_order, name').all() as CategoryRow[]).map(toCategory)
 }
 
 /** Validates input against the contract, runs the operation and records changes. */

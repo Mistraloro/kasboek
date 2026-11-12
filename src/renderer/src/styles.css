@@ -20,6 +20,9 @@
   --warning: #9a6700;
   --warning-soft: #fff6dd;
   --focus: #15803d;
+  /* Chart series, validated for colour-vision deficiency on the light surface. */
+  --chart-income: #15803d;
+  --chart-spending: #4f6bd8;
   color-scheme: light;
 }
 
@@ -40,6 +43,8 @@
   --warning: #e9b949;
   --warning-soft: rgba(233, 185, 73, 0.12);
   --focus: #3fcf8e;
+  --chart-income: #2dae74;
+  --chart-spending: #6b83e8;
   color-scheme: dark;
 }
 
@@ -61,6 +66,8 @@
   --color-negative-soft: var(--negative-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-chart-income: var(--chart-income);
+  --color-chart-spending: var(--chart-spending);
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   --font-serif: 'Source Serif 4 Variable', ui-serif, Georgia, serif;
 }

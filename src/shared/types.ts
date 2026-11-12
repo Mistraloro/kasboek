@@ -99,3 +99,62 @@ export interface PickedTransfer {
   /** Passwordless export, but this computer has no Windows Hello / Touch ID. */
   needsNewPassword: boolean
 }
+
+export interface Transaction {
+  id: number
+  accountId: number
+  accountName: string
+  bookingDate: string
+  valueDate: string | null
+  amountCents: number
+  currency: string
+  description: string
+  counterpartyName: string | null
+  counterpartyIban: string | null
+  communication: string | null
+  categoryId: number | null
+  categoryName: string | null
+  notes: string | null
+  importBatchId: number | null
+}
+
+export interface TransactionPage {
+  items: Transaction[]
+  total: number
+  inCents: number
+  outCents: number
+}
+
+export type RuleField = 'counterparty' | 'description' | 'any'
+
+export interface Rule {
+  id: number
+  field: RuleField
+  pattern: string
+  categoryId: number
+  categoryName: string
+}
+
+export interface BudgetRow {
+  categoryId: number
+  name: string
+  budgetCents: number | null
+  spentCents: number
+}
+
+export interface MonthSummary {
+  month: string
+  incomeCents: number
+  spendingCents: number
+  budgetedCents: number
+  /** Budget left for the month; null when no budgets are set. */
+  leftCents: number | null
+  byCategory: { categoryId: number | null; name: string; cents: number }[]
+  uncategorized: number
+  history: { month: string; incomeCents: number; spendingCents: number }[]
+}
+
+export interface AccountWithBalance extends Account {
+  balanceCents: number
+  transactionCount: number
+}

@@ -6,11 +6,16 @@
  */
 import { z } from 'zod'
 import { BANKS } from './types'
-import type { Account, AppInfo, AuthStatus, BackupStatus, Category, PickedTransfer, Prefs, Settings } from './types'
+import { MONTH } from './month'
+import type { Account, AccountWithBalance, AppInfo, AuthStatus, BackupStatus, BudgetRow, Category, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
 const password = z.string().min(10, 'Use at least 10 characters.').max(256)
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD.')
+const month = z.string().regex(MONTH, 'Use YYYY-MM.')
+const id = z.number().int().positive()
+const cents = z.number().int().min(-1e12).max(1e12)
 const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.')
 
 export const contract = {
@@ -84,7 +89,15 @@ export const contract = {
   'settings.get': { input: empty, output: out<Settings>() },
   'settings.update': { input: z.object({ currency: z.string().length(3) }).partial().strict(), output: out<Settings>() },
 
-  'accounts.list': { input: empty, output: out<Account[]>() },
+  'accounts.list': {
+    description: 'List bank accounts with their current balance (cents).',
+    input: empty,
+    output: out<AccountWithBalance[]>()
+  },
+  'accounts.update': {
+    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), iban: z.string().trim().max(34).nullable().optional(), archived: z.boolean().optional() }).strict(),
+    output: out<Account>()
+  },
   'accounts.create': {
     input: z
       .object({
@@ -98,10 +111,103 @@ export const contract = {
     output: out<Account>()
   },
 
-  'categories.list': { input: empty, output: out<Category[]>() }
+  'categories.list': { description: 'List all categories (id, name, kind: expense/income/transfer).', input: empty, output: out<Category[]>() },
+  'categories.create': {
+    description: 'Create a new category.',
+    input: z.object({ name: z.string().trim().min(1).max(60), kind: z.enum(['expense', 'income', 'transfer']) }).strict(),
+    output: out<Category[]>()
+  },
+  'categories.update': {
+    input: z.object({ id, name: z.string().trim().min(1).max(60).optional(), archived: z.boolean().optional() }).strict(),
+    output: out<Category[]>()
+  },
+
+  'transactions.list': {
+    description:
+      'Search transactions. Amounts are integer cents: negative = money out, positive = money in. Filter by account, category (or "none" for uncategorised), month (YYYY-MM), date range, free-text search or direction. Returns a page plus totals for the whole filter.',
+    input: z
+      .object({
+        accountId: id.optional(),
+        categoryId: z.union([id, z.literal('none')]).optional(),
+        month: month.optional(),
+        from: date.optional(),
+        to: date.optional(),
+        search: z.string().max(100).optional(),
+        direction: z.enum(['in', 'out']).optional(),
+        limit: z.number().int().min(1).max(500).default(100),
+        offset: z.number().int().min(0).default(0)
+      })
+      .strict(),
+    output: out<TransactionPage>()
+  },
+  'transactions.create': {
+    input: z
+      .object({
+        accountId: id,
+        bookingDate: date,
+        amountCents: cents.refine((v) => v !== 0, 'Amount can’t be zero.'),
+        description: z.string().trim().min(1).max(300),
+        counterpartyName: z.string().trim().max(120).nullable().optional(),
+        categoryId: id.nullable().optional(),
+        notes: z.string().max(1000).nullable().optional()
+      })
+      .strict(),
+    output: out<Transaction>()
+  },
+  'transactions.update': {
+    input: z
+      .object({
+        id,
+        categoryId: id.nullable().optional(),
+        notes: z.string().max(1000).nullable().optional(),
+        description: z.string().trim().min(1).max(300).optional(),
+        bookingDate: date.optional(),
+        amountCents: cents.optional(),
+        counterpartyName: z.string().trim().max(120).nullable().optional()
+      })
+      .strict(),
+    output: out<Transaction>()
+  },
+  'transactions.categorize': {
+    description: 'Set the category of one or more transactions (categoryId null = uncategorised).',
+    input: z.object({ ids: z.array(id).min(1).max(5000), categoryId: id.nullable() }).strict(),
+    output: out<{ updated: number }>()
+  },
+  'transactions.delete': { input: z.object({ ids: z.array(id).min(1).max(5000) }).strict(), output: out<{ deleted: number }>() },
+
+  'rules.list': { description: 'List categorisation rules ("text in counterparty/description → category").', input: empty, output: out<Rule[]>() },
+  'rules.create': {
+    description:
+      'Create a rule that puts transactions whose counterparty and/or description contains `pattern` (case-insensitive) into a category. New imports use it; applyToExisting also categorises uncategorised transactions now.',
+    input: z
+      .object({
+        field: z.enum(['counterparty', 'description', 'any']),
+        pattern: z.string().trim().min(2).max(100),
+        categoryId: id,
+        applyToExisting: z.boolean().default(true)
+      })
+      .strict(),
+    output: out<{ rule: Rule; applied: number }>()
+  },
+  'rules.delete': { input: z.object({ id }).strict(), output: out<Rule[]>() },
+
+  'budgets.list': { description: 'Budgets and spending per spending category for a month (cents).', input: z.object({ month }).strict(), output: out<BudgetRow[]>() },
+  'budgets.set': {
+    description: 'Set (or clear with null) the monthly budget for a spending category, in cents.',
+    input: z.object({ categoryId: id, month, amountCents: z.number().int().min(0).max(1e10).nullable() }).strict(),
+    output: out<BudgetRow[]>()
+  },
+  'budgets.copyPrevious': { input: z.object({ month }).strict(), output: out<{ copied: number }>() },
+
+  'summary.month': {
+    description: 'Income, spending, budget left, spending per category and the last 6 months, for one month (cents).',
+    input: z.object({ month }).strict(),
+    output: out<MonthSummary>()
+  }
 } as const
 
 export type Contract = typeof contract
+export type ContractEntry = { input: z.ZodType; output: unknown; description?: string }
 export type OpName = keyof Contract
 export type OpInput<K extends OpName> = z.input<Contract[K]['input']>
 export type OpParsedInput<K extends OpName> = z.output<Contract[K]['input']>

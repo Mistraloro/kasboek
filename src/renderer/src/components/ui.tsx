@@ -203,3 +203,18 @@ export function Modal({ open, title, onClose, children }: { open: boolean; title
 }
 
 export { cx }
+
+export function MonthNav({ month, label, onChange }: { month: string; label: string; onChange: (m: string) => void }) {
+  const [y, m] = month.split('-').map(Number) as [number, number]
+  const shift = (n: number): void => {
+    const d = new Date(y, m - 1 + n, 1)
+    onChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return (
+    <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5">
+      <button type="button" aria-label="Previous month" onClick={() => shift(-1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">‹</button>
+      <span className="min-w-36 text-center text-[13px] font-medium capitalize">{label}</span>
+      <button type="button" aria-label="Next month" onClick={() => shift(1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">›</button>
+    </div>
+  )
+}

@@ -15,7 +15,7 @@ import { Budgets } from './pages/Budgets'
 import { ImportPage } from './pages/Import'
 import { Overview } from './pages/Overview'
 import { SettingsPage } from './pages/Settings'
-import { Transactions } from './pages/Transactions'
+import { Transactions, type TxFilter } from './pages/Transactions'
 
 export type Page = 'overview' | 'transactions' | 'budgets' | 'import' | 'settings'
 
@@ -55,7 +55,15 @@ function Shell() {
   const { info } = usePrefs()
   const { set } = useAuth()
   const toast = useToast()
-  const [page, setPage] = useState<Page>('overview')
+  const [page, setPageState] = useState<Page>('overview')
+  const [txFilter, setTxFilter] = useState<TxFilter | undefined>()
+  const [navKey, setNavKey] = useState(0)
+  const go = (p: Page, filter?: Record<string, unknown>): void => {
+    setTxFilter(filter as TxFilter | undefined)
+    setPageState(p)
+    setNavKey((k) => k + 1)
+  }
+  const setPage = (p: Page): void => go(p)
   const [assistantOpen, setAssistantOpen] = useState(true)
   const isMac = info.platform === 'darwin'
 
@@ -124,8 +132,8 @@ function Shell() {
         <div className="flex min-h-0 flex-1">
           <main className="min-w-0 flex-1 overflow-y-auto">
             <div className="mx-auto max-w-5xl px-10 pt-4 pb-16">
-              {page === 'overview' && <Overview go={setPage} />}
-              {page === 'transactions' && <Transactions go={setPage} />}
+              {page === 'overview' && <Overview key={navKey} go={go} />}
+              {page === 'transactions' && <Transactions key={navKey} go={setPage} initial={txFilter} />}
               {page === 'budgets' && <Budgets />}
               {page === 'import' && <ImportPage />}
               {page === 'settings' && <SettingsPage />}
