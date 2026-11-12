@@ -5,10 +5,10 @@
  * operations (only those marked as assistant tools), so every path is validated the same way.
  */
 import { z } from 'zod'
-import { BANKS } from './types'
+import { ASSISTANT_MODELS, BANKS } from './types'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
-import type { Account, AccountWithBalance, AppInfo, AuthStatus, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -85,6 +85,30 @@ export const contract = {
   },
   'backup.runNow': { input: empty, output: out<{ file: string }>() },
   'backup.revealFolder': { input: empty, output: out<{ ok: boolean }>() },
+
+  /* ----- Claude ----- */
+  'assistant.status': { input: empty, output: out<AssistantStatus>() },
+  'assistant.setKey': { input: z.object({ apiKey: z.string().trim().regex(/^sk-ant-[A-Za-z0-9_-]{20,}$/, 'That doesn’t look like an Anthropic API key (it starts with sk-ant-).') }).strict(), output: out<AssistantStatus>() },
+  'assistant.clearKey': { input: empty, output: out<AssistantStatus>() },
+  'assistant.configure': {
+    input: z
+      .object({
+        chatModel: z.enum(ASSISTANT_MODELS),
+        chatEffort: z.enum(['low', 'medium', 'high']),
+        csvModel: z.enum(ASSISTANT_MODELS),
+        csvEffort: z.enum(['low', 'medium', 'high']),
+        mcpEnabled: z.boolean()
+      })
+      .partial()
+      .strict(),
+    output: out<Settings>()
+  },
+  'assistant.send': { input: z.object({ text: z.string().trim().min(1).max(8000) }).strict(), output: out<AssistantStatus>() },
+  'assistant.confirm': { input: z.object({ id: z.string().uuid(), approve: z.boolean() }).strict(), output: out<AssistantStatus>() },
+  'assistant.stop': { input: empty, output: out<AssistantStatus>() },
+  'assistant.reset': { input: empty, output: out<AssistantStatus>() },
+  'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'mcp.respond': { input: z.object({ id: z.string().uuid(), approve: z.boolean() }).strict(), output: out<{ ok: true }>() },
 
   /* ----- Data ----- */
   'settings.get': { input: empty, output: out<Settings>() },
@@ -297,3 +321,7 @@ export type AppEvent =
   | { type: 'backup.completed'; file: string }
   | { type: 'backup.failed'; message: string }
   | { type: 'auth.locked'; reason: 'user' | 'idle' | 'system' }
+  | { type: 'assistant.update'; status: AssistantStatus }
+  | { type: 'import.updated' }
+  | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
+  | { type: 'mcp.request'; id: string; summary: string }

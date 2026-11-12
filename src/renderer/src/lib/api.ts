@@ -43,5 +43,14 @@ export function useOp<K extends OpName>(op: K, input?: OpInput<K>) {
     void reload()
   }, [reload])
 
+  // Refresh when data changes elsewhere (another page, Claude, or MCP).
+  useEffect(
+    () =>
+      window.kasboek.onEvent((e) => {
+        if (e.type === 'data.changed' && !op.startsWith('import.')) void reload()
+      }),
+    [op, reload]
+  )
+
   return { data, error, loading, reload }
 }

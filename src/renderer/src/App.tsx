@@ -139,7 +139,7 @@ function Shell() {
               {page === 'settings' && <SettingsPage />}
             </div>
           </main>
-          {assistantOpen && <AssistantPanel />}
+          {assistantOpen && <AssistantPanel go={setPage} />}
         </div>
       </div>
     </div>

@@ -7,7 +7,12 @@ export const DEFAULT_SETTINGS: Settings = {
   autoBackupFolder: null,
   autoBackupKeep: 10,
   lastBackupAt: null,
-  lastBackupFile: null
+  lastBackupFile: null,
+  chatModel: 'claude-sonnet-5-5',
+  chatEffort: 'medium',
+  csvModel: 'claude-opus-5-5',
+  csvEffort: 'medium',
+  mcpEnabled: false
 }
 
 export function getSettings(db: Db): Settings {

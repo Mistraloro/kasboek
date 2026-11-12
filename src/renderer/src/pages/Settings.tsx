@@ -10,6 +10,7 @@ import { useAuth } from '../lib/auth'
 import { formatDateTime, formatMoney } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { ImportFlow } from './auth/ImportFlow'
+import { ClaudeSection } from './SettingsClaude'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 
 const FORMAT_LOCALES = ['en-BE', 'nl-BE', 'fr-BE', 'de-BE', 'en-GB', 'en-US']
@@ -33,6 +34,7 @@ export function SettingsPage() {
       <PageHeader title={t('settings.title')} />
       <div className="flex flex-col gap-6">
         <SecuritySection />
+        <ClaudeSection />
         <TransferSection />
         <BackupSection />
         <AccountsSection />

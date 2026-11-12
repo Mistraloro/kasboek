@@ -11,6 +11,11 @@ import * as session from './session'
 import { applyTheme } from './theme'
 import { backupStatus, describeTransfer, exportFileName, importTransfer, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
 import { writeTransfer } from './transfer/service'
+import { setSecret } from '@core/secrets'
+import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
+import { API_KEY, checkKey } from './assistant/claude'
+import { assistImport } from './assistant/csv'
+import { respondMcp } from './mcp/bridge'
 
 function focusedWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -166,6 +171,63 @@ const desktopOps: OpTable = {
     }
   },
 
+  'assistant.status': { mutates: false, assistant: false, handler: () => assistantStatus() },
+  'assistant.setKey': {
+    mutates: true,
+    assistant: false,
+    handler: async ({ db }, { apiKey }) => {
+      // Dev/test only: skip the online check.
+      if (app.isPackaged || process.env['KASBOEK_SKIP_KEY_CHECK'] !== '1') await checkKey(apiKey)
+      setSecret(db, API_KEY, apiKey)
+      publishStatus()
+      return assistantStatus()
+    }
+  },
+  'assistant.clearKey': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }) => {
+      setSecret(db, API_KEY, null)
+      resetChat()
+      return assistantStatus()
+    }
+  },
+  'assistant.configure': { mutates: true, assistant: false, handler: ({ db }, patch) => updateSettings(db, patch) },
+  'assistant.send': { mutates: false, assistant: false, handler: (_c, { text }) => send(text) },
+  'assistant.confirm': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { id, approve }) => {
+      confirmAssistant(id, approve)
+      return assistantStatus()
+    }
+  },
+  'assistant.stop': {
+    mutates: false,
+    assistant: false,
+    handler: () => {
+      stopChat()
+      return assistantStatus()
+    }
+  },
+  'assistant.reset': {
+    mutates: false,
+    assistant: false,
+    handler: () => {
+      resetChat()
+      return assistantStatus()
+    }
+  },
+  'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'mcp.respond': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { id, approve }) => {
+      respondMcp(id, approve)
+      return { ok: true as const }
+    }
+  },
+
   'backup.status': { mutates: false, assistant: false, handler: () => backupStatus() },
   'backup.chooseFolder': {
     mutates: true,
@@ -214,7 +276,16 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
   if (!session.isUnlocked() && !PUBLIC_OPS.includes(name)) {
     return { ok: false as const, error: { code: 'auth.locked', message: 'Kasboek is locked.' } }
   }
-  return runOp(allOps, opContext(actor), name, input)
+  const result = await runOp(allOps, opContext(actor), name, input)
+  // Tell open pages to refresh, e.g. when Claude changed a budget.
+  if (result.ok && allOps[name]?.mutates) notifyChanged(actor)
+  return result
+}
+
+let changeTimer: NodeJS.Timeout | null = null
+function notifyChanged(actor: OpContext['actor']): void {
+  if (changeTimer) clearTimeout(changeTimer)
+  changeTimer = setTimeout(() => session.broadcast({ type: 'data.changed', actor }), 50)
 }
 
 /** Only our own page may call operations; never a page that got navigated to. */
@@ -226,6 +297,8 @@ function isTrusted(frame: WebFrameMain | null): boolean {
 }
 
 export function registerIpc(): void {
+  initAssistant((op, input, actor) => dispatch(op, input, actor))
+  session.onLock(resetChat)
   ipcMain.handle('kasboek:op', async (event, name: unknown, input: unknown) => {
     if (!isTrusted(event.senderFrame) || typeof name !== 'string') {
       return { ok: false, error: { code: 'ipc.denied', message: 'Not allowed.' } }

@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, RotateCcw, Sparkles, Undo2 } from 'lucide-react'
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
 import type { Page } from '../App'
@@ -11,6 +11,7 @@ import { formatDate, formatDateTime } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { CategorySelect } from './Transactions'
+import { useAssistant } from '../components/AssistantPanel'
 
 const SUPPORTED = ['argenta', 'hellobank', 'keytrade'] as const
 type Filter = 'all' | ImportRow['status']
@@ -22,7 +23,7 @@ function toBase64(buf: ArrayBuffer): string {
   return btoa(s)
 }
 
-export function ImportPage({ go, assist }: { go: (p: Page) => void; assist?: (preview: ImportPreview) => void }) {
+export function ImportPage({ go }: { go: (p: Page) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { locale } = useSettings()
@@ -35,6 +36,16 @@ export function ImportPage({ go, assist }: { go: (p: Page) => void; assist?: (pr
   const [drag, setDrag] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const account = accountId ?? accounts.data?.find((a) => !a.archived)?.id ?? null
+  const assistant = useAssistant()
+  const [assisting, setAssisting] = useState(false)
+  // The chat assistant can change the open import too: refresh when it does.
+  useEffect(
+    () =>
+      window.kasboek.onEvent((e) => {
+        if (e.type === 'import.updated') void call('import.current').then((p) => p && setPreview(p))
+      }),
+    []
+  )
 
   const open = async (file: File): Promise<void> => {
     if (!account) return
@@ -54,7 +65,20 @@ export function ImportPage({ go, assist }: { go: (p: Page) => void; assist?: (pr
       <PreviewView
         preview={preview}
         onChange={setPreview}
-        onAssist={assist}
+        assisting={assisting}
+        onAssist={
+          assistant?.configured
+            ? (p) => {
+                setAssisting(true)
+                void call('import.assist', { sessionId: p.sessionId })
+                  .then((next) => {
+                    setPreview(next)
+                    toast(t('import.checked'))
+                  }, (e) => toast(errText(e), 'error'))
+                  .finally(() => setAssisting(false))
+              }
+            : undefined
+        }
         onCancel={() => void call('import.discard', { sessionId: preview.sessionId }).finally(() => setPreview(null))}
         onCommitted={(r) => {
           setPreview(null)
@@ -127,7 +151,7 @@ export function ImportPage({ go, assist }: { go: (p: Page) => void; assist?: (pr
 
 const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
 
-function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: { batchId: number; imported: number }) => void; onAssist?: (p: ImportPreview) => void }) {
+function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: { batchId: number; imported: number }) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { money, locale } = useSettings()
@@ -175,7 +199,13 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist }: { p
           <span className="num">{t('transactions.in')} <span className="font-medium">{money(s.inCents)}</span></span>
           <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents)}</span></span>
           <span className="ml-auto flex items-center gap-2">
-            {onAssist && <Button size="sm" variant="primary" icon={<Sparkles size={14} />} onClick={() => onAssist(preview)}>{t('import.checkWithClaude')}</Button>}
+            {onAssist ? (
+              <Button size="sm" variant="primary" icon={<Sparkles size={14} />} disabled={assisting} title={t('import.checkPrivacy')} onClick={() => onAssist(preview)}>
+                {assisting ? t('import.checking') : t('import.checkWithClaude')}
+              </Button>
+            ) : (
+              <span className="text-xs text-muted">{t('import.claudeOff')}</span>
+            )}
             <Button size="sm" icon={<Columns3 size={14} />} onClick={() => setMappingOpen(true)}>{t('import.columns')}</Button>
           </span>
         </div>

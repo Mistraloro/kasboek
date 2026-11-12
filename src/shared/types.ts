@@ -35,7 +35,29 @@ export interface Settings {
   autoBackupKeep: number
   lastBackupAt: string | null
   lastBackupFile: string | null
+  chatModel: AssistantModel
+  chatEffort: Effort
+  csvModel: AssistantModel
+  csvEffort: Effort
+  /** Allow Claude Desktop / Claude Code to use Kasboek through MCP while it is unlocked. */
+  mcpEnabled: boolean
 }
+
+export const ASSISTANT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'] as const
+export type AssistantModel = (typeof ASSISTANT_MODELS)[number]
+export type Effort = 'low' | 'medium' | 'high'
+
+export interface AssistantStatus {
+  configured: boolean
+  keyHint: string | null
+  busy: boolean
+  messages: ChatMessage[]
+}
+
+export type ChatMessage =
+  | { id: string; role: 'user'; text: string }
+  | { id: string; role: 'assistant'; text: string; tools: { name: string; ok: boolean }[]; error?: string }
+  | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' }
 
 /** Interface preferences, stored outside the database so the lock screen can use them. */
 export interface Prefs {

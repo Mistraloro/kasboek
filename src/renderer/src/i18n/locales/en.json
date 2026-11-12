@@ -198,17 +198,50 @@
     "apply": "Apply",
     "fixDate": "Enter the date (DD/MM/YYYY)",
     "fixDateInvalid": "Use the format DD/MM/YYYY.",
-    "fixAmount": "Enter the amount, negative for money out (e.g. -12,50)"
+    "fixAmount": "Enter the amount, negative for money out (e.g. -12,50)",
+    "checking": "Claude is checking…",
+    "checked": "Claude checked the file. See the notes above the rows.",
+    "checkPrivacy": "Sends the rows of this file to Anthropic.",
+    "claudeOff": "Connect Claude in Settings to have it check files."
   },
   "assistant": {
     "title": "Claude",
-    "comingSoon": "Coming soon",
-    "intro": "Soon you’ll be able to ask Claude about your money and let it make changes, always with your confirmation.",
+    "intro": "Ask about your money, or let Claude make changes. Anything that changes your data waits for your OK.",
     "examplesTitle": "For example",
     "example1": "How much did I spend on groceries in October?",
     "example2": "Set my eating-out budget to €150 a month.",
     "example3": "Check this Keytrade CSV and import it.",
-    "placeholder": "Ask Claude…"
+    "placeholder": "Ask Claude…",
+    "setupBody": "Connect Claude with your own Anthropic API key to ask questions about your budget, set budgets, sort transactions and check CSV files.",
+    "setupButton": "Connect Claude",
+    "privacy": "Your messages, and the data Claude looks up to answer them, are sent to Anthropic. Nothing is sent until you ask something.",
+    "newChat": "New conversation",
+    "thinking": "Claude is working…",
+    "stop": "Stop",
+    "send": "Send",
+    "wantsTo": "Claude wants to",
+    "approve": "Approve",
+    "decline": "Decline",
+    "approved": "Approved",
+    "declined": "Declined",
+    "tool": {
+      "summary_month": "Monthly summary",
+      "transactions_list": "Transactions",
+      "transactions_categorize": "Categorised",
+      "budgets_list": "Budgets",
+      "budgets_set": "Budget",
+      "categories_list": "Categories",
+      "categories_create": "New category",
+      "rules_list": "Rules",
+      "rules_create": "New rule",
+      "accounts_list": "Accounts",
+      "settings_get": "Settings",
+      "import_current": "Open import",
+      "import_raw": "CSV file",
+      "import_remap": "Columns",
+      "import_updateRows": "Import rows",
+      "import_commit": "Import"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -391,5 +424,37 @@
       "income": "Income",
       "transfer": "Transfer"
     }
+  },
+  "claude": {
+    "title": "Claude",
+    "hint": "Uses your own Anthropic API key. Billed by Anthropic, separately from a Claude.ai subscription.",
+    "apiKey": "API key",
+    "apiKeyHint": "Stored inside your encrypted data. Never shown again.",
+    "keySet": "Set ({{hint}})",
+    "keyNotSet": "Not set",
+    "addKey": "Add API key",
+    "replaceKey": "Replace",
+    "removeKey": "Remove API key",
+    "keyHelp": "Create a key in the Anthropic Console and paste it here. Kasboek checks it once with Anthropic.",
+    "getKey": "Get a key",
+    "checking": "Checking…",
+    "keySaved": "API key saved.",
+    "chat": "Chat",
+    "chatHint": "Answers questions and makes changes you approve.",
+    "csv": "CSV check",
+    "csvHint": "Checks and fixes bank exports before import.",
+    "effortLabel": "Effort",
+    "model": {
+      "claude-opus-5-5": "Claude Opus 5.5",
+      "claude-sonnet-5-5": "Claude Sonnet 5.5",
+      "claude-haiku-5-5": "Claude Haiku 5.5",
+      "claude-fable-5-2": "Claude Fable 5.2 (most capable)"
+    },
+    "effort": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "privacy": "Recommended: Sonnet 5.5 (medium) for chat, Opus 5.5 (medium) for CSV checks. Higher effort is more thorough but slower and costs more. If a request is declined by Anthropic’s safety checks, it’s retried automatically on a fallback model (not available for Haiku)."
   }
 }

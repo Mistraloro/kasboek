@@ -142,7 +142,7 @@ You’ll need an Anthropic API key (console.anthropic.com). It’s billed separa
 | 2 | **Login & device security**: password or passwordless (Windows Hello / Touch ID), 2FA (TOTP), recovery key, lock screen, auto-lock, device binding, encrypted **export/import for moving computers**, backups moved onto login credentials | Done |
 | 3 | Transactions (list, search, edit, bulk categorise), categories, rules, monthly budgets, overview with real numbers and charts | Done |
 | 4 | CSV pipeline in code: encoding/delimiter/header detection, Argenta / Hello bank! / Keytrade profiles, preview, duplicates, import, undo import | Done |
-| 5 | Claude: API key and model settings, chat panel with tools and confirmations, CSV assistant | |
+| 5 | Claude: API key and model settings, chat panel with tools and confirmations, CSV assistant | Done |
 | 6 | MCP server for Claude Desktop / Claude Code | |
 | 7 | Tests with bank fixtures, polish, docs, release builds for all three OSes | |
 
