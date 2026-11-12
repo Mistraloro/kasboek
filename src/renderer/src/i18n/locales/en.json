@@ -338,7 +338,6 @@
     "choosePasswordBody": "Strongest option. Works on every computer.",
     "chooseDevice": "Use {{name}}",
     "chooseDeviceBody": "Passwordless: unlock with your face, fingerprint or PIN.",
-    "deviceUnavailable": "Not available on this computer.",
     "chooseImport": "Import from another computer",
     "chooseImportBody": "Open an export made with Kasboek, using its login details.",
     "windowsHello": "Windows Hello",
@@ -397,7 +396,9 @@
     "eraseType": "Type ERASE to confirm",
     "eraseConfirm": "Erase everything",
     "cantOpen": "Kasboek can’t open its data",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "choosePasswordless": "Passwordless",
+    "deviceUnavailableHint": "Needs Windows Hello or Touch ID, which aren’t available on this computer."
   },
   "transfer": {
     "title": "Move to another computer",

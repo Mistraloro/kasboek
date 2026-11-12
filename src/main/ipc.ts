@@ -45,9 +45,11 @@ const desktopOps: OpTable = {
       version: app.getVersion(),
       platform: process.platform,
       dataDir: paths.dataDir,
-      mcpCommand: app.isPackaged
-        ? { command: process.execPath, args: ['--mcp'] }
-        : { command: process.execPath, args: [app.getAppPath(), '--mcp'] }
+      // The helper never opens a window; on Linux it must not need a display either.
+      mcpCommand: {
+        command: process.execPath,
+        args: [...(process.platform === 'linux' ? ['--ozone-platform=headless'] : []), ...(app.isPackaged ? [] : [app.getAppPath()]), '--mcp']
+      }
     })
   },
   'prefs.get': { mutates: false, assistant: false, handler: () => getPrefs() },

@@ -107,15 +107,23 @@ names and amounts; the column layout is what matters.
 
 ## Claude (Phase 5) and MCP (Phase 6)
 
-* **In-app chat** (side panel, already in the layout): Claude uses the operation registry as tools.
-  Questions are answered from your data; anything that changes data shows a confirmation card first.
-* **Provider adapter**: Claude through the official Anthropic SDK now; the adapter interface keeps
-  other LLMs possible later.
-* **API key** is stored in the OS keychain like the database key, never in the renderer, and
-  requests go from the main process only.
-* **MCP server**: `Kasboek.exe --mcp` runs a stdio MCP server that talks to the running app over a
-  local, authenticated channel (it doesn’t open the database a second time). Claude Desktop or
-  Claude Code can then work with your budget.
+* **In-app chat** (side panel): Claude uses the operation registry as tools. Questions are answered
+  from your data; anything that changes data shows an Approve / Decline card first. Input is
+  validated before you are asked. The conversation lives in memory and is cleared on lock.
+* **Check with Claude** on the import screen: Claude returns a strict JSON plan (columns, row fixes,
+  categories, notes). Code applies it through the same checks as a manual edit; a mapping that
+  reads fewer rows than the detected one is rejected.
+* **API key**: stored inside the encrypted database (so it is protected by your login and moves
+  with an export), never sent to the page; requests go from the main process only.
+* **Refusal fallbacks**: Opus 5.5, Sonnet 5.5 and Fable 5.2 requests use server-side fallbacks, so a
+  safety-classifier decline is retried on a suitable model in the same call.
+* **MCP server**: `Kasboek --mcp` is a stdio MCP server for Claude Desktop, Claude Code or any MCP
+  client. It holds no keys and opens no database: it forwards calls over a named pipe / Unix socket
+  (per-start token) to the running app, which must be unlocked with MCP switched on. Changes wait
+  for approval in the app.
+* **Other LLMs later**: everything goes through the operation contract, whose input schemas are
+  plain JSON Schema for tools. MCP already works with any MCP-capable client; an in-app adapter
+  for another provider would replace `src/main/assistant/claude.ts`.
 
 ## Models and effort
 
@@ -144,7 +152,7 @@ You’ll need an Anthropic API key (console.anthropic.com). It’s billed separa
 | 4 | CSV pipeline in code: encoding/delimiter/header detection, Argenta / Hello bank! / Keytrade profiles, preview, duplicates, import, undo import | Done |
 | 5 | Claude: API key and model settings, chat panel with tools and confirmations, CSV assistant | Done |
 | 6 | MCP server for Claude Desktop / Claude Code | Done |
-| 7 | Tests with bank fixtures, polish, docs, release builds for all three OSes | |
+| 7 | Tests with bank fixtures, polish, docs, release builds for all three OSes | Done (needs a real Windows run, see below) |
 
 ## Brand
 
@@ -153,3 +161,22 @@ You’ll need an Anthropic API key (console.anthropic.com). It’s billed separa
 `build/icon.ico` (Windows), `build/icon.icns` (macOS), `build/icons/*.png` (Linux) and the
 window icon. The mark is a **K** whose bright upper arm stands for money in and dimmed lower
 arm for money out.
+
+## Status and what still needs a real computer
+
+Built and tested here (Linux, automated): 31 unit tests (crypto, TOTP test vectors, key slots,
+export format and tampering, budgets and summaries, CSV parsing for the three bank layouts,
+import duplicates/undo, the assistant loop) and end-to-end runs of the real app for setup,
+lock/unlock, 2FA, recovery, export → import on a "new computer", passwordless (simulated),
+transactions, budgets, CSV import, Claude chat and CSV check (against a local mock of the API)
+and MCP with a real MCP client.
+
+Not possible to test here, please check on your machine:
+1. **Windows Hello** prompt (via PowerShell / WinRT) and **Touch ID**: simulated in tests only.
+2. **DPAPI device binding**: copy `%APPDATA%\Kasboek` to another PC or Windows user and confirm it
+   refuses to open (the error path is tested; the real DPAPI behaviour can only be seen on Windows).
+3. **Real Claude calls** with your API key (tested against a mock with the same request format).
+4. **Your real bank exports**: the fixtures imitate the layouts; send one anonymised export per
+   bank to confirm (the column editor and "Check with Claude" cover differences).
+5. **Windows installer** (`npm run dist:win` on Windows, or the GitHub Actions workflow). Code
+   signing needs a certificate; without one Windows SmartScreen shows a warning on first install.

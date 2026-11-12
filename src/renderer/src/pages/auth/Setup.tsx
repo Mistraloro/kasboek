@@ -64,10 +64,10 @@ export function Setup() {
             <Choice icon={<KeyRound size={16} />} title={t('auth.choosePassword')} body={t('auth.choosePasswordBody')} onClick={() => setStep('password')} />
             <Choice
               icon={<DeviceIcon kind={status.device} />}
-              title={t('auth.chooseDevice', { name: status.device ? deviceName : t('auth.windowsHello') })}
+              title={status.device ? t('auth.chooseDevice', { name: deviceName }) : t('auth.choosePasswordless')}
               body={t('auth.chooseDeviceBody')}
               disabled={!status.device || busy}
-              note={status.device ? undefined : t('auth.deviceUnavailable')}
+              note={status.device ? undefined : t('auth.deviceUnavailableHint')}
               onClick={() => create({ mode: 'device' })}
             />
             <Choice icon={<FileLock2 size={16} />} title={t('auth.chooseImport')} body={t('auth.chooseImportBody')} onClick={() => setStep('import')} />

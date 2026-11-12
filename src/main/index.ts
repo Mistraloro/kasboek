@@ -16,6 +16,8 @@ const MCP_MODE = process.argv.includes('--mcp')
 
 // `--mcp`: run only the small stdio helper for Claude Desktop / Claude Code. No window, no database.
 if (MCP_MODE) {
+  // On Linux the config passes --ozone-platform=headless so no display is needed (see app.info).
+  app.commandLine.appendSwitch('disable-gpu')
   void runMcpStdio().catch((err: unknown) => {
     process.stderr.write(`kasboek --mcp: ${String(err)}\n`)
     app.exit(1)
