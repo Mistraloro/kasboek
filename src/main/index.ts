@@ -1,7 +1,8 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { registerIpc } from './ipc'
+import { dispatch, registerIpc } from './ipc'
+import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
@@ -9,8 +10,20 @@ import { broadcast, initSession, lock, onLock, startAutoLock } from './session'
 import { runAutoBackupIfDue } from './transfer/service'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT } from './theme'
 
-// One running copy only: two processes must never write the same database.
-if (!app.requestSingleInstanceLock()) app.quit()
+import { runMcpStdio } from './mcp/stdio'
+
+const MCP_MODE = process.argv.includes('--mcp')
+
+// `--mcp`: run only the small stdio helper for Claude Desktop / Claude Code. No window, no database.
+if (MCP_MODE) {
+  void runMcpStdio().catch((err: unknown) => {
+    process.stderr.write(`kasboek --mcp: ${String(err)}\n`)
+    app.exit(1)
+  })
+} else if (!app.requestSingleInstanceLock()) {
+  // One running copy only: two processes must never write the same database.
+  app.quit()
+}
 
 app.setAppUserModelId('app.kasboek')
 paths.rendererDir = join(__dirname, '../renderer')
@@ -77,6 +90,9 @@ function scheduleAutoBackups(): void {
   setInterval(tick, 60 * 60_000)
 }
 
+if (!MCP_MODE) startApp()
+
+function startApp(): void {
 app.on('second-instance', () => {
   const win = BrowserWindow.getAllWindows()[0]
   if (win) {
@@ -95,6 +111,8 @@ void app.whenReady().then(async () => {
   createWindow()
   scheduleAutoBackups()
   startAutoLock()
+  // Keep the MCP bridge in step with the lock state and the setting.
+  setInterval(() => syncMcpBridge(dispatch), 2000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -105,4 +123,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('will-quit', () => lock('user', true))
+app.on('will-quit', () => {
+  stopMcpBridge()
+  lock('user', true)
+})
+}

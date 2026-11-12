@@ -1,9 +1,10 @@
-import { KeyRound, Trash2 } from 'lucide-react'
+import { Copy, KeyRound, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
-import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select } from '../components/ui'
+import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
+import { usePrefs } from '../lib/settings'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
@@ -52,7 +53,8 @@ export function ClaudeSection() {
           </Row>
         </>
       )}
-      <div className="px-5 py-4 text-xs text-muted">{t('claude.privacy')}</div>
+      <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('claude.privacy')}</div>
+      {s && <McpRows enabled={s.mcpEnabled} onChange={(mcpEnabled) => configure({ mcpEnabled })} />}
 
       <Modal open={keyOpen} title={t('claude.addKey')} onClose={() => setKeyOpen(false)}>
         <form
@@ -82,5 +84,35 @@ export function ClaudeSection() {
         </form>
       </Modal>
     </Card>
+  )
+}
+
+function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { info } = usePrefs()
+  const desktop = JSON.stringify({ mcpServers: { kasboek: { command: info.mcpCommand.command, args: info.mcpCommand.args } } }, null, 2)
+  const quote = (p: string): string => (/\s/.test(p) ? `"${p}"` : p)
+  const code = `claude mcp add kasboek -- ${[info.mcpCommand.command, ...info.mcpCommand.args].map(quote).join(' ')}`
+  const copy = (v: string): void => void navigator.clipboard.writeText(v).then(() => toast(t('mcp.copied')), () => toast(t('auth.copyFailed'), 'error'))
+  return (
+    <>
+      <Row label={t('mcp.title')} hint={t('mcp.hint')}>
+        <Switch label={t('mcp.title')} checked={enabled} onChange={onChange} />
+      </Row>
+      {enabled && (
+        <div className="flex flex-col gap-3 px-5 py-4 text-[13px]">
+          <div>
+            <div className="mb-1 flex items-center justify-between"><span className="font-medium">{t('mcp.desktop')}</span><Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copy(desktop)}>{t('auth.copy')}</Button></div>
+            <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{desktop}</pre>
+          </div>
+          <div>
+            <div className="mb-1 flex items-center justify-between"><span className="font-medium">{t('mcp.code')}</span><Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copy(code)}>{t('auth.copy')}</Button></div>
+            <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{code}</pre>
+          </div>
+          <p className="text-xs text-muted">{t('mcp.note')}</p>
+        </div>
+      )}
+    </>
   )
 }

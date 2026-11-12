@@ -20,6 +20,8 @@ export interface LoopDeps {
   retryable(err: unknown): boolean
   runTool(name: string, input: unknown): Promise<{ ok: boolean; content: string }>
   mutates(name: string): boolean
+  /** Checks the input first, so the person is never asked to approve a call that would fail anyway. */
+  precheck(name: string, input: unknown): string | null
   confirm(name: string, input: unknown): Promise<boolean>
   onEvent(e: LoopEvent): void
 }
@@ -56,6 +58,12 @@ export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: 
     const results: ToolResult[] = []
     for (const use of uses) {
       if (signal.aborted) return 'aborted'
+      const invalid = deps.precheck(use.name, use.input)
+      if (invalid) {
+        results.push({ type: 'tool_result', tool_use_id: use.id, is_error: true, content: invalid })
+        deps.onEvent({ type: 'tool', name: use.name, ok: false })
+        continue
+      }
       if (deps.mutates(use.name) && !(await deps.confirm(use.name, use.input))) {
         results.push({ type: 'tool_result', tool_use_id: use.id, is_error: true, content: 'The person declined this change. Do not retry it unless they ask.' })
         deps.onEvent({ type: 'tool', name: use.name, ok: false })

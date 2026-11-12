@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AssistantPanel } from './components/AssistantPanel'
 import { Mark } from './components/Mark'
+import { McpRequests } from './components/McpRequests'
 import { ToastProvider, useToast } from './components/Toast'
 import { cx } from './components/ui'
 import { call } from './lib/api'
@@ -45,6 +46,7 @@ function Gate() {
   return (
     <SettingsProvider>
       <Shell />
+      <McpRequests />
       {status.recovered && <RecoveredModal />}
     </SettingsProvider>
   )

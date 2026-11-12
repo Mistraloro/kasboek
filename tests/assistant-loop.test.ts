@@ -19,6 +19,7 @@ function deps(script: unknown[], opts: { approve?: boolean } = {}) {
       return { ok: true, content: '{"ok":true}' }
     },
     mutates: (name) => name === 'budgets_set',
+    precheck: (_name, input) => ((input as { bad?: boolean })?.bad ? 'Invalid input' : null),
     confirm: async () => opts.approve ?? true,
     onEvent: (e) => events.push(e)
   }
@@ -48,6 +49,17 @@ describe('assistant loop', () => {
     await runTurn(messages, d, new AbortController().signal)
     expect(calls).toEqual([])
     expect(JSON.stringify(messages[2])).toContain('declined')
+  })
+
+  it('rejects invalid input without asking the person', async () => {
+    let asked = false
+    const { d, calls } = deps([msg([{ type: 'tool_use', id: 't1', name: 'budgets_set', input: { bad: true } }], 'tool_use'), msg([{ type: 'text', text: 'Fixed.' }], 'end_turn')])
+    d.confirm = async () => ((asked = true), true)
+    const messages: never[] = [{ role: 'user', content: 'x' } as never]
+    await runTurn(messages, d, new AbortController().signal)
+    expect(asked).toBe(false)
+    expect(calls).toEqual([])
+    expect(JSON.stringify(messages[2])).toContain('Invalid input')
   })
 
   it('never runs a tool call cut off by max_tokens, and stops on refusal', async () => {

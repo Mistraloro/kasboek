@@ -30,6 +30,14 @@ export function assistantTools(): ToolDef[] {
   return cache
 }
 
+/** Null if the input is valid for the tool, otherwise a message for the model. */
+export function precheck(name: string, input: unknown): string | null {
+  const def = opForTool(name)
+  if (!def) return `Unknown tool ${name}.`
+  const r = (contract[def.op] as ContractEntry).input.safeParse(input ?? {})
+  return r.success ? null : `Invalid input: ${z.prettifyError(r.error)}`
+}
+
 export function opForTool(name: string): ToolDef | undefined {
   return assistantTools().find((t) => t.name === name)
 }

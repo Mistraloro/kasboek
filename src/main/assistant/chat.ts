@@ -11,7 +11,7 @@ import type { OpName, OpResult } from '@shared/contract'
 import type { AssistantStatus, ChatMessage } from '@shared/types'
 import { broadcast, db } from '../session'
 import { API_KEY, client, explainError, modelParams } from './claude'
-import { assistantTools, compactResult, describeChange, opForTool } from './tools'
+import { assistantTools, compactResult, describeChange, opForTool, precheck } from './tools'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 let run: Run | null = null
@@ -132,6 +132,7 @@ export function send(text: string): AssistantStatus {
       },
       retryable: (err) => !(err instanceof Anthropic.APIError) && !(err instanceof AppError),
       mutates: (name) => opForTool(name)?.mutates ?? false,
+      precheck,
       runTool: async (name, input) => {
         const def = opForTool(name)
         if (!def) return { ok: false, content: `Unknown tool ${name}.` }

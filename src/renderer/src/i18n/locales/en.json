@@ -456,5 +456,15 @@
       "high": "High"
     },
     "privacy": "Recommended: Sonnet 5.5 (medium) for chat, Opus 5.5 (medium) for CSV checks. Higher effort is more thorough but slower and costs more. If a request is declined by Anthropic’s safety checks, it’s retried automatically on a fallback model (not available for Haiku)."
+  },
+  "mcp": {
+    "title": "Claude Desktop & Claude Code (MCP)",
+    "hint": "Let Claude apps on this computer read your budget and propose changes while Kasboek is open and unlocked.",
+    "desktop": "Claude Desktop: add to claude_desktop_config.json",
+    "code": "Claude Code: run in a terminal",
+    "note": "Works only while Kasboek is running and unlocked. Every change shows up here for you to approve. What Claude reads is sent to Anthropic by that app.",
+    "copied": "Copied.",
+    "requestTitle": "Request from Claude (MCP)",
+    "requestBody": "A Claude app connected through MCP wants to make this change:"
   }
 }
