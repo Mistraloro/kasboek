@@ -39,31 +39,52 @@ Anthropic’s own typefaces are licensed, so the closest free equivalents are us
 * Operations are marked `assistant: true/false`. Desktop-only actions (file dialogs, restore,
   passwords) are never offered to an AI.
 
-## Security and backups
+## Login, device binding and moving computers
 
-**On this computer**
-* The database file is encrypted with a random 256-bit key.
-* That key is protected by the operating system (DPAPI on Windows, Keychain on macOS,
-  GNOME Keyring/KWallet on Linux) through Electron `safeStorage`. Copying the files to
-  another machine or user account doesn’t open them.
-* The app warns in Settings → Security if no OS protection is available (Linux without a keyring).
-* Electron hardening: context isolation, sandboxed renderer, strict CSP, no navigation or
-  pop-ups, all permission requests denied, one IPC channel that only accepts the app’s own page.
-  Packaged builds set Electron fuses (no `ELECTRON_RUN_AS_NODE`, no `--inspect`,
-  no `NODE_OPTIONS`, asar integrity check).
+**Signing in** (chosen at first start, changeable later)
+* **Password**: the master key is unlocked with your password (scrypt, N=2¹⁷).
+* **Passwordless**: unlock with **Windows Hello** (face, fingerprint or PIN) or **Touch ID**.
+  The master key is protected by the operating system account; Hello/Touch ID confirms it’s you.
+  Password mode is stronger: passwordless doesn’t protect against malware running as you.
+* **Two-factor authentication (optional, both modes)**: 6-digit codes from an authenticator app
+  (Microsoft Authenticator, Google Authenticator, 1Password, …), TOTP / RFC 6238. Set up with a QR code.
+* **Recovery key**: shown once at setup (write it down or print it). Unlocks if you forget the
+  password or lose your phone, and is how passwordless accounts move to another computer.
+* Wrong attempts slow down (increasing waits). **Auto-lock** after inactivity, when the screen
+  locks or the computer sleeps. Lock now at any time.
 
-**Backups (`.kasboek` files)**
-* One file containing the still-encrypted database plus its key, sealed with **AES-256-GCM** using
-  a key derived from your **backup password** (scrypt, N=2¹⁷). Nothing is written to disk unencrypted.
-* Restoring needs only the backup password, so it works on a new computer.
-* Tampering or a wrong password is detected (authenticated encryption).
-* **Back up now** to any location, or **automatic daily backups** to a folder you pick
-  (OneDrive / iCloud Drive / Dropbox / USB drive), keeping the last N.
-* Before a restore, the current data is saved as a safety backup automatically.
-* The backup password is also kept in the OS keychain so automatic backups can run unattended.
-  Write it down: without it a backup can’t be opened.
+**Key hierarchy**
+```
+password ─scrypt─►┐
+recovery key ─────┼─► master key M ─► vault { database key, 2FA secret }
+Windows Hello ────┘        (each is a "key slot" that unwraps M)
+everything above, on disk ─► sealed again by the OS (DPAPI / Keychain / keyring) = device binding
+```
 
-## CSV import (Phase 3–4)
+**Device binding: copying the data folder doesn’t work.** The account file is sealed by this
+computer’s operating-system account. A copy on another computer (or another Windows user) can’t
+be opened, not even with the right password. Without the password (or Hello), it can’t be
+opened on this computer either.
+
+**Moving computers / backups: the only way out**
+* **Export** (Settings → Move to another computer) writes one `.kasboek` file. It contains the
+  encrypted database and vault, sealed with AES-256-GCM under the master key, plus the password
+  and recovery key slots, but **no device layer**.
+* It only opens through **Import** in Kasboek on the new computer, with your **password and
+  2FA code** (or the recovery key). There’s no other way to read it.
+* **Automatic backups** use the same format and protection, so a dead laptop isn’t lost data.
+  They’re made while Kasboek is unlocked, without asking for your password.
+* Changing your password doesn’t change older exports: they keep opening with the password
+  that was current when they were made.
+* 2FA is checked by the app. The encryption itself rests on the password/recovery key and
+  (locally) the device. This is the honest limit of offline 2FA.
+
+**Hardening** (from Phase 1): context isolation, sandboxed renderer, strict CSP, no navigation or
+pop-ups, all permission requests denied, one IPC channel that only accepts the app’s own page,
+Electron fuses in packaged builds. While locked, the database is closed and only login
+operations are accepted.
+
+## CSV import (Phase 4–5)
 
 1. **Parse in code**: detect encoding (UTF-8 BOM / Windows-1252), delimiter (`;` is typical in
    Belgium), header row (some exports have lines above it), decimal commas, `dd/mm/yyyy` dates.
@@ -84,7 +105,7 @@ own-account transfers (matched by IBAN, categorised as transfers, not spending).
 **What I need from you for Phase 3:** one real CSV export from each bank. You can blank out
 names and amounts; the column layout is what matters.
 
-## Claude (Phase 4) and MCP (Phase 5)
+## Claude (Phase 5) and MCP (Phase 6)
 
 * **In-app chat** (side panel, already in the layout): Claude uses the operation registry as tools.
   Questions are answered from your data; anything that changes data shows a confirmation card first.
@@ -117,12 +138,13 @@ You’ll need an Anthropic API key (console.anthropic.com). It’s billed separa
 
 | # | Scope | Status |
 |---|---|---|
-| 1 | Project setup, theme (dark/light, green), layout, encrypted DB + schema, OS keychain, encrypted backups (manual, automatic, restore), i18n, accounts, app icons, packaging config | **Done** |
-| 2 | Transactions list/edit, categories, monthly budgets, overview with real numbers and charts | Next |
-| 3 | CSV pipeline in code: parse, Belgian bank profiles, preview, duplicate check, import | |
-| 4 | Claude: settings for API key and model, chat panel with tools, CSV assistant | |
-| 5 | MCP server | |
-| 6 | Tests with bank fixtures, polish, installer signing, release builds for all three OSes | |
+| 1 | Project setup, theme, layout, encrypted DB, OS keychain, encrypted backups, i18n, accounts, app icons, packaging | Done |
+| 2 | **Login & device security**: password or passwordless (Windows Hello / Touch ID), 2FA (TOTP), recovery key, lock screen, auto-lock, device binding, encrypted **export/import for moving computers**, backups moved onto login credentials | Done |
+| 3 | Transactions (list, search, edit, bulk categorise), categories, rules, monthly budgets, overview with real numbers and charts | |
+| 4 | CSV pipeline in code: encoding/delimiter/header detection, Argenta / Hello bank! / Keytrade profiles, preview, duplicates, import, undo import | |
+| 5 | Claude: API key and model settings, chat panel with tools and confirmations, CSV assistant | |
+| 6 | MCP server for Claude Desktop / Claude Code | |
+| 7 | Tests with bank fixtures, polish, docs, release builds for all three OSes | |
 
 ## Brand
 

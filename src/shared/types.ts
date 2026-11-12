@@ -27,18 +27,42 @@ export interface Category {
   archived: boolean
 }
 
+/** Data settings, stored in the encrypted database. */
 export interface Settings {
-  theme: Theme
-  /** UI language (i18n resource key). */
-  language: string
-  /** Locale used to format numbers and dates, e.g. `en-BE` or `nl-BE`. */
-  formatLocale: string
   currency: string
   autoBackupEnabled: boolean
   autoBackupFolder: string | null
   autoBackupKeep: number
   lastBackupAt: string | null
   lastBackupFile: string | null
+}
+
+/** Interface preferences, stored outside the database so the lock screen can use them. */
+export interface Prefs {
+  theme: Theme
+  /** UI language (i18n resource key). */
+  language: string
+  /** Locale used to format numbers and dates, e.g. `en-BE` or `nl-BE`. */
+  formatLocale: string
+  /** Lock after this many minutes without keyboard or mouse use. 0 = never. */
+  autoLockMinutes: number
+}
+
+export type AuthMode = 'password' | 'device'
+export type DeviceAuthKind = 'windows-hello' | 'touch-id' | null
+
+export interface AuthStatus {
+  state: 'setup' | 'locked' | 'unlocked'
+  mode: AuthMode | null
+  twoFactor: boolean
+  device: DeviceAuthKind
+  throttleSeconds: number
+  /** Unlocked with the recovery key; a new password should be chosen. */
+  recovered: boolean
+  /** Data from an earlier version exists and will be kept at setup. */
+  legacyData: boolean
+  keyProtection: KeyProtection
+  error: { code: string; message: string } | null
 }
 
 export type KeyProtection = 'os' | 'weak'
@@ -48,14 +72,14 @@ export interface AppInfo {
   version: string
   platform: NodeJSPlatform
   dataDir: string
-  keyProtection: KeyProtection
+  /** Command and arguments to run Kasboek as an MCP server. */
+  mcpCommand: { command: string; args: string[] }
 }
 
 /** Narrowed copy of `NodeJS.Platform`, so the renderer does not need Node types. */
 export type NodeJSPlatform = 'win32' | 'darwin' | 'linux' | 'aix' | 'android' | 'freebsd' | 'haiku' | 'openbsd' | 'sunos' | 'cygwin' | 'netbsd'
 
 export interface BackupStatus {
-  passwordSet: boolean
   autoEnabled: boolean
   folder: string | null
   keep: number
@@ -63,9 +87,15 @@ export interface BackupStatus {
   lastBackupFile: string | null
 }
 
-export interface PickedBackup {
+export interface PickedTransfer {
   token: string
   fileName: string
+  kind: 'export' | 'backup'
   createdAt: string
   appVersion: string
+  mode: AuthMode
+  twoFactor: boolean
+  hasPassword: boolean
+  /** Passwordless export, but this computer has no Windows Hello / Touch ID. */
+  needsNewPassword: boolean
 }

@@ -6,13 +6,13 @@ import { useSettings } from '../lib/settings'
 
 export function Budgets() {
   const { t } = useTranslation()
-  const { settings, money } = useSettings()
+  const { locale, money } = useSettings()
   const categories = useOp('categories.list')
   const expense = (categories.data ?? []).filter((c) => c.kind === 'expense' && !c.archived)
 
   return (
     <>
-      <PageHeader title={t('budgets.title')} subtitle={monthLabel(new Date(), settings.formatLocale)} />
+      <PageHeader title={t('budgets.title')} subtitle={monthLabel(new Date(), locale)} />
       <Card>
         <table className="w-full text-sm">
           <thead>

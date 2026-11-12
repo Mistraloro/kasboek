@@ -1,11 +1,16 @@
-import { ArrowLeftRight, FileUp, LayoutDashboard, PanelRight, Settings as SettingsIcon, Target } from 'lucide-react'
+import { ArrowLeftRight, FileUp, LayoutDashboard, Lock as LockIcon, PanelRight, Settings as SettingsIcon, Target } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AssistantPanel } from './components/AssistantPanel'
 import { Mark } from './components/Mark'
 import { ToastProvider, useToast } from './components/Toast'
 import { cx } from './components/ui'
-import { SettingsProvider, useSettings } from './lib/settings'
+import { call } from './lib/api'
+import { AuthProvider, useAuth } from './lib/auth'
+import { PrefsProvider, SettingsProvider, usePrefs } from './lib/settings'
+import { Lock } from './pages/auth/Lock'
+import { RecoveredModal } from './pages/auth/RecoveredModal'
+import { Setup } from './pages/auth/Setup'
 import { Budgets } from './pages/Budgets'
 import { ImportPage } from './pages/Import'
 import { Overview } from './pages/Overview'
@@ -24,16 +29,31 @@ const NAV: { page: Page; icon: ReactNode }[] = [
 export function App() {
   return (
     <ToastProvider>
-      <SettingsProvider>
-        <Shell />
-      </SettingsProvider>
+      <PrefsProvider>
+        <AuthProvider>
+          <Gate />
+        </AuthProvider>
+      </PrefsProvider>
     </ToastProvider>
+  )
+}
+
+function Gate() {
+  const { status } = useAuth()
+  if (status.state === 'setup') return <Setup />
+  if (status.state === 'locked') return <Lock />
+  return (
+    <SettingsProvider>
+      <Shell />
+      {status.recovered && <RecoveredModal />}
+    </SettingsProvider>
   )
 }
 
 function Shell() {
   const { t } = useTranslation()
-  const { info } = useSettings()
+  const { info } = usePrefs()
+  const { set } = useAuth()
   const toast = useToast()
   const [page, setPage] = useState<Page>('overview')
   const [assistantOpen, setAssistantOpen] = useState(true)
@@ -72,7 +92,17 @@ function Shell() {
           <span className="font-serif text-[17px] font-semibold tracking-[-0.01em]">{t('app.name')}</span>
         </div>
         <nav className="mt-4 flex flex-1 flex-col gap-0.5 px-3">{NAV.map((n) => navItem(n.page, n.icon))}</nav>
-        <div className="px-3 pb-4">{navItem('settings', <SettingsIcon size={17} />)}</div>
+        <div className="flex flex-col gap-0.5 px-3 pb-4">
+          {navItem('settings', <SettingsIcon size={17} />)}
+          <button
+            type="button"
+            onClick={() => void call('auth.lock').then(set)}
+            className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+          >
+            <LockIcon size={17} />
+            {t('nav.lock')}
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

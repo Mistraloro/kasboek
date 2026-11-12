@@ -135,9 +135,12 @@ export async function runOp<K extends OpName>(
   try {
     const data = await def.handler(ctx, parsed.data as OpParsedInput<K>)
     if (def.mutates) {
-      ctx.db
-        .prepare('INSERT INTO audit_log (actor, action, details) VALUES (?, ?, ?)')
-        .run(ctx.actor, name, redact(name, parsed.data))
+      try {
+        ctx.db.prepare('INSERT INTO audit_log (actor, action, details) VALUES (?, ?, ?)').run(ctx.actor, name, redact(name, parsed.data))
+      } catch (err) {
+        // Locked (e.g. right after "erase"): nothing to log into.
+        if (!(err instanceof AppError && err.code === 'auth.locked')) throw err
+      }
     }
     return { ok: true, data }
   } catch (err) {
@@ -149,6 +152,6 @@ export async function runOp<K extends OpName>(
 
 /** Never store secrets in the audit log. */
 function redact(name: string, input: unknown): string {
-  if (name.startsWith('backup.')) return '{}'
+  if (/^(auth|transfer|backup|prefs)\./.test(name)) return '{}'
   return JSON.stringify(input)
 }

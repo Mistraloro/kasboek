@@ -9,19 +9,19 @@ import { useSettings } from '../lib/settings'
 
 export function Overview({ go }: { go: (p: Page) => void }) {
   const { t } = useTranslation()
-  const { settings, money } = useSettings()
+  const { locale, money } = useSettings()
   const backup = useOp('backup.status')
   const accounts = useOp('accounts.list')
 
   const steps: { done: boolean; title: string; body: string; page: Page }[] = [
-    { done: !!backup.data?.passwordSet, title: t('overview.stepBackup'), body: t('overview.stepBackupBody'), page: 'settings' },
+    { done: !!backup.data?.autoEnabled, title: t('overview.stepBackup'), body: t('overview.stepBackupBody'), page: 'settings' },
     { done: (accounts.data?.length ?? 0) > 0, title: t('overview.stepAccounts'), body: t('overview.stepAccountsBody'), page: 'settings' },
     { done: false, title: t('overview.stepImport'), body: t('overview.stepImportBody'), page: 'import' }
   ]
 
   return (
     <>
-      <PageHeader title={t('overview.title')} subtitle={monthLabel(new Date(), settings.formatLocale)} />
+      <PageHeader title={t('overview.title')} subtitle={monthLabel(new Date(), locale)} />
 
       <div className="grid grid-cols-3 gap-4">
         <Stat label={t('overview.income')} value={money(0)} />

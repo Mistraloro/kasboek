@@ -2,9 +2,6 @@ import type { Settings } from '@shared/types'
 import type { Db } from './database'
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'system',
-  language: 'en',
-  formatLocale: 'en-BE',
   currency: 'EUR',
   autoBackupEnabled: false,
   autoBackupFolder: null,
