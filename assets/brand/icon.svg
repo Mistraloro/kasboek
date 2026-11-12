@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Kasboek app icon. Plate: dark ink. Mark: a K whose upper arm (money in) is bright and lower arm (money out) is dimmed. -->
+  <rect x="64" y="64" width="896" height="896" rx="208" fill="#0E110F"/>
+  <rect x="70" y="70" width="884" height="884" rx="202" fill="none" stroke="#24302A" stroke-width="12"/>
+  <path d="M492 512 L704 724" stroke="#3FCF8E" stroke-opacity=".5" stroke-width="120" stroke-linecap="round"/>
+  <path d="M492 512 L704 300" stroke="#3FCF8E" stroke-width="120" stroke-linecap="round"/>
+  <rect x="292" y="252" width="120" height="520" rx="60" fill="#3FCF8E"/>
+</svg>

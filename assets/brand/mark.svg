@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="240 200 520 624" fill="currentColor">
+  <!-- The bare mark, no plate. Takes the text colour (currentColor), so it follows the theme. -->
+  <path d="M492 512 L704 724" stroke="currentColor" stroke-opacity=".5" stroke-width="120" stroke-linecap="round"/>
+  <path d="M492 512 L704 300" stroke="currentColor" stroke-width="120" stroke-linecap="round"/>
+  <rect x="292" y="252" width="120" height="520" rx="60"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Variant for 16–32 px: full-bleed plate and heavier strokes so the K stays readable. -->
+  <rect width="1024" height="1024" rx="200" fill="#0E110F"/>
+  <path d="M500 512 L760 772" stroke="#3FCF8E" stroke-opacity=".6" stroke-width="170" stroke-linecap="round"/>
+  <path d="M500 512 L760 252" stroke="#3FCF8E" stroke-width="170" stroke-linecap="round"/>
+  <rect x="200" y="167" width="170" height="690" rx="85" fill="#3FCF8E"/>
+</svg>
