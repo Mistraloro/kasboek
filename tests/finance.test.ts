@@ -74,6 +74,7 @@ describe('migration 3', () => {
     const key = randomBytes(32).toString('hex')
     const db = openDatabase(file, key)
     db.prepare("INSERT INTO accounts (name, bank) VALUES ('a', 'hellobank'), ('b', 'other')").run()
+    db.exec('DROP TABLE fx_rates')
     db.pragma('user_version = 2')
     db.close()
     const again = openDatabase(file, key)

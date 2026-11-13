@@ -10,7 +10,14 @@ import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
 import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS } from './format'
 import { checkPassword } from './password'
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import { CURRENCIES } from './currency'
+
+const currency = z
+  .string()
+  .trim()
+  .transform((s) => s.toUpperCase())
+  .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -138,7 +145,26 @@ export const contract = {
 
   /* ----- Data ----- */
   'settings.get': { input: empty, output: out<Settings>() },
-  'settings.update': { input: z.object({ currency: z.string().length(3) }).partial().strict(), output: out<Settings>() },
+  'settings.update': { input: z.object({ currency, fxAutoUpdate: z.boolean() }).partial().strict(), output: out<Settings>() },
+
+  /* ----- Currencies ----- */
+  'fx.status': {
+    description: 'Currencies in use and the exchange rates Kasboek has for them (units per 1 euro). Totals are shown in the main currency.',
+    input: empty,
+    output: out<FxStatus>()
+  },
+  'fx.rates': {
+    description: 'Exchange rates typed in by hand, newest first (units of the currency per 1 euro).',
+    input: z.object({ currency: currency.optional() }).strict(),
+    output: out<FxRate[]>()
+  },
+  'fx.setRate': {
+    description: 'Set an exchange rate by hand: how many units of `currency` one euro was worth on `date`. Used from that date on, until the next rate.',
+    input: z.object({ currency, date, perEur: z.number().positive().max(1e9) }).strict(),
+    output: out<FxStatus>()
+  },
+  'fx.deleteRate': { input: z.object({ currency, date }).strict(), output: out<FxStatus>() },
+  'fx.updateEcb': { input: empty, output: out<FxStatus & { added: number }>() },
 
   'accounts.list': {
     description: 'List bank accounts with their current balance (cents).',
@@ -146,7 +172,7 @@ export const contract = {
     output: out<AccountWithBalance[]>()
   },
   'accounts.update': {
-    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), archived: z.boolean().optional() }).strict(),
+    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), currency: currency.optional(), archived: z.boolean().optional() }).strict(),
     output: out<Account>()
   },
   'accounts.create': {
@@ -155,7 +181,7 @@ export const contract = {
         name: z.string().trim().min(1).max(80),
         bank: z.string().trim().max(60).default(''),
         iban: z.string().trim().max(34).nullable().optional(),
-        currency: z.string().length(3).default('EUR'),
+        currency: currency.default('EUR'),
         openingBalanceCents: z.number().int().default(0)
       })
       .strict(),

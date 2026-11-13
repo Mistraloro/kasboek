@@ -4,6 +4,11 @@ import type { BudgetRow, MonthSummary, Rule, RuleField, Transaction, Transaction
 import type { Db } from './database'
 import { AppError } from './errors'
 import { fingerprint } from './fingerprint'
+import { getSettings } from './settings'
+
+/** A transaction's amount in currency `to` (SQL parameter by default), NULL when there is no rate. */
+const FX = (to = '?'): string => `fx(t.amount_cents, t.currency, t.booking_date, ${to})`
+const mainCurrency = (db: Db): string => getSettings(db).currency
 
 /* ---------- Transactions ---------- */
 
@@ -82,11 +87,11 @@ export function listTransactions(db: Db, f: TxFilter): TransactionPage {
   const items = (db.prepare(`${TX_SELECT} ${w} ORDER BY t.booking_date DESC, t.id DESC LIMIT ? OFFSET ?`).all(...args, f.limit, f.offset) as TxRow[]).map(toTx)
   const agg = db
     .prepare(
-      `SELECT count(*) AS n, coalesce(sum(CASE WHEN amount_cents > 0 THEN amount_cents END), 0) AS inc,
-              coalesce(sum(CASE WHEN amount_cents < 0 THEN amount_cents END), 0) AS outc
+      `SELECT count(*) AS n, coalesce(sum(CASE WHEN amount_cents > 0 THEN ${FX()} END), 0) AS inc,
+              coalesce(sum(CASE WHEN amount_cents < 0 THEN ${FX()} END), 0) AS outc
        FROM transactions t ${w}`
     )
-    .get(...args) as { n: number; inc: number; outc: number }
+    .get(mainCurrency(db), mainCurrency(db), ...args) as { n: number; inc: number; outc: number }
   return { items, total: agg.n, inCents: agg.inc, outCents: -agg.outc }
 }
 
@@ -134,7 +139,7 @@ export function insertTransaction(db: Db, t: NewTx): number {
       t.bookingDate,
       t.valueDate ?? null,
       t.amountCents,
-      t.currency ?? 'EUR',
+      t.currency ?? (db.prepare('SELECT currency FROM accounts WHERE id = ?').get(t.accountId) as { currency: string } | undefined)?.currency ?? 'EUR',
       t.description,
       t.counterpartyName ?? null,
       t.counterpartyIban ?? null,
@@ -275,12 +280,12 @@ function spentByCategory(db: Db, month: string): Map<number | null, number> {
   const r = monthRange(month)
   const rows = db
     .prepare(
-      `SELECT t.category_id AS id, -sum(t.amount_cents) AS spent FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
+      `SELECT t.category_id AS id, -coalesce(sum(${FX()}), 0) AS spent FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.booking_date >= ? AND t.booking_date < ? AND (c.kind IS NULL OR c.kind = 'expense')
          AND (t.amount_cents < 0 OR c.kind = 'expense')
        GROUP BY t.category_id`
     )
-    .all(r.from, r.to) as { id: number | null; spent: number }[]
+    .all(mainCurrency(db), r.from, r.to) as { id: number | null; spent: number }[]
   return new Map(rows.map((x) => [x.id, x.spent]))
 }
 
@@ -320,12 +325,12 @@ function incomeAndSpending(db: Db, month: string): { incomeCents: number; spendi
   const r = monthRange(month)
   const row = db
     .prepare(
-      `SELECT coalesce(sum(CASE WHEN t.amount_cents > 0 THEN t.amount_cents END), 0) AS inc,
-              coalesce(-sum(CASE WHEN t.amount_cents < 0 THEN t.amount_cents END), 0) AS spend
+      `SELECT coalesce(sum(CASE WHEN t.amount_cents > 0 THEN ${FX()} END), 0) AS inc,
+              coalesce(-sum(CASE WHEN t.amount_cents < 0 THEN ${FX()} END), 0) AS spend
        FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.booking_date >= ? AND t.booking_date < ? AND (c.kind IS NULL OR c.kind != 'transfer')`
     )
-    .get(r.from, r.to) as { inc: number; spend: number }
+    .get(mainCurrency(db), mainCurrency(db), r.from, r.to) as { inc: number; spend: number }
   return { incomeCents: row.inc, spendingCents: row.spend }
 }
 
@@ -342,6 +347,7 @@ export function monthSummary(db: Db, month: string): MonthSummary {
     .sort((a, b) => b.cents - a.cents)
   const r = monthRange(month)
   const uncategorized = (db.prepare('SELECT count(*) AS n FROM transactions WHERE category_id IS NULL AND booking_date >= ? AND booking_date < ?').get(r.from, r.to) as { n: number }).n
+  const unconverted = (db.prepare(`SELECT count(*) AS n FROM transactions t WHERE t.booking_date >= ? AND t.booking_date < ? AND ${FX()} IS NULL`).get(r.from, r.to, mainCurrency(db)) as { n: number }).n
   const history = Array.from({ length: 6 }, (_, i) => addMonths(month, i - 5)).map((m) => ({ month: m, ...incomeAndSpending(db, m) }))
   return {
     month,
@@ -351,13 +357,24 @@ export function monthSummary(db: Db, month: string): MonthSummary {
     leftCents: budgeted.length ? budgetedCents - spentOnBudgeted : null,
     byCategory,
     uncategorized,
+    unconverted,
     history
   }
 }
 
-export function accountBalances(db: Db): Map<number, { balance: number; count: number }> {
+/**
+ * Balance per account in the account's own currency (a transaction in another currency is
+ * converted at its date's rate), and that balance in the main currency at today's rate.
+ */
+export function accountBalances(db: Db, today = new Date().toISOString().slice(0, 10)): Map<number, { balance: number; balanceMain: number | null; count: number }> {
   const rows = db
-    .prepare('SELECT a.id, a.opening_balance_cents + coalesce(sum(t.amount_cents), 0) AS bal, count(t.id) AS n FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id GROUP BY a.id')
-    .all() as { id: number; bal: number; n: number }[]
-  return new Map(rows.map((r) => [r.id, { balance: r.bal, count: r.n }]))
+    .prepare(
+      `SELECT a.id, a.currency, a.opening_balance_cents + coalesce(sum(${FX('a.currency')}), 0) AS bal, count(t.id) AS n
+       FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id GROUP BY a.id`
+    )
+    .all() as { id: number; currency: string; bal: number; n: number }[]
+  const main = mainCurrency(db)
+  return new Map(
+    rows.map((r) => [r.id, { balance: r.bal, balanceMain: (db.prepare('SELECT fx(?, ?, ?, ?) AS v').get(r.bal, r.currency, today, main) as { v: number | null }).v, count: r.n }])
+  )
 }

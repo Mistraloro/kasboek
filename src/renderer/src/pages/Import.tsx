@@ -191,8 +191,8 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
       <Card className="mb-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
           <span className="num">{t('import.period')}: <span className="font-medium">{s.from ? `${formatDate(s.from, fmt)} – ${formatDate(s.to!, fmt)}` : '—'}</span></span>
-          <span className="num">{t('transactions.in')} <span className="font-medium">{money(s.inCents)}</span></span>
-          <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents)}</span></span>
+          <span className="num">{t('transactions.in')} <span className="font-medium">{money(s.inCents, preview.currency)}</span></span>
+          <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents, preview.currency)}</span></span>
           <span className="ml-auto flex items-center gap-2">
             {onAssist ? (
               <Button size="sm" variant="primary" icon={<Sparkles size={14} />} disabled={assisting} title={t('import.checkPrivacy')} onClick={() => onAssist(preview)}>
@@ -275,7 +275,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
                           if (c) update([{ index: r.index, amountCents: c }])
                           else if (v) toast(t('budgets.invalid'), 'error')
                         }}>{t('import.badAmount')}</button>
-                      ) : money(r.amountCents)}
+                      ) : money(r.amountCents, preview.currency)}
                     </td>
                     <td className="py-2 pr-5 pl-2" title={r.issues.map((i) => t(`import.issue.${i}`)).join(' · ')}>
                       <Badge tone={STATUS_TONE[r.status]}>{t(`import.status.${r.status}`)}</Badge>

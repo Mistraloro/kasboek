@@ -1,11 +1,17 @@
 import { z } from 'zod'
 import { contract, type OpName, type OpOutput, type OpParsedInput, type OpResult } from '@shared/contract'
-import type { Account, AccountWithBalance, Actor, Category } from '@shared/types'
+import type { Account, AccountWithBalance, Actor, Category, FxStatus } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
 import * as fin from './finance'
 import * as imp from './import'
+import * as fx from './fx'
+
+export function fxStatus(db: Db): FxStatus {
+  const s = getSettings(db)
+  return { main: s.currency, currencies: fx.currencyInfo(db, s.currency), lastEcbUpdateAt: s.fxLastEcbUpdateAt, autoUpdate: s.fxAutoUpdate }
+}
 
 export interface OpContext {
   db: Db
@@ -82,6 +88,24 @@ export const coreOps: OpTable = {
     assistant: false,
     handler: ({ db }, patch) => updateSettings(db, patch)
   },
+  'fx.status': { mutates: false, assistant: true, handler: ({ db }) => fxStatus(db) },
+  'fx.rates': { mutates: false, assistant: true, handler: ({ db }, input) => fx.listManualRates(db, input.currency) },
+  'fx.setRate': {
+    mutates: true,
+    assistant: true,
+    handler: ({ db }, input) => {
+      fx.setManualRate(db, input)
+      return fxStatus(db)
+    }
+  },
+  'fx.deleteRate': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, input) => {
+      fx.deleteManualRate(db, input)
+      return fxStatus(db)
+    }
+  },
   'accounts.list': {
     mutates: false,
     assistant: true,
@@ -90,6 +114,7 @@ export const coreOps: OpTable = {
       return (db.prepare('SELECT * FROM accounts ORDER BY archived, name').all() as AccountRow[]).map((r) => ({
         ...toAccount(r),
         balanceCents: bal.get(r.id)?.balance ?? r.opening_balance_cents,
+        balanceMainCents: bal.get(r.id)?.balanceMain ?? null,
         transactionCount: bal.get(r.id)?.count ?? 0
       }))
     }
@@ -100,13 +125,19 @@ export const coreOps: OpTable = {
     handler: ({ db }, input) => {
       const cur = db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow | undefined
       if (!cur) throw new AppError('accounts.not_found', 'Account not found.')
-      db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, archived = ? WHERE id = ?').run(
-        input.name ?? cur.name,
-        input.bank ?? cur.bank,
-        input.iban !== undefined ? normalizeIban(input.iban) : cur.iban,
-        input.archived !== undefined ? (input.archived ? 1 : 0) : cur.archived,
-        input.id
-      )
+      db.transaction(() => {
+        db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, currency = ?, archived = ? WHERE id = ?').run(
+          input.name ?? cur.name,
+          input.bank ?? cur.bank,
+          input.iban !== undefined ? normalizeIban(input.iban) : cur.iban,
+          input.currency ?? cur.currency,
+          input.archived !== undefined ? (input.archived ? 1 : 0) : cur.archived,
+          input.id
+        )
+        // Changing the currency corrects it: amounts that were in the old one now count in the new one.
+        if (input.currency && input.currency !== cur.currency)
+          db.prepare('UPDATE transactions SET currency = ? WHERE account_id = ? AND currency = ?').run(input.currency, input.id, cur.currency)
+      })()
       return toAccount(db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow)
     }
   },

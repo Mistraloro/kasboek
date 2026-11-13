@@ -171,12 +171,13 @@ export function preview(db: Db, id: string): ImportPreview {
   const ready = rows.filter((r) => r.status === 'ready')
   const dates = ready.map((r) => r.bookingDate!).sort()
   const headerRow = s.mapping?.headerRow ?? 0
-  const account = db.prepare('SELECT name FROM accounts WHERE id = ?').get(s.accountId) as { name: string }
+  const account = db.prepare('SELECT name, currency FROM accounts WHERE id = ?').get(s.accountId) as { name: string; currency: string }
   return {
     sessionId: s.id,
     fileName: s.fileName,
     accountId: s.accountId,
     accountName: account.name,
+    currency: account.currency,
     layout: s.layout,
     encoding: s.encoding,
     mappingSource: s.mappingSource,

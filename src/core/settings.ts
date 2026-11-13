@@ -3,6 +3,8 @@ import type { Db } from './database'
 
 export const DEFAULT_SETTINGS: Settings = {
   currency: 'EUR',
+  fxAutoUpdate: false,
+  fxLastEcbUpdateAt: null,
   autoBackupEnabled: false,
   autoBackupFolder: null,
   autoBackupKeep: 10,

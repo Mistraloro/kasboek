@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3-multiple-ciphers'
 import { AppError } from './errors'
+import { installFx } from './fx'
 import { migrate } from './migrations'
 
 export type Db = Database.Database
@@ -33,6 +34,7 @@ export function openDatabase(file: string, keyHex: string, opts: { migrate?: boo
   db.pragma('secure_delete = ON')
   db.pragma('journal_mode = DELETE')
   if (opts.migrate !== false) migrate(db)
+  installFx(db)
   return db
 }
 

@@ -13,7 +13,7 @@ const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.sli
 
 export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown>) => void }) {
   const { t } = useTranslation()
-  const { fmt, money } = useSettings()
+  const { fmt, money, settings } = useSettings()
   const [month, setMonth] = useState(monthOf())
   const summary = useOp('summary.month', { month })
   const backup = useOp('backup.status')
@@ -42,6 +42,13 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
           hint={s?.leftCents == null ? t('overview.noBudgets') : t('overview.ofBudget', { budget: money(s.budgetedCents) })}
         />
       </div>
+
+      {s && s.unconverted > 0 && (
+        <button type="button" onClick={() => go('settings')} className="mt-4 flex w-full items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-left text-[13px] hover:bg-surface-2">
+          <span className="font-medium text-warning">{t('fx.unconverted', { count: s.unconverted })}</span>
+          <span className="text-muted">{t('fx.unconvertedHint')}</span>
+        </button>
+      )}
 
       {s && s.uncategorized > 0 && (
         <button
@@ -90,7 +97,12 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
             {(accounts.data ?? []).filter((a) => !a.archived).map((a) => (
               <div key={a.id} className="flex items-center justify-between border-b border-border px-5 py-3 text-[13px] last:border-b-0">
                 <span className="truncate">{a.name}</span>
-                <span className="num font-medium">{money(a.balanceCents)}</span>
+                <span className="text-right">
+                  <span className="num font-medium">{money(a.balanceCents, a.currency)}</span>
+                  {a.currency !== settings.currency && (
+                    <span className="num block text-xs text-muted">{a.balanceMainCents === null ? t('fx.noRateShort') : `≈ ${money(a.balanceMainCents)}`}</span>
+                  )}
+                </span>
               </div>
             ))}
           </Card>

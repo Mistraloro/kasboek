@@ -202,7 +202,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                   </td>
                   <td className={cx('num py-2.5 pr-5 pl-3 text-right font-medium whitespace-nowrap', tx.amountCents > 0 && 'text-accent')}>
                     {tx.amountCents > 0 ? '+' : ''}
-                    {money(tx.amountCents)}
+                    {money(tx.amountCents, tx.currency)}
                   </td>
                 </tr>
               ))}

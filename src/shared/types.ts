@@ -26,9 +26,37 @@ export interface Category {
   archived: boolean
 }
 
+export interface FxRate {
+  currency: string
+  date: string
+  /** Units of `currency` for 1 euro. */
+  perEur: number
+  source: 'ecb' | 'manual'
+}
+
+export interface FxCurrencyInfo {
+  currency: string
+  latest: { date: string; perEur: number; source: 'ecb' | 'manual' } | null
+  ecbRates: number
+  manualRates: number
+  /** False when transactions are older than the first known rate (the first rate is used for them). */
+  coversOldest: boolean
+}
+
+export interface FxStatus {
+  main: string
+  currencies: FxCurrencyInfo[]
+  lastEcbUpdateAt: string | null
+  autoUpdate: boolean
+}
+
 /** Data settings, stored in the encrypted database. */
 export interface Settings {
+  /** Main currency: totals, budgets and net worth are shown in it. */
   currency: string
+  /** Download the ECB reference rates by itself (at most once a day) when other currencies are in use. */
+  fxAutoUpdate: boolean
+  fxLastEcbUpdateAt: string | null
   autoBackupEnabled: boolean
   autoBackupFolder: string | null
   autoBackupKeep: number
@@ -181,11 +209,16 @@ export interface MonthSummary {
   leftCents: number | null
   byCategory: { categoryId: number | null; name: string; cents: number }[]
   uncategorized: number
+  /** Transactions this month in a currency without any exchange rate (left out of the totals). */
+  unconverted: number
   history: { month: string; incomeCents: number; spendingCents: number }[]
 }
 
 export interface AccountWithBalance extends Account {
+  /** In the account's own currency. */
   balanceCents: number
+  /** In the main currency at the latest rate; null when there is no rate. */
+  balanceMainCents: number | null
   transactionCount: number
 }
 
@@ -239,6 +272,8 @@ export interface ImportPreview {
   fileName: string
   accountId: number
   accountName: string
+  /** The account's currency; amounts in the preview are in it. */
+  currency: string
   /** Internal id of a recognised file layout, or null. Not a bank list: any bank's CSV works. */
   layout: string | null
   encoding: string

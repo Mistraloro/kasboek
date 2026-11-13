@@ -65,7 +65,7 @@ export function usePrefsFmt(): Fmt {
 
 interface SettingsValue extends PrefsValue {
   settings: Settings
-  update: (patch: { currency?: string }) => Promise<void>
+  update: (patch: { currency?: string; fxAutoUpdate?: boolean }) => Promise<void>
   /** Money in the main currency, or in `currency` when given. */
   money: (cents: number, currency?: string) => string
   fmt: Fmt
@@ -79,7 +79,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void call('settings.get').then(setSettings)
   }, [])
-  const update = useCallback(async (patch: { currency?: string }) => setSettings(await call('settings.update', patch)), [])
+  const update = useCallback(async (patch: { currency?: string; fxAutoUpdate?: boolean }) => setSettings(await call('settings.update', patch)), [])
   const value = useMemo(() => {
     if (!settings) return null
     const fmt: Fmt = { formats: prefsValue.prefs.formats, language: prefsValue.prefs.language }

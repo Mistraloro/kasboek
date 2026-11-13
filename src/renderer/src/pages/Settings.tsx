@@ -11,6 +11,7 @@ import { formatDate, formatDateTime, formatMoney, formatNumber, type Fmt } from 
 import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS, formatTime, type CurrencyPosition, type CurrencyStyle, type DatePattern, type DecimalSeparator, type FormatPrefs, type GroupSeparator, type Grouping, type NegativeStyle, type TimeFormat } from '@shared/format'
 import { useSettings } from '../lib/settings'
 import { ImportFlow } from './auth/ImportFlow'
+import { CurrencySelect } from '../components/CurrencySelect'
 import { ClaudeSection } from './SettingsClaude'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 
@@ -37,6 +38,7 @@ export function SettingsPage() {
         <TransferSection />
         <BackupSection />
         <AccountsSection />
+        <CurrenciesSection />
         <AppearanceSection />
         <FormatsSection />
       </div>
@@ -300,6 +302,96 @@ function BackupSection() {
   )
 }
 
+/* ---------- Currencies ---------- */
+
+function CurrenciesSection() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { settings, update, fmt } = useSettings()
+  const status = useOp('fx.status')
+  const manual = useOp('fx.rates', {})
+  const [busy, setBusy] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const today = new Date().toISOString().slice(0, 10)
+  const [rate, setRate] = useState({ currency: 'USD', date: today, perEur: '' })
+  const reload = (): void => {
+    void status.reload()
+    void manual.reload()
+  }
+  useEffect(() => window.kasboek.onEvent((e) => e.type === 'data.changed' && reload()), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const download = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      const r = await call('fx.updateEcb', {})
+      toast(t('fx.downloaded', { count: r.added }))
+      reload()
+    } catch (e) {
+      toast(errText(e), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const saveRate = async (): Promise<void> => {
+    const perEur = Number(rate.perEur.replace(',', '.'))
+    try {
+      await call('fx.setRate', { currency: rate.currency, date: rate.date, perEur })
+      toast(t('fx.rateSaved'))
+      setAdding(false)
+      reload()
+    } catch (e) {
+      toast(errText(e), 'error')
+    }
+  }
+  const s = status.data
+  const rateText = (cur: string, perEur: number): string => `1 EUR = ${formatNumber(perEur, fmt, perEur >= 100 ? 2 : 4)} ${cur}`
+  return (
+    <Card>
+      <CardHeader title={t('fx.title')} description={t('fx.hint')} />
+      <Row label={t('fx.main')} hint={t('fx.mainHint')}>
+        <CurrencySelect className="w-64!" value={settings.currency} onChange={(e) => void update({ currency: e.target.value }).then(reload)} aria-label={t('fx.main')} />
+      </Row>
+      {s?.currencies.map((c) => (
+        <Row
+          key={c.currency}
+          label={c.currency}
+          hint={
+            c.latest
+              ? `${rateText(c.currency, c.latest.perEur)} · ${formatDate(c.latest.date, fmt)} · ${t(c.latest.source === 'ecb' ? 'fx.sourceEcb' : 'fx.sourceManual')}${c.coversOldest ? '' : ' · ' + t('fx.olderThanRates')}`
+              : t('fx.noRate')
+          }
+        >
+          {c.latest ? <Badge tone="accent">{t('fx.converted')}</Badge> : <Badge tone="warning">{t('fx.notConverted')}</Badge>}
+        </Row>
+      ))}
+      <Row label={t('fx.ecb')} hint={s?.lastEcbUpdateAt ? t('fx.ecbLast', { date: formatDateTime(s.lastEcbUpdateAt, fmt) }) : t('fx.ecbHint')}>
+        <Button size="sm" icon={<Download size={14} />} disabled={busy} onClick={() => void download()}>{busy ? t('fx.downloading') : t('fx.download')}</Button>
+      </Row>
+      <Row label={t('fx.auto')} hint={t('fx.autoHint')}>
+        <Switch checked={settings.fxAutoUpdate} onChange={(v) => void update({ fxAutoUpdate: v })} label={t('fx.auto')} />
+      </Row>
+      <Row label={t('fx.manual')} hint={t('fx.manualHint')}>
+        <Button size="sm" icon={<Plus size={14} />} onClick={() => { setRate({ currency: s?.currencies[0]?.currency ?? 'USD', date: today, perEur: '' }); setAdding(true) }}>{t('fx.addRate')}</Button>
+      </Row>
+      {(manual.data ?? []).map((r) => (
+        <Row key={`${r.currency}-${r.date}`} label={<span className="num text-[13px]">{rateText(r.currency, r.perEur)}</span>} hint={formatDate(r.date, fmt)}>
+          <Button size="sm" variant="ghost" onClick={() => void call('fx.deleteRate', { currency: r.currency, date: r.date }).then(reload)}>{t('fx.remove')}</Button>
+        </Row>
+      ))}
+      <Modal open={adding} title={t('fx.addRate')} onClose={() => setAdding(false)}>
+        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void saveRate() }}>
+          <Field label={t('fx.currency')}>{(id) => <CurrencySelect id={id} value={rate.currency} onChange={(e) => setRate({ ...rate, currency: e.target.value })} />}</Field>
+          <Field label={t('fx.date')} hint={t('fx.dateHint')}>{(id) => <Input id={id} type="date" value={rate.date} onChange={(e) => setRate({ ...rate, date: e.target.value })} required />}</Field>
+          <Field label={t('fx.perEur', { currency: rate.currency })}>{(id) => <Input id={id} inputMode="decimal" value={rate.perEur} onChange={(e) => setRate({ ...rate, perEur: e.target.value })} placeholder="1.0800" className="num" required />}</Field>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setAdding(false)}>{t('settings.cancel')}</Button>
+            <Button type="submit" variant="primary" disabled={!(Number(rate.perEur.replace(',', '.')) > 0) || rate.currency === 'EUR'}>{t('settings.save')}</Button>
+          </div>
+        </form>
+      </Modal>
+    </Card>
+  )
+}
+
 /* ---------- Accounts ---------- */
 
 function AccountsSection() {
@@ -307,15 +399,16 @@ function AccountsSection() {
   const toast = useToast()
   const accounts = useOp('accounts.list')
   const [editing, setEditing] = useState<AccountWithBalance | 'new' | null>(null)
-  const [form, setForm] = useState({ name: '', bank: '', iban: '' })
+  const { settings } = useSettings()
+  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR' })
   const open = (a: AccountWithBalance | 'new'): void => {
-    setForm(a === 'new' ? { name: '', bank: '', iban: '' } : { name: a.name, bank: a.bank, iban: a.iban ?? '' })
+    setForm(a === 'new' ? { name: '', bank: '', iban: '', currency: settings.currency } : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency })
     setEditing(a)
   }
   const save = async (): Promise<void> => {
     try {
-      if (editing === 'new') await call('accounts.create', { name: form.name, bank: form.bank, iban: form.iban || null })
-      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null })
+      if (editing === 'new') await call('accounts.create', { name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency })
+      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency })
       toast(editing === 'new' ? t('settings.accountAdded') : t('settings.accountSaved'))
       setEditing(null)
       void accounts.reload()
@@ -334,7 +427,7 @@ function AccountsSection() {
         <Row
           key={a.id}
           label={<span className={a.archived ? 'text-muted line-through' : undefined}>{a.name}</span>}
-          hint={[a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : ''].filter(Boolean).join(' · ') || undefined}
+          hint={[a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : '', a.currency !== settings.currency ? a.currency : ''].filter(Boolean).join(' · ') || undefined}
         >
           <Button size="sm" variant="ghost" onClick={() => open(a)}>{t('settings.edit')}</Button>
           <Button size="sm" variant="ghost" onClick={() => void call('accounts.update', { id: a.id, archived: !a.archived }).then(() => accounts.reload())}>
@@ -347,6 +440,9 @@ function AccountsSection() {
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>
           <Field label={t('settings.accountName')}>{(id) => <Input id={id} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('settings.accountNamePlaceholder')} autoFocus required />}</Field>
           <Field label={t('settings.bankName')} hint={t('settings.bankNameHint')}>{(id) => <Input id={id} value={form.bank} maxLength={60} onChange={(e) => setForm({ ...form, bank: e.target.value })} />}</Field>
+          <Field label={t('settings.accountCurrency')} hint={editing !== 'new' && editing && editing.transactionCount > 0 && form.currency !== editing.currency ? t('settings.accountCurrencyChange', { from: editing.currency, to: form.currency }) : undefined}>
+            {(id) => <CurrencySelect id={id} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />}
+          </Field>
           <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <Input id={id} value={form.iban} onChange={(e) => setForm({ ...form, iban: e.target.value })} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
           <div className="flex justify-end gap-2">
             <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>

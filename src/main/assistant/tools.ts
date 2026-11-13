@@ -2,6 +2,9 @@
 import { z } from 'zod'
 import type { Db } from '@core/database'
 import { coreOps } from '@core/ops'
+import { getSettings } from '@core/settings'
+import { formatMoney } from '@shared/format'
+import { getPrefs } from '../prefs'
 import { contract, type ContractEntry, type OpName } from '@shared/contract'
 import type { ImportPreview } from '@shared/types'
 
@@ -76,7 +79,8 @@ export function compactResult(op: OpName, data: unknown): string {
   return text.length > 60_000 ? text.slice(0, 60_000) + '… [truncated: ask for a narrower filter]' : text
 }
 
-const eur = (c: number): string => new Intl.NumberFormat('en-BE', { style: 'currency', currency: 'EUR' }).format(c / 100)
+/** Money in the user's own formats, for confirmation cards. */
+const money = (db: Db, c: number, currency = getSettings(db).currency): string => formatMoney(c, currency, getPrefs().formats)
 
 /** One readable sentence for the confirmation card. */
 export function describeChange(db: Db, op: OpName, input: Record<string, unknown>): string {
@@ -85,7 +89,7 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
     case 'budgets.set':
       return input['amountCents'] === null
         ? `Remove the ${cat(input['categoryId'])} budget for ${String(input['month'])}`
-        : `Set the ${cat(input['categoryId'])} budget for ${String(input['month'])} to ${eur(Number(input['amountCents']))}`
+        : `Set the ${cat(input['categoryId'])} budget for ${String(input['month'])} to ${money(db, Number(input['amountCents']))}`
     case 'transactions.categorize':
       return `Put ${(input['ids'] as unknown[] | undefined)?.length ?? 0} transaction(s) in ${cat(input['categoryId'])}`
     case 'rules.create':
@@ -95,7 +99,9 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
     case 'import.commit':
       return 'Import the ready rows of the open CSV as transactions'
     case 'accounts.create':
-      return `Add the account “${String(input['name'])}”`
+      return `Add the account “${String(input['name'])}”${input['currency'] && input['currency'] !== getSettings(db).currency ? ` in ${String(input['currency'])}` : ''}`
+    case 'fx.setRate':
+      return `Set the exchange rate on ${String(input['date'])}: 1 EUR = ${String(input['perEur'])} ${String(input['currency'])}`
     default:
       return `${op}: ${JSON.stringify(input).slice(0, 200)}`
   }

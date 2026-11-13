@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url'
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebFrameMain } from 'electron'
 import { AppError } from '@core/errors'
-import { coreOps, runOp, type OpContext, type OpTable } from '@core/ops'
+import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/ops'
 import { getSettings, updateSettings } from '@core/settings'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
 import { PUBLIC_OPS, type OpName } from '@shared/contract'
@@ -11,6 +11,7 @@ import * as session from './session'
 import { applyTheme } from './theme'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
 import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
+import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
@@ -91,7 +92,7 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async (_c, input) => {
       await session.unlock(input)
-      backupAfterUnlock()
+      afterUnlock()
       return session.status()
     }
   },
@@ -100,6 +101,7 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async (_c, { recoveryKey }) => {
       await session.unlockRecovery(recoveryKey)
+      afterUnlock()
       return session.status()
     }
   },
@@ -294,6 +296,14 @@ const desktopOps: OpTable = {
       return backupStatus()
     }
   },
+  'fx.updateEcb': {
+    mutates: true,
+    assistant: false,
+    handler: async ({ db }) => {
+      const { added } = await updateEcbRates(db)
+      return { ...fxStatus(db), added }
+    }
+  },
   'backup.runNow': { mutates: false, assistant: false, handler: async () => ({ file: await runAutoBackup() }) },
   'backup.list': { mutates: false, assistant: false, handler: () => backupList() },
   'backup.pick': { mutates: false, assistant: false, handler: (_c, { name }) => pickBackup(name) },
@@ -331,6 +341,15 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
     dataChanged(name, input)
   }
   return result
+}
+
+/** Work that waits for the database: due backups and, when switched on, fresh exchange rates. */
+function afterUnlock(): void {
+  backupAfterUnlock()
+  if (!session.isUnlocked() || !shouldAutoUpdate(session.db())) return
+  updateEcbRates(session.db())
+    .then(({ added }) => added > 0 && notifyChanged('system'))
+    .catch((err: unknown) => console.warn('[fx] automatic update failed:', err instanceof Error ? err.message : err))
 }
 
 let changeTimer: NodeJS.Timeout | null = null

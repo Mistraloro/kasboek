@@ -361,7 +361,9 @@
     "timeOption": {
       "24h": "24-hour",
       "12h": "12-hour"
-    }
+    },
+    "accountCurrency": "Currency",
+    "accountCurrencyChange": "Its {{from}} transactions will count as {{to}}. Use this to correct a wrong currency."
   },
   "errors": {
     "generic": "Something went wrong."
@@ -543,5 +545,39 @@
     "removedDesktop": "Removed from Claude Desktop. Restart it to apply.",
     "codeAdded": "Added to Claude Code. Start a new Claude Code session to use it.",
     "removedCode": "Removed from Claude Code."
+  },
+  "fx": {
+    "title": "Currencies",
+    "hint": "Each account keeps its own currency. Totals, budgets and net worth are shown in the main currency, using the exchange rate of each transaction’s date.",
+    "main": "Main currency",
+    "mainHint": "Totals and budgets are shown in this currency.",
+    "converted": "Converted",
+    "notConverted": "No rate",
+    "noRate": "No exchange rate yet: these amounts are left out of totals. Download the ECB rates or add a rate.",
+    "noRateShort": "No exchange rate",
+    "olderThanRates": "some transactions are older than the first rate",
+    "sourceEcb": "ECB",
+    "sourceManual": "typed in",
+    "ecb": "ECB reference rates",
+    "ecbHint": "Downloads the European Central Bank’s public rate list. Nothing about your data is sent.",
+    "ecbLast": "Last downloaded {{date}}. Only the public rate list is downloaded; nothing about your data is sent.",
+    "download": "Download rates",
+    "downloading": "Downloading…",
+    "downloaded_one": "Rates updated: {{count}} new rate.",
+    "downloaded_other": "Rates updated: {{count}} new rates.",
+    "auto": "Update rates automatically",
+    "autoHint": "Once a day after unlocking, only when you use other currencies.",
+    "manual": "Your own rates",
+    "manualHint": "For a currency the ECB doesn’t publish, or to use your bank’s rate. A rate counts from its date until the next one, and wins over the ECB rate of that day.",
+    "addRate": "Add a rate",
+    "rateSaved": "Rate saved.",
+    "remove": "Remove",
+    "currency": "Currency",
+    "date": "From date",
+    "dateHint": "Used for transactions on and after this date, until the next rate.",
+    "perEur": "{{currency}} for 1 euro",
+    "unconverted_one": "{{count}} transaction this month has no exchange rate.",
+    "unconverted_other": "{{count}} transactions this month have no exchange rate.",
+    "unconvertedHint": "They are left out of these totals. Add rates in Settings."
   }
 }
