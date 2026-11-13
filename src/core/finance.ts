@@ -378,3 +378,11 @@ export function accountBalances(db: Db, today = new Date().toISOString().slice(0
     rows.map((r) => [r.id, { balance: r.bal, balanceMain: (db.prepare('SELECT fx(?, ?, ?, ?) AS v').get(r.bal, r.currency, today, main) as { v: number | null }).v, count: r.n }])
   )
 }
+
+/** Renames the starting categories (still under their English names) for a new database. */
+export function localizeDefaultCategories(db: Db, names: Record<string, string>): void {
+  const rename = db.prepare('UPDATE categories SET name = ? WHERE name = ? AND NOT EXISTS (SELECT 1 FROM categories WHERE name = ? COLLATE NOCASE)')
+  db.transaction(() => {
+    for (const [en, local] of Object.entries(names)) if (local && local !== en) rename.run(local, en, local)
+  })()
+}

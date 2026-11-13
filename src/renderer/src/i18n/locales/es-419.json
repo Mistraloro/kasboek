@@ -1,0 +1,120 @@
+{
+  "nav": {
+    "settings": "Configuración"
+  },
+  "overview": {
+    "stepAccounts": "Agrega tus cuentas bancarias"
+  },
+  "transactions": {
+    "add": "Agregar movimiento",
+    "amount": "Monto"
+  },
+  "budgets": {
+    "invalid": "Escribe un monto como 150 o 150,00.",
+    "emptyHint": "Aún no hay presupuestos para este mes. Escribe un monto junto a una categoría o copia los del mes pasado.",
+    "add": "Agregar",
+    "addRule": "Agregar regla"
+  },
+  "import": {
+    "needAccount": "Agrega primero la cuenta bancaria, para que Kasboek sepa a dónde pertenecen estos movimientos.",
+    "addAccount": "Agregar una cuenta",
+    "noMapping": "Kasboek no pudo saber qué columnas tienen la fecha y el monto. Elígelas en Columnas.",
+    "issue": {
+      "amount_invalid": "monto ilegible",
+      "amount_zero": "el monto es cero"
+    },
+    "field": {
+      "amount": "Monto (+/−)"
+    },
+    "fixAmount": "Escribe el monto, negativo para una salida (p. ej. -12,50)",
+    "checked": "{{ai}} revisó el archivo. Mira las notas encima de las filas.",
+    "claudeOff": "Configura un asistente en Configuración para que revise los archivos.",
+    "checkPrivacyLocal": "Envía las filas de este archivo a {{ai}} en esta computadora o esta red."
+  },
+  "assistant": {
+    "tool": {
+      "settings_get": "Configuración"
+    },
+    "privacyLocal": "{{ai}} funciona en esta computadora o en tu red: tus mensajes y datos solo van allí."
+  },
+  "settings": {
+    "title": "Configuración",
+    "addAccount": "Agregar cuenta",
+    "accountAdded": "Cuenta agregada.",
+    "autoHint": "Copias cifradas en la carpeta que elijas. Una carpeta sincronizada (OneDrive, iCloud Drive, Dropbox) o una memoria USB va bien.",
+    "securityHint": "Cómo se protegen tus datos en esta computadora.",
+    "passwordlessExplain": "Desbloquearás Kasboek con {{name}} en lugar de una contraseña. Tu contraseña dejará de funcionar. Una contraseña es más segura: sin ella, todo depende de tu cuenta de la computadora.",
+    "twoFactorHint": "Un código de 6 dígitos de tu celular, en cada desbloqueo e importación.",
+    "recoveryHint": "Para una contraseña olvidada o un celular perdido. Crear una nueva hace que la anterior deje de funcionar en esta computadora.",
+    "autoLockHint": "También bloquea cuando se bloquea la pantalla o la computadora entra en suspensión.",
+    "keyStorageOsHint": "Los datos están ligados a esta computadora y esta cuenta de usuario.",
+    "rememberedHint": "Recordado en esta computadora hasta el {{date}}. Otras computadoras, importaciones y exportaciones siguen pidiendo el código.",
+    "forgetComputer": "Olvidar esta computadora",
+    "forgotten": "Esta computadora volverá a pedir el código.",
+    "negative": "Montos negativos"
+  },
+  "errors": {
+    "generic": "Algo salió mal."
+  },
+  "auth": {
+    "welcomeBody": "Tu presupuesto se queda en esta computadora, cifrado. Primero, elige cómo lo desbloquearás.",
+    "choosePasswordBody": "La opción más segura. Funciona en cualquier computadora.",
+    "chooseImport": "Importar desde otra computadora",
+    "recoveryBody": "Si olvidas tu contraseña o pierdes el celular, esta clave es la única forma de volver a entrar. Solo se muestra una vez.",
+    "recoveryTip2": "No la guardes en un archivo de esta computadora.",
+    "recoveryTip3": "Kasboek no puede volver a mostrarla. Puedes crear una nueva en Configuración.",
+    "recoverySaved": "Guardé mi clave de recuperación en un lugar seguro.",
+    "totpBody": "Recomendada. Además de tu contraseña, escribirás un código de 6 dígitos de una app de tu celular.",
+    "totpLater": "Puedes cambiarlo más tarde en Configuración → Seguridad.",
+    "forgot": "¿Olvidaste la contraseña?",
+    "recoveredBody": "Desbloqueaste con tu clave de recuperación. Elige una nueva contraseña para mantener Kasboek seguro.",
+    "eraseTitle": "Borrar Kasboek en esta computadora",
+    "eraseBody": "Elimina todos los datos de Kasboek en esta computadora. No se puede deshacer. Las exportaciones y copias guardadas en otros sitios no se tocan.",
+    "deviceUnavailableHint": "Necesita Windows Hello o Touch ID, que no están disponibles en esta computadora.",
+    "rememberComputer": "Recordar esta computadora durante 30 días",
+    "rememberedNote": "Código de verificación recordado en esta computadora hasta el {{date}}."
+  },
+  "transfer": {
+    "title": "Pasar a otra computadora",
+    "hint": "Copiar la carpeta de datos de Kasboek no funciona: está ligada a esta computadora. Usa una exportación.",
+    "needsNewPassword": "Esta exportación usaba Windows Hello o Touch ID, que no están disponibles aquí. Elige una contraseña para esta computadora.",
+    "replaceWarning": "Esto sustituye todo lo que hay en Kasboek en esta computadora. Antes se hace una copia de seguridad de los datos actuales."
+  },
+  "claude": {
+    "addKey": "Agregar clave API"
+  },
+  "mcp": {
+    "hint": "Deja que las apps de Claude de esta computadora lean tu presupuesto y propongan cambios mientras Kasboek está abierto y desbloqueado.",
+    "codeNotFound": "No se encontró Claude Code en esta computadora. Usa «Configurar a mano» más abajo.",
+    "state": {
+      "absent": "Sin agregar",
+      "current": "Agregado"
+    },
+    "addDesktop": "Agregar a Claude Desktop",
+    "addCode": "Agregar a Claude Code",
+    "addTitle": "Agregar Kasboek a Claude Desktop",
+    "addBody": "Kasboek solo agregará (o actualizará) su propia entrada en este archivo. Los demás servidores y ajustes se quedan como están.",
+    "confirmAdd": "Agregar",
+    "addedDesktop": "Agregado. Reinicia Claude Desktop para ver las herramientas de Kasboek.",
+    "codeAdded": "Agregado a Claude Code. Abre una nueva sesión de Claude Code para usarlo."
+  },
+  "fx": {
+    "noRate": "Aún no hay tipo de cambio: estos montos no cuentan en los totales. Descarga los tipos del BCE o agrega uno.",
+    "addRate": "Agregar un tipo",
+    "unconvertedHint": "No cuentan en estos totales. Agrega tipos en Configuración."
+  },
+  "ai": {
+    "providerLocal": "Funciona en esta computadora o en tu red. No va nada a un servicio en línea.",
+    "local": "en tu computadora",
+    "baseUrlLocalHint": "Déjala vacía para usar la predeterminada ({{url}}). Cámbiala si el servidor funciona en otro puerto o computadora.",
+    "baseUrlCustomHint": "La dirección compatible con OpenAI del servidor; en la mayoría termina en /v1. Usa https salvo que funcione en esta computadora o en tu red local."
+  },
+  "networth": {
+    "unconverted_one": "{{count}} cuenta no tiene tipo de cambio y no se cuenta. Agrega tipos en Configuración → Monedas.",
+    "unconverted_other": "{{count}} cuentas no tienen tipo de cambio y no se cuentan. Agrega tipos en Configuración → Monedas.",
+    "empty": "Agrega cuentas y movimientos para ver crecer tu patrimonio."
+  },
+  "defaultCategories": {
+    "Salary": "Sueldo"
+  }
+}

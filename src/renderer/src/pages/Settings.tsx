@@ -5,6 +5,7 @@ import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance, type PickedTr
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
+import type { LanguageCode } from '@shared/languages'
 import { ApiError, call, useOp } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { formatDate, formatDateTime, formatMoney, formatNumber, type Fmt } from '../lib/format'
@@ -524,7 +525,7 @@ function AppearanceSection() {
         />
       </Row>
       <Row label={t('settings.uiLanguage')} hint={t('settings.languageHint')}>
-        <Select className="w-44" value={prefs.language} onChange={(e) => void updatePrefs({ language: e.target.value })} aria-label={t('settings.uiLanguage')}>
+        <Select className="w-44" value={prefs.language} onChange={(e) => void updatePrefs({ language: e.target.value as LanguageCode })} aria-label={t('settings.uiLanguage')}>
           {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </Select>
       </Row>

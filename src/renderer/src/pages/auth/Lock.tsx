@@ -144,8 +144,8 @@ function EraseForm({ value, onChange, onConfirm, busy }: { value: string; onChan
   const { t } = useTranslation()
   return (
     <div className="mt-4 flex flex-col gap-3">
-      <Field label={t('auth.eraseType')}>{(id) => <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder="ERASE" />}</Field>
-      <Button variant="danger" disabled={value !== 'ERASE' || busy} onClick={onConfirm}>
+      <Field label={t('auth.eraseType')}>{(id) => <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder={t('auth.eraseWord')} />}</Field>
+      <Button variant="danger" disabled={value.trim().toUpperCase() !== t('auth.eraseWord').toUpperCase() || busy} onClick={onConfirm}>
         {t('auth.eraseConfirm')}
       </Button>
     </div>

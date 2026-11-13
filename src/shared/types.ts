@@ -1,5 +1,6 @@
 import type { ProviderId } from './ai-providers'
 import type { FormatPrefs } from './format'
+import type { LanguageCode } from './languages'
 export type Theme = 'system' | 'light' | 'dark'
 export type CategoryKind = 'expense' | 'income' | 'transfer'
 export type Actor = 'user' | 'assistant' | 'system'
@@ -155,7 +156,7 @@ export type PrefsPatch = Partial<Omit<Prefs, 'formats'>> & { formats?: Partial<F
 export interface Prefs {
   theme: Theme
   /** UI language (i18n resource key). */
-  language: string
+  language: LanguageCode
   /** Number, money and date formats; each part is chosen separately. */
   formats: FormatPrefs
   /** Lock after this many minutes without keyboard or mouse use. 0 = never. */

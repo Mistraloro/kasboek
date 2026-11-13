@@ -266,7 +266,7 @@
     "themeSystem": "System",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "languageHint": "More languages can be added later.",
+    "languageHint": "Also used for month names. Number and date formats are set separately.",
     "uiLanguage": "Language",
     "backups": "Backups",
     "backupsHint": "Automatic, encrypted backups in the same format as an export. They open only with Import and your login.",
@@ -456,7 +456,8 @@
     "weakBody": "Kasboek now asks for stronger passwords to protect your data, especially in backups and exports. Choose a new one to continue.",
     "rememberComputer": "Remember this computer for 30 days",
     "rememberedNote": "Two-factor code remembered on this computer until {{date}}.",
-    "deviceChecking": "Checking for Windows Hello or Touch ID…"
+    "deviceChecking": "Checking for Windows Hello or Touch ID…",
+    "eraseWord": "ERASE"
   },
   "transfer": {
     "title": "Move to another computer",
@@ -673,5 +674,23 @@
     "empty": "No transactions in this year.",
     "allYears": "All years",
     "yearCol": "Year"
+  },
+  "defaultCategories": {
+    "Salary": "Salary",
+    "Other income": "Other income",
+    "Groceries": "Groceries",
+    "Housing": "Housing",
+    "Utilities": "Utilities",
+    "Transport": "Transport",
+    "Eating out": "Eating out",
+    "Shopping": "Shopping",
+    "Health": "Health",
+    "Insurance": "Insurance",
+    "Subscriptions": "Subscriptions",
+    "Leisure": "Leisure",
+    "Gifts": "Gifts",
+    "Fees & taxes": "Fees & taxes",
+    "Own transfers": "Own transfers",
+    "Savings": "Savings"
   }
 }

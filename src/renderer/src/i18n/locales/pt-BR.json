@@ -1,0 +1,204 @@
+{
+  "nav": {
+    "networth": "Patrimônio",
+    "settings": "Configurações"
+  },
+  "overview": {
+    "stepBackupBody": "Criptografadas, diárias, para a pasta ou unidade que escolher.",
+    "stepImport": "Importe um arquivo CSV",
+    "stepImportBody": "O Kasboek o lê e mostra cada linha antes de salvar o que quer que seja.",
+    "review": "Revisar"
+  },
+  "transactions": {
+    "emptyBody": "Importe um arquivo CSV do seu banco para começar.",
+    "amount": "Valor",
+    "amountHint": "Negativo para dinheiro que sai, ex.: -12,50",
+    "delete": "Excluir",
+    "deleteConfirm_one": "Excluir este movimento?",
+    "deleteConfirm_other": "Excluir {{count}} movimentos?"
+  },
+  "budgets": {
+    "invalid": "Digite um valor como 150 ou 150,00.",
+    "emptyHint": "Ainda sem orçamentos para este mês. Escreva um valor ao lado de uma categoria ou copie os do mês passado.",
+    "renameShort": "Renomear",
+    "rulesHint": "As regras colocam os movimentos em uma categoria automaticamente quando o texto corresponde. Aplicam-se às importações e, ao serem criadas, aos movimentos sem categoria."
+  },
+  "import": {
+    "subtitle": "Traga os arquivos CSV do seu banco. Nada é salvo sem a sua aprovação.",
+    "dropTitle": "Solte aqui um arquivo CSV",
+    "dropBody": "O Kasboek lê o arquivo, reconhece o formato, marca duplicados e problemas e sugere categorias. Você revisa tudo antes de ser salvo.",
+    "choose": "Escolher arquivo CSV…",
+    "undo": "Desfazer",
+    "reviewTitle": "Revisar importação",
+    "source": {
+      "saved": "Formato salvo",
+      "assistant": "Revisado por {{ai}}"
+    },
+    "checkWithClaude": "Revisar com {{ai}}",
+    "noMapping": "O Kasboek não conseguiu perceber que colunas têm a data e o valor. Escolha-as em Colunas.",
+    "issue": {
+      "amount_invalid": "valor ilegível",
+      "amount_zero": "o valor é zero"
+    },
+    "remember": "Lembrar este formato",
+    "field": {
+      "amount": "Valor (+/−)"
+    },
+    "invert": "Inverter sinais (as saídas são positivas neste arquivo)",
+    "reset": "Redefinir",
+    "fixDate": "Digite a data (DD/MM/AAAA)",
+    "fixAmount": "Digite o valor, negativo para uma saída (ex.: -12,50)",
+    "checking": "{{ai}} está revisando…",
+    "checked": "{{ai}} revisou o arquivo. Veja as notas por cima das linhas.",
+    "checkPrivacy": "Envia as linhas deste arquivo para {{aiCompany}}.",
+    "claudeOff": "Configure um assistente nas Configurações para revisar arquivos.",
+    "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação.",
+    "checkPrivacyLocal": "Envia as linhas deste arquivo para {{ai}} neste computador ou nesta rede."
+  },
+  "assistant": {
+    "example3": "Revise este CSV do meu banco e importe-o.",
+    "setupBody": "Conecte um assistente de IA (Claude, Mistral, Gemini, um modelo local e outros) para fazer perguntas sobre o seu orçamento, definir orçamentos, classificar movimentos e revisar arquivos CSV.",
+    "thinking": "{{ai}} está trabalhando…",
+    "tool": {
+      "settings_get": "Configurações",
+      "import_raw": "Arquivo CSV"
+    }
+  },
+  "settings": {
+    "title": "Configurações",
+    "accountNamePlaceholder": "ex.: Conta corrente",
+    "save": "Salvar",
+    "appearance": "Aparência",
+    "appearanceHint": "Escolha a aparência do Kasboek.",
+    "languageHint": "Também usado nos nomes dos meses. Os formatos de números e datas são definidos à parte.",
+    "backupsHint": "Cópias automáticas e criptografadas, no mesmo formato que uma exportação. Só abrem com Importar e os seus dados de acesso.",
+    "changePassword": "Alterar senha",
+    "backupSaved": "Cópia salva em {{file}}",
+    "autoHint": "Cópias criptografadas para a pasta que escolher. Uma pasta sincronizada (OneDrive, iCloud Drive, Dropbox) ou um pendrive funciona bem.",
+    "encryption": "Criptografia da base de dados",
+    "signInPassword": "Desbloquear com a sua senha.",
+    "signInDevice": "Sem senha: desbloquear com {{name}}.",
+    "usePassword": "Usar uma senha",
+    "passwordlessExplain": "Vai desbloquear o Kasboek com {{name}} em vez de uma senha. A sua senha deixa de funcionar. Uma senha é mais segura: sem ela, tudo depende da sua conta no computador.",
+    "passwordlessOn": "O acesso sem senha está ativo.",
+    "oldExportsNote": "As exportações e cópias feitas antes continuam abrindo com a senha daquela época.",
+    "twoFactorHint": "Um código de 6 dígitos do celular, em cada desbloqueio e importação.",
+    "twoFactorOffBody": "Digite um código atual para confirmar.",
+    "on": "Ativada",
+    "recoveryHint": "Para uma senha esquecida ou um celular perdido. Criar uma nova faz a antiga deixar de funcionar neste computador.",
+    "newRecoveryBody": "A chave de recuperação atual deixa de funcionar aqui. As exportações feitas antes continuam abrindo com a antiga.",
+    "autoLockHint": "Também bloqueia quando a tela bloqueia ou o computador entra em suspensão.",
+    "encryptionHint": "Os dados do seu orçamento estão criptografados no disco.",
+    "keyStorageOsHint": "Os dados estão vinculados a este computador e a esta conta de usuário.",
+    "rememberedHint": "Lembrado neste computador até {{date}}. Outros computadores, importações e exportações continuam pedindo o código.",
+    "forgotten": "Este computador vai pedir de novo o código.",
+    "whenBackupHint": "Pouco depois de importações, restauros e grandes alterações, no máximo de hora a hora após outras alterações, diariamente em qualquer caso, e quando o Kasboek bloqueia ou fecha. Salvas: tudo das últimas 24 horas, uma por dia durante 30 dias, uma por mês durante um ano.",
+    "accountSaved": "Conta salva.",
+    "formatsHint": "Cada parte é definida separadamente. Exemplo: {{value}}",
+    "negative": "Valores negativos",
+    "accountKindInvestment": "Registre o valor de vez em quando na página Patrimônio; os aportes e saques vêm dos movimentos."
+  },
+  "auth": {
+    "welcome": "Boas-vindas ao Kasboek",
+    "welcomeBody": "O seu orçamento fica neste computador, criptografado. Primeiro, escolha como o vai desbloquear.",
+    "choosePassword": "Usar uma senha",
+    "chooseDeviceBody": "Sem senha: desbloqueie com o rosto, a impressão digital ou o PIN.",
+    "chooseImportBody": "Abrir uma exportação feita com o Kasboek, com os respectivos dados de acesso.",
+    "newPassword": "Nova senha",
+    "repeatPassword": "Repita a senha",
+    "currentPassword": "Senha atual",
+    "password": "Senha",
+    "passwordMismatch": "As senhas não coincidem.",
+    "passwordChanged": "Senha alterada.",
+    "recoveryBody": "Se esquecer a senha ou perder o celular, esta chave é a única forma de voltar a entrar. Só é mostrada uma vez.",
+    "recoveryTip1": "Anote-a em papel ou salve-a em um gerenciador de senhas.",
+    "recoveryTip2": "Não a salve em um arquivo neste computador.",
+    "recoveryTip3": "O Kasboek não a pode mostrar outra vez. Pode criar uma nova nas Configurações.",
+    "recoverySaved": "Salvei a minha chave de recuperação em um local seguro.",
+    "copied": "Copiada. Cole-a em um local seguro e depois limpe a área de transferência.",
+    "copyFailed": "Não foi possível copiar. Anote-a à mão.",
+    "totpBody": "Recomendada. Além da senha, vai digitar um código de 6 dígitos de um aplicativo no celular.",
+    "totpStep1": "Abra um aplicativo de autenticação (Microsoft Authenticator, Google Authenticator, 1Password, …).",
+    "totpStep2": "Escaneie este código ou escreva a chave.",
+    "totpStep3": "Digite o código de 6 dígitos que o aplicativo mostra",
+    "totpManual": "Não consegue escanear? Digite esta chave:",
+    "totpLater": "Pode alterar isto mais tarde em Configurações → Segurança.",
+    "qrAlt": "Código QR para o seu aplicativo de autenticação",
+    "forgot": "Esqueceu a senha?",
+    "recoveryUnlockBody": "Digite a chave de recuperação que salvou ao configurar o Kasboek. Depois vai escolher uma nova senha.",
+    "usePasswordInstead": "Usar a senha",
+    "recoveredTitle": "Escolha uma nova senha",
+    "recoveredBody": "Desbloqueou com a chave de recuperação. Escolha uma nova senha para manter o Kasboek seguro.",
+    "eraseBody": "Exclui todos os dados do Kasboek neste computador. Não pode ser desfeito. Exportações e cópias salvas em outro lugar não são afetadas.",
+    "choosePasswordless": "Sem senha",
+    "ruleCommon": "Não ser uma senha comum nem conter «Kasboek»",
+    "strength": "Força da senha",
+    "weakTitle": "Escolha uma senha mais forte",
+    "weakBody": "O Kasboek agora pede senhas mais fortes para proteger os seus dados, sobretudo em cópias e exportações. Escolha uma nova para continuar.",
+    "rememberComputer": "Lembrar este computador durante 30 dias",
+    "rememberedNote": "Código de dois fatores lembrado neste computador até {{date}}.",
+    "deviceChecking": "Procurando Windows Hello ou Touch ID…"
+  },
+  "transfer": {
+    "hint": "Copiar a pasta de dados do Kasboek não funciona: está vinculada a este computador. Use uma exportação.",
+    "exportHint": "Um único arquivo criptografado. Só abre com Importar no Kasboek e os seus dados de acesso: senha e código, ou a chave de recuperação.",
+    "importIntro": "Escolha um arquivo .kasboek. Precisa dos dados de acesso com que foi criado.",
+    "chooseFile": "Escolher arquivo…",
+    "needsNewPassword": "Esta exportação usava o Windows Hello ou o Touch ID, que não estão disponíveis aqui. Escolha uma senha para este computador."
+  },
+  "claude": {
+    "hint": "Usa a sua própria chave API da Anthropic. Cobrado pela Anthropic, separadamente de uma assinatura Claude.ai.",
+    "apiKeyHint": "Salva nos seus dados criptografados. Nunca mais é mostrada.",
+    "keyHelp": "Crie uma chave na Anthropic Console e cole-a aqui. O Kasboek a verifica uma vez com a Anthropic.",
+    "checking": "Verificando…",
+    "keySaved": "Chave API salva.",
+    "csvHint": "Revisa e corrige arquivos do banco antes da importação."
+  },
+  "mcp": {
+    "hint": "Deixe os aplicativos Claude deste computador ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado.",
+    "note": "Só funciona enquanto o Kasboek está aberto e desbloqueado. Cada alteração aparece aqui para a aprovar. O que o Claude lê é enviado para a Anthropic por esse aplicativo.",
+    "requestBody": "Um aplicativo Claude conectado via MCP quer fazer esta alteração:",
+    "addBody": "O Kasboek só adiciona (ou atualiza) a sua própria entrada neste arquivo. Os outros servidores e definições ficam como estão.",
+    "removeBody": "O Kasboek só remove a sua própria entrada deste arquivo.",
+    "backupNote": "Primeiro é salva uma cópia do arquivo ao lado. Depois, reinicie o Claude Desktop."
+  },
+  "fx": {
+    "noRate": "Ainda sem taxa de câmbio: estes valores ficam fora dos totais. Baixe as taxas do BCE ou adicione uma taxa.",
+    "sourceManual": "digitada",
+    "ecbHint": "Baixa a lista pública de taxas do Banco Central Europeu. Nada sobre os seus dados é enviado.",
+    "ecbLast": "Último download: {{date}}. Só é baixada a lista pública de taxas; nada sobre os seus dados é enviado.",
+    "download": "Baixar taxas",
+    "downloading": "Baixando…",
+    "rateSaved": "Taxa salva.",
+    "unconvertedHint": "Ficam fora destes totais. Adicione taxas nas Configurações."
+  },
+  "ai": {
+    "hint": "Escolha a IA que responde na conversa do Kasboek e revisa arquivos CSV. Usa a sua própria conta e chave nesse fornecedor.",
+    "providerCloud": "Funciona em {{company}}, com a sua própria chave API e cobrança.",
+    "baseUrlLocalHint": "Deixe vazio para o predefinido ({{url}}). Altere-o se o servidor funcionar em outra porta ou computador.",
+    "keyHint": "A sua chave API da {{name}}, salva criptografada na base de dados.",
+    "keyHelp": "Crie uma chave na sua conta da {{name}} e cole-a aqui. O Kasboek a verifica uma vez com a {{name}}.",
+    "loadingModels": "Carregando…",
+    "note": "Escolha um modelo que suporte ferramentas (function calling); modelos locais pequenos podem responder de forma menos confiável. As alterações propostas pelo assistente continuam aguardando a sua aprovação."
+  },
+  "accountKind": {
+    "current": "Conta corrente",
+    "cash": "Dinheiro",
+    "loan": "Empréstimo ou financiamento imobiliário"
+  },
+  "networth": {
+    "title": "Patrimônio",
+    "total": "Patrimônio",
+    "unconverted_one": "{{count}} conta não tem taxa de câmbio e não é contada. Adicione taxas em Configurações → Moedas.",
+    "unconverted_other": "{{count}} contas não têm taxa de câmbio e não são contadas. Adicione taxas em Configurações → Moedas.",
+    "history": "Patrimônio ao longo do tempo",
+    "valueHelp": "Digite quanto valia a conta em um dia, tal como o seu banco ou corretora mostra. Os aportes e saques depois desse dia somam-se até digitar um novo valor.",
+    "saveValue": "Salvar valor",
+    "valueSaved": "Valor salvo.",
+    "recorded": "Valores registrados"
+  },
+  "defaultCategories": {
+    "Subscriptions": "Assinaturas",
+    "Fees & taxes": "Tarifas e impostos"
+  }
+}

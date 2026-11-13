@@ -11,6 +11,7 @@ import { MONTH } from './month'
 import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS } from './format'
 import { checkPassword } from './password'
 import { CURRENCIES } from './currency'
+import { LANGUAGE_CODES, type LanguageCode } from './languages'
 import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
 
 const currency = z
@@ -42,7 +43,7 @@ export const contract = {
     input: z
       .object({
         theme: z.enum(['system', 'light', 'dark']),
-        language: z.string().min(2).max(10),
+        language: z.enum(LANGUAGE_CODES as [LanguageCode, ...LanguageCode[]]),
         formats: z
           .object({
             decimal: z.enum(DECIMAL_SEPARATORS),

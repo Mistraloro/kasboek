@@ -7,6 +7,8 @@ import { TRANSFER_EXTENSION } from '@core/transfer-format'
 import { PUBLIC_OPS, type OpName } from '@shared/contract'
 import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
+import { defaultCategoryNames } from './i18n-categories'
+import { localizeDefaultCategories } from '@core/finance'
 import * as session from './session'
 import { applyTheme } from './theme'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
@@ -88,7 +90,12 @@ const desktopOps: OpTable = {
   'auth.setup': {
     mutates: true,
     assistant: false,
-    handler: async (_c, input) => session.setup(input.mode, input.mode === 'password' ? input.password : undefined)
+    handler: async (_c, input) => {
+      const result = await session.setup(input.mode, input.mode === 'password' ? input.password : undefined)
+      // A new database starts with its categories in the interface language.
+      if (session.isUnlocked()) localizeDefaultCategories(session.db(), defaultCategoryNames(getPrefs().language))
+      return result
+    }
   },
   'auth.unlock': {
     mutates: false,
