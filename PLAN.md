@@ -197,9 +197,22 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    `assets/brand/`, and wire them in as `WixUIBannerBmp` / `WixUIDialogBmp`. Check the `.exe`
    installer's sidebar image at the same time.
 3. **Launch window (splash screen).** After starting Kasboek nothing appears for a moment, so it
-   isn't clear the app is opening. Show a small window immediately (logo, "Kasboek", a subtle
-   loading indicator, in the current light/dark theme) and close it when the main window is
-   ready. Also look at what makes start-up slow (opening the encrypted account, the Windows
+   isn't clear the app is opening. Show a small window immediately (logo, "Kasboek", light/dark
+   theme) with a **loading animation and a progress bar** that moves through the real start-up
+   steps (starting, opening your data, loading the interface), so it's visibly working. Close it
+   when the main window is ready. Also look at what makes start-up slow (opening the encrypted account, the Windows
    Hello availability check, loading the UI bundle) and trim it.
-4. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+4. **All Belgian banks in the CSV import.** Recognise exports from every bank available in
+   Belgium, not only Argenta, Hello bank! and Keytrade. At least: BNP Paribas Fortis, Fintro,
+   KBC, CBC, Belfius, ING Belgium, Crelan (incl. former AXA Bank), Beobank, vdk bank, Triodos,
+   Nagelmackers, Europabank, bpost bank, MeDirect, and app banks widely used in Belgium
+   (Revolut, N26, bunq, Wise). Check the current list of banks first. Each needs one real,
+   anonymised export (NL and FR column names where the bank offers both) as a test fixture.
+5. **Backups at the right moments, with tiers.** Today: one full backup a day, keeping the last N.
+   Add a backup right after important changes (CSV import, restore, bulk edits) and when closing
+   Kasboek, and keep them in tiers: every change for the last 24 hours, one per day for 30 days,
+   one per month for 12 months. Every copy stays a complete, independent encrypted export (no
+   chains of incremental pieces, which break if one piece is lost); the database is small enough
+   that full copies are fast. Show the backup list with dates in Settings, with restore.
+6. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
