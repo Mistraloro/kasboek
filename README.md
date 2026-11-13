@@ -44,9 +44,9 @@ npm run dev        # start the app with hot reload
 **Download**: the repository's **Releases** page has every installer for each version.
 
 **Publish a new version**: set `version` in `package.json`, commit, then push a matching tag
-(`git tag v0.9.1 && git push origin v0.9.1`). The **Build installers** workflow builds every OS on a
+(`git tag v0.9.1 && git push origin v0.9.1`), or run the workflow with “Publish as a release” ticked. The **Build installers** workflow builds every OS on a
 real machine of that OS and attaches the files to a new Release. Running the workflow by hand
-instead makes a test build whose files stay under the run's Artifacts for 90 days.
+without ticking “Publish as a release” makes a test build whose files stay under the run's Artifacts for 90 days.
 
 Locally, each OS builds its own installers: `npm run dist:win`, `npm run dist:mac`,
 `npm run dist:linux`. (The Windows `.exe` and the Linux packages can also be built on Linux, with

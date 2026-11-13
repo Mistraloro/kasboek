@@ -2,10 +2,16 @@ name: Build installers
 
 # Builds 64-bit installers on real machines for each OS:
 #   Windows: .msi and .exe (x64 + ARM64)   macOS: universal .dmg   Linux: AppImage + .deb (x64 + ARM64)
-# Run by hand: temporary test builds (Actions artifacts, kept 90 days).
-# Push a tag like v0.9.0: the same builds, published as a permanent GitHub Release.
+# Run by hand: a test build (Actions artifacts, kept 90 days), or tick "Publish as a release".
+# Push a tag like v0.9.0, or run with "Publish as a release": a permanent GitHub Release for the
+# version in package.json, with every installer attached.
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish as a release (version from package.json)
+        type: boolean
+        default: false
   push:
     tags: ['v*']
 
@@ -60,17 +66,20 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Tag must match package.json version
+      - name: Work out the version
         run: |
-          v="$(node -p "require('./package.json').version")"
-          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match package.json version $v"; exit 1; }
+          v="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$v" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $v"; exit 1
+          fi
+          echo "TAG=$v" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -80,7 +89,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           find dist -type f | sort
-          gh release create "$GITHUB_REF_NAME" $(find dist -type f) \
+          # Creates the tag on the built commit if it doesn't exist yet; fails if the release exists.
+          gh release create "$TAG" $(find dist -type f) \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Kasboek ${GITHUB_REF_NAME#v}" \
+            --target "$GITHUB_SHA" \
+            --title "Kasboek ${TAG#v}" \
             --notes-file .github/release-notes.md
