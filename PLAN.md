@@ -214,5 +214,36 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    one per month for 12 months. Every copy stays a complete, independent encrypted export (no
    chains of incremental pieces, which break if one piece is lost); the database is small enough
    that full copies are fast. Show the backup list with dates in Settings, with restore.
-6. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+6. **Stronger password rules.** Minimum 16 characters, at least three of: lowercase, uppercase,
+   digits, symbols; refused if it is on a built-in list of common/breached passwords, contains
+   "kasboek", or is mostly one repeated character/sequence; a live strength meter (zxcvbn-style)
+   that must reach "strong". Long passphrases (several random words) pass easily and are
+   encouraged. Applies to new passwords and password changes; existing users are asked to choose
+   a stronger one at their next unlock. Matters even more once sync puts encrypted data in the
+   cloud, where it could be attacked offline.
+7. **2FA: "Remember this computer for 30 days".** Optional tick box when entering the 2FA code.
+   This computer then only asks for the password (or Windows Hello / Touch ID) for 30 days; other
+   computers, imports and exports still ask for the code. The "remembered" mark is sealed by the
+   OS (so it can't be copied to another computer), is cleared by changing the password, turning
+   2FA off/on, or "Forget remembered computers" in Settings, and never applies to the recovery
+   key flow.
+8. **Sync between computers (Windows, macOS, Linux).** Through a cloud folder the person
+   chooses (Google Drive, OneDrive, Dropbox, iCloud Drive), no Kasboek server.
+   - Each computer writes its changes as small encrypted change files (not the whole database);
+     the others merge them. Conflicts are resolved per field, latest change wins, nothing is
+     silently dropped (a conflict note is shown where two edits clashed).
+   - The cloud only ever holds encrypted data (same protection as an export). Joining a new
+     computer: choose the sync folder, then the password + 2FA code (or the recovery key). After
+     that it unlocks locally as usual; passwordless is set up per computer.
+   - Backups (item 5) stay separate and keep working per computer.
+   - Risk to state in the UI: encrypted data lives permanently in the cloud, so a long password
+     (item 6) is what protects it if the cloud account is compromised. Optional extra: a separate
+     sync key that is never stored in the cloud.
+9. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
+
+## Later, maybe
+
+- **Phone app (iPhone / Android).** Would build on sync (item 8): first view the overview and
+  budgets, later quick edits (categorise, add a transaction, budgets). Electron doesn't run on
+  phones, so this is a separate app reading the same encrypted sync files. Not planned yet.
