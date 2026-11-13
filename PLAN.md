@@ -186,7 +186,10 @@ Not possible to test here, please check on your machine:
 
 Installer feedback from testing the 0.9.0 `.msi` on Windows:
 
-1. **Let people choose the shortcuts.** The installer creates the desktop and Start menu shortcuts
+1. **Installer: choose shortcuts, and update an existing install.** Installing a new version over an
+   older one must upgrade it in place (same install folder, data untouched, no duplicate entry in
+   Apps & Features), for both the `.msi` (fixed UpgradeCode, MajorUpgrade) and the `.exe`.
+   **Let people choose the shortcuts.** The installer creates the desktop and Start menu shortcuts
    without asking. Add two ticked-by-default checkboxes ("Desktop shortcut", "Start menu
    shortcut") on a page before installing. For the `.msi` this needs a custom WiX dialog
    (electron-builder's built-in MSI UI has no such options; `msiProjectCreated` can edit the
@@ -266,7 +269,27 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
     year-end value.
 14. **Year view.** Income vs spending for all 12 months, totals per category per year, and a
     comparison of years (the overviews a yearly spreadsheet gives).
-15. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+15. **Number and date format, each set separately.** Not tied to a language or country: choose
+    the decimal mark (`,` or `.`), the thousands separator (`.` `,` space, `'` or none), where the
+    currency symbol goes and whether it is a symbol or code, how negative amounts look, the date
+    order (DMY/MDY/YMD), the date separator, and the first day of the week. Presets only fill these
+    in; every option can still be changed.
+16. **Accounts in different currencies.** Each account has its own currency and amounts are stored
+    and shown exactly as the bank reports them. One main currency for overviews, budgets and net
+    worth: other currencies are converted at the rate of the transaction's own date (net worth at
+    month-end rates). Rates from the European Central Bank's free daily reference rates (only the
+    public rate list is downloaded, nothing is sent), stored locally; can be switched off in favour
+    of rates typed in by hand. Converted figures are marked as such, originals stay visible.
+17. **More languages.** English, Dutch (Flemish), French, German, Spanish (Spain), Spanish (Latin
+    America), Portuguese (Portugal), Portuguese (Brazil), Italian, Polish and Turkish; others can be
+    added as one file each. Language is separate from the number and date format (item 15).
+18. **Other AI providers (OpenAI-compatible).** Besides Claude, any provider with an
+    OpenAI-compatible chat API: ready-made setups for Claude, Mistral, Groq, DeepSeek, Ollama,
+    LM Studio, OpenRouter, Together, Fireworks and Gemini, plus a custom endpoint. Each with its
+    own key (kept in the encrypted data), base URL and model. Local options (Ollama, LM Studio)
+    keep everything on the computer. Tool use and confirmations work the same; providers without
+    tool calling get chat without changes.
+19. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
 
 ## Later, maybe
