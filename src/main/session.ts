@@ -8,6 +8,8 @@ import { BrowserWindow, powerMonitor } from 'electron'
 import QRCode from 'qrcode'
 import {
   createAccount,
+  forgetRemembered,
+  rememberedUntil,
   rotateRecoveryKey,
   setPassword,
   setPasswordless,
@@ -91,6 +93,7 @@ export async function status(): Promise<AuthStatus> {
     state: open ? 'unlocked' : account || loadError ? 'locked' : 'setup',
     mode: account?.mode ?? null,
     twoFactor: account?.twoFactor ?? false,
+    rememberedUntil: account ? rememberedUntil(account) : null,
     device,
     throttleSeconds: account ? throttleSeconds(account) : 0,
     recovered,
@@ -139,16 +142,17 @@ function requireAccount(): AccountData {
   return account
 }
 
-export async function unlock(input: { password?: string; code?: string }): Promise<void> {
+export async function unlock(input: { password?: string; code?: string; remember?: boolean }): Promise<void> {
   const acc = requireAccount()
   let result
   if (acc.mode === 'device') {
     // Check the 2FA code format first so a typo doesn't cost a Hello prompt.
-    if (acc.twoFactor && !/^\d{6}$/.test((input.code ?? '').trim())) throw new AppError('auth.code_required', 'Enter the 6-digit code from your authenticator app.')
+    const needCode = acc.twoFactor && !rememberedUntil(acc)
+    if (needCode && !/^\d{6}$/.test((input.code ?? '').trim())) throw new AppError('auth.code_required', 'Enter the 6-digit code from your authenticator app.')
     await requireDevice('Unlock Kasboek')
-    result = unlockWithDevice(acc, input.code)
+    result = unlockWithDevice(acc, input.code || undefined, { remember: input.remember })
   } else {
-    result = await unlockWithPassword(acc, input.password ?? '', input.code)
+    result = await unlockWithPassword(acc, input.password ?? '', input.code || undefined, { remember: input.remember })
   }
   await persist(result.account)
   if (!result.ok) {
@@ -227,6 +231,11 @@ export async function newRecoveryKey(password?: string): Promise<string> {
   const r = await rotateRecoveryKey(requireAccount(), master)
   await persist(r.account)
   return r.recoveryKey
+}
+
+export async function forgetThisComputer(): Promise<void> {
+  secrets()
+  await persist(forgetRemembered(requireAccount()))
 }
 
 export async function totpBegin(): Promise<{ secret: string; uri: string; qrSvg: string }> {

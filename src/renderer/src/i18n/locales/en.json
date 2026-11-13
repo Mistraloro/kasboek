@@ -319,7 +319,10 @@
     "encryptionHint": "Your budget data is encrypted on disk.",
     "keyStorageOsHint": "Data is locked to this computer and user account.",
     "keepValue_one": "Last {{count}} backup",
-    "keepValue_other": "Last {{count}} backups"
+    "keepValue_other": "Last {{count}} backups",
+    "rememberedHint": "Remembered on this computer until {{date}}. Other computers, imports and exports still ask for the code.",
+    "forgetComputer": "Forget this computer",
+    "forgotten": "This computer will ask for the code again."
   },
   "banks": {
     "argenta": "Argenta",
@@ -409,7 +412,9 @@
     "strength3": "Good",
     "strength4": "Strong",
     "weakTitle": "Choose a stronger password",
-    "weakBody": "Kasboek now asks for stronger passwords to protect your data, especially in backups and exports. Choose a new one to continue."
+    "weakBody": "Kasboek now asks for stronger passwords to protect your data, especially in backups and exports. Choose a new one to continue.",
+    "rememberComputer": "Remember this computer for 30 days",
+    "rememberedNote": "Two-factor code remembered on this computer until {{date}}."
   },
   "transfer": {
     "title": "Move to another computer",

@@ -99,7 +99,15 @@ function SecuritySection() {
           </>
         )}
       </Row>
-      <Row label={t('settings.twoFactor')} hint={t('settings.twoFactorHint')}>
+      <Row
+        label={t('settings.twoFactor')}
+        hint={status.rememberedUntil ? t('settings.rememberedHint', { date: new Date(status.rememberedUntil).toLocaleDateString() }) : t('settings.twoFactorHint')}
+      >
+        {status.rememberedUntil && (
+          <Button size="sm" variant="ghost" onClick={() => void call('auth.forgetComputer').then((s2) => { set(s2); toast(t('settings.forgotten')) }, (e) => toast(errText(e), 'error'))}>
+            {t('settings.forgetComputer')}
+          </Button>
+        )}
         <Badge tone={status.twoFactor ? 'accent' : 'neutral'}>{status.twoFactor ? t('settings.on') : t('settings.off')}</Badge>
         <Button size="sm" onClick={() => setModal(status.twoFactor ? 'totp-off' : 'totp-on')}>
           {status.twoFactor ? t('settings.turnOff') : t('settings.turnOn')}

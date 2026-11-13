@@ -152,3 +152,30 @@ async function legacyScryptSlot(master: Buffer) {
   const key = scryptSync('a long password'.normalize('NFKC'), salt, 32, { N: 2 ** 10, r: 8, p: 1 })
   return { kdf: { name: 'scrypt' as const, N: 2 ** 10, r: 8, p: 1, salt: salt.toString('base64') }, sealed: seal(key, master, 'kasboek:slot:password') }
 }
+
+describe('remember 2FA for 30 days', () => {
+  it('skips the code only with a valid, unexpired, unforged record, and clears on 2FA changes', async () => {
+    const { rememberValid, setTwoFactor: set2fa } = await import('@core/account')
+    const created = await createAccount({ mode: 'password', password: 'a long password', dbKey: dbKey() })
+    const secret = newTotpSecret()
+    const { account } = set2fa(created.account, created.master, created.vault, { secret, lastStep: 0 })
+    const code = totpAt(secret, Date.now() / 1000)
+
+    const first = await unlockWithPassword(account, 'a long password', code, { remember: true })
+    expect(first.ok).toBe(true)
+    const remembered = first.account
+    expect(remembered.remember2fa).toBeTruthy()
+
+    expect((await unlockWithPassword(remembered, 'a long password')).ok).toBe(true)
+    expect((await unlockWithPassword(remembered, 'wrong password')).ok).toBe(false)
+
+    const forged = { ...remembered, remember2fa: { until: '2099-01-01T00:00:00.000Z', mac: remembered.remember2fa!.mac } }
+    expect(rememberValid(forged, created.master)).toBe(false)
+    expect((await unlockWithPassword(forged, 'a long password')).ok).toBe(false)
+
+    expect(rememberValid(remembered, created.master, Date.now() + 31 * 86_400_000)).toBe(false)
+
+    const reset = set2fa(remembered, created.master, created.vault, { secret, lastStep: 0 }).account
+    expect(reset.remember2fa).toBeUndefined()
+  })
+})

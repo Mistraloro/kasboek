@@ -50,9 +50,10 @@ export const contract = {
     output: out<{ recoveryKey: string }>()
   },
   'auth.unlock': {
-    input: z.object({ password: z.string().max(256).optional(), code: z.string().max(12).optional() }).strict(),
+    input: z.object({ password: z.string().max(256).optional(), code: z.string().max(12).optional(), remember: z.boolean().optional() }).strict(),
     output: out<AuthStatus>()
   },
+  'auth.forgetComputer': { input: empty, output: out<AuthStatus>() },
   'auth.unlockRecovery': { input: z.object({ recoveryKey: z.string().min(10).max(80) }).strict(), output: out<AuthStatus>() },
   'auth.lock': { input: empty, output: out<AuthStatus>() },
   'auth.erase': { input: z.object({ confirm: z.literal('ERASE') }).strict(), output: out<AuthStatus>() },

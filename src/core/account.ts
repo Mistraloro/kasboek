@@ -8,6 +8,7 @@
  * Pure logic, no Electron. The main process adds the device seal (DPAPI/Keychain)
  * around the whole account record when it is written to disk.
  */
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { AppError } from './errors'
 import { makeSlot, openSlot, random, seal, slotNeedsUpgrade, unseal, type Sealed, type Slot } from './crypto'
 import { newRecoveryKey, normalizeRecoveryKey, verifyTotp } from './totp'
@@ -33,6 +34,43 @@ export interface AccountData {
   }
   vault: Sealed
   attempts: { failed: number; lastFailedAt: string | null }
+  /**
+   * "Remember this computer for 30 days": skip the 2FA code here until `until`. Signed with the
+   * master key, so it can't be forged by editing the file; the account file itself is sealed to this
+   * computer, so it can't be used elsewhere. Exports never contain it.
+   */
+  remember2fa?: { until: string; mac: string }
+}
+
+export const REMEMBER_DAYS = 30
+
+function rememberMac(master: Buffer, until: string): string {
+  return createHmac('sha256', master).update(`kasboek:remember2fa:${until}`).digest('base64')
+}
+
+/** True if the 2FA code may be skipped on this computer right now (checked only after the master key is known). */
+export function rememberValid(account: AccountData, master: Buffer, now = Date.now()): boolean {
+  const r = account.remember2fa
+  if (!account.twoFactor || !r || Date.parse(r.until) <= now) return false
+  const expected = Buffer.from(rememberMac(master, r.until))
+  const given = Buffer.from(r.mac)
+  return expected.length === given.length && timingSafeEqual(expected, given)
+}
+
+/** Whether the lock screen can leave out the code field (unverified: the real check happens on unlock). */
+export function rememberedUntil(account: AccountData, now = Date.now()): string | null {
+  const r = account.remember2fa
+  return account.twoFactor && r && Date.parse(r.until) > now ? r.until : null
+}
+
+export function forgetRemembered(account: AccountData): AccountData {
+  const { remember2fa: _r, ...rest } = account
+  return rest
+}
+
+function remembered(account: AccountData, master: Buffer, now = Date.now()): AccountData {
+  const until = new Date(now + REMEMBER_DAYS * 86_400_000).toISOString()
+  return { ...account, remember2fa: { until, mac: rememberMac(master, until) } }
 }
 
 export interface Unlocked {
@@ -111,33 +149,52 @@ function verifySecondFactor(account: AccountData, vault: Vault, code: string | u
  * Unlocks with the password (and 2FA code if enabled). On failure returns the account with the
  * failure recorded, so the caller can save it. The error never says which factor was wrong.
  */
+export interface UnlockOptions {
+  /** Remember this computer for 30 days after a correct 2FA code. */
+  remember?: boolean
+}
+
+function secondFactor(account: AccountData, master: Buffer, code: string | undefined, opts: UnlockOptions): { vault: Vault; account: AccountData } | null {
+  const vault = openVault(master, account.vault)
+  if (!account.twoFactor) return { vault, account }
+  if (!code && rememberValid(account, master)) return { vault, account }
+  const checked = verifySecondFactor(account, vault, code)
+  if (!checked) return null
+  return { vault: checked, account: opts.remember ? remembered(account, master) : account }
+}
+
 export async function unlockWithPassword(
   account: AccountData,
   password: string,
-  code?: string
+  code?: string,
+  opts: UnlockOptions = {}
 ): Promise<{ ok: true; unlocked: Unlocked; account: AccountData } | { ok: false; account: AccountData }> {
   checkThrottle(account)
   if (account.mode !== 'password' || !account.slots.password) throw new AppError('auth.wrong_mode', 'This account uses Windows Hello or Touch ID.')
-  const master = await openSlot(account.slots.password, password, 'password')
+  const slot = account.slots.password
+  const master = await openSlot(slot, password, 'password')
   if (!master) return { ok: false, account: recordFailure(account) }
-  const vault = verifySecondFactor(account, openVault(master, account.vault), code)
-  if (!vault) return { ok: false, account: recordFailure(account) }
+  const second = secondFactor(account, master, code, opts)
+  if (!second) return { ok: false, account: recordFailure(account) }
+  const vault = second.vault
+  account = second.account
   // Re-make an older scrypt slot with Argon2id now that we know the password.
-  const upgraded = slotNeedsUpgrade(account.slots.password) ? { ...account, slots: { ...account.slots, password: await makeSlot(master, password, 'password') } } : account
+  const upgraded = slotNeedsUpgrade(slot) ? { ...account, slots: { ...account.slots, password: await makeSlot(master, password, 'password') } } : account
   return succeed(upgraded, master, vault)
 }
 
 /** Passwordless: the caller has already verified the user with Windows Hello / Touch ID. */
 export function unlockWithDevice(
   account: AccountData,
-  code?: string
+  code?: string,
+  opts: UnlockOptions = {}
 ): { ok: true; unlocked: Unlocked; account: AccountData } | { ok: false; account: AccountData } {
   checkThrottle(account)
   if (account.mode !== 'device' || !account.slots.device) throw new AppError('auth.wrong_mode', 'This account uses a password.')
   const master = Buffer.from(account.slots.device, 'base64')
-  const vault = verifySecondFactor(account, openVault(master, account.vault), code)
-  if (!vault) return { ok: false, account: recordFailure(account) }
-  return succeed(account, master, vault)
+  const second = secondFactor(account, master, code, opts)
+  if (!second) return { ok: false, account: recordFailure(account) }
+  return succeed(second.account, master, second.vault)
 }
 
 /** The recovery key replaces both the password and the 2FA code. */
@@ -163,12 +220,12 @@ function succeed(account: AccountData, master: Buffer, vault: Vault) {
 
 export async function setPassword(account: AccountData, master: Buffer, password: string): Promise<AccountData> {
   const { device: _device, ...rest } = account.slots
-  return { ...account, mode: 'password', slots: { ...rest, password: await makeSlot(master, password, 'password') } }
+  return { ...forgetRemembered(account), mode: 'password', slots: { ...rest, password: await makeSlot(master, password, 'password') } }
 }
 
 export function setPasswordless(account: AccountData, master: Buffer): AccountData {
   const { password: _password, ...rest } = account.slots
-  return { ...account, mode: 'device', slots: { ...rest, device: master.toString('base64') } }
+  return { ...forgetRemembered(account), mode: 'device', slots: { ...rest, device: master.toString('base64') } }
 }
 
 export async function rotateRecoveryKey(account: AccountData, master: Buffer): Promise<{ account: AccountData; recoveryKey: string }> {
@@ -183,7 +240,7 @@ export function setTwoFactor(account: AccountData, master: Buffer, vault: Vault,
   const next: Vault = { ...vault }
   if (totp) next.totp = totp
   else delete next.totp
-  return { vault: next, account: { ...account, twoFactor: !!totp, vault: sealVault(master, next) } }
+  return { vault: next, account: { ...forgetRemembered(account), twoFactor: !!totp, vault: sealVault(master, next) } }
 }
 
 export function storeVault(account: AccountData, master: Buffer, vault: Vault): AccountData {

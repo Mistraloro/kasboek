@@ -120,6 +120,14 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async (_c, { current }) => ({ recoveryKey: await session.newRecoveryKey(current) })
   },
+  'auth.forgetComputer': {
+    mutates: true,
+    assistant: false,
+    handler: async () => {
+      await session.forgetThisComputer()
+      return session.status()
+    }
+  },
   'auth.totpBegin': { mutates: false, assistant: false, handler: () => session.totpBegin() },
   'auth.totpEnable': {
     mutates: true,

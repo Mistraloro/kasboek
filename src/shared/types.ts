@@ -77,6 +77,8 @@ export interface AuthStatus {
   state: 'setup' | 'locked' | 'unlocked'
   mode: AuthMode | null
   twoFactor: boolean
+  /** 2FA is remembered on this computer until this time (ISO), or null. */
+  rememberedUntil: string | null
   device: DeviceAuthKind
   throttleSeconds: number
   /** Unlocked with the recovery key; a new password should be chosen. */

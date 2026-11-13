@@ -16,6 +16,7 @@ export function Lock() {
   const [view, setView] = useState<View>('unlock')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
+  const [remember, setRemember] = useState(false)
   const [recoveryKey, setRecoveryKey] = useState('')
   const [erase, setErase] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +51,8 @@ export function Lock() {
   }
 
   const device = status.mode === 'device'
+  // A remembered computer skips the code; the real check happens in the main process.
+  const needCode = status.twoFactor && !status.rememberedUntil
   return (
     <AuthLayout>
       {view === 'unlock' && (
@@ -58,7 +61,8 @@ export function Lock() {
             className="flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault()
-              run(call('auth.unlock', device ? { code } : { password, code }))
+              const second = needCode ? { code, remember } : {}
+              run(call('auth.unlock', device ? second : { password, ...second }))
             }}
           >
             {!device && (
@@ -66,14 +70,23 @@ export function Lock() {
                 {(id) => <Input id={id} type="password" autoFocus autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
               </Field>
             )}
-            {status.twoFactor && <Field label={t('auth.code')}>{(id) => <CodeInput id={id} value={code} onChange={setCode} autoFocus={device} />}</Field>}
+            {needCode && (
+              <>
+                <Field label={t('auth.code')}>{(id) => <CodeInput id={id} value={code} onChange={setCode} autoFocus={device} />}</Field>
+                <label className="-mt-2 flex items-center gap-2 text-[13px] text-muted">
+                  <input type="checkbox" className="accent-[var(--accent)]" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                  {t('auth.rememberComputer')}
+                </label>
+              </>
+            )}
+            {status.twoFactor && status.rememberedUntil && <p className="text-xs text-muted">{t('auth.rememberedNote', { date: new Date(status.rememberedUntil).toLocaleDateString() })}</p>}
             {error && <p className="text-[13px] text-negative" role="alert">{error}</p>}
             {status.throttleSeconds > 0 && !error && <p className="text-[13px] text-warning">{t('auth.throttled', { s: status.throttleSeconds })}</p>}
             <Button
               type="submit"
               variant="primary"
               icon={device ? <DeviceIcon kind={status.device} /> : <LockIcon size={14} />}
-              disabled={busy || (!device && !password) || (status.twoFactor && code.length !== 6)}
+              disabled={busy || (!device && !password) || (needCode && code.length !== 6)}
             >
               {busy ? t('auth.working') : device ? t('auth.unlockWith', { name: deviceName }) : t('auth.unlock')}
             </Button>
