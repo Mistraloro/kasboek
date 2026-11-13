@@ -3,7 +3,7 @@
  * Detected from the header names (Dutch, French, English, German) and checked against the data.
  */
 import { mappingSchema } from '@shared/import-mapping'
-import type { Bank, ImportMapping } from '@shared/types'
+import type { ImportMapping } from '@shared/types'
 import { normHeader } from './read'
 
 export { mappingSchema }
@@ -127,8 +127,11 @@ export function detectDecimal(samples: string[]): ',' | '.' {
   return dot > comma ? '.' : ','
 }
 
-/** Recognises the three banks with built-in support from their header rows. */
-export function detectBank(headerCells: string[]): Bank | null {
+/**
+ * Recognises a few well-known layouts from their header rows, to report "layout recognised". This
+ * is only a label: any bank's CSV is mapped from its column names by autoMap.
+ */
+export function detectLayout(headerCells: string[]): string | null {
   const h = headerCells.map(normHeader)
   const has = (x: string): boolean => h.includes(x)
   if (has('nr v/d rekening') || (has('boekdatum') && has('naam tegenpartij') && has('munt'))) return 'argenta'

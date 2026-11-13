@@ -5,7 +5,7 @@
  * operations (only those marked as assistant tools), so every path is validated the same way.
  */
 import { z } from 'zod'
-import { ASSISTANT_MODELS, BANKS } from './types'
+import { ASSISTANT_MODELS } from './types'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
 import { checkPassword } from './password'
@@ -128,14 +128,14 @@ export const contract = {
     output: out<AccountWithBalance[]>()
   },
   'accounts.update': {
-    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), iban: z.string().trim().max(34).nullable().optional(), archived: z.boolean().optional() }).strict(),
+    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), archived: z.boolean().optional() }).strict(),
     output: out<Account>()
   },
   'accounts.create': {
     input: z
       .object({
         name: z.string().trim().min(1).max(80),
-        bank: z.enum(BANKS),
+        bank: z.string().trim().max(60).default(''),
         iban: z.string().trim().max(34).nullable().optional(),
         currency: z.string().length(3).default('EUR'),
         openingBalanceCents: z.number().int().default(0)

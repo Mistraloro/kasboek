@@ -51,7 +51,7 @@ describe('bank files', () => {
   it('Argenta (Windows-1252): detects bank, columns, IBANs and structured communication', () => {
     const { d, acc } = db()
     const p = analyze(d, { fileName: 'argenta.csv', bytes: fixture('argenta.csv'), accountId: acc })
-    expect(p.bank).toBe('argenta')
+    expect(p.layout).toBe('argenta')
     expect(p.encoding).toBe('windows-1252')
     expect(p.stats).toMatchObject({ total: 4, ready: 4, problems: 0 })
     const salary = p.rows.find((r) => r.amountCents === 285000)!
@@ -63,7 +63,7 @@ describe('bank files', () => {
   it('Hello bank!: skips refused payments and keeps quoted text intact', () => {
     const { d, acc } = db()
     const p = analyze(d, { fileName: 'hb.csv', bytes: fixture('hellobank.csv'), accountId: acc })
-    expect(p.bank).toBe('hellobank')
+    expect(p.layout).toBe('hellobank')
     expect(p.stats).toMatchObject({ total: 4, ready: 3, skipped: 1 })
     expect(p.rows.find((r) => r.amountCents === -125000)!.counterpartyIban).toBe('BE43068200000101')
     expect(p.rows.find((r) => r.amountCents === -1999)!.counterpartyName).toBe('BOL.COM; ONLINE')
@@ -72,7 +72,7 @@ describe('bank files', () => {
   it('Keytrade: finds the header below the info lines', () => {
     const { d, acc } = db()
     const p = analyze(d, { fileName: 'kt.csv', bytes: fixture('keytrade.csv'), accountId: acc })
-    expect(p.bank).toBe('keytrade')
+    expect(p.layout).toBe('keytrade')
     expect(p.mapping!.headerRow).toBe(2)
     expect(p.rows.map((r) => r.amountCents)).toEqual([50000, -750, 312])
     expect(p.rows[0]!.description).toContain('STORTING')

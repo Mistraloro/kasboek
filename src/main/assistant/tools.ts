@@ -61,7 +61,7 @@ export function compactResult(op: OpName, data: unknown): string {
     return JSON.stringify({
       fileName: p.fileName,
       account: p.accountName,
-      bank: p.bank,
+      layout: p.layout,
       mappingSource: p.mappingSource,
       headers: p.headers.map((h, i) => `${i}: ${h}`),
       mapping: p.mapping,

@@ -13,8 +13,10 @@ describe('operations', () => {
     const ctx = fresh()
     const bad = await runOp(coreOps, ctx, 'accounts.create', { name: '', bank: 'argenta' })
     expect(bad.ok).toBe(false)
-    const unknownBank = await runOp(coreOps, ctx, 'accounts.create', { name: 'X', bank: 'mybank' })
-    expect(unknownBank.ok).toBe(false)
+    // Any bank name is fine: there is no fixed list.
+    const anyBank = await runOp(coreOps, ctx, 'accounts.create', { name: 'X', bank: 'Mijn Bank' })
+    expect(anyBank).toMatchObject({ ok: true, data: { bank: 'Mijn Bank' } })
+    expect((await runOp(coreOps, ctx, 'accounts.create', { name: 'Y', bank: 'x'.repeat(61) })).ok).toBe(false)
 
     const ok = await runOp(coreOps, ctx, 'accounts.create', { name: 'Hello bank!', bank: 'hellobank', iban: 'be68 5390 0754 7034' })
     expect(ok).toMatchObject({ ok: true, data: { iban: 'BE68539007547034', currency: 'EUR' } })

@@ -2,14 +2,12 @@ export type Theme = 'system' | 'light' | 'dark'
 export type CategoryKind = 'expense' | 'income' | 'transfer'
 export type Actor = 'user' | 'assistant' | 'system'
 
-/** Banks we ship CSV profiles for. `other` covers anything else. */
-export const BANKS = ['argenta', 'hellobank', 'keytrade', 'other'] as const
-export type Bank = (typeof BANKS)[number]
 
 export interface Account {
   id: number
   name: string
-  bank: Bank
+  /** The bank's name as the person typed it (may be empty). */
+  bank: string
   iban: string | null
   currency: string
   openingBalanceCents: number
@@ -237,7 +235,8 @@ export interface ImportPreview {
   fileName: string
   accountId: number
   accountName: string
-  bank: Bank | null
+  /** Internal id of a recognised file layout, or null. Not a bank list: any bank's CSV works. */
+  layout: string | null
   encoding: string
   mappingSource: 'saved' | 'detected' | 'assistant' | 'manual' | 'none'
   headers: string[]

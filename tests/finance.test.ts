@@ -62,3 +62,22 @@ describe('budgets and summaries', () => {
     expect((await op('transactions.list', { month: '2026-10', direction: 'out' })).outCents).toBe(1800)
   })
 })
+
+describe('migration 3', () => {
+  it('turns old bank ids into readable names', async () => {
+    const { randomBytes } = await import('node:crypto')
+    const { mkdtempSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { openDatabase } = await import('@core/database')
+    const file = join(mkdtempSync(join(tmpdir(), 'kb-m3-')), 'k.db')
+    const key = randomBytes(32).toString('hex')
+    const db = openDatabase(file, key)
+    db.prepare("INSERT INTO accounts (name, bank) VALUES ('a', 'hellobank'), ('b', 'other')").run()
+    db.pragma('user_version = 2')
+    db.close()
+    const again = openDatabase(file, key)
+    expect(again.prepare('SELECT bank FROM accounts ORDER BY name').all()).toEqual([{ bank: 'Hello bank!' }, { bank: '' }])
+    again.close()
+  })
+})

@@ -1,7 +1,7 @@
 import { Download, FolderOpen, Monitor, Moon, Plus, ShieldAlert, ShieldCheck, Sun, Upload } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BANKS, type Bank, type PickedTransfer } from '@shared/types'
+import type { AccountWithBalance, PickedTransfer } from '@shared/types'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
@@ -305,17 +305,18 @@ function AccountsSection() {
   const { t } = useTranslation()
   const toast = useToast()
   const accounts = useOp('accounts.list')
-  const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [bank, setBank] = useState<Bank>('argenta')
-  const [iban, setIban] = useState('')
+  const [editing, setEditing] = useState<AccountWithBalance | 'new' | null>(null)
+  const [form, setForm] = useState({ name: '', bank: '', iban: '' })
+  const open = (a: AccountWithBalance | 'new'): void => {
+    setForm(a === 'new' ? { name: '', bank: '', iban: '' } : { name: a.name, bank: a.bank, iban: a.iban ?? '' })
+    setEditing(a)
+  }
   const save = async (): Promise<void> => {
     try {
-      await call('accounts.create', { name, bank, iban: iban || null })
-      toast(t('settings.accountAdded'))
-      setAdding(false)
-      setName('')
-      setIban('')
+      if (editing === 'new') await call('accounts.create', { name: form.name, bank: form.bank, iban: form.iban || null })
+      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null })
+      toast(editing === 'new' ? t('settings.accountAdded') : t('settings.accountSaved'))
+      setEditing(null)
       void accounts.reload()
     } catch (e) {
       toast(errText(e), 'error')
@@ -326,33 +327,32 @@ function AccountsSection() {
       <CardHeader
         title={t('settings.accounts')}
         description={t('settings.accountsHint')}
-        action={!adding && <Button size="sm" icon={<Plus size={14} />} onClick={() => setAdding(true)}>{t('settings.addAccount')}</Button>}
+        action={<Button size="sm" icon={<Plus size={14} />} onClick={() => open('new')}>{t('settings.addAccount')}</Button>}
       />
       {(accounts.data ?? []).map((a) => (
-        <Row key={a.id} label={a.name} hint={a.iban ? <span className="num selectable">{a.iban.replace(/(.{4})/g, '$1 ').trim()}</span> : undefined}>
-          <Badge>{t(`banks.${a.bank}`)}</Badge>
+        <Row
+          key={a.id}
+          label={<span className={a.archived ? 'text-muted line-through' : undefined}>{a.name}</span>}
+          hint={[a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : ''].filter(Boolean).join(' · ') || undefined}
+        >
+          <Button size="sm" variant="ghost" onClick={() => open(a)}>{t('settings.edit')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => void call('accounts.update', { id: a.id, archived: !a.archived }).then(() => accounts.reload())}>
+            {a.archived ? t('budgets.restore') : t('budgets.archive')}
+          </Button>
         </Row>
       ))}
-      {accounts.data?.length === 0 && !adding && <p className="px-5 py-4 text-[13px] text-muted">{t('settings.noAccounts')}</p>}
-      {adding && (
-        <form className="grid grid-cols-2 gap-4 border-t border-border px-5 py-4" onSubmit={(e) => { e.preventDefault(); void save() }}>
-          <Field label={t('settings.accountName')}>{(id) => <Input id={id} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('settings.accountNamePlaceholder')} autoFocus required />}</Field>
-          <Field label={t('settings.bank')}>
-            {(id) => (
-              <Select id={id} value={bank} onChange={(e) => setBank(e.target.value as Bank)}>
-                {BANKS.map((b) => <option key={b} value={b}>{t(`banks.${b}`)}</option>)}
-              </Select>
-            )}
-          </Field>
-          <div className="col-span-2">
-            <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <Input id={id} value={iban} onChange={(e) => setIban(e.target.value)} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
-          </div>
-          <div className="col-span-2 flex justify-end gap-2">
-            <Button onClick={() => setAdding(false)}>{t('settings.cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={!name.trim()}>{t('settings.save')}</Button>
+      {accounts.data?.length === 0 && <p className="px-5 py-4 text-[13px] text-muted">{t('settings.noAccounts')}</p>}
+      <Modal open={!!editing} title={editing === 'new' ? t('settings.addAccount') : t('settings.editAccount')} onClose={() => setEditing(null)}>
+        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>
+          <Field label={t('settings.accountName')}>{(id) => <Input id={id} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('settings.accountNamePlaceholder')} autoFocus required />}</Field>
+          <Field label={t('settings.bankName')} hint={t('settings.bankNameHint')}>{(id) => <Input id={id} value={form.bank} maxLength={60} onChange={(e) => setForm({ ...form, bank: e.target.value })} />}</Field>
+          <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <Input id={id} value={form.iban} onChange={(e) => setForm({ ...form, iban: e.target.value })} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>
+            <Button type="submit" variant="primary" disabled={!form.name.trim()}>{t('settings.save')}</Button>
           </div>
         </form>
-      )}
+      </Modal>
     </Card>
   )
 }

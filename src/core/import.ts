@@ -3,12 +3,12 @@
  * confirmation) can change the mapping, skip rows and set categories first.
  */
 import { randomUUID } from 'node:crypto'
-import type { Bank, ImportBatch, ImportPreview, ImportRow } from '@shared/types'
+import type { ImportBatch, ImportPreview, ImportRow } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { insertTransaction, listRules, matchRule } from './finance'
 import { fingerprint } from './fingerprint'
-import { autoMap, detectBank, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
+import { autoMap, detectLayout, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
 import { normalizeRows, type CleanRow } from './csv/normalize'
 import { decode, detectDelimiter, parseCsv } from './csv/read'
 
@@ -30,7 +30,7 @@ interface Session {
   rows: string[][]
   mapping: CsvMapping | null
   mappingSource: ImportPreview['mappingSource']
-  bank: Bank | null
+  layout: string | null
   overrides: Map<number, RowOverride>
   notes: string[]
 }
@@ -86,7 +86,7 @@ export function analyze(db: Db, input: { fileName: string; bytes: Uint8Array; ac
     rows,
     mapping,
     mappingSource: source,
-    bank: detectBank(rows[mapping?.headerRow ?? 0] ?? []),
+    layout: detectLayout(rows[mapping?.headerRow ?? 0] ?? []),
     overrides: new Map(),
     notes: []
   }
@@ -103,7 +103,7 @@ export function remap(db: Db, id: string, mapping: unknown, source: ImportPrevie
   if (all.some((c) => c !== undefined && c >= width) || parsed.headerRow >= s.rows.length - 1) throw new AppError('import.bad_mapping', 'That column doesn’t exist in this file.')
   s.mapping = parsed
   s.mappingSource = source
-  s.bank = detectBank(s.rows[parsed.headerRow] ?? []) ?? s.bank
+  s.layout = detectLayout(s.rows[parsed.headerRow] ?? []) ?? s.layout
   return preview(db, id)
 }
 
@@ -177,7 +177,7 @@ export function preview(db: Db, id: string): ImportPreview {
     fileName: s.fileName,
     accountId: s.accountId,
     accountName: account.name,
-    bank: s.bank,
+    layout: s.layout,
     encoding: s.encoding,
     mappingSource: s.mappingSource,
     headers: s.rows[headerRow] ?? [],
@@ -224,7 +224,7 @@ export function commit(db: Db, id: string, saveProfile: boolean): { batchId: num
   db.transaction(() => {
     batchId = Number(
       db.prepare("INSERT INTO import_batches (account_id, file_name, csv_profile, row_count, status, committed_at) VALUES (?, ?, ?, ?, 'committed', strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
-        .run(s.accountId, s.fileName, s.bank, ready.length).lastInsertRowid
+        .run(s.accountId, s.fileName, s.layout, ready.length).lastInsertRowid
     )
     for (const { clean, row } of ready) {
       insertTransaction(db, {
@@ -247,7 +247,7 @@ export function commit(db: Db, id: string, saveProfile: boolean): { batchId: num
       db.prepare(
         `INSERT INTO csv_profiles (name, bank, header_signature, mapping_json) VALUES (?, ?, ?, ?)
          ON CONFLICT(header_signature) DO UPDATE SET mapping_json = excluded.mapping_json, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`
-      ).run(s.bank ?? s.fileName, s.bank, headerSignature(header, s.mapping!.delimiter), JSON.stringify(s.mapping))
+      ).run(s.layout ?? s.fileName, s.layout, headerSignature(header, s.mapping!.delimiter), JSON.stringify(s.mapping))
     }
   })()
   sessions.delete(id)

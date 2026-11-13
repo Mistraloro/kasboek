@@ -24,7 +24,7 @@
     "stepBackup": "Turn on automatic backups",
     "stepBackupBody": "Encrypted, daily, to a folder or drive you choose.",
     "stepAccounts": "Add your bank accounts",
-    "stepAccountsBody": "Argenta, Hello bank!, Keytrade Bank or any other.",
+    "stepAccountsBody": "Give each account a name, and the bank if you like.",
     "stepImport": "Import a CSV export",
     "stepImportBody": "Claude checks and cleans it before anything is saved.",
     "open": "Open",
@@ -123,12 +123,10 @@
     "subtitle": "Bring in CSV exports from your bank. Nothing is saved until you approve.",
     "dropTitle": "Drop a CSV export here",
     "dropBody": "Kasboek reads the file, recognises the bank, flags duplicates and problems, and suggests categories. You review everything before it’s saved.",
-    "supported": "Recognised automatically:",
     "intoAccount": "Import into",
     "needAccount": "Add the bank account first, so Kasboek knows where these transactions belong.",
     "addAccount": "Add an account",
     "choose": "Choose CSV file…",
-    "andOthers": "and most other CSV layouts.",
     "recent": "Recent imports",
     "rows_one": "{{count}} row",
     "rows_other": "{{count}} rows",
@@ -202,7 +200,9 @@
     "checking": "Claude is checking…",
     "checked": "Claude checked the file. See the notes above the rows.",
     "checkPrivacy": "Sends the rows of this file to Anthropic.",
-    "claudeOff": "Connect Claude in Settings to have it check files."
+    "claudeOff": "Connect Claude in Settings to have it check files.",
+    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import.",
+    "layoutRecognised": "Layout recognised"
   },
   "assistant": {
     "title": "Claude",
@@ -250,8 +250,7 @@
     "addAccount": "Add account",
     "noAccounts": "No accounts yet.",
     "accountName": "Name",
-    "accountNamePlaceholder": "e.g. Argenta current account",
-    "bank": "Bank",
+    "accountNamePlaceholder": "e.g. Everyday account",
     "iban": "IBAN",
     "ibanOptional": "Optional. Helps match transfers between your own accounts.",
     "save": "Save",
@@ -330,13 +329,12 @@
     "restoreTitle": "Restore a backup",
     "showAllBackups_one": "Show all {{count}} backup",
     "showAllBackups_other": "Show all {{count}} backups",
-    "showFewer": "Show fewer"
-  },
-  "banks": {
-    "argenta": "Argenta",
-    "hellobank": "Hello bank!",
-    "keytrade": "Keytrade Bank",
-    "other": "Other"
+    "showFewer": "Show fewer",
+    "bankName": "Bank",
+    "bankNameHint": "Optional. Any bank, as you call it.",
+    "edit": "Edit",
+    "editAccount": "Edit account",
+    "accountSaved": "Account saved."
   },
   "errors": {
     "generic": "Something went wrong."

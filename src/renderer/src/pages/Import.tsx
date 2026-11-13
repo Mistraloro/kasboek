@@ -13,7 +13,6 @@ import { errText } from './auth/parts'
 import { CategorySelect } from './Transactions'
 import { useAssistant } from '../components/AssistantPanel'
 
-const SUPPORTED = ['argenta', 'hellobank', 'keytrade'] as const
 type Filter = 'all' | ImportRow['status']
 
 function toBase64(buf: ArrayBuffer): string {
@@ -109,7 +108,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
           <div className="mb-4 flex items-center gap-3">
             <span className="text-[13px] font-medium">{t('import.intoAccount')}</span>
             <Select className="w-64!" aria-label={t('import.intoAccount')} value={account ?? ''} onChange={(e) => setAccountId(Number(e.target.value))}>
-              {(accounts.data ?? []).filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.name} · {t(`banks.${a.bank}`)}</option>)}
+              {(accounts.data ?? []).filter((a) => !a.archived).map((a) => <option key={a.id} value={a.id}>{a.bank ? `${a.name} · ${a.bank}` : a.name}</option>)}
             </Select>
           </div>
           <div
@@ -124,11 +123,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
             <Button className="mt-5" variant="primary" disabled={busy || !account} onClick={() => fileInput.current?.click()}>{busy ? t('auth.working') : t('import.choose')}</Button>
             <input ref={fileInput} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void open(f) }} />
           </div>
-          <div className="mt-4 flex items-center gap-2">
-            <span className="text-[13px] text-muted">{t('import.supported')}</span>
-            {SUPPORTED.map((b) => <Badge key={b}>{t(`banks.${b}`)}</Badge>)}
-            <span className="text-[13px] text-muted">{t('import.andOthers')}</span>
-          </div>
+          <p className="mt-4 text-[13px] text-muted">{t('import.anyBank')}</p>
         </>
       )}
       {(batches.data ?? []).length > 0 && (
@@ -179,7 +174,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
             <span className="selectable font-medium text-text">{preview.fileName}</span> → {preview.accountName}
-            {preview.bank && <Badge tone="accent">{t(`banks.${preview.bank}`)}</Badge>}
+            {preview.layout && <Badge tone="accent">{t('import.layoutRecognised')}</Badge>}
             <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>
           </span>
         }

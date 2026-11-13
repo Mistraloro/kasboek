@@ -76,7 +76,7 @@ function buildContext(db: Db, preview: ImportPreview): string {
     {
       account,
       fileName: preview.fileName,
-      detectedBank: preview.bank,
+      recognisedLayout: preview.layout,
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,
       stats: preview.stats,

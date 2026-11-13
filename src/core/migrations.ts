@@ -138,6 +138,17 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
         value TEXT NOT NULL
       );
     `)
+  },
+  (db) => {
+    // Accounts used to pick from a fixed list of banks; the bank is now a free-text name.
+    db.exec(`
+      UPDATE accounts SET bank = CASE bank
+        WHEN 'argenta' THEN 'Argenta'
+        WHEN 'hellobank' THEN 'Hello bank!'
+        WHEN 'keytrade' THEN 'Keytrade Bank'
+        WHEN 'other' THEN ''
+        ELSE bank END;
+    `)
   }
 ]
 

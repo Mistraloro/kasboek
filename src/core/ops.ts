@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { contract, type OpName, type OpOutput, type OpParsedInput, type OpResult } from '@shared/contract'
-import type { Account, AccountWithBalance, Actor, Bank, Category } from '@shared/types'
+import type { Account, AccountWithBalance, Actor, Category } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
@@ -25,7 +25,7 @@ export type OpTable = { [K in OpName]?: OpDef<K> }
 interface AccountRow {
   id: number
   name: string
-  bank: Bank
+  bank: string
   iban: string | null
   currency: string
   opening_balance_cents: number
@@ -100,8 +100,9 @@ export const coreOps: OpTable = {
     handler: ({ db }, input) => {
       const cur = db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow | undefined
       if (!cur) throw new AppError('accounts.not_found', 'Account not found.')
-      db.prepare('UPDATE accounts SET name = ?, iban = ?, archived = ? WHERE id = ?').run(
+      db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, archived = ? WHERE id = ?').run(
         input.name ?? cur.name,
+        input.bank ?? cur.bank,
         input.iban !== undefined ? normalizeIban(input.iban) : cur.iban,
         input.archived !== undefined ? (input.archived ? 1 : 0) : cur.archived,
         input.id
