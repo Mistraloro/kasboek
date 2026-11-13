@@ -1,3 +1,4 @@
+import type { ProviderId } from './ai-providers'
 import type { FormatPrefs } from './format'
 export type Theme = 'system' | 'light' | 'dark'
 export type CategoryKind = 'expense' | 'income' | 'transfer'
@@ -68,6 +69,13 @@ export interface Settings {
   csvEffort: Effort
   /** Allow Claude Desktop / Claude Code to use Kasboek through MCP while it is unlocked. */
   mcpEnabled: boolean
+  /** Which AI the in-app assistant uses. */
+  aiProvider: ProviderId
+  /** Base URL for providers where it can be changed (local servers, custom); null = the preset's. */
+  aiBaseUrl: string | null
+  /** Model names for OpenAI-compatible providers (Claude uses chatModel/csvModel). */
+  aiChatModel: string
+  aiCsvModel: string
 }
 
 export const ASSISTANT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'] as const
@@ -77,6 +85,11 @@ export type Effort = 'low' | 'medium' | 'high'
 export interface AssistantStatus {
   configured: boolean
   keyHint: string | null
+  provider: ProviderId
+  /** Shown as the assistant's name ("Claude", "Mistral", …). */
+  providerName: string
+  /** Who receives the data; null when the model runs on this computer or network. */
+  company: string | null
   busy: boolean
   messages: ChatMessage[]
 }

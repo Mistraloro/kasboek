@@ -11,6 +11,7 @@ import { MONTH } from './month'
 import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS } from './format'
 import { checkPassword } from './password'
 import { CURRENCIES } from './currency'
+import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
 
 const currency = z
   .string()
@@ -116,7 +117,18 @@ export const contract = {
 
   /* ----- Claude ----- */
   'assistant.status': { input: empty, output: out<AssistantStatus>() },
-  'assistant.setKey': { input: z.object({ apiKey: z.string().trim().regex(/^sk-ant-[A-Za-z0-9_-]{20,}$/, 'That doesn’t look like an Anthropic API key (it starts with sk-ant-).') }).strict(), output: out<AssistantStatus>() },
+  'assistant.setKey': {
+    input: z
+      .object({ apiKey: z.string().trim().min(1).max(500), provider: z.enum(PROVIDER_IDS).optional() })
+      .strict()
+      .superRefine((v, ctx) => {
+        if ((v.provider ?? 'anthropic') === 'anthropic' && !/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(v.apiKey))
+          ctx.addIssue({ code: 'custom', path: ['apiKey'], message: 'That doesn’t look like an Anthropic API key (it starts with sk-ant-).' })
+        else if (/\s/.test(v.apiKey) || v.apiKey.length < 8) ctx.addIssue({ code: 'custom', path: ['apiKey'], message: 'That doesn’t look like an API key.' })
+      }),
+    output: out<AssistantStatus>()
+  },
+  'assistant.models': { input: empty, output: out<string[]>() },
   'assistant.clearKey': { input: empty, output: out<AssistantStatus>() },
   'assistant.configure': {
     input: z
@@ -125,7 +137,16 @@ export const contract = {
         chatEffort: z.enum(['low', 'medium', 'high']),
         csvModel: z.enum(ASSISTANT_MODELS),
         csvEffort: z.enum(['low', 'medium', 'high']),
-        mcpEnabled: z.boolean()
+        mcpEnabled: z.boolean(),
+        aiProvider: z.enum(PROVIDER_IDS),
+        aiBaseUrl: z
+          .string()
+          .trim()
+          .max(300)
+          .refine((u) => !checkBaseUrl(u), { error: (iss) => checkBaseUrl(String(iss.input)) ?? 'Invalid address.' })
+          .nullable(),
+        aiChatModel: z.string().trim().max(200),
+        aiCsvModel: z.string().trim().max(200)
       })
       .partial()
       .strict(),

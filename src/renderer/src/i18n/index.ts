@@ -12,8 +12,17 @@ void i18n.use(initReactI18next).init({
   resources: { en: { translation: en } },
   lng: 'en',
   fallbackLng: 'en',
-  interpolation: { escapeValue: false },
+  interpolation: { escapeValue: false, defaultVariables: { ai: 'Claude', aiCompany: 'Anthropic' } },
   returnNull: false
 })
+
+/** The assistant's name in texts; follows the chosen AI provider. */
+export function setAiName(name: string, company: string | null): void {
+  const vars = i18n.options.interpolation?.defaultVariables as Record<string, string> | undefined
+  if (vars) {
+    vars['ai'] = name
+    vars['aiCompany'] = company ?? ''
+  }
+}
 
 export default i18n

@@ -15,7 +15,10 @@ import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
-import { API_KEY, checkKey } from './assistant/claude'
+import { checkKey } from './assistant/claude'
+import { activeProvider, keyName } from './assistant/provider'
+import { checkProviderKey, listProviderModels } from './assistant/models'
+import { PROVIDERS } from '@shared/ai-providers'
 import { assistImport } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { helperPath } from './mcp/channel'
@@ -204,10 +207,14 @@ const desktopOps: OpTable = {
   'assistant.setKey': {
     mutates: true,
     assistant: false,
-    handler: async ({ db }, { apiKey }) => {
+    handler: async ({ db }, { apiKey, provider }) => {
+      const id = provider ?? getSettings(db).aiProvider
       // Dev/test only: skip the online check.
-      if (app.isPackaged || process.env['KASBOEK_SKIP_KEY_CHECK'] !== '1') await checkKey(apiKey)
-      setSecret(db, API_KEY, apiKey)
+      if (app.isPackaged || process.env['KASBOEK_SKIP_KEY_CHECK'] !== '1') {
+        if (id === 'anthropic') await checkKey(apiKey)
+        else await checkProviderKey({ ...activeProvider(db), preset: PROVIDERS[id], key: apiKey })
+      }
+      setSecret(db, keyName(id), apiKey)
       publishStatus()
       return assistantStatus()
     }
@@ -216,12 +223,29 @@ const desktopOps: OpTable = {
     mutates: true,
     assistant: false,
     handler: ({ db }) => {
-      setSecret(db, API_KEY, null)
+      setSecret(db, keyName(getSettings(db).aiProvider), null)
       resetChat()
       return assistantStatus()
     }
   },
-  'assistant.configure': { mutates: true, assistant: false, handler: ({ db }, patch) => updateSettings(db, patch) },
+  'assistant.configure': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, patch) => {
+      const before = getSettings(db)
+      // A new provider starts with its suggested model and its own address.
+      if (patch.aiProvider && patch.aiProvider !== before.aiProvider) {
+        const preset = PROVIDERS[patch.aiProvider]
+        patch = { aiChatModel: preset.suggestedModels[0] ?? '', aiCsvModel: '', aiBaseUrl: null, ...patch }
+      }
+      const next = updateSettings(db, patch)
+      // The conversation is tied to one provider's message format.
+      if (next.aiProvider !== before.aiProvider) resetChat()
+      else publishStatus()
+      return next
+    }
+  },
+  'assistant.models': { mutates: false, assistant: false, handler: ({ db }) => listProviderModels(db) },
   'assistant.send': { mutates: false, assistant: false, handler: (_c, { text }) => send(text) },
   'assistant.confirm': {
     mutates: false,

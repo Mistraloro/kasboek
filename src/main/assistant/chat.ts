@@ -5,12 +5,14 @@ import { randomUUID } from 'node:crypto'
 import Anthropic from '@anthropic-ai/sdk'
 import { runTurn } from '@core/assistant-loop'
 import { AppError } from '@core/errors'
-import { getSecret } from '@core/secrets'
 import { getSettings } from '@core/settings'
 import type { OpName, OpResult } from '@shared/contract'
 import type { AssistantStatus, ChatMessage } from '@shared/types'
 import { broadcast, db } from '../session'
-import { API_KEY, client, explainError, modelParams } from './claude'
+import { client, explainError, modelParams } from './claude'
+import * as openai from './openai'
+import { activeProvider, isConfigured, requireConfigured } from './provider'
+import { PROVIDERS } from '@shared/ai-providers'
 import { assistantTools, compactResult, describeChange, opForTool, precheck } from './tools'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
@@ -24,7 +26,7 @@ let display: ChatMessage[] = []
 let busy: AbortController | null = null
 const pending = new Map<string, (ok: boolean) => void>()
 
-const SYSTEM = `You are Claude, the assistant inside Kasboek, a private budgeting app on the person's own computer.
+const systemPrompt = (name: string): string => `You are ${name}, the assistant inside Kasboek, a private budgeting app on the person's own computer.
 
 How the data works:
 - Money is in integer cents. Negative = money out, positive = money in. Months are YYYY-MM, dates YYYY-MM-DD.
@@ -38,14 +40,16 @@ Style: short and plain. Lead with the answer. Write money with its currency, e.g
 function status(): AssistantStatus {
   let configured = false
   let keyHint: string | null = null
+  let preset = PROVIDERS.anthropic
   try {
-    const key = getSecret(db(), API_KEY)
-    configured = !!key
-    keyHint = key ? `…${key.slice(-4)}` : null
+    const p = activeProvider(db())
+    preset = p.preset
+    configured = isConfigured(p)
+    keyHint = p.key ? `…${p.key.slice(-4)}` : null
   } catch {
     // Locked.
   }
-  return { configured, keyHint, busy: !!busy, messages: display }
+  return { configured, keyHint, provider: preset.id, providerName: preset.assistantName, company: preset.company, busy: !!busy, messages: display }
 }
 
 let timer: NodeJS.Timeout | null = null
@@ -95,13 +99,17 @@ export function confirm(id: string, approve: boolean): void {
 }
 
 export function send(text: string): AssistantStatus {
-  if (busy) throw new AppError('assistant.busy', 'Claude is still answering.')
+  if (busy) throw new AppError('assistant.busy', 'The assistant is still answering.')
   if (!run) throw new Error('assistant not initialised')
   const database = db()
   const settings = getSettings(database)
-  const anthropic = client(database)
+  const provider = activeProvider(database)
+  requireConfigured(provider)
+  const native = provider.preset.id === 'anthropic'
+  const anthropic = native ? client(database) : null
   const tools = assistantTools().map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema as Anthropic.Beta.Messages.BetaTool.InputSchema, eager_input_streaming: true }))
   const today = new Date().toISOString().slice(0, 10)
+  const system = `${systemPrompt(provider.preset.assistantName)}\n\nToday is ${today}.`
 
   display.push({ id: randomUUID(), role: 'user', text })
   let current: Extract<ChatMessage, { role: 'assistant' }> = { id: randomUUID(), role: 'assistant', text: '', tools: [] }
@@ -117,11 +125,12 @@ export function send(text: string): AssistantStatus {
     history,
     {
       call: async (messages, onText, signal) => {
+        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 8192 }, onText, signal)
         const stream = anthropic.beta.messages.stream(
           {
             ...modelParams(settings.chatModel, settings.chatEffort),
             max_tokens: 32000,
-            system: `${SYSTEM}\n\nToday is ${today}.`,
+            system,
             cache_control: { type: 'ephemeral' },
             tools,
             messages
@@ -131,7 +140,8 @@ export function send(text: string): AssistantStatus {
         stream.on('text', onText)
         return stream.finalMessage()
       },
-      retryable: (err) => !(err instanceof Anthropic.APIError) && !(err instanceof AppError),
+      retryable: (err) =>
+        native ? !(err instanceof Anthropic.APIError) && !(err instanceof AppError) : err instanceof openai.ToolArgumentsError,
       mutates: (name) => opForTool(name)?.mutates ?? false,
       precheck,
       runTool: async (name, input) => {
@@ -164,13 +174,14 @@ export function send(text: string): AssistantStatus {
     .then((end) => {
       // A turn that ended mid-tool-loop would leave tool calls without results: roll back.
       if (end !== 'done' && history.at(-1)?.role === 'assistant' && JSON.stringify(history.at(-1)).includes('"tool_use"')) history.length = before
-      if (end === 'refusal') current.error = 'Claude declined to answer this.'
+      const name = provider.preset.assistantName
+      if (end === 'refusal') current.error = `${name} declined to answer this.`
       if (end === 'max_tokens') current.error = 'The answer was cut off. Ask for something shorter.'
-      if (end === 'too_many_steps') current.error = 'Claude took too many steps. Try a more specific question.'
+      if (end === 'too_many_steps') current.error = `${name} took too many steps. Try a more specific question.`
       if (end === 'aborted') current.error = 'Stopped.'
     })
     .catch((err: unknown) => {
-      current.error = explainError(err)
+      current.error = native ? explainError(err) : openai.explainProviderError(err, provider.preset.assistantName)
       // Roll back to before this turn so the conversation stays valid (no tool call without its result).
       history.length = before
     })

@@ -14,7 +14,11 @@ export const DEFAULT_SETTINGS: Settings = {
   chatEffort: 'medium',
   csvModel: 'claude-opus-5-5',
   csvEffort: 'medium',
-  mcpEnabled: false
+  mcpEnabled: false,
+  aiProvider: 'anthropic',
+  aiBaseUrl: null,
+  aiChatModel: '',
+  aiCsvModel: ''
 }
 
 export function getSettings(db: Db): Settings {

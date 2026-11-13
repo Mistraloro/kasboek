@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { AssistantStatus, ChatMessage } from '@shared/types'
 import type { Page } from '../App'
 import { call } from '../lib/api'
+import { setAiName } from '../i18n'
 import { errText } from '../pages/auth/parts'
 import { useToast } from './Toast'
 import { Badge, Button, cx } from './ui'
@@ -11,9 +12,14 @@ import { Badge, Button, cx } from './ui'
 export function useAssistant(): AssistantStatus | null {
   const [status, setStatus] = useState<AssistantStatus | null>(null)
   useEffect(() => {
-    void call('assistant.status').then(setStatus)
+    const apply = (s: AssistantStatus): void => {
+      // Texts name the chosen assistant ("Check with Mistral") through {{ai}} and {{aiCompany}}.
+      setAiName(s.providerName, s.company)
+      setStatus(s)
+    }
+    void call('assistant.status').then(apply)
     return window.kasboek.onEvent((e) => {
-      if (e.type === 'assistant.update') setStatus(e.status)
+      if (e.type === 'assistant.update') apply(e.status)
     })
   }, [])
   return status
@@ -102,7 +108,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
         <div className="flex-1 px-5">
           <p className="text-[13px] text-muted">{t('assistant.setupBody')}</p>
           <Button className="mt-4" variant="primary" onClick={() => go('settings')}>{t('assistant.setupButton')}</Button>
-          <p className="mt-4 text-xs text-muted">{t('assistant.privacy')}</p>
+          <p className="mt-4 text-xs text-muted">{t(status?.company === null ? 'assistant.privacyLocal' : 'assistant.privacy')}</p>
         </div>
       ) : (
         <>
@@ -115,7 +121,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
                     <button key={e} type="button" onClick={() => sendText(e)} className="rounded-lg border border-border bg-surface px-3 py-2 text-left text-[13px] hover:border-accent">{e}</button>
                   ))}
                 </div>
-                <p className="text-xs text-muted">{t('assistant.privacy')}</p>
+                <p className="text-xs text-muted">{t(status?.company === null ? 'assistant.privacyLocal' : 'assistant.privacy')}</p>
               </>
             ) : (
               status.messages.map((m) => <Bubble key={m.id} m={m} />)

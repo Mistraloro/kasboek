@@ -13,6 +13,8 @@ import { getSettings } from '@core/settings'
 import { mappingSchema } from '@shared/import-mapping'
 import type { ImportPreview } from '@shared/types'
 import { client, explainError, modelParams } from './claude'
+import * as openai from './openai'
+import { activeProvider, requireConfigured } from './provider'
 
 const col = z.number().int().nullable()
 const Plan = z.object({
@@ -151,8 +153,19 @@ function applyPlan(db: Db, preview: ImportPreview, plan: Plan): ImportPreview {
 export async function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
   const preview = imp.preview(db, sessionId)
   const settings = getSettings(db)
-  const params = modelParams(settings.csvModel, settings.csvEffort)
+  const provider = activeProvider(db)
+  requireConfigured(provider)
+  const name = provider.preset.assistantName
   let text = ''
+  if (provider.preset.id !== 'anthropic') {
+    try {
+      text = await openai.json(provider, { system: INSTRUCTIONS, user: buildContext(db, preview), schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 16000 })
+    } catch (err) {
+      throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
+    }
+    return applyPlan(db, preview, parsePlan(text, name))
+  }
+  const params = modelParams(settings.csvModel, settings.csvEffort)
   try {
     const stream = client(db).beta.messages.stream({
       ...params,
@@ -162,19 +175,21 @@ export async function assistImport(db: Db, sessionId: string): Promise<ImportPre
       messages: [{ role: 'user', content: buildContext(db, preview) }]
     })
     const message = await stream.finalMessage()
-    if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', 'Claude declined to check this file.')
+    if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
     if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
     for (const b of message.content) if (b.type === 'text') text += b.text
   } catch (err) {
     throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
   }
-  let plan: Plan
+  return applyPlan(db, preview, parsePlan(text, name))
+}
+
+function parsePlan(text: string, name: string): Plan {
   try {
-    plan = Plan.parse(JSON.parse(text))
+    return Plan.parse(JSON.parse(text))
   } catch {
-    throw new AppError('assistant.bad_plan', 'Claude’s answer couldn’t be read. Try again.')
+    throw new AppError('assistant.bad_plan', `${name}’s answer couldn’t be read. Try again, or try another model.`)
   }
-  return applyPlan(db, preview, plan)
 }
 
 /** Exposed for tests. */

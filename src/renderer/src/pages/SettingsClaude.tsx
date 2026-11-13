@@ -1,7 +1,8 @@
 import { Copy, KeyRound, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
+import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import { useAssistant } from '../components/AssistantPanel'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -19,7 +20,11 @@ export function ClaudeSection() {
   const [keyOpen, setKeyOpen] = useState(false)
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
+  const [models, setModels] = useState<string[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
   const s = settings.data
+  const preset = PROVIDERS[s?.aiProvider ?? 'anthropic']
+  const native = preset.id === 'anthropic'
   const configure = (patch: Parameters<typeof call<'assistant.configure'>>[1]): void => void call('assistant.configure', patch).then(() => settings.reload(), (e) => toast(errText(e), 'error'))
   const modelSelect = (value: AssistantModel, onChange: (m: AssistantModel) => void, label: string) => (
     <Select className="w-52" aria-label={label} value={value} onChange={(e) => onChange(e.target.value as AssistantModel)}>
@@ -31,16 +36,44 @@ export function ClaudeSection() {
       {EFFORTS.map((x) => <option key={x} value={x}>{t(`claude.effort.${x}`)}</option>)}
     </Select>
   )
+  const loadModels = (): void => {
+    setLoadingModels(true)
+    void call('assistant.models', {})
+      .then((list) => {
+        setModels(list)
+        toast(t('ai.modelsLoaded', { count: list.length }))
+      })
+      .catch((e) => toast(errText(e), 'error'))
+      .finally(() => setLoadingModels(false))
+  }
+  const suggestions = [...new Set([...models, ...preset.suggestedModels])]
+  const modelInput = (value: string, field: 'aiChatModel' | 'aiCsvModel', label: string, placeholder?: string) => (
+    <TextSetting key={`${preset.id}-${field}`} className="w-64!" label={label} value={value} placeholder={placeholder} list="ai-models" onSave={(v) => configure({ [field]: v })} />
+  )
 
   return (
     <Card>
-      <CardHeader title={t('claude.title')} description={t('claude.hint')} />
-      <Row label={t('claude.apiKey')} hint={t('claude.apiKeyHint')}>
-        <Badge tone={status?.configured ? 'accent' : 'neutral'}>{status?.configured ? t('claude.keySet', { hint: status.keyHint }) : t('claude.keyNotSet')}</Badge>
-        <Button size="sm" icon={<KeyRound size={14} />} onClick={() => setKeyOpen(true)}>{status?.configured ? t('claude.replaceKey') : t('claude.addKey')}</Button>
-        {status?.configured && <Button size="sm" variant="ghost" aria-label={t('claude.removeKey')} icon={<Trash2 size={14} />} onClick={() => void call('assistant.clearKey')} />}
-      </Row>
+      <CardHeader title={t('ai.title')} description={t('ai.hint')} />
       {s && (
+        <Row label={t('ai.provider')} hint={preset.company ? t('ai.providerCloud', { company: preset.company }) : t('ai.providerLocal')}>
+          <Select className="w-64!" aria-label={t('ai.provider')} value={s.aiProvider} onChange={(e) => { setModels([]); configure({ aiProvider: e.target.value as ProviderId }) }}>
+            {PROVIDER_IDS.map((id) => <option key={id} value={id}>{PROVIDERS[id].name}{PROVIDERS[id].company ? '' : ` · ${t('ai.local')}`}</option>)}
+          </Select>
+        </Row>
+      )}
+      {s && preset.editableUrl && (
+        <Row label={t('ai.baseUrl')} hint={preset.id === 'custom' ? t('ai.baseUrlCustomHint') : t('ai.baseUrlLocalHint', { url: preset.baseUrl })}>
+          <TextSetting key={`${preset.id}-url`} className="w-72!" label={t('ai.baseUrl')} value={s.aiBaseUrl ?? ''} placeholder={preset.baseUrl || 'https://…/v1'} onSave={(v) => configure({ aiBaseUrl: v || null })} />
+        </Row>
+      )}
+      {(preset.needsKey || preset.id === 'custom') && (
+        <Row label={t('claude.apiKey')} hint={native ? t('claude.apiKeyHint') : preset.needsKey ? t('ai.keyHint', { name: preset.name }) : t('ai.keyOptional')}>
+          <Badge tone={status?.keyHint ? 'accent' : 'neutral'}>{status?.keyHint ? t('claude.keySet', { hint: status.keyHint }) : t('claude.keyNotSet')}</Badge>
+          <Button size="sm" icon={<KeyRound size={14} />} onClick={() => setKeyOpen(true)}>{status?.keyHint ? t('claude.replaceKey') : t('claude.addKey')}</Button>
+          {status?.keyHint && <Button size="sm" variant="ghost" aria-label={t('claude.removeKey')} icon={<Trash2 size={14} />} onClick={() => void call('assistant.clearKey')} />}
+        </Row>
+      )}
+      {s && native && (
         <>
           <Row label={t('claude.chat')} hint={t('claude.chatHint')}>
             {modelSelect(s.chatModel, (chatModel) => configure({ chatModel }), t('claude.chat'))}
@@ -50,18 +83,33 @@ export function ClaudeSection() {
             {modelSelect(s.csvModel, (csvModel) => configure({ csvModel }), t('claude.csv'))}
             {effortSelect(s.csvEffort, (csvEffort) => configure({ csvEffort }), t('claude.effortLabel'))}
           </Row>
+          <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('claude.privacy')}</div>
         </>
       )}
-      <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('claude.privacy')}</div>
+      {s && !native && (
+        <>
+          <datalist id="ai-models">{suggestions.map((m) => <option key={m} value={m} />)}</datalist>
+          <Row label={t('claude.chat')} hint={t('ai.chatModelHint')}>
+            {modelInput(s.aiChatModel, 'aiChatModel', t('claude.chat'), preset.suggestedModels[0])}
+          </Row>
+          <Row label={t('claude.csv')} hint={t('ai.csvModelHint')}>
+            {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), s.aiChatModel || preset.suggestedModels[0])}
+          </Row>
+          <Row label={t('ai.models')} hint={t('ai.modelsHint', { name: preset.id === 'custom' ? t('ai.theServer') : preset.name })}>
+            <Button size="sm" disabled={loadingModels} onClick={loadModels}>{loadingModels ? t('ai.loadingModels') : t('ai.loadModels')}</Button>
+          </Row>
+          <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
+        </>
+      )}
       {s && <McpRows enabled={s.mcpEnabled} onChange={(mcpEnabled) => configure({ mcpEnabled })} />}
 
-      <Modal open={keyOpen} title={t('claude.addKey')} onClose={() => setKeyOpen(false)}>
+      <Modal open={keyOpen} title={t('ai.addKeyFor', { name: preset.name })} onClose={() => setKeyOpen(false)}>
         <form
           className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault()
             setBusy(true)
-            void call('assistant.setKey', { apiKey: key })
+            void call('assistant.setKey', { apiKey: key, provider: preset.id })
               .then(() => {
                 toast(t('claude.keySaved'))
                 setKey('')
@@ -71,10 +119,10 @@ export function ClaudeSection() {
               .finally(() => setBusy(false))
           }}
         >
-          <p className="text-[13px] text-muted">{t('claude.keyHelp')}</p>
-          <Field label={t('claude.apiKey')}>{(id) => <Input id={id} type="password" autoFocus value={key} onChange={(e) => setKey(e.target.value)} placeholder="sk-ant-…" />}</Field>
+          <p className="text-[13px] text-muted">{native ? t('claude.keyHelp') : t('ai.keyHelp', { name: preset.name })}</p>
+          <Field label={t('claude.apiKey')}>{(id) => <Input id={id} type="password" autoFocus value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} />}</Field>
           <div className="flex justify-between gap-2">
-            <a className="self-center text-[13px] font-medium text-accent hover:underline" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">{t('claude.getKey')}</a>
+            {preset.keyUrl ? <a className="self-center text-[13px] font-medium text-accent hover:underline" href={preset.keyUrl} target="_blank" rel="noreferrer">{t('ai.getKey', { name: preset.name })}</a> : <span />}
             <div className="flex gap-2">
               <Button onClick={() => setKeyOpen(false)}>{t('settings.cancel')}</Button>
               <Button type="submit" variant="primary" disabled={!key.trim() || busy}>{busy ? t('claude.checking') : t('settings.save')}</Button>
@@ -83,6 +131,28 @@ export function ClaudeSection() {
         </form>
       </Modal>
     </Card>
+  )
+}
+
+/** A text field that saves when it loses focus or on Enter. */
+function TextSetting({ value, onSave, label, className, placeholder, list }: { value: string; onSave: (v: string) => void; label: string; className?: string; placeholder?: string; list?: string }) {
+  const [text, setText] = useState(value)
+  useEffect(() => setText(value), [value])
+  const save = (): void => {
+    if (text.trim() !== value) onSave(text.trim())
+  }
+  return (
+    <Input
+      className={className}
+      aria-label={label}
+      value={text}
+      placeholder={placeholder}
+      list={list}
+      spellCheck={false}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), save())}
+    />
   )
 }
 

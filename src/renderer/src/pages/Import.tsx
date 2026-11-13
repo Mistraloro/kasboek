@@ -150,6 +150,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
+  const assistant = useAssistant()
   const categories = useOp('categories.list')
   const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : 'all')
   const [limit, setLimit] = useState(300)
@@ -195,7 +196,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents, preview.currency)}</span></span>
           <span className="ml-auto flex items-center gap-2">
             {onAssist ? (
-              <Button size="sm" variant="primary" icon={<Sparkles size={14} />} disabled={assisting} title={t('import.checkPrivacy')} onClick={() => onAssist(preview)}>
+              <Button size="sm" variant="primary" icon={<Sparkles size={14} />} disabled={assisting} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview)}>
                 {assisting ? t('import.checking') : t('import.checkWithClaude')}
               </Button>
             ) : (
