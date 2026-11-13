@@ -239,7 +239,18 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    - Risk to state in the UI: encrypted data lives permanently in the cloud, so a long password
      (item 6) is what protects it if the cloud account is compromised. Optional extra: a separate
      sync key that is never stored in the cloud.
-9. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+9. **One-click MCP setup for Claude Desktop and Claude Code** (Settings → Claude).
+   - *Add to Claude Desktop*: finds `claude_desktop_config.json` (Windows `%APPDATA%\Claude\`,
+     macOS `~/Library/Application Support/Claude/`), shows the exact entry it will add, then adds
+     or updates only `mcpServers.kasboek` and keeps everything else. Backs up the file first,
+     writes atomically, and stops with an explanation (never overwrites) if the file isn't valid
+     JSON. Says to restart Claude Desktop. A *Remove* button undoes it. Linux: no official Claude
+     Desktop, keep the snippet. Also evaluate Claude Desktop's one-click extension format.
+   - *Add to Claude Code*: if `claude` is on the PATH, runs `claude mcp add --scope user kasboek
+     -- <Kasboek> --mcp` after confirmation and shows the result; otherwise keeps the copyable
+     command. A *Remove* button runs `claude mcp remove kasboek`.
+   - Only ever on a button press, with the change shown first.
+10. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
 
 ## Later, maybe
