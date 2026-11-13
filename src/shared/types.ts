@@ -1,3 +1,4 @@
+import type { FormatPrefs } from './format'
 export type Theme = 'system' | 'light' | 'dark'
 export type CategoryKind = 'expense' | 'income' | 'transfer'
 export type Actor = 'user' | 'assistant' | 'system'
@@ -57,13 +58,16 @@ export type ChatMessage =
   | { id: string; role: 'assistant'; text: string; tools: { name: string; ok: boolean }[]; error?: string }
   | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' }
 
+/** A change to the preferences; `formats` may hold only the parts that change. */
+export type PrefsPatch = Partial<Omit<Prefs, 'formats'>> & { formats?: Partial<FormatPrefs> }
+
 /** Interface preferences, stored outside the database so the lock screen can use them. */
 export interface Prefs {
   theme: Theme
   /** UI language (i18n resource key). */
   language: string
-  /** Locale used to format numbers and dates, e.g. `en-BE` or `nl-BE`. */
-  formatLocale: string
+  /** Number, money and date formats; each part is chosen separately. */
+  formats: FormatPrefs
   /** Lock after this many minutes without keyboard or mouse use. 0 = never. */
   autoLockMinutes: number
 }

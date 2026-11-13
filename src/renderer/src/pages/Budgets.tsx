@@ -2,6 +2,7 @@ import { Copy, ListChecks, Tags, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
+import { centsToInput } from '@shared/format'
 import { monthOf } from '@shared/month'
 import type { BudgetRow, RuleField } from '@shared/types'
 import { Meter } from '../components/charts'
@@ -18,7 +19,7 @@ const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.sli
 export function Budgets() {
   const { t } = useTranslation()
   const toast = useToast()
-  const { locale, money } = useSettings()
+  const { fmt, money } = useSettings()
   const [month, setMonth] = useState(monthOf())
   const [rows, setRows] = useState<BudgetRow[] | null>(null)
   const [modal, setModal] = useState<null | 'categories' | 'rules'>(null)
@@ -37,7 +38,7 @@ export function Budgets() {
           <div className="flex items-center gap-2">
             <Button icon={<Tags size={14} />} onClick={() => setModal('categories')}>{t('budgets.categories')}</Button>
             <Button icon={<ListChecks size={14} />} onClick={() => setModal('rules')}>{t('budgets.rules')}</Button>
-            <MonthNav month={month} label={monthLabel(toDate(month), locale)} onChange={setMonth} />
+            <MonthNav month={month} label={monthLabel(toDate(month), fmt)} onChange={setMonth} />
           </div>
         }
       />
@@ -86,11 +87,12 @@ export function Budgets() {
 function BudgetLine({ row, month, money, onSaved }: { row: BudgetRow; month: string; money: (c: number) => string; onSaved: (r: BudgetRow[]) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const initial = row.budgetCents === null ? '' : (row.budgetCents / 100).toFixed(2).replace('.', ',')
+  const { fmt } = useSettings()
+  const initial = row.budgetCents === null ? '' : centsToInput(row.budgetCents, fmt.formats)
   const [text, setText] = useState(initial)
   const save = (): void => {
     if (text === initial) return
-    const cents = text.trim() === '' ? null : parseAmount(text)
+    const cents = text.trim() === '' ? null : parseAmount(text, 'auto', fmt.formats.decimal)
     if (cents !== null && (cents < 0 || Number.isNaN(cents))) return toast(t('budgets.invalid'), 'error')
     if (text.trim() !== '' && cents === null) return toast(t('budgets.invalid'), 'error')
     call('budgets.set', { categoryId: row.categoryId, month, amountCents: cents }).then(onSaved, (e) => toast(errText(e), 'error'))

@@ -6,14 +6,14 @@ import { Button, Field, Input } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { call } from '../../lib/api'
 import { formatDateTime } from '../../lib/format'
-import { usePrefs } from '../../lib/settings'
+import { usePrefsFmt } from '../../lib/settings'
 import { CodeInput, errText, PasswordFields, passwordsOk } from './parts'
 
 /** Pick a .kasboek file and open it with the login details it was made with. */
 export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s: AuthStatus) => void; onCancel: () => void; replacing?: boolean; preset?: PickedTransfer }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const { prefs } = usePrefs()
+  const fmt = usePrefsFmt()
   const [picked, setPicked] = useState<PickedTransfer | null>(preset ?? null)
   const [useRecovery, setUseRecovery] = useState(preset ? !preset.hasPassword : false)
   const [password, setPassword] = useState('')
@@ -77,7 +77,7 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
       <div className="rounded-lg bg-surface-2 px-3 py-2.5 text-[13px]">
         <p className="selectable font-medium break-all">{picked.fileName}</p>
         <p className="text-muted">
-          {t(picked.kind === 'export' ? 'transfer.kindExport' : 'transfer.kindBackup')} · {formatDateTime(picked.createdAt, prefs.formatLocale)}
+          {t(picked.kind === 'export' ? 'transfer.kindExport' : 'transfer.kindBackup')} · {formatDateTime(picked.createdAt, fmt)}
         </p>
       </div>
       {useRecovery ? (

@@ -4,12 +4,15 @@ import { useTranslation } from 'react-i18next'
 import { Button, Field, Input } from '../../components/ui'
 import { call } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { formatDate } from '../../lib/format'
+import { usePrefsFmt } from '../../lib/settings'
 import { AuthCard, AuthLayout } from './AuthLayout'
 import { CodeInput, DeviceIcon, errText, useDeviceName } from './parts'
 
 type View = 'unlock' | 'recovery' | 'erase'
 
 export function Lock() {
+  const fmt = usePrefsFmt()
   const { t } = useTranslation()
   const { status, set } = useAuth()
   const deviceName = useDeviceName(status.device)
@@ -79,7 +82,7 @@ export function Lock() {
                 </label>
               </>
             )}
-            {status.twoFactor && status.rememberedUntil && <p className="text-xs text-muted">{t('auth.rememberedNote', { date: new Date(status.rememberedUntil).toLocaleDateString() })}</p>}
+            {status.twoFactor && status.rememberedUntil && <p className="text-xs text-muted">{t('auth.rememberedNote', { date: formatDate(status.rememberedUntil, fmt) })}</p>}
             {error && <p className="text-[13px] text-negative" role="alert">{error}</p>}
             {status.throttleSeconds > 0 && !error && <p className="text-[13px] text-warning">{t('auth.throttled', { s: status.throttleSeconds })}</p>}
             <Button

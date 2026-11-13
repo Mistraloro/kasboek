@@ -1,15 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { AppInfo, Prefs, Settings } from '@shared/types'
+import type { AppInfo, Prefs, PrefsPatch, Settings } from '@shared/types'
 import i18n from '../i18n'
 import { call } from './api'
-import { formatMoney } from './format'
+import { formatMoney, type Fmt } from './format'
 
 /* ---------- Preferences: available before login ---------- */
 
 interface PrefsValue {
   prefs: Prefs
   info: AppInfo
-  updatePrefs: (patch: Partial<Prefs>) => Promise<void>
+  updatePrefs: (patch: PrefsPatch) => Promise<void>
 }
 
 const PrefsCtx = createContext<PrefsValue | null>(null)
@@ -43,7 +43,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     return () => mq.removeEventListener('change', onChange)
   }, [prefs])
 
-  const updatePrefs = useCallback(async (patch: Partial<Prefs>) => setPrefs(await call('prefs.update', patch)), [])
+  const updatePrefs = useCallback(async (patch: PrefsPatch) => setPrefs(await call('prefs.update', patch)), [])
   const value = useMemo(() => (prefs && info ? { prefs, info, updatePrefs } : null), [prefs, info, updatePrefs])
   if (!value) return null
   return <PrefsCtx.Provider value={value}>{children}</PrefsCtx.Provider>
@@ -55,13 +55,20 @@ export function usePrefs(): PrefsValue {
   return v
 }
 
+/** Formatting choices, also before login. */
+export function usePrefsFmt(): Fmt {
+  const { prefs } = usePrefs()
+  return useMemo(() => ({ formats: prefs.formats, language: prefs.language }), [prefs.formats, prefs.language])
+}
+
 /* ---------- Data settings: only while unlocked ---------- */
 
 interface SettingsValue extends PrefsValue {
   settings: Settings
   update: (patch: { currency?: string }) => Promise<void>
-  money: (cents: number) => string
-  locale: string
+  /** Money in the main currency, or in `currency` when given. */
+  money: (cents: number, currency?: string) => string
+  fmt: Fmt
 }
 
 const Ctx = createContext<SettingsValue | null>(null)
@@ -73,19 +80,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     void call('settings.get').then(setSettings)
   }, [])
   const update = useCallback(async (patch: { currency?: string }) => setSettings(await call('settings.update', patch)), [])
-  const value = useMemo(
-    () =>
-      settings
-        ? {
-            ...prefsValue,
-            settings,
-            update,
-            locale: prefsValue.prefs.formatLocale,
-            money: (c: number) => formatMoney(c, settings.currency, prefsValue.prefs.formatLocale)
-          }
-        : null,
-    [settings, prefsValue, update]
-  )
+  const value = useMemo(() => {
+    if (!settings) return null
+    const fmt: Fmt = { formats: prefsValue.prefs.formats, language: prefsValue.prefs.language }
+    return { ...prefsValue, settings, update, fmt, money: (c: number, currency?: string) => formatMoney(c, currency ?? settings.currency, fmt) }
+  }, [settings, prefsValue, update])
   if (!value) return null
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

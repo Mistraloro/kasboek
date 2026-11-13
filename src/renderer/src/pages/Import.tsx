@@ -25,7 +25,7 @@ function toBase64(buf: ArrayBuffer): string {
 export function ImportPage({ go }: { go: (p: Page) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const { locale } = useSettings()
+  const { fmt } = useSettings()
   const accounts = useOp('accounts.list')
   const batches = useOp('import.batches')
   const [accountId, setAccountId] = useState<number | null>(null)
@@ -132,7 +132,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
           {(batches.data ?? []).map((b) => (
             <div key={b.id} className="flex items-center gap-3 border-b border-border px-5 py-3 text-[13px] last:border-b-0">
               <span className="min-w-0 flex-1 truncate"><span className="font-medium">{b.fileName}</span> <span className="text-muted">→ {b.accountName}</span></span>
-              <span className="text-muted">{t('import.rows', { count: b.remaining })} · {formatDateTime(b.committedAt, locale)}</span>
+              <span className="text-muted">{t('import.rows', { count: b.remaining })} · {formatDateTime(b.committedAt, fmt)}</span>
               {b.remaining > 0 && (
                 <Button size="sm" variant="ghost" icon={<Undo2 size={14} />} onClick={() => { if (window.confirm(t('import.undoConfirm', { count: b.remaining }))) void call('import.undo', { batchId: b.id }).then(() => batches.reload()) }}>{t('import.undo')}</Button>
               )}
@@ -149,7 +149,7 @@ const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative'
 function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: { batchId: number; imported: number }) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const { money, locale } = useSettings()
+  const { money, fmt } = useSettings()
   const categories = useOp('categories.list')
   const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : 'all')
   const [limit, setLimit] = useState(300)
@@ -190,7 +190,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
 
       <Card className="mb-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
-          <span className="num">{t('import.period')}: <span className="font-medium">{s.from ? `${formatDate(s.from, locale)} – ${formatDate(s.to!, locale)}` : '—'}</span></span>
+          <span className="num">{t('import.period')}: <span className="font-medium">{s.from ? `${formatDate(s.from, fmt)} – ${formatDate(s.to!, fmt)}` : '—'}</span></span>
           <span className="num">{t('transactions.in')} <span className="font-medium">{money(s.inCents)}</span></span>
           <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents)}</span></span>
           <span className="ml-auto flex items-center gap-2">
@@ -251,7 +251,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
                       />
                     </td>
                     <td className="num px-2 py-2 text-[13px] whitespace-nowrap">
-                      {r.bookingDate ? formatDate(r.bookingDate, locale) : (
+                      {r.bookingDate ? formatDate(r.bookingDate, fmt) : (
                         <button type="button" className="font-medium text-negative underline decoration-dotted" onClick={() => {
                           const v = window.prompt(t('import.fixDate'), '')
                           const m = v?.trim().match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/)
@@ -271,7 +271,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
                       {r.amountCents === null ? (
                         <button type="button" className="text-negative underline decoration-dotted" onClick={() => {
                           const v = window.prompt(t('import.fixAmount'), '')
-                          const c = v ? parseAmount(v) : null
+                          const c = v ? parseAmount(v, 'auto', fmt.formats.decimal) : null
                           if (c) update([{ index: r.index, amountCents: c }])
                           else if (v) toast(t('budgets.invalid'), 'error')
                         }}>{t('import.badAmount')}</button>

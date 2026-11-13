@@ -1,16 +1,34 @@
-/** Formats integer cents as money, e.g. -123450 → "-€1,234.50" (en-BE). */
-export function formatMoney(cents: number, currency: string, locale: string): string {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 100)
+import * as f from '@shared/format'
+import type { FormatPrefs } from '@shared/format'
+
+/** What the UI needs to format: the user's chosen formats plus the language for month names. */
+export interface Fmt {
+  formats: FormatPrefs
+  language: string
 }
 
-export function formatDate(iso: string, locale: string, opts: Intl.DateTimeFormatOptions = { dateStyle: 'medium' }): string {
-  return new Intl.DateTimeFormat(locale, opts).format(new Date(iso))
+export function formatMoney(cents: number, currency: string, fmt: Fmt): string {
+  return f.formatMoney(cents, currency, fmt.formats)
 }
 
-export function formatDateTime(iso: string, locale: string): string {
-  return formatDate(iso, locale, { dateStyle: 'medium', timeStyle: 'short' })
+export function formatDate(iso: string | Date, fmt: Fmt): string {
+  return f.formatDate(iso, fmt.formats, fmt.language)
 }
 
-export function monthLabel(date: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date)
+export function formatDateTime(iso: string | Date, fmt: Fmt): string {
+  return f.formatDateTime(iso, fmt.formats, fmt.language)
+}
+
+export function formatNumber(value: number, fmt: Fmt, digits = 2): string {
+  return f.formatNumber(value, fmt.formats, digits)
+}
+
+/** "January 2026" in the interface language. */
+export function monthLabel(date: Date, fmt: Fmt): string {
+  return new Intl.DateTimeFormat(fmt.language, { month: 'long', year: 'numeric' }).format(date)
+}
+
+/** "Jan" in the interface language. */
+export function monthShort(date: Date, fmt: Fmt): string {
+  return new Intl.DateTimeFormat(fmt.language, { month: 'short' }).format(date).replace(/\.$/, '')
 }

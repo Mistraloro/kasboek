@@ -264,8 +264,6 @@
     "themeDark": "Dark",
     "languageHint": "More languages can be added later.",
     "uiLanguage": "Language",
-    "numberFormat": "Number and date format",
-    "example": "Example: {{value}}",
     "backups": "Backups",
     "backupsHint": "Automatic, encrypted backups in the same format as an export. They open only with Import and your login.",
     "changePassword": "Change password",
@@ -334,7 +332,36 @@
     "bankNameHint": "Optional. Any bank, as you call it.",
     "edit": "Edit",
     "editAccount": "Edit account",
-    "accountSaved": "Account saved."
+    "accountSaved": "Account saved.",
+    "formats": "Number and date formats",
+    "formatsHint": "Each part can be set on its own. Example: {{value}}",
+    "decimalSeparator": "Decimal mark",
+    "groupSeparator": "Thousands separator",
+    "grouping": "Digit grouping",
+    "currencyPosition": "Currency position",
+    "currencyStyle": "Currency shown as",
+    "negative": "Negative amounts",
+    "dateFormat": "Date",
+    "timeFormat": "Time",
+    "sep": {
+      "dot": "Point",
+      "comma": "Comma",
+      "space": "Space",
+      "apostrophe": "Apostrophe",
+      "none": "None"
+    },
+    "groupingOption": {
+      "thousands": "Thousands",
+      "indian": "Lakh and crore"
+    },
+    "currencyStyleOption": {
+      "symbol": "Symbol",
+      "code": "Code"
+    },
+    "timeOption": {
+      "24h": "24-hour",
+      "12h": "12-hour"
+    }
   },
   "errors": {
     "generic": "Something went wrong."

@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { ASSISTANT_MODELS } from './types'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
+import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS } from './format'
 import { checkPassword } from './password'
 import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
@@ -33,7 +34,19 @@ export const contract = {
       .object({
         theme: z.enum(['system', 'light', 'dark']),
         language: z.string().min(2).max(10),
-        formatLocale: z.string().min(2).max(20),
+        formats: z
+          .object({
+            decimal: z.enum(DECIMAL_SEPARATORS),
+            group: z.enum(GROUP_SEPARATORS),
+            grouping: z.enum(GROUPINGS),
+            currencyPosition: z.enum(CURRENCY_POSITIONS),
+            currencyStyle: z.enum(CURRENCY_STYLES),
+            negative: z.enum(NEGATIVE_STYLES),
+            date: z.enum(DATE_PATTERNS),
+            time: z.enum(TIME_FORMATS)
+          })
+          .partial()
+          .strict(),
         autoLockMinutes: z.number().int().min(0).max(240)
       })
       .partial()

@@ -6,14 +6,14 @@ import type { Page } from '../App'
 import { CategoryBars, MonthBars } from '../components/charts'
 import { Button, Card, CardHeader, EmptyState, MonthNav, PageHeader, cx } from '../components/ui'
 import { useOp } from '../lib/api'
-import { monthLabel } from '../lib/format'
+import { monthLabel, monthShort } from '../lib/format'
 import { useSettings } from '../lib/settings'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 
 export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown>) => void }) {
   const { t } = useTranslation()
-  const { locale, money } = useSettings()
+  const { fmt, money } = useSettings()
   const [month, setMonth] = useState(monthOf())
   const summary = useOp('summary.month', { month })
   const backup = useOp('backup.status')
@@ -30,7 +30,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
 
   return (
     <>
-      <PageHeader title={t('overview.title')} action={<MonthNav month={month} label={monthLabel(toDate(month), locale)} onChange={setMonth} />} />
+      <PageHeader title={t('overview.title')} action={<MonthNav month={month} label={monthLabel(toDate(month), fmt)} onChange={setMonth} />} />
 
       <div className="grid grid-cols-3 gap-4">
         <Stat label={t('overview.income')} value={money(s?.incomeCents ?? 0)} />
@@ -57,7 +57,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
 
       <div className="mt-4 grid grid-cols-5 gap-4">
         <Card className="col-span-3">
-          <CardHeader title={t('overview.byCategory')} description={monthLabel(toDate(month), locale)} />
+          <CardHeader title={t('overview.byCategory')} description={monthLabel(toDate(month), fmt)} />
           {s && s.byCategory.length > 0 ? (
             <div className="px-5 py-4">
               <CategoryBars rows={s.byCategory.map((c) => ({ name: c.categoryId === null ? t('transactions.uncategorized') : c.name, cents: c.cents }))} format={money} />
@@ -105,7 +105,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
               label={t('overview.trend')}
               legend={{ income: t('overview.income'), spending: t('overview.spending') }}
               format={money}
-              data={s.history.map((h) => ({ month: h.month, label: new Intl.DateTimeFormat(locale, { month: 'short' }).format(toDate(h.month)), income: h.incomeCents, spending: h.spendingCents }))}
+              data={s.history.map((h) => ({ month: h.month, label: monthShort(toDate(h.month), fmt), income: h.incomeCents, spending: h.spendingCents }))}
             />
           )}
         </div>

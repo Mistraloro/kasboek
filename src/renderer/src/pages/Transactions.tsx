@@ -2,6 +2,7 @@ import { ArrowLeftRight, Plus, Search, Trash2, Wand2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
+import { centsToInput } from '@shared/format'
 import { addMonths, monthOf } from '@shared/month'
 import type { Category, Transaction } from '@shared/types'
 import type { Page } from '../App'
@@ -37,7 +38,7 @@ export function CategorySelect({ value, categories, onChange, className, allowNo
 export function Transactions({ go, initial }: { go: (p: Page) => void; initial?: TxFilter }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const { money, locale } = useSettings()
+  const { money, fmt } = useSettings()
   const [filter, setFilter] = useState<TxFilter>(initial ?? {})
   const [searchText, setSearchText] = useState(initial?.search ?? '')
   const [limit, setLimit] = useState(100)
@@ -93,7 +94,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
         </Select>
         <Select className="w-48!" aria-label={t('transactions.month')} value={filter.month ?? ''} onChange={(e) => setFilter({ ...filter, month: e.target.value || undefined })}>
           <option value="">{t('transactions.allDates')}</option>
-          {months.map((m) => <option key={m} value={m}>{monthLabel(new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1), locale)}</option>)}
+          {months.map((m) => <option key={m} value={m}>{monthLabel(new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1), fmt)}</option>)}
         </Select>
       </div>
 
@@ -189,7 +190,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                       }}
                     />
                   </td>
-                  <td className="num px-3 py-2.5 text-[13px] whitespace-nowrap text-muted">{formatDate(tx.bookingDate, locale)}</td>
+                  <td className="num px-3 py-2.5 text-[13px] whitespace-nowrap text-muted">{formatDate(tx.bookingDate, fmt)}</td>
                   <td className="max-w-0 px-3 py-2.5">
                     <button type="button" className="block w-full truncate text-left" onClick={() => setEditing(tx)}>
                       <span className="font-medium">{tx.counterpartyName || tx.description}</span>
@@ -233,6 +234,7 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
   const { t } = useTranslation()
   const toast = useToast()
   const isNew = tx === 'new'
+  const { fmt } = useSettings()
   const base = tx && tx !== 'new' ? tx : null
   const [form, setForm] = useState({ accountId: 0, bookingDate: '', amount: '', description: '', counterpartyName: '', categoryId: null as number | null, notes: '' })
   useEffect(() => {
@@ -240,14 +242,14 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
     setForm({
       accountId: base?.accountId ?? accounts[0]?.id ?? 0,
       bookingDate: base?.bookingDate ?? new Date().toISOString().slice(0, 10),
-      amount: base ? (base.amountCents / 100).toFixed(2).replace('.', ',') : '',
+      amount: base ? centsToInput(base.amountCents, fmt.formats) : '',
       description: base?.description ?? '',
       counterpartyName: base?.counterpartyName ?? '',
       categoryId: base?.categoryId ?? null,
       notes: base?.notes ?? ''
     })
   }, [tx]) // eslint-disable-line react-hooks/exhaustive-deps
-  const cents = parseAmount(form.amount)
+  const cents = parseAmount(form.amount, 'auto', fmt.formats.decimal)
   const valid = cents !== null && cents !== 0 && form.description.trim() && /^\d{4}-\d{2}-\d{2}$/.test(form.bookingDate)
   const save = (): void => {
     const common = { bookingDate: form.bookingDate, amountCents: cents!, description: form.description, counterpartyName: form.counterpartyName || null, categoryId: form.categoryId, notes: form.notes || null }
