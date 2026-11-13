@@ -47,7 +47,7 @@ function Gate() {
     <SettingsProvider>
       <Shell />
       <McpRequests />
-      {status.recovered && <RecoveredModal />}
+      {(status.recovered || status.weakPassword) && <RecoveredModal weak={!status.recovered} />}
     </SettingsProvider>
   )
 }

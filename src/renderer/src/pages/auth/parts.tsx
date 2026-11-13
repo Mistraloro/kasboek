@@ -2,7 +2,8 @@ import { Check, Copy, Fingerprint, KeyRound, ScanFace } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DeviceAuthKind } from '@shared/types'
-import { Button, Field, Input } from '../../components/ui'
+import { MIN_PASSWORD_LENGTH, checkPassword } from '@shared/password'
+import { Button, Field, Input, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { ApiError, call } from '../../lib/api'
 
@@ -17,24 +18,49 @@ export function useDeviceName(kind: DeviceAuthKind): string {
   return kind === 'touch-id' ? t('auth.touchId') : t('auth.windowsHello')
 }
 
+const STRENGTH_TONE = ['bg-negative', 'bg-negative', 'bg-warning', 'bg-warning', 'bg-accent']
+
+/** New-password fields with a live strength meter and the rules ticked off as they're met. */
 export function PasswordFields({ value, onChange, autoFocus }: { value: { a: string; b: string }; onChange: (v: { a: string; b: string }) => void; autoFocus?: boolean }) {
   const { t } = useTranslation()
-  const tooShort = value.a.length > 0 && value.a.length < 10
+  const check = checkPassword(value.a)
   const mismatch = value.b.length > 0 && value.a !== value.b
+  const rules: { ok: boolean; label: string }[] = [
+    { ok: [...value.a].length >= MIN_PASSWORD_LENGTH, label: t('auth.ruleLength', { n: MIN_PASSWORD_LENGTH }) },
+    { ok: check.classes >= 3, label: t('auth.ruleVariety') },
+    { ok: value.a.length > 0 && !check.issues.includes('common') && !check.issues.includes('appName'), label: t('auth.ruleCommon') },
+    { ok: value.a.length > 0 && !check.issues.includes('pattern'), label: t('auth.rulePattern') }
+  ]
   return (
     <div className="flex flex-col gap-4">
-      <Field label={t('auth.newPassword')} hint={t('auth.passwordHint')}>
+      <Field label={t('auth.newPassword')}>
         {(id) => <Input id={id} type="password" autoFocus={autoFocus} autoComplete="new-password" value={value.a} onChange={(e) => onChange({ ...value, a: e.target.value })} />}
       </Field>
+      <div>
+        <div className="flex gap-1" role="meter" aria-label={t('auth.strength')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={check.strength}>
+          {[1, 2, 3, 4].map((i) => (
+            <span key={i} className={cx('h-1.5 flex-1 rounded-full', value.a && check.strength >= i ? STRENGTH_TONE[check.strength] : 'bg-surface-2')} />
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-muted">{value.a ? t(`auth.strength${check.strength}`) : t('auth.strengthHint')}</p>
+        <ul className="mt-2 space-y-0.5 text-xs">
+          {rules.map((r) => (
+            <li key={r.label} className={cx('flex items-center gap-1.5', r.ok ? 'text-accent' : 'text-muted')}>
+              {r.ok ? <Check size={12} strokeWidth={3} /> : <span className="inline-block h-3 w-3 rounded-full border border-border-strong" />}
+              {r.label}
+            </li>
+          ))}
+        </ul>
+      </div>
       <Field label={t('auth.repeatPassword')}>
         {(id) => <Input id={id} type="password" autoComplete="new-password" value={value.b} onChange={(e) => onChange({ ...value, b: e.target.value })} />}
       </Field>
-      {(tooShort || mismatch) && <p className="text-[13px] text-negative">{tooShort ? t('auth.passwordTooShort') : t('auth.passwordMismatch')}</p>}
+      {mismatch && <p className="text-[13px] text-negative">{t('auth.passwordMismatch')}</p>}
     </div>
   )
 }
 
-export const passwordsOk = (v: { a: string; b: string }): boolean => v.a.length >= 10 && v.a === v.b
+export const passwordsOk = (v: { a: string; b: string }): boolean => checkPassword(v.a).ok && v.a === v.b
 
 export function CodeInput({ value, onChange, autoFocus, id }: { value: string; onChange: (v: string) => void; autoFocus?: boolean; id?: string }) {
   return (

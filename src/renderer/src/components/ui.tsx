@@ -172,18 +172,18 @@ export function EmptyState({ icon, title, body, action }: { icon: ReactNode; tit
   )
 }
 
-export function Modal({ open, title, onClose, children }: { open: boolean; title: ReactNode; onClose: () => void; children: ReactNode }) {
+export function Modal({ open, title, onClose, children, dismissible = true }: { open: boolean; title: ReactNode; onClose: () => void; children: ReactNode; dismissible?: boolean }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && dismissible) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, dismissible])
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onMouseDown={dismissible ? onClose : undefined}>
       <div
         role="dialog"
         aria-modal="true"
@@ -192,9 +192,11 @@ export function Modal({ open, title, onClose, children }: { open: boolean; title
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <h2 className="font-semibold">{title}</h2>
-          <button type="button" aria-label="Close" onClick={onClose} className="rounded-md p-1 text-muted hover:bg-surface-2 hover:text-text">
-            <X size={16} />
-          </button>
+          {dismissible && (
+            <button type="button" aria-label="Close" onClick={onClose} className="rounded-md p-1 text-muted hover:bg-surface-2 hover:text-text">
+              <X size={16} />
+            </button>
+          )}
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>

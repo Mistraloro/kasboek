@@ -26,6 +26,7 @@ import { openDatabase, type Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { newTotpSecret, otpauthUri, verifyTotp } from '@core/totp'
 import type { AppEvent } from '@shared/contract'
+import { checkPassword } from '@shared/password'
 import type { AuthStatus } from '@shared/types'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
@@ -44,6 +45,8 @@ let open: Open | null = null
 /** Unlocked with the recovery key: the next password change needs no current password. */
 let recovered = false
 let pendingTotp: string | null = null
+/** Unlocked with a password that predates the current rules. */
+let weakPassword = false
 const lockListeners: (() => void)[] = []
 
 export function broadcast(event: AppEvent): void {
@@ -91,6 +94,7 @@ export async function status(): Promise<AuthStatus> {
     device,
     throttleSeconds: account ? throttleSeconds(account) : 0,
     recovered,
+    weakPassword: !!open && weakPassword,
     legacyData: !account && (await readLegacyDbKey()) !== null,
     keyProtection: await keyProtection(),
     error: loadError ? { code: loadError.code, message: loadError.message } : null
@@ -116,6 +120,7 @@ async function requireDevice(reason: string): Promise<void> {
 
 export async function setup(mode: AuthMode, password?: string): Promise<{ recoveryKey: string }> {
   if (account || loadError || accountExists()) throw new AppError('auth.exists', 'Kasboek is already set up.')
+  if (mode === 'password' && !checkPassword(password ?? '').ok) throw new AppError('auth.weak_password', 'Choose a stronger password.')
   if (mode === 'device') await requireDevice('Set up Kasboek')
   const legacyKey = await readLegacyDbKey()
   if (!legacyKey && existsSync(paths.dbFile)) {
@@ -150,6 +155,7 @@ export async function unlock(input: { password?: string; code?: string }): Promi
     throw new AppError('auth.failed', acc.twoFactor ? 'The password or code is incorrect.' : 'The password is incorrect.')
   }
   recovered = false
+  weakPassword = acc.mode === 'password' && !checkPassword(input.password ?? '').ok
   openWith(result.unlocked.master, result.unlocked.vault)
 }
 
@@ -169,6 +175,7 @@ export function lock(reason: 'user' | 'idle' | 'system' = 'user', silent = false
   open = null
   pendingTotp = null
   recovered = false
+  weakPassword = false
   if (!silent) broadcast({ type: 'auth.locked', reason })
 }
 
@@ -200,8 +207,10 @@ async function reauth(password?: string): Promise<void> {
 export async function changePassword(current: string | undefined, next: string): Promise<void> {
   const { master } = secrets()
   await reauth(current)
+  if (!checkPassword(next).ok) throw new AppError('auth.weak_password', 'Choose a stronger password.')
   await persist(await setPassword(requireAccount(), master, next))
   recovered = false
+  weakPassword = false
 }
 
 export async function switchToPasswordless(currentPassword?: string): Promise<void> {

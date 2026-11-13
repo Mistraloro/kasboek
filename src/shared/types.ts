@@ -81,6 +81,8 @@ export interface AuthStatus {
   throttleSeconds: number
   /** Unlocked with the recovery key; a new password should be chosen. */
   recovered: boolean
+  /** The current password doesn't meet today's rules; a stronger one must be chosen. */
+  weakPassword: boolean
   /** Data from an earlier version exists and will be kept at setup. */
   legacyData: boolean
   keyProtection: KeyProtection
