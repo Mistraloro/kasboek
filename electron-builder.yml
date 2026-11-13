@@ -40,6 +40,8 @@ win:
     - target: nsis
       arch: [x64, arm64]
   artifactName: Kasboek-${version}-win-${arch}.${ext}
+# Optional shortcuts and Kasboek artwork in the MSI (see build/msi-project.cjs).
+msiProjectCreated: build/msi-project.cjs
 msi:
   oneClick: false
   perMachine: false
@@ -56,6 +58,11 @@ nsis:
   shortcutName: Kasboek
   # Keep user data on uninstall: it holds the encrypted database.
   deleteAppDataOnUninstall: false
+  # Shortcut choice page and Kasboek artwork (see build/installer.nsh).
+  include: build/installer.nsh
+  installerSidebar: build/installer/nsis-sidebar.bmp
+  uninstallerSidebar: build/installer/nsis-sidebar.bmp
+  installerHeader: build/installer/nsis-header.bmp
 
 mac:
   icon: build/icon.icns
