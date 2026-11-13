@@ -202,12 +202,10 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    steps (starting, opening your data, loading the interface), so it's visibly working. Close it
    when the main window is ready. Also look at what makes start-up slow (opening the encrypted account, the Windows
    Hello availability check, loading the UI bundle) and trim it.
-4. **All Belgian banks in the CSV import.** Recognise exports from every bank available in
-   Belgium, not only Argenta, Hello bank! and Keytrade. At least: BNP Paribas Fortis, Fintro,
-   KBC, CBC, Belfius, ING Belgium, Crelan (incl. former AXA Bank), Beobank, vdk bank, Triodos,
-   Nagelmackers, Europabank, bpost bank, MeDirect, and app banks widely used in Belgium
-   (Revolut, N26, bunq, Wise). Check the current list of banks first. Each needs one real,
-   anonymised export (NL and FR column names where the bank offers both) as a test fixture.
+4. **Account names instead of bank presets.** No fixed list of bank names: people name each
+   account and its bank themselves (free text, e.g. "KBC zichtrekening"). The CSV import keeps
+   recognising file layouts from their column names (Dutch, French, English, German), whichever
+   bank they come from, and remembers each layout after the first import.
 5. **Backups at the right moments, with tiers.** Today: one full backup a day, keeping the last N.
    Add a backup right after important changes (CSV import, restore, bulk edits) and when closing
    Kasboek, and keep them in tiers: every change for the last 24 hours, one per day for 30 days,
@@ -262,7 +260,13 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
     opening balances), let the person map unknown labels, and import nothing until approved.
     Investment and net-worth rows need a place in Kasboek to land (see the open question about
     investments, net worth over time and a year view).
-12. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+12. **Investments.** Investment accounts per broker: money paid in, portfolio value at the end of
+    each month (typed in or imported), and a portfolio chart.
+13. **Net worth over time.** Current accounts + savings + portfolio per month, with a chart, and the
+    year-end value.
+14. **Year view.** Income vs spending for all 12 months, totals per category per year, and a
+    comparison of years (the overviews a yearly spreadsheet gives).
+15. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
 
 ## Later, maybe
