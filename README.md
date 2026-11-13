@@ -41,9 +41,12 @@ npm run dev        # start the app with hot reload
 | macOS | `.dmg` (one universal app) | Intel + Apple Silicon |
 | Linux | `.AppImage` and `.deb` | x64, ARM64 |
 
-The easiest way to get all of them: GitHub → Actions → **Build installers** → Run workflow (or
-push a tag like `v0.9.0`). Each OS is built on a real machine of that OS; download the files from
-the run's Artifacts.
+**Download**: the repository's **Releases** page has every installer for each version.
+
+**Publish a new version**: set `version` in `package.json`, commit, then push a matching tag
+(`git tag v0.9.1 && git push origin v0.9.1`). The **Build installers** workflow builds every OS on a
+real machine of that OS and attaches the files to a new Release. Running the workflow by hand
+instead makes a test build whose files stay under the run's Artifacts for 90 days.
 
 Locally, each OS builds its own installers: `npm run dist:win`, `npm run dist:mac`,
 `npm run dist:linux`. (The Windows `.exe` and the Linux packages can also be built on Linux, with
