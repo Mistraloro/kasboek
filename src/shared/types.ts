@@ -256,3 +256,10 @@ export interface ImportBatch {
   committedAt: string
   remaining: number
 }
+
+export interface BackupEntryInfo {
+  name: string
+  createdAt: string
+  size: number
+  tier: 'recent' | 'daily' | 'monthly'
+}

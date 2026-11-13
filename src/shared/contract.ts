@@ -9,7 +9,7 @@ import { ASSISTANT_MODELS, BANKS } from './types'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
 import { checkPassword } from './password'
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -90,6 +90,8 @@ export const contract = {
     output: out<BackupStatus>()
   },
   'backup.runNow': { input: empty, output: out<{ file: string }>() },
+  'backup.list': { input: empty, output: out<BackupEntryInfo[]>() },
+  'backup.pick': { input: z.object({ name: z.string().min(1).max(200) }).strict(), output: out<PickedTransfer>() },
   'backup.revealFolder': { input: empty, output: out<{ ok: boolean }>() },
 
   /* ----- Claude ----- */

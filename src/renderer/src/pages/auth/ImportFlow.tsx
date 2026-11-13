@@ -10,12 +10,12 @@ import { usePrefs } from '../../lib/settings'
 import { CodeInput, errText, PasswordFields, passwordsOk } from './parts'
 
 /** Pick a .kasboek file and open it with the login details it was made with. */
-export function ImportFlow({ onDone, onCancel, replacing }: { onDone: (s: AuthStatus) => void; onCancel: () => void; replacing?: boolean }) {
+export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s: AuthStatus) => void; onCancel: () => void; replacing?: boolean; preset?: PickedTransfer }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { prefs } = usePrefs()
-  const [picked, setPicked] = useState<PickedTransfer | null>(null)
-  const [useRecovery, setUseRecovery] = useState(false)
+  const [picked, setPicked] = useState<PickedTransfer | null>(preset ?? null)
+  const [useRecovery, setUseRecovery] = useState(preset ? !preset.hasPassword : false)
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [recoveryKey, setRecoveryKey] = useState('')

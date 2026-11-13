@@ -3,7 +3,7 @@
  * .kasboek format, which opens only through Import with the login credentials.
  */
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { app } from 'electron'
@@ -14,7 +14,8 @@ import { AppError } from '@core/errors'
 import { MIGRATIONS, schemaVersion } from '@core/migrations'
 import { getSettings, updateSettings } from '@core/settings'
 import { encodeTransfer, openTransfer, readTransferHeader, TRANSFER_EXTENSION } from '@core/transfer-format'
-import type { BackupStatus, PickedTransfer } from '@shared/types'
+import { planRetention, timeFromName, type Tier } from '@core/backup-tiers'
+import type { BackupEntryInfo, BackupStatus, PickedTransfer } from '@shared/types'
 import { paths } from '../paths'
 import { deviceAuthKind } from '../security/device-auth'
 import { adopt, closeForReplace, db, isUnlocked, secrets } from '../session'
@@ -52,16 +53,38 @@ export async function writeTransfer(file: string, kind: 'export' | 'backup'): Pr
   return file
 }
 
+/** Same as writeTransfer, but synchronous: used when locking or quitting, right before the database closes. */
+export function writeTransferSync(file: string, kind: 'export' | 'backup'): string {
+  const { account, master, vault } = secrets()
+  const live = db()
+  const tmp = join(paths.dataDir, `snapshot-${randomUUID()}.tmp`)
+  try {
+    snapshotEncrypted(live, tmp)
+    const bytes = encodeTransfer({ kind, account, master, vault, dbFile: readFileSync(tmp), appVersion: app.getVersion(), schemaVersion: schemaVersion(live) })
+    writeFileSync(file + '.partial', bytes, { mode: 0o600 })
+    renameSync(file + '.partial', file)
+  } finally {
+    rmSync(tmp, { force: true })
+  }
+  if (kind === 'backup') updateSettings(live, { lastBackupAt: new Date().toISOString(), lastBackupFile: file })
+  return file
+}
+
 /* ---------- Automatic backups ---------- */
 
-export async function runAutoBackupIfDue(maxAgeHours = 24): Promise<string | null> {
+/** The backup folder if automatic backups are on and it's reachable (an unplugged drive is skipped, never created). */
+export function autoFolder(): string | null {
   if (!isUnlocked()) return null
   const s = getSettings(db())
-  if (!s.autoBackupEnabled || !s.autoBackupFolder) return null
-  // A missing folder may be an unplugged drive or a path from another computer: skip, don't create it.
-  if (!existsSync(s.autoBackupFolder)) return null
-  const newest = await newestBackupTime(s.autoBackupFolder)
-  if (newest && Date.now() - newest < maxAgeHours * 3600_000) return null
+  if (!s.autoBackupEnabled || !s.autoBackupFolder || !existsSync(s.autoBackupFolder)) return null
+  return s.autoBackupFolder
+}
+
+export async function runAutoBackupIfDue(maxAgeHours = 24): Promise<string | null> {
+  const folder = autoFolder()
+  if (!folder) return null
+  const newest = (await listBackups(folder))[0]
+  if (newest && Date.now() - newest.time < maxAgeHours * 3600_000) return null
   return runAutoBackup()
 }
 
@@ -70,24 +93,51 @@ export async function runAutoBackup(): Promise<string> {
   if (!s.autoBackupFolder) throw new AppError('backup.no_folder', 'Choose a backup folder first.')
   if (!existsSync(s.autoBackupFolder)) throw new AppError('backup.folder_missing', 'The backup folder can’t be found. Is the drive connected?')
   const file = await writeTransfer(join(s.autoBackupFolder, backupFileName()), 'backup')
-  await prune(s.autoBackupFolder, s.autoBackupKeep)
+  await prune(s.autoBackupFolder)
   return file
 }
 
-async function listBackups(folder: string): Promise<{ n: string; t: number }[]> {
+/** Synchronous automatic backup for lock/quit. Returns null when backups are off or the folder is missing. */
+export function runAutoBackupSync(): string | null {
+  const folder = autoFolder()
+  if (!folder) return null
+  const file = writeTransferSync(join(folder, backupFileName()), 'backup')
+  void prune(folder)
+  return file
+}
+
+async function listBackups(folder: string): Promise<{ name: string; time: number; size: number }[]> {
   const names = (await readdir(folder)).filter((n) => AUTO_FILE.test(n))
-  return Promise.all(names.map(async (n) => ({ n, t: (await stat(join(folder, n))).mtimeMs })))
+  const list = await Promise.all(
+    names.map(async (name) => {
+      const st = await stat(join(folder, name))
+      return { name, time: timeFromName(name) ?? st.mtimeMs, size: st.size }
+    })
+  )
+  return list.sort((a, b) => b.time - a.time)
 }
 
-async function newestBackupTime(folder: string): Promise<number | null> {
-  const list = await listBackups(folder)
-  return list.length ? Math.max(...list.map((x) => x.t)) : null
+/** Thins out automatic backups by tier. Only touches files Kasboek named. */
+async function prune(folder: string): Promise<void> {
+  const { remove } = planRetention(await listBackups(folder))
+  for (const name of remove) await rm(join(folder, name), { force: true })
 }
 
-/** Keeps the newest `keep` automatic backups. Only touches files Kasboek named. */
-async function prune(folder: string, keep: number): Promise<void> {
-  const list = (await listBackups(folder)).sort((a, b) => b.t - a.t)
-  for (const { n } of list.slice(keep)) await rm(join(folder, n), { force: true })
+export async function backupList(): Promise<BackupEntryInfo[]> {
+  const s = getSettings(db())
+  if (!s.autoBackupFolder || !existsSync(s.autoBackupFolder)) return []
+  const list = await listBackups(s.autoBackupFolder)
+  const { keep } = planRetention(list)
+  return list.map((b) => ({ name: b.name, createdAt: new Date(b.time).toISOString(), size: b.size, tier: (keep.get(b.name) ?? 'recent') as Tier }))
+}
+
+/** Prepares one backup from the folder for Import (the page never sends a path). */
+export async function pickBackup(name: string): Promise<PickedTransfer> {
+  const s = getSettings(db())
+  if (!AUTO_FILE.test(name) || !s.autoBackupFolder) throw new AppError('backup.not_found', 'That backup can’t be found.')
+  const file = join(s.autoBackupFolder, name)
+  if (!existsSync(file) || !statSync(file).isFile()) throw new AppError('backup.not_found', 'That backup can’t be found.')
+  return describeTransfer(file)
 }
 
 /* ---------- Import ---------- */

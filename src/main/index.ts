@@ -8,7 +8,7 @@ import { closeSplash, showSplash, splashMinimumElapsed, splashProgress } from '.
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
 import { broadcast, initSession, lock, onLock, startAutoLock } from './session'
-import { runAutoBackupIfDue } from './transfer/service'
+import { startBackupScheduler } from './transfer/scheduler'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT, trackOverlay } from './theme'
 
 const MCP_MODE = process.argv.includes('--mcp')
@@ -86,15 +86,6 @@ function harden(): void {
   })
 }
 
-function scheduleAutoBackups(): void {
-  const tick = (): void => {
-    runAutoBackupIfDue()
-      .then((file) => file && broadcast({ type: 'backup.completed', file }))
-      .catch((err: unknown) => broadcast({ type: 'backup.failed', message: err instanceof Error ? err.message : String(err) }))
-  }
-  setTimeout(tick, 15_000)
-  setInterval(tick, 60 * 60_000)
-}
 
 if (!MCP_MODE) startApp()
 
@@ -133,7 +124,7 @@ void app.whenReady().then(async () => {
   onAppReady(reveal)
   // Never leave the person with only the launch window.
   setTimeout(reveal, 20_000)
-  scheduleAutoBackups()
+  startBackupScheduler()
   startAutoLock()
   // Keep the MCP bridge in step with the lock state and the setting.
   setInterval(() => syncMcpBridge(dispatch), 2000)

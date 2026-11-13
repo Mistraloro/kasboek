@@ -9,7 +9,8 @@ import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
 import * as session from './session'
 import { applyTheme } from './theme'
-import { backupStatus, describeTransfer, exportFileName, importTransfer, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
+import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
+import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
@@ -89,7 +90,7 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async (_c, input) => {
       await session.unlock(input)
-      notifyBackup(runAutoBackupIfDue())
+      backupAfterUnlock()
       return session.status()
     }
   },
@@ -274,6 +275,8 @@ const desktopOps: OpTable = {
     }
   },
   'backup.runNow': { mutates: false, assistant: false, handler: async () => ({ file: await runAutoBackup() }) },
+  'backup.list': { mutates: false, assistant: false, handler: () => backupList() },
+  'backup.pick': { mutates: false, assistant: false, handler: (_c, { name }) => pickBackup(name) },
   'backup.revealFolder': {
     mutates: false,
     assistant: false,
@@ -303,7 +306,10 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
   }
   const result = await runOp(allOps, opContext(actor), name, input)
   // Tell open pages to refresh, e.g. when Claude changed a budget.
-  if (result.ok && allOps[name]?.mutates) notifyChanged(actor)
+  if (result.ok && allOps[name]?.mutates) {
+    notifyChanged(actor)
+    dataChanged(name, input)
+  }
   return result
 }
 

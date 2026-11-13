@@ -1,7 +1,7 @@
 import { Download, FolderOpen, Monitor, Moon, Plus, ShieldAlert, ShieldCheck, Sun, Upload } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BANKS, type Bank } from '@shared/types'
+import { BANKS, type Bank, type PickedTransfer } from '@shared/types'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
@@ -231,7 +231,11 @@ function BackupSection() {
   const { t } = useTranslation()
   const toast = useToast()
   const { locale } = useSettings()
+  const { set } = useAuth()
   const status = useOp('backup.status')
+  const list = useOp('backup.list')
+  const [showAll, setShowAll] = useState(false)
+  const [restoring, setRestoring] = useState<PickedTransfer | null>(null)
   const s = status.data
   const run = async (fn: () => Promise<unknown>): Promise<void> => {
     try {
@@ -240,8 +244,13 @@ function BackupSection() {
       toast(e instanceof ApiError ? e.message : String(e), 'error')
     } finally {
       void status.reload()
+      void list.reload()
     }
   }
+  useEffect(() => window.kasboek.onEvent((e) => { if (e.type === 'backup.completed') { void list.reload(); void status.reload() } }), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const backups = list.data ?? []
+  const shown = showAll ? backups : backups.slice(0, 6)
+  const kb = (n: number): string => `${Math.max(1, Math.round(n / 1024))} KB`
   return (
     <Card>
       <CardHeader title={t('settings.backups')} description={t('settings.backupsHint')} />
@@ -261,17 +270,31 @@ function BackupSection() {
         {s?.folder && <Button size="sm" variant="ghost" icon={<FolderOpen size={14} />} onClick={() => void run(() => call('backup.revealFolder'))}>{t('settings.openFolder')}</Button>}
         <Button size="sm" onClick={() => void run(() => call('backup.chooseFolder'))}>{t('settings.chooseFolder')}</Button>
       </Row>
-      <Row label={t('settings.keep')}>
-        <Select className="w-44" aria-label={t('settings.keep')} value={s?.keep ?? 10} onChange={(e) => void run(() => call('backup.configureAuto', { enabled: !!s?.autoEnabled, keep: Number(e.target.value) }))}>
-          {[5, 10, 20, 30, 60].map((n) => <option key={n} value={n}>{t('settings.keepValue', { count: n })}</option>)}
-        </Select>
-      </Row>
-      <Row label={t('settings.lastBackup')} hint={s?.lastBackupFile ? <span className="selectable break-all">{s.lastBackupFile}</span> : undefined}>
-        <span className="mr-2 text-[13px] text-muted">{s?.lastBackupAt ? formatDateTime(s.lastBackupAt, locale) : t('settings.never')}</span>
+      <Row label={t('settings.whenBackup')} hint={t('settings.whenBackupHint')}>
         <Button size="sm" disabled={!s?.folder} onClick={() => void run(async () => toast(t('settings.backupSaved', { file: (await call('backup.runNow')).file })))}>
           {t('settings.backupNow')}
         </Button>
       </Row>
+      {backups.length > 0 && (
+        <div className="border-t border-border">
+          {shown.map((b) => (
+            <div key={b.name} className="flex items-center gap-3 border-b border-border px-5 py-2.5 text-[13px] last:border-b-0">
+              <span className="num flex-1">{formatDateTime(b.createdAt, locale)}</span>
+              <Badge tone={b.tier === 'recent' ? 'accent' : 'neutral'}>{t(`settings.tier.${b.tier}`)}</Badge>
+              <span className="num w-16 text-right text-muted">{kb(b.size)}</span>
+              <Button size="sm" variant="ghost" onClick={() => void run(async () => setRestoring(await call('backup.pick', { name: b.name })))}>{t('settings.restoreThis')}</Button>
+            </div>
+          ))}
+          {backups.length > 6 && (
+            <button type="button" className="w-full px-5 py-2.5 text-left text-[13px] font-medium text-accent hover:underline" onClick={() => setShowAll((v) => !v)}>
+              {showAll ? t('settings.showFewer') : t('settings.showAllBackups', { count: backups.length })}
+            </button>
+          )}
+        </div>
+      )}
+      <Modal open={!!restoring} title={t('settings.restoreTitle')} onClose={() => setRestoring(null)}>
+        {restoring && <ImportFlow replacing preset={restoring} onCancel={() => setRestoring(null)} onDone={(st) => { setRestoring(null); set(st); window.location.reload() }} />}
+      </Modal>
     </Card>
   )
 }
