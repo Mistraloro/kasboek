@@ -181,3 +181,20 @@ Not possible to test here, please check on your machine:
 5. **Installers**: `.exe` (Windows x64) and the Linux AppImage/.deb (x64, ARM64) were built here;
    the `.msi` and the universal `.dmg` are built by the GitHub Actions workflow on real Windows and
    macOS machines. Unsigned until certificates are added (see README → Installers).
+
+## Next release (backlog)
+
+Installer feedback from testing the 0.9.0 `.msi` on Windows:
+
+1. **Let people choose the shortcuts.** The installer creates the desktop and Start menu shortcuts
+   without asking. Add two ticked-by-default checkboxes ("Desktop shortcut", "Start menu
+   shortcut") on a page before installing. For the `.msi` this needs a custom WiX dialog
+   (electron-builder's built-in MSI UI has no such options; `msiProjectCreated` can edit the
+   generated WiX project). The NSIS `.exe` can do it with a small `include` script.
+2. **Kasboek branding in the `.msi` wizard.** The setup dialogs still show WiX's default red disk
+   (banner top right, large image on the welcome/finish pages). Provide our own images in
+   `build/` (WiX sizes: banner 493×58, dialog 493×312, as .bmp/.png) generated from
+   `assets/brand/`, and wire them in as `WixUIBannerBmp` / `WixUIDialogBmp`. Check the `.exe`
+   installer's sidebar image at the same time.
+3. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+   Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
