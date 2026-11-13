@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { app, BrowserWindow, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { dispatch, registerIpc } from './ipc'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
@@ -13,6 +13,12 @@ import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT
 import { runMcpStdio } from './mcp/stdio'
 
 const MCP_MODE = process.argv.includes('--mcp')
+
+// 64-bit only (x64 or ARM64): larger address space for ASLR, and the only builds we ship and test.
+if (process.arch !== 'x64' && process.arch !== 'arm64') {
+  dialog.showErrorBox('Kasboek', 'Kasboek needs a 64-bit version of Windows, macOS or Linux.')
+  app.exit(1)
+}
 
 // `--mcp`: run only the small stdio helper for Claude Desktop / Claude Code. No window, no database.
 if (MCP_MODE) {

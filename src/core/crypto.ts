@@ -1,6 +1,7 @@
 /** Small, explicit crypto helpers. AES-256-GCM everywhere, with a label as associated data. */
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes, scrypt as scryptCb } from 'node:crypto'
 import { promisify } from 'node:util'
+import { argon2id } from 'hash-wasm'
 import { AppError } from './errors'
 
 const scryptAsync = promisify(scryptCb) as (
@@ -16,7 +17,10 @@ export interface Sealed {
   ct: string
 }
 
-export type Kdf = { name: 'scrypt'; N: number; r: number; p: number; salt: string } | { name: 'hkdf'; salt: string }
+export type Kdf =
+  | { name: 'argon2id'; m: number; t: number; p: number; salt: string }
+  | { name: 'scrypt'; N: number; r: number; p: number; salt: string }
+  | { name: 'hkdf'; salt: string }
 
 /** A key slot: the master key, wrapped by a key derived from one credential. */
 export interface Slot {
@@ -24,11 +28,14 @@ export interface Slot {
   sealed: Sealed
 }
 
-/** scrypt cost for passwords. About 0.3–0.5 s on a laptop. Tests lower it. */
-export const PASSWORD_KDF = { N: 2 ** 17, r: 8, p: 1 }
-let kdfOverride: { N: number; r: number; p: number } | null = null
+/**
+ * Password hashing: Argon2id (RFC 9106), 128 MiB memory, 3 passes, 4 lanes. About 0.5 s on a laptop,
+ * and expensive to attack with GPUs. Slots made by earlier versions with scrypt still open.
+ */
+export const PASSWORD_KDF = { m: 128 * 1024, t: 3, p: 4 }
+let kdfOverride: { m: number; t: number; p: number } | null = null
 /** For tests only. */
-export function setPasswordKdfForTests(params: { N: number; r: number; p: number } | null): void {
+export function setPasswordKdfForTests(params: { m: number; t: number; p: number } | null): void {
   kdfOverride = params
 }
 
@@ -62,6 +69,12 @@ export function hkdf(key: Buffer, salt: Buffer, info: string): Buffer {
 async function deriveSlotKey(secret: string, kdf: Kdf): Promise<Buffer> {
   const salt = Buffer.from(kdf.salt, 'base64')
   if (kdf.name === 'hkdf') return hkdf(Buffer.from(secret, 'utf8'), salt, 'kasboek:slot')
+  if (kdf.name === 'argon2id') {
+    // Cap the cost so a crafted file can't make the app hang or run out of memory.
+    if (kdf.m > 1024 * 1024 || kdf.t > 10 || kdf.p > 16 || kdf.m < 8 * kdf.p) throw new AppError('crypto.unsupported', 'These key settings are not supported.')
+    const out = await argon2id({ password: secret.normalize('NFKC'), salt, parallelism: kdf.p, iterations: kdf.t, memorySize: kdf.m, hashLength: 32, outputType: 'binary' })
+    return Buffer.from(out)
+  }
   if (kdf.N > 2 ** 20 || kdf.r > 16 || kdf.p > 4) {
     throw new AppError('crypto.unsupported', 'These key settings are not supported.')
   }
@@ -71,8 +84,13 @@ async function deriveSlotKey(secret: string, kdf: Kdf): Promise<Buffer> {
 /** Wraps the master key with a password (scrypt) or a high-entropy secret such as the recovery key (HKDF). */
 export async function makeSlot(master: Buffer, secret: string, kind: 'password' | 'recovery'): Promise<Slot> {
   const salt = randomBytes(16).toString('base64')
-  const kdf: Kdf = kind === 'password' ? { name: 'scrypt', ...(kdfOverride ?? PASSWORD_KDF), salt } : { name: 'hkdf', salt }
+  const kdf: Kdf = kind === 'password' ? { name: 'argon2id', ...(kdfOverride ?? PASSWORD_KDF), salt } : { name: 'hkdf', salt }
   return { kdf, sealed: seal(await deriveSlotKey(secret, kdf), master, `kasboek:slot:${kind}`) }
+}
+
+/** True for slots made with an older, weaker setting; they are re-made after the next unlock. */
+export function slotNeedsUpgrade(slot: Slot): boolean {
+  return slot.kdf.name === 'scrypt'
 }
 
 export async function openSlot(slot: Slot, secret: string, kind: 'password' | 'recovery'): Promise<Buffer | null> {

@@ -6,9 +6,9 @@ A simple, clean, local-first budget app for the desktop, which Claude (and later
 
 | Topic | Decision |
 |---|---|
-| Platform | Desktop app. **Windows first**; macOS and Linux build from the same code. |
+| Platform | Desktop app for Windows, macOS and Linux, **64-bit only** (x64 and ARM64); same database and export format everywhere |
 | Stack | Electron + React + TypeScript (electron-vite), Tailwind CSS |
-| Storage | Local only. One SQLite file, **encrypted** (SQLite3 Multiple Ciphers, ChaCha20-Poly1305) |
+| Storage | Local only. One SQLite file, **encrypted** (SQLite3 Multiple Ciphers, ChaCha20-Poly1305), native prebuilt engine on every OS |
 | Language | English UI; every string goes through i18next so more languages are a JSON file away |
 | Banks | Argenta, Hello bank!, Keytrade Bank (plus a generic “other”) |
 | Money | Integer cents, EUR by default, Belgian number/date formats |
@@ -42,7 +42,7 @@ Anthropic’s own typefaces are licensed, so the closest free equivalents are us
 ## Login, device binding and moving computers
 
 **Signing in** (chosen at first start, changeable later)
-* **Password**: the master key is unlocked with your password (scrypt, N=2¹⁷).
+* **Password**: the master key is unlocked with your password, hashed with **Argon2id** (128 MiB, 3 passes, 4 lanes; RFC 9106). Older scrypt slots still open and are upgraded on the next unlock.
 * **Passwordless**: unlock with **Windows Hello** (face, fingerprint or PIN) or **Touch ID**.
   The master key is protected by the operating system account; Hello/Touch ID confirms it’s you.
   Password mode is stronger: passwordless doesn’t protect against malware running as you.
@@ -55,7 +55,7 @@ Anthropic’s own typefaces are licensed, so the closest free equivalents are us
 
 **Key hierarchy**
 ```
-password ─scrypt─►┐
+password ─Argon2id─►┐
 recovery key ─────┼─► master key M ─► vault { database key, 2FA secret }
 Windows Hello ────┘        (each is a "key slot" that unwraps M)
 everything above, on disk ─► sealed again by the OS (DPAPI / Keychain / keyring) = device binding
@@ -178,5 +178,6 @@ Not possible to test here, please check on your machine:
 3. **Real Claude calls** with your API key (tested against a mock with the same request format).
 4. **Your real bank exports**: the fixtures imitate the layouts; send one anonymised export per
    bank to confirm (the column editor and "Check with Claude" cover differences).
-5. **Windows installer** (`npm run dist:win` on Windows, or the GitHub Actions workflow). Code
-   signing needs a certificate; without one Windows SmartScreen shows a warning on first install.
+5. **Installers**: `.exe` (Windows x64) and the Linux AppImage/.deb (x64, ARM64) were built here;
+   the `.msi` and the universal `.dmg` are built by the GitHub Actions workflow on real Windows and
+   macOS machines. Unsigned until certificates are added (see README → Installers).

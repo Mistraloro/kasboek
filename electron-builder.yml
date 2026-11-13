@@ -9,6 +9,9 @@ files:
   - resources/**
   - package.json
   - '!**/*.map'
+# better-sqlite3-multiple-ciphers ships prebuilt Node-API binaries for every platform, so nothing
+# is compiled and installers can be built on any OS.
+npmRebuild: false
 asarUnpack:
   - resources/**
   - '**/*.node'
@@ -23,10 +26,22 @@ electronFuses:
 
 win:
   icon: build/icon.ico
+  files:
+    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux}*'
+  # 64-bit only. MSI for managed/standard installs, NSIS .exe as a friendly per-user installer.
   target:
+    - target: msi
+      arch: [x64, arm64]
     - target: nsis
       arch: [x64, arm64]
-  artifactName: Kasboek-Setup-${version}-${arch}.${ext}
+  artifactName: Kasboek-${version}-win-${arch}.${ext}
+msi:
+  oneClick: false
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Kasboek
+  upgradeCode: 7f3c2a1e-4b5d-4c8e-9a6f-2d1b0e9c8a74
 nsis:
   oneClick: false
   perMachine: false
@@ -39,6 +54,11 @@ nsis:
 
 mac:
   icon: build/icon.icns
+  # One app for Intel and Apple Silicon. The database's per-arch binaries are loaded by arch at
+  # runtime, so they are kept as-is instead of being merged.
+  x64ArchFiles: '**/better-sqlite3-multiple-ciphers/prebuilds/darwin-*.node'
+  files:
+    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,linux}*'
   category: public.app-category.finance
   hardenedRuntime: true
   target:
@@ -48,8 +68,14 @@ mac:
 
 linux:
   icon: build/icons
+  files:
+    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,darwin}*'
   category: Finance
   synopsis: Simple, local-first budgeting
   maintainer: Kasboek
-  target: [AppImage, deb]
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
   artifactName: Kasboek-${version}-${arch}.${ext}

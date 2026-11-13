@@ -16,33 +16,44 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
 - **Claude**: ask questions about your money or let Claude make changes, which you approve one by
   one. "Check with Claude" fixes messy CSV files before import.
 - **MCP**: use Kasboek from Claude Desktop or Claude Code (Settings → Claude).
-- **Security**: password or passwordless (Windows Hello / Touch ID), optional two-factor codes,
+- **Same everywhere**: Windows, macOS and Linux use the same encrypted database and the same export
+  format, so an export from one opens on any other (with your login).
+- **Security**: password (Argon2id) or passwordless (Windows Hello / Touch ID), optional two-factor codes,
   recovery key, auto-lock. Encrypted database; the data folder can't be opened on another
   computer. Moving computers only works through an encrypted **export** that opens with your login.
 - **Backups**: automatic, encrypted, daily, to a folder you choose.
 
 ## Run it
 
-Requirements: Node.js 22.12 or newer.
+Requirements: Node.js 22.12 or newer. Nothing is compiled: the encrypted database engine ships
+prebuilt 64-bit binaries for Windows, macOS and Linux (x64 and ARM64).
 
 ```bash
-npm install        # also builds the encrypted-SQLite module for Electron
+npm install
 npm run dev        # start the app with hot reload
 ```
 
-If `npm install` on Windows fails while building `better-sqlite3-multiple-ciphers`, install the
-“Desktop development with C++” workload from Visual Studio Build Tools and run it again.
+## Installers (64-bit only)
 
-## Build an installer
+| OS | Files | Architectures |
+|---|---|---|
+| Windows | `.msi` and `.exe` installer | x64, ARM64 |
+| macOS | `.dmg` (one universal app) | Intel + Apple Silicon |
+| Linux | `.AppImage` and `.deb` | x64, ARM64 |
 
-Build each platform on that platform, or use the GitHub Actions workflow
-(`.github/workflows/build.yml`: push a tag like `v0.9.0`, or run it from the Actions tab).
+The easiest way to get all of them: GitHub → Actions → **Build installers** → Run workflow (or
+push a tag like `v0.9.0`). Each OS is built on a real machine of that OS; download the files from
+the run's Artifacts.
 
-```bash
-npm run dist:win     # release/<version>/Kasboek-Setup-<version>-x64.exe (and arm64)
-npm run dist:mac     # .dmg (unsigned until a signing certificate is set up)
-npm run dist:linux   # AppImage and .deb
-```
+Locally, each OS builds its own installers: `npm run dist:win`, `npm run dist:mac`,
+`npm run dist:linux`. (The Windows `.exe` and the Linux packages can also be built on Linux, with
+Wine for the `.exe`.)
+
+**Signing.** Without certificates, Windows SmartScreen shows “Windows protected your PC” on first
+install (More info → Run anyway), and macOS shows “cannot verify the developer” (right-click the
+app → Open, once). The Mac app is ad-hoc signed so it runs on Apple Silicon. To sign properly,
+add `CSC_LINK` / `CSC_KEY_PASSWORD` repository secrets (Apple Developer ID, or a Windows
+code-signing certificate).
 
 ## Claude
 

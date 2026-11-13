@@ -9,7 +9,7 @@
  * around the whole account record when it is written to disk.
  */
 import { AppError } from './errors'
-import { makeSlot, openSlot, random, seal, unseal, type Sealed, type Slot } from './crypto'
+import { makeSlot, openSlot, random, seal, slotNeedsUpgrade, unseal, type Sealed, type Slot } from './crypto'
 import { newRecoveryKey, normalizeRecoveryKey, verifyTotp } from './totp'
 
 export type AuthMode = 'password' | 'device'
@@ -122,7 +122,9 @@ export async function unlockWithPassword(
   if (!master) return { ok: false, account: recordFailure(account) }
   const vault = verifySecondFactor(account, openVault(master, account.vault), code)
   if (!vault) return { ok: false, account: recordFailure(account) }
-  return succeed(account, master, vault)
+  // Re-make an older scrypt slot with Argon2id now that we know the password.
+  const upgraded = slotNeedsUpgrade(account.slots.password) ? { ...account, slots: { ...account.slots, password: await makeSlot(master, password, 'password') } } : account
+  return succeed(upgraded, master, vault)
 }
 
 /** Passwordless: the caller has already verified the user with Windows Hello / Touch ID. */

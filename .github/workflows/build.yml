@@ -1,5 +1,7 @@
-name: Build
+name: Build installers
 
+# Builds 64-bit installers on real machines for each OS:
+#   Windows: .msi and .exe (x64 + ARM64)   macOS: universal .dmg   Linux: AppImage + .deb (x64 + ARM64)
 on:
   workflow_dispatch:
   push:
@@ -28,15 +30,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run check:i18n
-      - run: npm run ${{ matrix.dist }} -- --publish never
+      # Without an Apple Developer ID the app is ad-hoc signed (required on Apple Silicon);
+      # set CSC_LINK / CSC_KEY_PASSWORD secrets to sign properly.
+      - run: npm run ${{ matrix.dist }} -- --publish never ${{ (runner.os == 'macOS' && !secrets.CSC_LINK) && '--config.mac.identity=-' || '' }}
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK && 'true' || 'false' }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       - uses: actions/upload-artifact@v4
         with:
-          name: kasboek-${{ matrix.os }}
+          name: kasboek-${{ runner.os }}
           path: |
+            release/*/*.msi
             release/*/*.exe
             release/*/*.dmg
             release/*/*.AppImage
             release/*/*.deb
-          if-no-files-found: warn
+          if-no-files-found: error

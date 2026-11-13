@@ -9,7 +9,7 @@ import { openDatabase, snapshotEncrypted } from '@core/database'
 import { encodeTransfer, openTransfer, readTransferHeader } from '@core/transfer-format'
 import { hotp, newTotpSecret, normalizeRecoveryKey, totpAt, verifyTotp } from '@core/totp'
 
-beforeAll(() => setPasswordKdfForTests({ N: 2 ** 10, r: 8, p: 1 }))
+beforeAll(() => setPasswordKdfForTests({ m: 1024, t: 1, p: 1 }))
 const dbKey = () => randomBytes(32).toString('hex')
 
 describe('TOTP', () => {
@@ -65,6 +65,16 @@ describe('account', () => {
     expect(r.ok).toBe(true)
     await expect(unlockWithPassword(created.account, 'x')).rejects.toMatchObject({ code: 'auth.wrong_mode' })
     expect(setPasswordless(created.account, created.master).slots.device).toBeTruthy()
+  })
+
+  it('uses Argon2id for passwords and upgrades older scrypt slots on unlock', async () => {
+    const { account, master } = await createAccount({ mode: 'password', password: 'a long password', dbKey: dbKey() })
+    expect(account.slots.password!.kdf.name).toBe('argon2id')
+    // Simulate a slot from an earlier version.
+    const old = { ...account, slots: { ...account.slots, password: await legacyScryptSlot(master) } }
+    const r = await unlockWithPassword(old, 'a long password')
+    expect(r.ok).toBe(true)
+    expect(r.account.slots.password!.kdf.name).toBe('argon2id')
   })
 
   it('slows down after five failures', async () => {
@@ -133,3 +143,12 @@ describe('export file', () => {
     expect(normalizeRecoveryKey('abcd efgh-2345')).toBe('ABCD-EFGH-2345')
   })
 })
+
+/** A password slot in the scrypt format earlier versions wrote. */
+async function legacyScryptSlot(master: Buffer) {
+  const { randomBytes, scryptSync } = await import('node:crypto')
+  const { seal } = await import('@core/crypto')
+  const salt = randomBytes(16)
+  const key = scryptSync('a long password'.normalize('NFKC'), salt, 32, { N: 2 ** 10, r: 8, p: 1 })
+  return { kdf: { name: 'scrypt' as const, N: 2 ** 10, r: 8, p: 1, salt: salt.toString('base64') }, sealed: seal(key, master, 'kasboek:slot:password') }
+}

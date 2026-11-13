@@ -15,7 +15,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
     "icons": "node scripts/generate-icons.mjs",
-    "postinstall": "electron-builder install-app-deps",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux",
@@ -25,6 +24,7 @@
     "@anthropic-ai/sdk": "^1.8.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "better-sqlite3-multiple-ciphers": "^13.0.3",
+    "hash-wasm": "4.12.0",
     "qrcode": "^1.5.4",
     "zod": "^4.6.7"
   },
