@@ -38,6 +38,18 @@ function powershell(script: string, timeoutMs: number): Promise<string> {
 }
 
 let cached: DeviceAuthKind | undefined
+let pending: Promise<DeviceAuthKind> | null = null
+
+/** The answer if the check has finished, otherwise undefined (and the check is started). */
+export function peekDeviceAuthKind(onDone?: () => void): DeviceAuthKind | undefined {
+  if (cached === undefined && !pending) {
+    pending = deviceAuthKind().finally(() => {
+      pending = null
+      onDone?.()
+    })
+  }
+  return cached
+}
 
 export async function deviceAuthKind(): Promise<DeviceAuthKind> {
   if (cached !== undefined) return cached

@@ -414,7 +414,8 @@
     "weakTitle": "Choose a stronger password",
     "weakBody": "Kasboek now asks for stronger passwords to protect your data, especially in backups and exports. Choose a new one to continue.",
     "rememberComputer": "Remember this computer for 30 days",
-    "rememberedNote": "Two-factor code remembered on this computer until {{date}}."
+    "rememberedNote": "Two-factor code remembered on this computer until {{date}}.",
+    "deviceChecking": "Checking for Windows Hello or Touch ID…"
   },
   "transfer": {
     "title": "Move to another computer",

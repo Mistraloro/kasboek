@@ -1,14 +1,15 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { dispatch, registerIpc } from './ipc'
+import { dispatch, onAppReady, registerIpc } from './ipc'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
+import { closeSplash, showSplash, splashMinimumElapsed, splashProgress } from './splash'
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
 import { broadcast, initSession, lock, onLock, startAutoLock } from './session'
 import { runAutoBackupIfDue } from './transfer/service'
-import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT } from './theme'
+import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT, trackOverlay } from './theme'
 
 const MCP_MODE = process.argv.includes('--mcp')
 
@@ -56,7 +57,9 @@ function createWindow(): BrowserWindow {
       spellcheck: false
     }
   })
-  win.once('ready-to-show', () => win.show())
+  if (!isMac) trackOverlay(win)
+  // Shown when the page reports its first screen is drawn (see startApp), so it never appears blank.
+  win.webContents.once('did-finish-load', () => splashProgress(0.8, 'Loading the interface…'))
 
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (!app.isPackaged && devUrl) void win.loadURL(devUrl)
@@ -106,19 +109,40 @@ app.on('second-instance', () => {
 
 void app.whenReady().then(async () => {
   harden()
-  await initSession()
-  onLock(clearImportSessions)
+  showSplash(getPrefs().theme)
+  splashProgress(0.15, 'Starting…')
   initThemeSync()
   applyTheme(getPrefs().theme)
+  splashProgress(0.3, 'Opening your data…')
+  await initSession()
+  onLock(clearImportSessions)
+  splashProgress(0.55, 'Preparing…')
   registerIpc()
-  createWindow()
+  const win = createWindow()
+  let shown = false
+  const reveal = (): void => {
+    if (shown || win.isDestroyed()) return
+    shown = true
+    splashProgress(0.95, 'Almost ready…')
+    void splashMinimumElapsed().then(() => {
+      if (win.isDestroyed()) return
+      win.show()
+      closeSplash()
+    })
+  }
+  onAppReady(reveal)
+  // Never leave the person with only the launch window.
+  setTimeout(reveal, 20_000)
   scheduleAutoBackups()
   startAutoLock()
   // Keep the MCP bridge in step with the lock state and the setting.
   setInterval(() => syncMcpBridge(dispatch), 2000)
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      const w = createWindow()
+      w.once('ready-to-show', () => w.show())
+    }
   })
 })
 

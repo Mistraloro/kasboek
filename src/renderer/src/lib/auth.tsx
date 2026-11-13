@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh()
     return window.kasboek.onEvent((e) => {
-      if (e.type === 'auth.locked') void refresh()
+      if (e.type === 'auth.locked' || e.type === 'auth.refresh') void refresh()
     })
   }, [refresh])
   if (!status) return null

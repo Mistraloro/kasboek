@@ -33,7 +33,7 @@ import type { AuthStatus } from '@shared/types'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { accountExists, deleteAccount, keyProtection, loadAccount, readLegacyDbKey, removeLegacyKeystore, saveAccount } from './security/account-store'
-import { deviceAuthKind, verifyDeviceUser } from './security/device-auth'
+import { deviceAuthKind, peekDeviceAuthKind, verifyDeviceUser } from './security/device-auth'
 
 interface Open {
   master: Buffer
@@ -66,7 +66,8 @@ export async function initSession(): Promise<void> {
   } catch (err) {
     loadError = err instanceof AppError ? err : new AppError('auth.corrupt', String(err))
   }
-  void deviceAuthKind()
+  // Checking for Windows Hello takes a moment (PowerShell): never let the first screen wait for it.
+  peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }))
 }
 
 export function db(): Db {
@@ -87,7 +88,8 @@ export function secrets(): { account: AccountData; master: Buffer; vault: Vault 
 export async function status(): Promise<AuthStatus> {
   // "Try again" after e.g. unlocking the system keyring.
   if (loadError && !open) await initSession()
-  const device = await deviceAuthKind()
+  const peek = peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }))
+  const device = peek ?? null
   return {
     // An account file that can't be read is 'locked' with an error, never 'setup': setup would replace it.
     state: open ? 'unlocked' : account || loadError ? 'locked' : 'setup',
@@ -95,6 +97,7 @@ export async function status(): Promise<AuthStatus> {
     twoFactor: account?.twoFactor ?? false,
     rememberedUntil: account ? rememberedUntil(account) : null,
     device,
+    deviceChecking: peek === undefined,
     throttleSeconds: account ? throttleSeconds(account) : 0,
     recovered,
     weakPassword: !!open && weakPassword,

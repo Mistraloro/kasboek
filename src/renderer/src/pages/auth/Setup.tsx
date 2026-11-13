@@ -67,7 +67,7 @@ export function Setup() {
               title={status.device ? t('auth.chooseDevice', { name: deviceName }) : t('auth.choosePasswordless')}
               body={t('auth.chooseDeviceBody')}
               disabled={!status.device || busy}
-              note={status.device ? undefined : t('auth.deviceUnavailableHint')}
+              note={status.device ? undefined : status.deviceChecking ? t('auth.deviceChecking') : t('auth.deviceUnavailableHint')}
               onClick={() => create({ mode: 'device' })}
             />
             <Choice icon={<FileLock2 size={16} />} title={t('auth.chooseImport')} body={t('auth.chooseImportBody')} onClick={() => setStep('import')} />

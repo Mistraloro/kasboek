@@ -26,6 +26,7 @@ const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.')
 export const contract = {
   /* ----- App & preferences (available while locked) ----- */
   'app.info': { input: empty, output: out<AppInfo>() },
+  'app.ready': { input: empty, output: out<{ ok: true }>() },
   'prefs.get': { input: empty, output: out<Prefs>() },
   'prefs.update': {
     input: z
@@ -303,6 +304,7 @@ export type OpOutput<K extends OpName> = Contract[K]['output']
 /** Operations that work while Kasboek is locked. Everything else needs a login. */
 export const PUBLIC_OPS: readonly OpName[] = [
   'app.info',
+  'app.ready',
   'prefs.get',
   'prefs.update',
   'auth.status',
@@ -326,6 +328,7 @@ export type AppEvent =
   | { type: 'backup.completed'; file: string }
   | { type: 'backup.failed'; message: string }
   | { type: 'auth.locked'; reason: 'user' | 'idle' | 'system' }
+  | { type: 'auth.refresh' }
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }

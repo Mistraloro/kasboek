@@ -18,6 +18,16 @@ import { assistImport } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { helperPath } from './mcp/channel'
 
+let readyListener: (() => void) | null = null
+/** Called once the page has drawn its first screen. */
+export function onAppReady(fn: () => void): void {
+  readyListener = fn
+}
+function appReady(): void {
+  readyListener?.()
+  readyListener = null
+}
+
 function focusedWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
 }
@@ -48,6 +58,14 @@ const desktopOps: OpTable = {
       dataDir: paths.dataDir,
       mcpCommand: { command: helperPath(), args: ['--data-dir', paths.dataDir] }
     })
+  },
+  'app.ready': {
+    mutates: false,
+    assistant: false,
+    handler: () => {
+      appReady()
+      return { ok: true as const }
+    }
   },
   'prefs.get': { mutates: false, assistant: false, handler: () => getPrefs() },
   'prefs.update': {

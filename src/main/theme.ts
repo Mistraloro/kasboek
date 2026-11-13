@@ -8,6 +8,13 @@ export const THEME_COLORS = {
 
 export const TITLEBAR_HEIGHT = 44
 
+const hasOverlay = new Set<number>()
+/** Marks a window created with titleBarOverlay, so theme changes recolour its buttons. */
+export function trackOverlay(win: BrowserWindow): void {
+  hasOverlay.add(win.id)
+  win.on('closed', () => hasOverlay.delete(win.id))
+}
+
 export function resolvedTheme(): 'light' | 'dark' {
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
 }
@@ -22,7 +29,8 @@ export function syncWindowChrome(): void {
   const colors = THEME_COLORS[resolvedTheme()]
   for (const win of BrowserWindow.getAllWindows()) {
     win.setBackgroundColor(colors.bg)
-    if (process.platform !== 'darwin') {
+    // Only the main window has overlay title-bar buttons (the launch window has no frame at all).
+    if (process.platform !== 'darwin' && hasOverlay.has(win.id)) {
       win.setTitleBarOverlay({ color: colors.bg, symbolColor: colors.symbol, height: TITLEBAR_HEIGHT })
     }
   }

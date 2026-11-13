@@ -80,6 +80,8 @@ export interface AuthStatus {
   /** 2FA is remembered on this computer until this time (ISO), or null. */
   rememberedUntil: string | null
   device: DeviceAuthKind
+  /** Still finding out whether Windows Hello / Touch ID is available. */
+  deviceChecking: boolean
   throttleSeconds: number
   /** Unlocked with the recovery key; a new password should be chosen. */
   recovered: boolean
