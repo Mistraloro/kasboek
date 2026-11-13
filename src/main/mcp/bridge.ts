@@ -1,5 +1,5 @@
 /**
- * Inside the running app: accepts tool calls from the `--mcp` helper (started by Claude Desktop
+ * Inside the running app: accepts tool calls from the `kasboek-mcp` helper (started by Claude Desktop
  * or Claude Code), only while Kasboek is unlocked and MCP is switched on. Changes wait for the
  * person to approve them in the app, just like in the built-in chat.
  */
@@ -10,7 +10,7 @@ import { getSettings } from '@core/settings'
 import type { OpName, OpResult } from '@shared/contract'
 import { assistantTools, compactResult, describeChange, opForTool, precheck } from '../assistant/tools'
 import { broadcast, db, isUnlocked } from '../session'
-import { socketPath, tokenFile, type BridgeRequest, type BridgeResponse } from './channel'
+import { discoveryFile, socketPath, type BridgeRequest, type BridgeResponse } from './channel'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 
@@ -95,8 +95,9 @@ export function syncMcpBridge(run: Run): void {
   const want = enabled()
   if (want && !server) {
     token = randomBytes(32).toString('hex')
-    writeFileSync(tokenFile(), token, { mode: 0o600 })
     const path = socketPath()
+    // Tells the kasboek-mcp helper where to connect and with which token. Readable only by this user.
+    writeFileSync(discoveryFile(), JSON.stringify({ socket: path, token }), { mode: 0o600 })
     if (process.platform !== 'win32' && existsSync(path)) rmSync(path, { force: true })
     server = createServer((s) => serve(s, run))
     server.on('error', (err) => console.error('[mcp bridge]', err))
@@ -106,7 +107,7 @@ export function syncMcpBridge(run: Run): void {
   } else if (!want && server) {
     server.close()
     server = null
-    rmSync(tokenFile(), { force: true })
+    rmSync(discoveryFile(), { force: true })
     for (const resolve of pending.values()) resolve(false)
     pending.clear()
   }
@@ -116,7 +117,7 @@ export function stopMcpBridge(): void {
   server?.close()
   server = null
   try {
-    rmSync(tokenFile(), { force: true })
+    rmSync(discoveryFile(), { force: true })
   } catch {
     // ignore
   }

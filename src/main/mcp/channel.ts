@@ -1,4 +1,4 @@
-/** Where the running app and the `--mcp` helper meet: a named pipe (Windows) or a Unix socket, plus a token file. */
+/** Where the running app and the kasboek-mcp helper meet: a named pipe (Windows) or a Unix socket, found via a discovery file. */
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,8 +9,14 @@ export function socketPath(): string {
   return process.platform === 'win32' ? `\\\\.\\pipe\\kasboek-mcp-${id}` : join(tmpdir(), `kasboek-mcp-${id}.sock`)
 }
 
-export function tokenFile(): string {
-  return join(app.getPath('userData'), 'mcp-token')
+export function discoveryFile(): string {
+  return join(app.getPath('userData'), 'mcp-bridge.json')
+}
+
+/** The kasboek-mcp helper shipped next to the app (built from tools/kasboek-mcp). */
+export function helperPath(): string {
+  const exe = process.platform === 'win32' ? 'kasboek-mcp.exe' : 'kasboek-mcp'
+  return app.isPackaged ? join(process.resourcesPath, exe) : join(app.getAppPath(), 'build', 'mcp', `${process.platform}-${process.arch}`, exe)
 }
 
 export interface BridgeRequest {

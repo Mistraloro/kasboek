@@ -16,6 +16,7 @@ import { assistantStatus, confirm as confirmAssistant, initAssistant, publishSta
 import { API_KEY, checkKey } from './assistant/claude'
 import { assistImport } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
+import { helperPath } from './mcp/channel'
 
 function focusedWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
@@ -45,11 +46,7 @@ const desktopOps: OpTable = {
       version: app.getVersion(),
       platform: process.platform,
       dataDir: paths.dataDir,
-      // The helper never opens a window; on Linux it must not need a display either.
-      mcpCommand: {
-        command: process.execPath,
-        args: [...(process.platform === 'linux' ? ['--ozone-platform=headless'] : []), ...(app.isPackaged ? [] : [app.getAppPath()]), '--mcp']
-      }
+      mcpCommand: { command: helperPath(), args: ['--data-dir', paths.dataDir] }
     })
   },
   'prefs.get': { mutates: false, assistant: false, handler: () => getPrefs() },

@@ -10,8 +10,6 @@ import { broadcast, initSession, lock, onLock, startAutoLock } from './session'
 import { runAutoBackupIfDue } from './transfer/service'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT } from './theme'
 
-import { runMcpStdio } from './mcp/stdio'
-
 const MCP_MODE = process.argv.includes('--mcp')
 
 // 64-bit only (x64 or ARM64): larger address space for ASLR, and the only builds we ship and test.
@@ -20,14 +18,11 @@ if (process.arch !== 'x64' && process.arch !== 'arm64') {
   app.exit(1)
 }
 
-// `--mcp`: run only the small stdio helper for Claude Desktop / Claude Code. No window, no database.
+// `--mcp` was the 0.9.0 way to start the MCP server. It can't work on Windows (a windowed app has no
+// stdin), so it now points to the kasboek-mcp helper instead of starting a second copy of Kasboek.
 if (MCP_MODE) {
-  // On Linux the config passes --ozone-platform=headless so no display is needed (see app.info).
-  app.commandLine.appendSwitch('disable-gpu')
-  void runMcpStdio().catch((err: unknown) => {
-    process.stderr.write(`kasboek --mcp: ${String(err)}\n`)
-    app.exit(1)
-  })
+  process.stderr.write('Kasboek: "--mcp" is no longer supported. In your MCP config, use the kasboek-mcp program that is installed next to Kasboek (see Kasboek → Settings → Claude).\n')
+  app.exit(2)
 } else if (!app.requestSingleInstanceLock()) {
   // One running copy only: two processes must never write the same database.
   app.quit()

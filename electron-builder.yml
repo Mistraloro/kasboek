@@ -12,6 +12,11 @@ files:
 # better-sqlite3-multiple-ciphers ships prebuilt Node-API binaries for every platform, so nothing
 # is compiled and installers can be built on any OS.
 npmRebuild: false
+# The kasboek-mcp helper (console program for MCP clients), one per platform/arch, next to the app.
+extraResources:
+  - from: build/mcp/${platform}-${arch}
+    to: .
+    filter: ['kasboek-mcp*']
 asarUnpack:
   - resources/**
   - '**/*.node'

@@ -42,8 +42,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Go builds the kasboek-mcp helper (tools/kasboek-mcp).
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: tools/kasboek-mcp/go.mod
+          cache: false
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run test:mcp
       - run: npm test
       - run: npm run check:i18n
       # Without an Apple Developer ID the app is ad-hoc signed (required on Apple Silicon);
