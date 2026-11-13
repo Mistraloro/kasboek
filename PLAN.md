@@ -250,7 +250,12 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
      -- <Kasboek> --mcp` after confirmation and shows the result; otherwise keeps the copyable
      command. A *Remove* button runs `claude mcp remove kasboek`.
    - Only ever on a button press, with the change shown first.
-10. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+10. **MCP on Windows (bug in 0.9.0).** Claude Desktop starts `Kasboek.exe --mcp`, which exits
+    after about a second: Electron's windowed app on Windows has no usable stdin, so the stdio MCP
+    connection closes. Fix: ship a small console helper `kasboek-mcp` (Go, ~5 MB, no runtime) next
+    to Kasboek on every OS. It speaks MCP over stdio and forwards to the running, unlocked app over
+    the existing local channel; it holds no keys and opens no database. Config points to it.
+11. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
 
 ## Later, maybe
