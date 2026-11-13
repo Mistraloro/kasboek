@@ -256,13 +256,7 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
     connection closes. Fix: ship a small console helper `kasboek-mcp` (Go, ~5 MB, no runtime) next
     to Kasboek on every OS. It speaks MCP over stdio and forwards to the running, unlocked app over
     the existing local channel; it holds no keys and opens no database. Config points to it.
-11. **Import an Excel budget workbook** (like a friend's yearly sheet with one tab per year:
-    expense categories × months, transfers to savings/investments, income types, investments paid
-    in and portfolio value per broker, opening balances). Read the .xlsx locally, show a preview of
-    what lands where (categories, monthly totals as one transaction per category per month,
-    opening balances), let the person map unknown labels, and import nothing until approved.
-    Investment and net-worth rows need a place in Kasboek to land (see the open question about
-    investments, net worth over time and a year view).
+11. ~~**Import an Excel budget workbook**~~ Dropped for now, at the owner's request.
 12. **Investments.** Investment accounts per broker: money paid in, portfolio value at the end of
     each month (typed in or imported), and a portfolio chart.
 13. **Net worth over time.** Current accounts + savings + portfolio per month, with a chart, and the
