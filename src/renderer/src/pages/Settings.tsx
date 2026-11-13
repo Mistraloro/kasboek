@@ -1,7 +1,7 @@
 import { Download, FolderOpen, Monitor, Moon, Plus, ShieldAlert, ShieldCheck, Sun, Upload } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AccountWithBalance, PickedTransfer } from '@shared/types'
+import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance, type PickedTransfer } from '@shared/types'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
@@ -400,15 +400,15 @@ function AccountsSection() {
   const accounts = useOp('accounts.list')
   const [editing, setEditing] = useState<AccountWithBalance | 'new' | null>(null)
   const { settings } = useSettings()
-  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR' })
+  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind })
   const open = (a: AccountWithBalance | 'new'): void => {
-    setForm(a === 'new' ? { name: '', bank: '', iban: '', currency: settings.currency } : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency })
+    setForm(a === 'new' ? { name: '', bank: '', iban: '', currency: settings.currency, kind: 'current' } : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency, kind: a.kind })
     setEditing(a)
   }
   const save = async (): Promise<void> => {
     try {
-      if (editing === 'new') await call('accounts.create', { name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency })
-      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency })
+      if (editing === 'new') await call('accounts.create', { name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency, kind: form.kind })
+      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency, kind: form.kind })
       toast(editing === 'new' ? t('settings.accountAdded') : t('settings.accountSaved'))
       setEditing(null)
       void accounts.reload()
@@ -427,7 +427,7 @@ function AccountsSection() {
         <Row
           key={a.id}
           label={<span className={a.archived ? 'text-muted line-through' : undefined}>{a.name}</span>}
-          hint={[a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : '', a.currency !== settings.currency ? a.currency : ''].filter(Boolean).join(' · ') || undefined}
+          hint={[t(`accountKind.${a.kind}`), a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : '', a.currency !== settings.currency ? a.currency : ''].filter(Boolean).join(' · ') || undefined}
         >
           <Button size="sm" variant="ghost" onClick={() => open(a)}>{t('settings.edit')}</Button>
           <Button size="sm" variant="ghost" onClick={() => void call('accounts.update', { id: a.id, archived: !a.archived }).then(() => accounts.reload())}>
@@ -440,6 +440,13 @@ function AccountsSection() {
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>
           <Field label={t('settings.accountName')}>{(id) => <Input id={id} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('settings.accountNamePlaceholder')} autoFocus required />}</Field>
           <Field label={t('settings.bankName')} hint={t('settings.bankNameHint')}>{(id) => <Input id={id} value={form.bank} maxLength={60} onChange={(e) => setForm({ ...form, bank: e.target.value })} />}</Field>
+          <Field label={t('settings.accountKind')} hint={form.kind === 'investment' ? t('settings.accountKindInvestment') : undefined}>
+            {(id) => (
+              <Select id={id} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as AccountKind })}>
+                {ACCOUNT_KINDS.map((k) => <option key={k} value={k}>{t(`accountKind.${k}`)}</option>)}
+              </Select>
+            )}
+          </Field>
           <Field label={t('settings.accountCurrency')} hint={editing !== 'new' && editing && editing.transactionCount > 0 && form.currency !== editing.currency ? t('settings.accountCurrencyChange', { from: editing.currency, to: form.currency }) : undefined}>
             {(id) => <CurrencySelect id={id} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />}
           </Field>

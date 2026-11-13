@@ -106,3 +106,81 @@ export function Meter({ value, max }: { value: number; max: number | null }) {
     </div>
   )
 }
+
+/** About three round gridline values (1, 2 or 5 times a power of ten) inside lo..hi. */
+function niceTicks(lo: number, hi: number): number[] {
+  const raw = (hi - lo) / 3
+  const pow = 10 ** Math.floor(Math.log10(raw))
+  const step = [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow
+  const out: number[] = []
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(v)
+  return out
+}
+
+/**
+ * One value over time (net worth): a 2px line over a faint area, three recessive gridlines with
+ * labels, and a crosshair with a tooltip on hover. One series, so no legend: the title names it.
+ */
+export function TrendLine({ data, format, compact, label }: { data: { key: string; label: string; cents: number; note?: string }[]; format: (c: number) => string; compact: (c: number) => string; label: string }) {
+  const [hover, setHover] = useState<number | null>(null)
+  const W = 560
+  const H = 200
+  const pad = { top: 12, bottom: 24, left: 56, right: 8 }
+  if (!data.length) return null
+  const values = data.map((d) => d.cents)
+  let lo = Math.min(0, ...values)
+  let hi = Math.max(0, ...values)
+  if (lo === hi) hi = lo + 100
+  const span = hi - lo
+  lo -= span * 0.04
+  hi += span * 0.06
+  const plotW = W - pad.left - pad.right
+  const plotH = H - pad.top - pad.bottom
+  const x = (i: number): number => pad.left + (data.length === 1 ? plotW / 2 : (i / (data.length - 1)) * plotW)
+  const y = (v: number): number => pad.top + plotH - ((v - lo) / (hi - lo)) * plotH
+  const line = data.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d.cents).toFixed(1)}`).join(' ')
+  const zero = y(0)
+  const area = `${line} L${x(data.length - 1).toFixed(1)},${zero.toFixed(1)} L${x(0).toFixed(1)},${zero.toFixed(1)} Z`
+  const ticks = niceTicks(lo, hi)
+  const every = Math.max(1, Math.ceil(data.length / 8))
+  const h = hover !== null ? data[hover] : null
+  const onMove = (e: React.MouseEvent<SVGRectElement>): void => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const px = ((e.clientX - r.left) / r.width) * plotW
+    setHover(Math.max(0, Math.min(data.length - 1, Math.round((px / plotW) * (data.length - 1)))))
+  }
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible" role="img" aria-label={label}>
+        {ticks.map((v) => (
+          <g key={v}>
+            <line x1={pad.left} x2={W - pad.right} y1={y(v)} y2={y(v)} stroke="var(--border)" strokeDasharray="2 4" />
+            <text x={pad.left - 8} y={y(v) + 4} textAnchor="end" className="num fill-[var(--text-muted)] text-[11px]">{compact(v)}</text>
+          </g>
+        ))}
+        {lo < 0 && <line x1={pad.left} x2={W - pad.right} y1={zero} y2={zero} stroke="var(--border-strong)" />}
+        <path d={area} fill="var(--chart-spending)" opacity={0.1} />
+        <path d={line} fill="none" stroke="var(--chart-spending)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {data.map((d, i) =>
+          i % every === 0 || i === data.length - 1 ? (
+            <text key={d.key} x={x(i)} y={H - 6} textAnchor="middle" className="fill-[var(--text-muted)] text-[11px]">{d.label}</text>
+          ) : null
+        )}
+        {h && hover !== null && (
+          <>
+            <line x1={x(hover)} x2={x(hover)} y1={pad.top} y2={pad.top + plotH} stroke="var(--border-strong)" />
+            <circle cx={x(hover)} cy={y(h.cents)} r={4.5} fill="var(--chart-spending)" stroke="var(--surface)" strokeWidth={2} />
+          </>
+        )}
+        <rect x={pad.left} y={0} width={plotW} height={H} fill="transparent" onMouseMove={onMove} onMouseLeave={() => setHover(null)} />
+      </svg>
+      {h && hover !== null && (
+        <Tip x={`${(x(hover) / W) * 100}%`} y={64}>
+          <p className="mb-0.5 font-medium">{h.label}</p>
+          <p className="num font-medium">{format(h.cents)}</p>
+          {h.note && <p className="text-muted">{h.note}</p>}
+        </Tip>
+      )}
+    </div>
+  )
+}

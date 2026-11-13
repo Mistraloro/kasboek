@@ -1,4 +1,4 @@
-import { ArrowLeftRight, FileUp, LayoutDashboard, Lock as LockIcon, PanelRight, Settings as SettingsIcon, Target } from 'lucide-react'
+import { ArrowLeftRight, CalendarRange, FileUp, LayoutDashboard, Lock as LockIcon, PanelRight, Settings as SettingsIcon, Target, TrendingUp } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AssistantPanel } from './components/AssistantPanel'
@@ -16,14 +16,18 @@ import { Budgets } from './pages/Budgets'
 import { ImportPage } from './pages/Import'
 import { Overview } from './pages/Overview'
 import { SettingsPage } from './pages/Settings'
+import { NetWorthPage } from './pages/NetWorth'
+import { YearPage } from './pages/Year'
 import { Transactions, type TxFilter } from './pages/Transactions'
 
-export type Page = 'overview' | 'transactions' | 'budgets' | 'import' | 'settings'
+export type Page = 'overview' | 'transactions' | 'budgets' | 'year' | 'networth' | 'import' | 'settings'
 
 const NAV: { page: Page; icon: ReactNode }[] = [
   { page: 'overview', icon: <LayoutDashboard size={17} /> },
   { page: 'transactions', icon: <ArrowLeftRight size={17} /> },
   { page: 'budgets', icon: <Target size={17} /> },
+  { page: 'year', icon: <CalendarRange size={17} /> },
+  { page: 'networth', icon: <TrendingUp size={17} /> },
   { page: 'import', icon: <FileUp size={17} /> }
 ]
 
@@ -141,6 +145,8 @@ function Shell() {
               {page === 'overview' && <Overview key={navKey} go={go} />}
               {page === 'transactions' && <Transactions key={navKey} go={setPage} initial={txFilter} />}
               {page === 'budgets' && <Budgets />}
+              {page === 'year' && <YearPage key={navKey} />}
+              {page === 'networth' && <NetWorthPage key={navKey} />}
               {page === 'import' && <ImportPage go={setPage} />}
               {page === 'settings' && <SettingsPage />}
             </div>

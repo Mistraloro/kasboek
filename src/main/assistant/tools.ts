@@ -100,6 +100,10 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
       return 'Import the ready rows of the open CSV as transactions'
     case 'accounts.create':
       return `Add the account “${String(input['name'])}”${input['currency'] && input['currency'] !== getSettings(db).currency ? ` in ${String(input['currency'])}` : ''}`
+    case 'valuations.set': {
+      const acc = db.prepare('SELECT name, currency FROM accounts WHERE id = ?').get(input['accountId']) as { name: string; currency: string } | undefined
+      return `Record that ${acc?.name ?? 'the account'} was worth ${money(db, Number(input['valueCents']), acc?.currency)} on ${String(input['date'])}`
+    }
     case 'fx.setRate':
       return `Set the exchange rate on ${String(input['date'])}: 1 EUR = ${String(input['perEur'])} ${String(input['currency'])}`
     default:

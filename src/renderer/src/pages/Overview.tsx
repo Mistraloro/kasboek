@@ -126,7 +126,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
   )
 }
 
-function Stat({ label, value, tone, hint }: { label: string; value: ReactNode; tone?: 'accent' | 'negative'; hint?: string }) {
+export function Stat({ label, value, tone, hint }: { label: string; value: ReactNode; tone?: 'accent' | 'negative'; hint?: string }) {
   return (
     <Card className="px-5 py-4">
       <p className="text-[13px] text-muted">{label}</p>

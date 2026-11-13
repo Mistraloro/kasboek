@@ -5,9 +5,13 @@ export type CategoryKind = 'expense' | 'income' | 'transfer'
 export type Actor = 'user' | 'assistant' | 'system'
 
 
+export const ACCOUNT_KINDS = ['current', 'savings', 'investment', 'cash', 'credit_card', 'loan', 'other'] as const
+export type AccountKind = (typeof ACCOUNT_KINDS)[number]
+
 export interface Account {
   id: number
   name: string
+  kind: AccountKind
   /** The bank's name as the person typed it (may be empty). */
   bank: string
   iban: string | null
@@ -49,6 +53,51 @@ export interface FxStatus {
   currencies: FxCurrencyInfo[]
   lastEcbUpdateAt: string | null
   autoUpdate: boolean
+}
+
+export interface Valuation {
+  accountId: number
+  date: string
+  valueCents: number
+  note: string | null
+}
+
+export interface NetWorthAccount {
+  id: number
+  name: string
+  kind: AccountKind
+  currency: string
+  archived: boolean
+  /** Today, in the account's currency. */
+  valueCents: number
+  valueMainCents: number | null
+  /** Opening balance plus payments in and out; only for accounts with recorded values. */
+  investedCents: number | null
+  gainCents: number | null
+  lastValuation: { date: string; valueCents: number } | null
+}
+
+export interface NetWorth {
+  main: string
+  totalCents: number
+  assetsCents: number
+  liabilitiesCents: number
+  /** Accounts left out because their currency has no exchange rate. */
+  unconverted: number
+  accounts: NetWorthAccount[]
+  /** Net worth at the end of each month (this month: today). */
+  history: { month: string; cents: number; unconverted: number }[]
+}
+
+export interface YearSummary {
+  year: number
+  months: { month: string; incomeCents: number; spendingCents: number }[]
+  categories: { categoryId: number | null; name: string; kind: 'income' | 'expense'; months: number[]; totalCents: number }[]
+  incomeCents: number
+  spendingCents: number
+  budgetedCents: number
+  /** Totals for every year with transactions. */
+  years: { year: number; incomeCents: number; spendingCents: number }[]
 }
 
 /** Data settings, stored in the encrypted database. */

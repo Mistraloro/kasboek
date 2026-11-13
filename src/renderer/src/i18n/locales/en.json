@@ -6,6 +6,8 @@
     "overview": "Overview",
     "transactions": "Transactions",
     "budgets": "Budgets",
+    "year": "Year",
+    "networth": "Net worth",
     "import": "Import",
     "settings": "Settings",
     "assistant": "Assistant",
@@ -365,7 +367,9 @@
       "12h": "12-hour"
     },
     "accountCurrency": "Currency",
-    "accountCurrencyChange": "Its {{from}} transactions will count as {{to}}. Use this to correct a wrong currency."
+    "accountCurrencyChange": "Its {{from}} transactions will count as {{to}}. Use this to correct a wrong currency.",
+    "accountKind": "Type",
+    "accountKindInvestment": "Record its value now and then on the Net worth page; deposits and withdrawals come from its transactions."
   },
   "errors": {
     "generic": "Something went wrong."
@@ -607,5 +611,67 @@
     "modelsLoaded_other": "{{count}} models found.",
     "note": "Pick a model that supports tools (function calling); small local models may answer less reliably. Changes the assistant proposes still wait for your OK.",
     "theServer": "the server"
+  },
+  "accountKind": {
+    "current": "Current account",
+    "savings": "Savings",
+    "investment": "Investments",
+    "cash": "Cash",
+    "credit_card": "Credit card",
+    "loan": "Loan or mortgage",
+    "other": "Other"
+  },
+  "networth": {
+    "title": "Net worth",
+    "subtitle": "Everything you own minus what you owe, in your main currency.",
+    "total": "Net worth",
+    "assets": "You own",
+    "debts": "You owe",
+    "change": "{{amount}} over {{months}} months",
+    "unconverted_one": "{{count}} account has no exchange rate and is left out. Add rates in Settings → Currencies.",
+    "unconverted_other": "{{count}} accounts have no exchange rate and are left out. Add rates in Settings → Currencies.",
+    "history": "Net worth over time",
+    "historyHint": "At the end of each month, this month up to today.",
+    "range": "Period",
+    "all": "All",
+    "years_one": "{{count}} year",
+    "years_other": "{{count}} years",
+    "missingRates_one": "{{count}} account without exchange rate left out",
+    "missingRates_other": "{{count}} accounts without exchange rate left out",
+    "empty": "Add accounts and transactions to see your net worth grow.",
+    "group": {
+      "everyday": "Everyday",
+      "savings": "Savings",
+      "investments": "Investments",
+      "debts": "Debts"
+    },
+    "valuedOn": "value from {{date}}",
+    "gain": "Gain",
+    "setValue": "Update value",
+    "valueTitle": "Value of {{name}}",
+    "valueHelp": "Enter what the account was worth on a day, as your bank or broker shows it. Deposits and withdrawals after that day are added on top until you enter a new value.",
+    "value": "Value ({{currency}})",
+    "note": "Note (optional)",
+    "saveValue": "Save value",
+    "valueSaved": "Value saved.",
+    "recorded": "Recorded values"
+  },
+  "year": {
+    "title": "Year",
+    "subtitle": "Twelve months side by side, and how the years compare.",
+    "previous": "Previous year",
+    "next": "Next year",
+    "net": "Saved",
+    "saved": "{{pct}}% of income",
+    "budgeted": "Budgeted: {{amount}}",
+    "perMonth": "Per month",
+    "byCategory": "By category",
+    "byCategoryHint": "Spending is money out minus refunds; transfers between your own accounts are left out.",
+    "income": "Income",
+    "spending": "Spending",
+    "total": "Total",
+    "empty": "No transactions in this year.",
+    "allYears": "All years",
+    "yearCol": "Year"
   }
 }

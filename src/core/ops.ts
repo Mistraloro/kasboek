@@ -7,6 +7,7 @@ import { getSettings, updateSettings } from './settings'
 import * as fin from './finance'
 import * as imp from './import'
 import * as fx from './fx'
+import * as wealth from './wealth'
 
 export function fxStatus(db: Db): FxStatus {
   const s = getSettings(db)
@@ -34,6 +35,7 @@ interface AccountRow {
   bank: string
   iban: string | null
   currency: string
+  kind: Account['kind']
   opening_balance_cents: number
   archived: number
   created_at: string
@@ -55,6 +57,7 @@ const toAccount = (r: AccountRow): Account => ({
   bank: r.bank,
   iban: r.iban,
   currency: r.currency,
+  kind: r.kind,
   openingBalanceCents: r.opening_balance_cents,
   archived: r.archived === 1,
   createdAt: r.created_at
@@ -88,6 +91,11 @@ export const coreOps: OpTable = {
     assistant: false,
     handler: ({ db }, patch) => updateSettings(db, patch)
   },
+  'networth.summary': { mutates: false, assistant: true, handler: ({ db }, input) => wealth.netWorth(db, input) },
+  'valuations.list': { mutates: false, assistant: true, handler: ({ db }, input) => wealth.listValuations(db, input.accountId) },
+  'valuations.set': { mutates: true, assistant: true, handler: ({ db }, input) => wealth.setValuation(db, input) },
+  'valuations.delete': { mutates: true, assistant: false, handler: ({ db }, input) => wealth.deleteValuation(db, input) },
+  'summary.year': { mutates: false, assistant: true, handler: ({ db }, input) => wealth.yearSummary(db, input.year) },
   'fx.status': { mutates: false, assistant: true, handler: ({ db }) => fxStatus(db) },
   'fx.rates': { mutates: false, assistant: true, handler: ({ db }, input) => fx.listManualRates(db, input.currency) },
   'fx.setRate': {
@@ -126,11 +134,12 @@ export const coreOps: OpTable = {
       const cur = db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow | undefined
       if (!cur) throw new AppError('accounts.not_found', 'Account not found.')
       db.transaction(() => {
-        db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, currency = ?, archived = ? WHERE id = ?').run(
+        db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, currency = ?, kind = ?, archived = ? WHERE id = ?').run(
           input.name ?? cur.name,
           input.bank ?? cur.bank,
           input.iban !== undefined ? normalizeIban(input.iban) : cur.iban,
           input.currency ?? cur.currency,
+          input.kind ?? cur.kind,
           input.archived !== undefined ? (input.archived ? 1 : 0) : cur.archived,
           input.id
         )
@@ -149,10 +158,10 @@ export const coreOps: OpTable = {
       try {
         const row = db
           .prepare(
-            `INSERT INTO accounts (name, bank, iban, currency, opening_balance_cents)
-             VALUES (?, ?, ?, ?, ?) RETURNING *`
+            `INSERT INTO accounts (name, bank, iban, currency, kind, opening_balance_cents)
+             VALUES (?, ?, ?, ?, ?, ?) RETURNING *`
           )
-          .get(input.name, input.bank, iban, input.currency.toUpperCase(), input.openingBalanceCents) as AccountRow
+          .get(input.name, input.bank, iban, input.currency, input.kind, input.openingBalanceCents) as AccountRow
         return toAccount(row)
       } catch (err) {
         if (err instanceof Error && /UNIQUE/.test(err.message)) {

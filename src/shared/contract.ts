@@ -18,7 +18,8 @@ const currency = z
   .trim()
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import { ACCOUNT_KINDS } from './types'
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -168,6 +169,29 @@ export const contract = {
   'settings.get': { input: empty, output: out<Settings>() },
   'settings.update': { input: z.object({ currency, fxAutoUpdate: z.boolean() }).partial().strict(), output: out<Settings>() },
 
+  /* ----- Net worth, investments, year ----- */
+  'networth.summary': {
+    description: 'Net worth now (assets minus debts, in the main currency), each account with its value and, for investments with recorded values, the gain, plus net worth at the end of each month. months: how many months of history (0 = all).',
+    input: z.object({ months: z.number().int().min(0).max(600).default(24) }).strict(),
+    output: out<NetWorth>()
+  },
+  'valuations.list': {
+    description: 'Recorded values of an account (e.g. an investment portfolio), newest first.',
+    input: z.object({ accountId: id }).strict(),
+    output: out<Valuation[]>()
+  },
+  'valuations.set': {
+    description: 'Record what an account (e.g. a broker portfolio or savings plan) was worth on a date, in cents of the account currency. Payments after that date are added on top until the next value.',
+    input: z.object({ accountId: id, date, valueCents: z.number().int(), note: z.string().trim().max(200).nullable().optional() }).strict(),
+    output: out<Valuation[]>()
+  },
+  'valuations.delete': { input: z.object({ accountId: id, date }).strict(), output: out<Valuation[]>() },
+  'summary.year': {
+    description: 'One year: income and spending per month and per category (main currency, transfers left out), and totals for every year with data.',
+    input: z.object({ year: z.number().int().min(1900).max(2200) }).strict(),
+    output: out<YearSummary>()
+  },
+
   /* ----- Currencies ----- */
   'fx.status': {
     description: 'Currencies in use and the exchange rates Kasboek has for them (units per 1 euro). Totals are shown in the main currency.',
@@ -193,7 +217,7 @@ export const contract = {
     output: out<AccountWithBalance[]>()
   },
   'accounts.update': {
-    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), currency: currency.optional(), archived: z.boolean().optional() }).strict(),
+    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), currency: currency.optional(), kind: z.enum(ACCOUNT_KINDS).optional(), archived: z.boolean().optional() }).strict(),
     output: out<Account>()
   },
   'accounts.create': {
@@ -203,6 +227,7 @@ export const contract = {
         bank: z.string().trim().max(60).default(''),
         iban: z.string().trim().max(34).nullable().optional(),
         currency: currency.default('EUR'),
+        kind: z.enum(ACCOUNT_KINDS).default('current'),
         openingBalanceCents: z.number().int().default(0)
       })
       .strict(),
