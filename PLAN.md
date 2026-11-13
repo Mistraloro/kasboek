@@ -196,5 +196,10 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    `build/` (WiX sizes: banner 493×58, dialog 493×312, as .bmp/.png) generated from
    `assets/brand/`, and wire them in as `WixUIBannerBmp` / `WixUIDialogBmp`. Check the `.exe`
    installer's sidebar image at the same time.
-3. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
+3. **Launch window (splash screen).** After starting Kasboek nothing appears for a moment, so it
+   isn't clear the app is opening. Show a small window immediately (logo, "Kasboek", a subtle
+   loading indicator, in the current light/dark theme) and close it when the main window is
+   ready. Also look at what makes start-up slow (opening the encrypted account, the Windows
+   Hello availability check, loading the UI bundle) and trim it.
+4. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
