@@ -1,0 +1,16 @@
+# Proposes updates to the GitHub Actions used in .github/workflows as pull requests, keeping the
+# commit pins current. Nothing is merged automatically.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week before proposing a new release, so a bad or hijacked one is likely caught first.
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci
