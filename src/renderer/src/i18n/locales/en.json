@@ -484,11 +484,37 @@
   "mcp": {
     "title": "Claude Desktop & Claude Code (MCP)",
     "hint": "Let Claude apps on this computer read your budget and propose changes while Kasboek is open and unlocked.",
-    "desktop": "Claude Desktop: add to claude_desktop_config.json",
-    "code": "Claude Code: run in a terminal",
+    "desktop": "Claude Desktop (claude_desktop_config.json)",
+    "code": "Claude Code (terminal)",
     "note": "Works only while Kasboek is running and unlocked. Every change shows up here for you to approve. What Claude reads is sent to Anthropic by that app.",
     "copied": "Copied.",
     "requestTitle": "Request from Claude (MCP)",
-    "requestBody": "A Claude app connected through MCP wants to make this change:"
+    "requestBody": "A Claude app connected through MCP wants to make this change:",
+    "desktopLabel": "Claude Desktop",
+    "codeLabel": "Claude Code",
+    "desktopUnavailable": "Claude Desktop isn’t available on this system.",
+    "codeNotFound": "Claude Code wasn’t found on this computer. Use “Set up by hand” below.",
+    "helperMissing": "The kasboek-mcp helper is missing from this installation. Reinstall Kasboek.",
+    "state": {
+      "absent": "Not added",
+      "current": "Added",
+      "outdated": "Needs update"
+    },
+    "addDesktop": "Add to Claude Desktop",
+    "addCode": "Add to Claude Code",
+    "update": "Update",
+    "remove": "Remove",
+    "manual": "Set up by hand",
+    "hideManual": "Hide manual setup",
+    "addTitle": "Add Kasboek to Claude Desktop",
+    "removeTitle": "Remove Kasboek from Claude Desktop",
+    "addBody": "Kasboek will add (or update) only its own entry in this file. Other servers and settings stay as they are.",
+    "removeBody": "Kasboek will remove only its own entry from this file.",
+    "backupNote": "A copy of the file is saved next to it first. Restart Claude Desktop afterwards.",
+    "confirmAdd": "Add",
+    "addedDesktop": "Added. Restart Claude Desktop to see Kasboek’s tools.",
+    "removedDesktop": "Removed from Claude Desktop. Restart it to apply.",
+    "codeAdded": "Added to Claude Code. Start a new Claude Code session to use it.",
+    "removedCode": "Removed from Claude Code."
   }
 }

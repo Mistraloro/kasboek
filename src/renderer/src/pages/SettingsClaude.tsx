@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
-import { usePrefs } from '../lib/settings'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
@@ -90,28 +89,85 @@ export function ClaudeSection() {
 function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
-  const { info } = usePrefs()
-  const desktop = JSON.stringify({ mcpServers: { kasboek: { command: info.mcpCommand.command, args: info.mcpCommand.args } } }, null, 2)
+  const status = useOp('mcp.setupStatus')
+  const [confirm, setConfirm] = useState<null | 'desktopAdd' | 'desktopRemove'>(null)
+  const [manual, setManual] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const st = status.data
+  const entryJson = st ? JSON.stringify({ mcpServers: { kasboek: st.entry } }, null, 2) : ''
   const quote = (p: string): string => (/\s/.test(p) ? `"${p}"` : p)
-  const code = `claude mcp add kasboek -- ${[info.mcpCommand.command, ...info.mcpCommand.args].map(quote).join(' ')}`
+  const command = st ? `claude mcp add --scope user kasboek -- ${[st.entry.command, ...st.entry.args].map(quote).join(' ')}` : ''
   const copy = (v: string): void => void navigator.clipboard.writeText(v).then(() => toast(t('mcp.copied')), () => toast(t('auth.copyFailed'), 'error'))
+  const act = (p: Promise<unknown>, done: string): void => {
+    setBusy(true)
+    p.then(() => toast(done), (e) => toast(errText(e), 'error')).finally(() => {
+      setBusy(false)
+      setConfirm(null)
+      void status.reload()
+    })
+  }
+  const desktopTone = st?.desktop?.state === 'current' ? 'accent' : st?.desktop?.state === 'outdated' ? 'warning' : 'neutral'
   return (
     <>
       <Row label={t('mcp.title')} hint={t('mcp.hint')}>
         <Switch label={t('mcp.title')} checked={enabled} onChange={onChange} />
       </Row>
-      {enabled && (
-        <div className="flex flex-col gap-3 px-5 py-4 text-[13px]">
-          <div>
-            <div className="mb-1 flex items-center justify-between"><span className="font-medium">{t('mcp.desktop')}</span><Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copy(desktop)}>{t('auth.copy')}</Button></div>
-            <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{desktop}</pre>
+      {enabled && st && (
+        <>
+          {!st.helperFound && <p className="px-5 pt-3 text-xs text-warning">{t('mcp.helperMissing')}</p>}
+          <Row label={t('mcp.desktopLabel')} hint={st.desktop ? <span className="selectable break-all">{st.desktop.configPath}</span> : t('mcp.desktopUnavailable')}>
+            {st.desktop && (
+              <>
+                <Badge tone={desktopTone}>{t(`mcp.state.${st.desktop.state}`)}</Badge>
+                {st.desktop.state !== 'current' && <Button size="sm" variant="primary" disabled={busy} onClick={() => setConfirm('desktopAdd')}>{st.desktop.state === 'outdated' ? t('mcp.update') : t('mcp.addDesktop')}</Button>}
+                {st.desktop.state !== 'absent' && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirm('desktopRemove')}>{t('mcp.remove')}</Button>}
+              </>
+            )}
+          </Row>
+          <Row label={t('mcp.codeLabel')} hint={st.code ? <span className="selectable break-all">{st.code.path}</span> : t('mcp.codeNotFound')}>
+            {st.code && (
+              <>
+                <Badge tone={st.code.installed ? 'accent' : 'neutral'}>{st.code.installed ? t('mcp.state.current') : t('mcp.state.absent')}</Badge>
+                <Button size="sm" variant={st.code.installed ? 'secondary' : 'primary'} disabled={busy} onClick={() => act(call('mcp.codeAdd'), t('mcp.codeAdded'))}>{st.code.installed ? t('mcp.update') : t('mcp.addCode')}</Button>
+                {st.code.installed && <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(call('mcp.codeRemove'), t('mcp.removedCode'))}>{t('mcp.remove')}</Button>}
+              </>
+            )}
+          </Row>
+          <div className="px-5 py-3 text-[13px]">
+            <button type="button" className="font-medium text-accent hover:underline" onClick={() => setManual((v) => !v)}>{manual ? t('mcp.hideManual') : t('mcp.manual')}</button>
+            {manual && (
+              <div className="mt-3 flex flex-col gap-3">
+                <div>
+                  <div className="mb-1 flex items-center justify-between"><span className="font-medium">{t('mcp.desktop')}</span><Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copy(entryJson)}>{t('auth.copy')}</Button></div>
+                  <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{entryJson}</pre>
+                </div>
+                <div>
+                  <div className="mb-1 flex items-center justify-between"><span className="font-medium">{t('mcp.code')}</span><Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copy(command)}>{t('auth.copy')}</Button></div>
+                  <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{command}</pre>
+                </div>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-muted">{t('mcp.note')}</p>
           </div>
-          <div>
-            <div className="mb-1 flex items-center justify-between"><span className="font-medium">{t('mcp.code')}</span><Button size="sm" variant="ghost" icon={<Copy size={13} />} onClick={() => copy(code)}>{t('auth.copy')}</Button></div>
-            <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{code}</pre>
-          </div>
-          <p className="text-xs text-muted">{t('mcp.note')}</p>
-        </div>
+          <Modal open={!!confirm} title={confirm === 'desktopRemove' ? t('mcp.removeTitle') : t('mcp.addTitle')} onClose={() => setConfirm(null)}>
+            <div className="flex flex-col gap-3 text-[13px]">
+              <p className="text-muted">{confirm === 'desktopRemove' ? t('mcp.removeBody') : t('mcp.addBody')}</p>
+              <p className="selectable rounded-lg bg-surface-2 px-3 py-2 font-mono text-[12px] break-all">{st.desktop?.configPath}</p>
+              {confirm === 'desktopAdd' && <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{JSON.stringify({ kasboek: st.entry }, null, 2)}</pre>}
+              <p className="text-xs text-muted">{t('mcp.backupNote')}</p>
+              <div className="flex justify-end gap-2">
+                <Button onClick={() => setConfirm(null)}>{t('settings.cancel')}</Button>
+                <Button
+                  variant="primary"
+                  disabled={busy}
+                  onClick={() => act(call(confirm === 'desktopRemove' ? 'mcp.desktopRemove' : 'mcp.desktopAdd'), confirm === 'desktopRemove' ? t('mcp.removedDesktop') : t('mcp.addedDesktop'))}
+                >
+                  {confirm === 'desktopRemove' ? t('mcp.remove') : t('mcp.confirmAdd')}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        </>
       )}
     </>
   )

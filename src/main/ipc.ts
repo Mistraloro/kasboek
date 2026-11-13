@@ -18,6 +18,7 @@ import { API_KEY, checkKey } from './assistant/claude'
 import { assistImport } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { helperPath } from './mcp/channel'
+import * as mcpSetup from './mcp/setup'
 
 let readyListener: (() => void) | null = null
 /** Called once the page has drawn its first screen. */
@@ -245,6 +246,25 @@ const desktopOps: OpTable = {
     }
   },
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'mcp.setupStatus': { mutates: false, assistant: false, handler: () => mcpSetup.setupStatus() },
+  'mcp.desktopAdd': { mutates: false, assistant: false, handler: () => mcpSetup.addToDesktop() },
+  'mcp.desktopRemove': { mutates: false, assistant: false, handler: () => mcpSetup.removeFromDesktop() },
+  'mcp.codeAdd': {
+    mutates: false,
+    assistant: false,
+    handler: async () => {
+      await mcpSetup.addToCode()
+      return { ok: true as const }
+    }
+  },
+  'mcp.codeRemove': {
+    mutates: false,
+    assistant: false,
+    handler: async () => {
+      await mcpSetup.removeFromCode()
+      return { ok: true as const }
+    }
+  },
   'mcp.respond': {
     mutates: false,
     assistant: false,

@@ -262,3 +262,13 @@ export interface BackupEntryInfo {
   size: number
   tier: 'recent' | 'daily' | 'monthly'
 }
+
+export interface McpSetupStatus {
+  entry: { command: string; args: string[] }
+  helperFound: boolean
+  /** null when Claude Desktop isn't available on this system. */
+  desktop: { configPath: string; state: 'absent' | 'current' | 'outdated' } | null
+  /** null when the `claude` command wasn't found. */
+  code: { path: string; installed: boolean } | null
+  devBuild: boolean
+}

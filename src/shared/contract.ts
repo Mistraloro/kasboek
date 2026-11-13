@@ -9,7 +9,7 @@ import { ASSISTANT_MODELS } from './types'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
 import { checkPassword } from './password'
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -116,6 +116,11 @@ export const contract = {
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },
   'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'mcp.setupStatus': { input: empty, output: out<McpSetupStatus>() },
+  'mcp.desktopAdd': { input: empty, output: out<{ path: string; backup: string | null }>() },
+  'mcp.desktopRemove': { input: empty, output: out<{ path: string; backup: string | null }>() },
+  'mcp.codeAdd': { input: empty, output: out<{ ok: true }>() },
+  'mcp.codeRemove': { input: empty, output: out<{ ok: true }>() },
   'mcp.respond': { input: z.object({ id: z.string().uuid(), approve: z.boolean() }).strict(), output: out<{ ok: true }>() },
 
   /* ----- Data ----- */
