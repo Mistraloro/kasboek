@@ -212,9 +212,9 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Pregunta sobre tu dinero o deja que {{ai}} haga cambios. Todo lo que cambia tus datos espera tu aprobación.",
-    "example1": "¿Cuánto gasté en supermercado en octubre?",
+    "example1": "¿Cuánto gasté en supermercado el mes pasado?",
     "example2": "Pon mi presupuesto de restaurantes en 150 € al mes.",
-    "example3": "Revisa este CSV de mi banco e impórtalo.",
+    "example3": "Pon mis movimientos sin categoría en la categoría correcta.",
     "placeholder": "Pregunta a {{ai}}…",
     "setupBody": "Conecta un asistente de IA (Claude, Mistral, Gemini, un modelo local y más) para hacer preguntas sobre tu presupuesto, definir presupuestos, clasificar movimientos y revisar archivos CSV.",
     "setupButton": "Configurar un asistente",

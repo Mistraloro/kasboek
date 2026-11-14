@@ -54,7 +54,7 @@ PTBR=[
  (r'uma aplicação','um aplicativo'),(r'Uma aplicação','Um aplicativo'),(r'essa aplicação','esse aplicativo'),(r'sua aplicação','seu aplicativo'),(r'\bas aplicações','os aplicativos'),(r'\ba aplicação','o aplicativo'),(r'aplicações','aplicativos'),(r'aplicação','aplicativo'),(r'aplicativo Claude conectada','aplicativo Claude conectado'),(r'^Revisa este CSV do meu banco e importa-o\.$','Revise este CSV do meu banco e importe-o.'),
  (r'\bnum\b','em um'),(r'\bnuma\b','em uma'),(r'\bnoutra\b','em outra'),(r'\bnoutro\b','em outro'),
  (r'Leia este código','Escaneie este código'),(r'Ativa\b(?! )','Ativada'),(r'Aguarde','Aguarde'),(r'Pasta de dados','Pasta de dados'),(r'Ligue','Conecte'),(r'ligada por','conectada via'),(r'ligados a','vinculados a'),(r'ligada a','vinculada a'),
- (r'aplicativo Claude conectada','aplicativo Claude conectado'),(r'a seu aplicativo','o seu aplicativo'),(r'respetiv','respectiv'),(r'^A pensar…$','Pensando…'),(r'\bativ(?=a\b|o\b|ar\b)','ativ'),(r'facto','fato'),(r'contacto','contato'),
+ (r'aplicativo Claude conectada','aplicativo Claude conectado'),(r'a seu aplicativo','o seu aplicativo'),(r'respetiv','respectiv'),(r'^A pensar…$','Pensando…'),(r'^Coloca os meus movimentos sem categoria na categoria certa\.$','Coloque meus movimentos sem categoria na categoria certa.'),(r'\bativ(?=a\b|o\b|ar\b)','ativ'),(r'facto','fato'),(r'contacto','contato'),
 ]
 for base, out, rules in [('es.json','es-419.json',ES419),('pt-PT.json','pt-BR.json',PTBR)]:
     src=load(base); res=collections.OrderedDict()

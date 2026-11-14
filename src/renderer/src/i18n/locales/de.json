@@ -212,9 +212,9 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Frag nach deinem Geld oder lass {{ai}} Änderungen machen. Alles, was deine Daten ändert, wartet auf dein OK.",
-    "example1": "Wie viel habe ich im Oktober für Lebensmittel ausgegeben?",
+    "example1": "Wie viel habe ich letzten Monat für Lebensmittel ausgegeben?",
     "example2": "Setz mein Budget fürs Essengehen auf 150 € im Monat.",
-    "example3": "Prüf diese CSV meiner Bank und importiere sie.",
+    "example3": "Ordne meine Buchungen ohne Kategorie der richtigen Kategorie zu.",
     "placeholder": "Frag {{ai}}…",
     "setupBody": "Verbinde einen KI-Assistenten (Claude, Mistral, Gemini, ein lokales Modell und mehr), um Fragen zu deinem Budget zu stellen, Budgets festzulegen, Buchungen einzuordnen und CSV-Dateien zu prüfen.",
     "setupButton": "Assistenten einrichten",

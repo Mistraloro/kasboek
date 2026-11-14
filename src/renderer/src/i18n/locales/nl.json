@@ -212,9 +212,9 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Stel vragen over je geld, of laat {{ai}} wijzigingen doen. Alles wat je gegevens verandert, wacht op jouw akkoord.",
-    "example1": "Hoeveel heb ik in oktober aan boodschappen uitgegeven?",
+    "example1": "Hoeveel heb ik vorige maand aan boodschappen uitgegeven?",
     "example2": "Zet mijn budget voor uit eten op €150 per maand.",
-    "example3": "Kijk deze CSV van mijn bank na en importeer hem.",
+    "example3": "Zet mijn verrichtingen zonder categorie in de juiste categorie.",
     "placeholder": "Vraag het aan {{ai}}…",
     "setupBody": "Koppel een AI-assistent (Claude, Mistral, Gemini, een lokaal model en meer) om vragen te stellen over je budget, budgetten in te stellen, verrichtingen in te delen en CSV-bestanden na te kijken.",
     "setupButton": "Assistent instellen",

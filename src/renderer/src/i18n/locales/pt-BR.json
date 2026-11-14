@@ -57,7 +57,7 @@
     "checkSlowHint": "Arquivos grandes podem demorar alguns minutos. Para sozinho ao fim de 4 minutos."
   },
   "assistant": {
-    "example3": "Revise este CSV do meu banco e importe-o.",
+    "example3": "Coloque meus movimentos sem categoria na categoria certa.",
     "setupBody": "Conecte um assistente de IA (Claude, Mistral, Gemini, um modelo local e outros) para fazer perguntas sobre o seu orçamento, definir orçamentos, classificar movimentos e revisar arquivos CSV.",
     "thinking": "{{ai}} está trabalhando…",
     "tool": {

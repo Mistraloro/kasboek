@@ -212,9 +212,9 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Posez des questions sur votre argent, ou laissez {{ai}} faire des modifications. Tout ce qui modifie vos données attend votre accord.",
-    "example1": "Combien ai-je dépensé en courses en octobre ?",
+    "example1": "Combien ai-je dépensé en courses le mois dernier ?",
     "example2": "Mets mon budget restaurants à 150 € par mois.",
-    "example3": "Vérifie ce CSV de ma banque et importe-le.",
+    "example3": "Classe mes opérations sans catégorie dans la bonne catégorie.",
     "placeholder": "Demandez à {{ai}}…",
     "setupBody": "Connectez un assistant IA (Claude, Mistral, Gemini, un modèle local et d’autres) pour poser des questions sur votre budget, définir des budgets, classer des opérations et vérifier des fichiers CSV.",
     "setupButton": "Configurer un assistant",

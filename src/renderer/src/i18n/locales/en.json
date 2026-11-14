@@ -212,9 +212,9 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Ask about your money, or let {{ai}} make changes. Anything that changes your data waits for your OK.",
-    "example1": "How much did I spend on groceries in October?",
+    "example1": "How much did I spend on groceries last month?",
     "example2": "Set my eating-out budget to €150 a month.",
-    "example3": "Check this Keytrade CSV and import it.",
+    "example3": "Put my uncategorised transactions in the right categories.",
     "placeholder": "Ask {{ai}}…",
     "setupBody": "Connect an AI assistant (Claude, Mistral, Gemini, a local model and more) to ask questions about your budget, set budgets, sort transactions and check CSV files.",
     "setupButton": "Set up an assistant",
