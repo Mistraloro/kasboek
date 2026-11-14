@@ -128,8 +128,25 @@ async function* events(res: Response, signal: AbortSignal): AsyncGenerator<unkno
 }
 
 interface Chunk {
-  choices?: { delta?: { content?: string | null; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[] }; finish_reason?: string | null }[]
+  choices?: { delta?: { content?: unknown; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[] }; finish_reason?: string | null }[]
   error?: { message?: string }
+}
+
+/**
+ * The answer text from a message or stream chunk. Usually a string, but some providers (Mistral's
+ * reasoning models, among others) send a list of parts: text parts, and "thinking" parts that
+ * are the model's working, not the answer. Only the text is kept.
+ */
+export function contentText(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((part) => {
+      if (typeof part === 'string') return part
+      const p = part as { type?: string; text?: unknown }
+      return (p.type === undefined || p.type === 'text' || p.type === 'output_text') && typeof p.text === 'string' ? p.text : ''
+    })
+    .join('')
 }
 
 /** JSON schema without the `$schema` marker, which some providers reject. */
@@ -157,9 +174,10 @@ export async function chat(
     const choice = chunk.choices?.[0]
     if (!choice) continue
     const d = choice.delta
-    if (d?.content) {
-      text += d.content
-      onText(d.content)
+    const piece = contentText(d?.content)
+    if (piece) {
+      text += piece
+      onText(piece)
     }
     for (const tc of d?.tool_calls ?? []) {
       const i = tc.index ?? calls.length
@@ -211,10 +229,10 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
       response_format: { type: 'json_object' }
     }, opts.signal)
   }
-  const body = (await res.json()) as { choices?: { message?: { content?: string | null }; finish_reason?: string }[] }
+  const body = (await res.json()) as { choices?: { message?: { content?: unknown }; finish_reason?: string }[] }
   const choice = body.choices?.[0]
   if (choice?.finish_reason === 'length') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
-  const text = choice?.message?.content ?? ''
+  const text = contentText(choice?.message?.content)
   // Some models wrap JSON in a code fence.
   return text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')
 }
