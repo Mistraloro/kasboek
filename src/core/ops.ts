@@ -8,6 +8,7 @@ import * as fin from './finance'
 import * as imp from './import'
 import * as fx from './fx'
 import * as wealth from './wealth'
+import { listBankBalances, setBankBalance } from './balance'
 
 export function fxStatus(db: Db): FxStatus {
   const s = getSettings(db)
@@ -119,11 +120,19 @@ export const coreOps: OpTable = {
     assistant: true,
     handler: ({ db }): AccountWithBalance[] => {
       const bal = fin.accountBalances(db)
+      // The latest recorded bank balance, and whether it matches what Kasboek counted.
+      const last = new Map(
+        (db.prepare('SELECT DISTINCT account_id AS id FROM valuations').all() as { id: number }[]).map(({ id }) => {
+          const b = listBankBalances(db, id)[0]!
+          return [id, { date: b.date, balanceCents: b.balanceCents, differenceCents: b.differenceCents }]
+        })
+      )
       return (db.prepare('SELECT * FROM accounts ORDER BY archived, name').all() as AccountRow[]).map((r) => ({
         ...toAccount(r),
         balanceCents: bal.get(r.id)?.balance ?? r.opening_balance_cents,
         balanceMainCents: bal.get(r.id)?.balanceMain ?? null,
-        transactionCount: bal.get(r.id)?.count ?? 0
+        transactionCount: bal.get(r.id)?.count ?? 0,
+        lastBankBalance: last.get(r.id) ?? null
       }))
     }
   },
@@ -162,6 +171,8 @@ export const coreOps: OpTable = {
              VALUES (?, ?, ?, ?, ?, ?) RETURNING *`
           )
           .get(input.name, input.bank, iban, input.currency, input.kind, input.openingBalanceCents) as AccountRow
+        // The balance the bank shows now: the starting point for the balance from here on.
+        if (input.bankBalance) setBankBalance(db, { accountId: row.id, date: input.bankBalance.date, balanceCents: input.bankBalance.cents })
         return toAccount(row)
       } catch (err) {
         if (err instanceof Error && /UNIQUE/.test(err.message)) {
@@ -171,6 +182,8 @@ export const coreOps: OpTable = {
       }
     }
   },
+  'balances.list': { mutates: false, assistant: true, handler: ({ db }, { accountId }) => listBankBalances(db, accountId) },
+  'balances.set': { mutates: true, assistant: true, handler: ({ db }, input) => setBankBalance(db, input) },
   'categories.list': { mutates: false, assistant: true, handler: ({ db }) => listCategories(db) },
   'categories.create': {
     mutates: true,

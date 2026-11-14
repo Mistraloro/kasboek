@@ -314,6 +314,8 @@ export interface MonthSummary {
 }
 
 export interface AccountWithBalance extends Account {
+  /** The latest balance recorded from the bank (or read from a CSV). */
+  lastBankBalance: { date: string; balanceCents: number; differenceCents: number | null } | null
   /** In the account's own currency. */
   balanceCents: number
   /** In the main currency at the latest rate; null when there is no rate. */
@@ -343,6 +345,40 @@ export interface ImportRow {
   note: string | null
   /** For a (possible) duplicate: the transaction already in Kasboek it matches. */
   match: { id: number; bookingDate: string; counterpartyName: string | null; description: string } | null
+}
+
+/** What an import did, and what it knows about the account's balance. */
+export interface ImportCommitResult {
+  batchId: number
+  imported: number
+  skipped: number
+  /** Last date in the file: the day to compare the balance with the bank. */
+  lastDate: string | null
+  /** Kasboek's balance at the end of that day, after the import. */
+  balanceOnLastDate: number | null
+  /** A balance read from the CSV and recorded, compared with what Kasboek expected. */
+  bankBalance: BankBalanceResult | null
+  /** The account has no recorded bank balance yet: ask for one. */
+  askBalance: boolean
+}
+
+/** A balance the bank showed at the end of a day, compared with the one before it. */
+export interface BankBalance {
+  date: string
+  balanceCents: number
+  note: string | null
+  /** What Kasboek expected from the previous recorded balance and the transactions since. */
+  expectedCents: number | null
+  /** Bank minus expected: not zero when a transaction is missing or counted twice. */
+  differenceCents: number | null
+  since: string | null
+}
+
+export interface BankBalanceResult {
+  date: string
+  balanceCents: number
+  expectedCents: number | null
+  differenceCents: number | null
 }
 
 /** What "Check" did to the open import, and what it proposes to change outside it. */
@@ -402,6 +438,8 @@ export interface ImportColumns {
   communication?: number
   bankReference?: number
   status?: number
+  /** The account balance after each transaction, when the bank includes it. */
+  balance?: number
 }
 
 export interface ImportMapping {

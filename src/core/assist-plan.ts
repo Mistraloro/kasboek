@@ -24,6 +24,7 @@ const MappingPart = z.object({
     communication: col,
     bankReference: col,
     status: col,
+    balance: col,
     description: z.array(z.number().int())
   })
 })
@@ -144,7 +145,13 @@ export function parsePlan(text: string, name: string): Plan {
       const r = schema.safeParse(numbers(item))
       return r.success ? [r.data] : []
     })
-  const mapping = o['mapping'] == null ? null : MappingPart.safeParse(numbers(o['mapping']))
+  // Column fields a model left out (e.g. one added later, like balance) count as "not in this file".
+  const withColumns = (m: unknown): unknown => {
+    if (!m || typeof m !== 'object' || !('columns' in m) || !m.columns || typeof m.columns !== 'object') return m
+    const blank = Object.fromEntries(Object.keys(MappingPart.shape.columns.shape).filter((k) => k !== 'description').map((k) => [k, null]))
+    return { ...m, columns: { description: [], ...blank, ...(m.columns as object) } }
+  }
+  const mapping = o['mapping'] == null ? null : MappingPart.safeParse(numbers(withColumns(o['mapping'])))
   const plan: Plan = {
     mapping: mapping && mapping.success ? mapping.data : null,
     fixes: keep(FixPart, list(o['fixes'])),

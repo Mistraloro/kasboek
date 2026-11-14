@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, ListChecks, RotateCcw, Sparkles, Square, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CheckPart, ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
+import type { CheckPart, ImportCommitResult, ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
 import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -12,6 +12,7 @@ import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { CategorySelect } from './Transactions'
 import { useAssistant } from '../components/AssistantPanel'
+import { ImportBalanceCheck } from '../components/BankBalance'
 
 type Filter = 'all' | ImportRow['status']
 
@@ -30,7 +31,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   const batches = useOp('import.batches')
   const [accountId, setAccountId] = useState<number | null>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
-  const [done, setDone] = useState<{ batchId: number; imported: number } | null>(null)
+  const [done, setDone] = useState<(ImportCommitResult & { accountId: number; currency: string }) | null>(null)
   const [busy, setBusy] = useState(false)
   const [drag, setDrag] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -81,7 +82,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
         onCancel={() => void call('import.discard', { sessionId: preview.sessionId }).finally(() => setPreview(null))}
         onCommitted={(r) => {
           setPreview(null)
-          setDone(r)
+          setDone({ ...r, accountId: preview.accountId, currency: preview.currency })
           void batches.reload()
         }}
       />
@@ -92,11 +93,18 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
     <>
       <PageHeader title={t('import.title')} subtitle={t('import.subtitle')} />
       {done && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-border bg-accent-soft px-4 py-3 text-[13px]">
-          <CheckCircle2 size={16} className="text-accent" />
-          <span className="flex-1">{t('import.done', { count: done.imported })}</span>
-          <Button size="sm" variant="ghost" icon={<Undo2 size={14} />} onClick={() => void call('import.undo', { batchId: done.batchId }).then((r) => { toast(t('import.undone', { count: r.deleted })); setDone(null); void batches.reload() })}>{t('import.undo')}</Button>
-          <Button size="sm" variant="primary" onClick={() => go('transactions')}>{t('import.viewTransactions')}</Button>
+        <div className="mb-4 rounded-xl border border-border bg-accent-soft px-4 py-3 text-[13px]">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={16} className="text-accent" />
+            <span className="flex-1">{t('import.done', { count: done.imported })}</span>
+            <Button size="sm" variant="ghost" icon={<Undo2 size={14} />} onClick={() => void call('import.undo', { batchId: done.batchId }).then((r) => { toast(t('import.undone', { count: r.deleted })); setDone(null); void batches.reload() })}>{t('import.undo')}</Button>
+            <Button size="sm" variant="primary" onClick={() => go('transactions')}>{t('import.viewTransactions')}</Button>
+          </div>
+          {done.lastDate && done.balanceOnLastDate !== null && (
+            <div className="mt-1 pl-7">
+              <ImportBalanceCheck key={done.batchId} accountId={done.accountId} currency={done.currency} date={done.lastDate} kasboekCents={done.balanceOnLastDate} ask={done.askBalance} fromCsv={done.bankBalance} />
+            </div>
+          )}
         </div>
       )}
       {accounts.data && accounts.data.length === 0 ? (
@@ -148,7 +156,7 @@ const clock = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).pad
 
 const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', possible_duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
 
-function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: { batchId: number; imported: number }) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
+function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: ImportCommitResult) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
@@ -438,7 +446,7 @@ function CheckSummaryCard({ preview, onChange }: { preview: ImportPreview; onCha
   )
 }
 
-const FIELDS: (keyof Omit<ImportColumns, 'description'>)[] = ['bookingDate', 'amount', 'debit', 'credit', 'counterpartyName', 'counterpartyIban', 'communication', 'valueDate', 'currency', 'bankReference', 'status']
+const FIELDS: (keyof Omit<ImportColumns, 'description'>)[] = ['bookingDate', 'amount', 'debit', 'credit', 'counterpartyName', 'counterpartyIban', 'communication', 'valueDate', 'currency', 'bankReference', 'status', 'balance']
 
 function MappingModal({ open, preview, onClose, onApplied }: { open: boolean; preview: ImportPreview; onClose: () => void; onApplied: (p: ImportPreview) => void }) {
   const { t } = useTranslation()

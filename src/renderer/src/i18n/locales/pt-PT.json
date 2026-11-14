@@ -210,7 +210,8 @@
       "currency": "Moeda",
       "bankReference": "Referência bancária",
       "status": "Estado",
-      "description": "Descrição (uma ou mais colunas)"
+      "description": "Descrição (uma ou mais colunas)",
+      "balance": "Saldo após o movimento"
     },
     "dateOrder": "Formato da data",
     "decimal": "Formato dos números",
@@ -781,5 +782,35 @@
     "stopHint": "Os dados ficam aqui e nos outros computadores, que continuam a sincronizar entre si.",
     "stopButton": "Parar",
     "stopConfirm": "Este computador deixa de enviar e receber alterações. Os dados ficam como estão. Para voltar a sincronizar, junte-se novamente à pasta."
+  },
+  "balance": {
+    "matches": "Corresponde ao que o Kasboek contou.",
+    "differs": "O Kasboek esperava {{expected}}: uma diferença de {{difference}}.",
+    "differsSince": "O Kasboek esperava {{expected}}: uma diferença de {{difference}} desde {{date}}.",
+    "moreAtBank": "O seu banco tem mais: talvez falte uma receita ou um pagamento esteja contado duas vezes.",
+    "lessAtBank": "O seu banco tem menos: talvez falte um pagamento ou uma receita esteja contada duas vezes.",
+    "amount": "Saldo ({{currency}})",
+    "onDate": "No fim de",
+    "title": "Saldo bancário · {{name}}",
+    "help": "Indique o saldo que o seu banco mostra (na app ou num extrato) no fim de um dia. O Kasboek calcula o saldo da conta a partir dele e compara-o com o que esperava, assim nota-se um movimento em falta ou duplicado.",
+    "save": "Guardar saldo",
+    "recorded": "Saldos registados",
+    "fromCsv": "Do CSV",
+    "ok": "certo",
+    "off": "{{difference}} de diferença",
+    "readFromCsv": "Saldo do ficheiro no fim de {{date}}: {{amount}}.",
+    "saved": "Saldo bancário de {{date}} guardado.",
+    "kasboekOn": "Saldo no Kasboek no fim de {{date}}: {{amount}}.",
+    "compare": "Comparar com o seu banco",
+    "ask": "Que saldo mostra o seu banco no fim de {{date}}?",
+    "askCompare": "Saldo no seu banco no fim de {{date}}",
+    "skip": "Saltar",
+    "why": "Assim o Kasboek conhece o saldo desta conta e repara quando falta um movimento. Também pode adicioná-lo mais tarde em Definições → Contas.",
+    "checkedOn": "Saldo bancário de {{date}}",
+    "notChecked": "Ainda sem saldo bancário",
+    "button": "Saldo bancário",
+    "newTitle": "Saldo no seu banco (opcional)",
+    "newInvestment": "Valor (opcional)",
+    "newHint": "O que o seu banco mostra agora. O Kasboek calcula o saldo a partir daqui, mesmo que importe movimentos mais antigos mais tarde."
   }
 }

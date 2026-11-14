@@ -15,6 +15,8 @@ import { ImportFlow } from './auth/ImportFlow'
 import { CurrencySelect } from '../components/CurrencySelect'
 import { ClaudeSection } from './SettingsClaude'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
+import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
+import { parseAmount } from '@shared/amount'
 
 export function Row({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -495,14 +497,30 @@ function AccountsSection() {
   const accounts = useOp('accounts.list')
   const [editing, setEditing] = useState<AccountWithBalance | 'new' | null>(null)
   const { settings } = useSettings()
-  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind })
+  const { fmt, money } = useSettings()
+  const today = new Date().toISOString().slice(0, 10)
+  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind, balance: '', balanceDate: today })
+  const [balanceOf, setBalanceOf] = useState<AccountWithBalance | null>(null)
   const open = (a: AccountWithBalance | 'new'): void => {
-    setForm(a === 'new' ? { name: '', bank: '', iban: '', currency: settings.currency, kind: 'current' } : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency, kind: a.kind })
+    setForm(
+      a === 'new'
+        ? { name: '', bank: '', iban: '', currency: settings.currency, kind: 'current', balance: '', balanceDate: today }
+        : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency, kind: a.kind, balance: '', balanceDate: today }
+    )
     setEditing(a)
   }
+  const balanceCents = form.balance.trim() ? parseAmount(form.balance, 'auto', fmt.formats.decimal) : null
   const save = async (): Promise<void> => {
     try {
-      if (editing === 'new') await call('accounts.create', { name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency, kind: form.kind })
+      if (editing === 'new')
+        await call('accounts.create', {
+          name: form.name,
+          bank: form.bank,
+          iban: form.iban || null,
+          currency: form.currency,
+          kind: form.kind,
+          ...(balanceCents !== null ? { bankBalance: { date: form.balanceDate, cents: balanceCents } } : {})
+        })
       else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency, kind: form.kind })
       toast(editing === 'new' ? t('settings.accountAdded') : t('settings.accountSaved'))
       setEditing(null)
@@ -524,6 +542,12 @@ function AccountsSection() {
           label={<span className={a.archived ? 'text-muted line-through' : undefined}>{a.name}</span>}
           hint={[t(`accountKind.${a.kind}`), a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : '', a.currency !== settings.currency ? a.currency : ''].filter(Boolean).join(' · ') || undefined}
         >
+          <span className="num mr-2 text-right text-[13px]">
+            <span className="block font-medium">{money(a.balanceCents, a.currency)}</span>
+            <span className="block text-xs text-muted">{a.lastBankBalance ? t('balance.checkedOn', { date: formatDate(a.lastBankBalance.date, fmt) }) : t('balance.notChecked')}</span>
+            {!!a.lastBankBalance?.differenceCents && <span className="block text-xs text-warning">{t('balance.off', { difference: money(a.lastBankBalance.differenceCents, a.currency) })}</span>}
+          </span>
+          <Button size="sm" variant="ghost" onClick={() => setBalanceOf(a)}>{t('balance.button')}</Button>
           <Button size="sm" variant="ghost" onClick={() => open(a)}>{t('settings.edit')}</Button>
           <Button size="sm" variant="ghost" onClick={() => void call('accounts.update', { id: a.id, archived: !a.archived }).then(() => accounts.reload())}>
             {a.archived ? t('budgets.restore') : t('budgets.archive')}
@@ -546,12 +570,21 @@ function AccountsSection() {
             {(id) => <CurrencySelect id={id} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />}
           </Field>
           <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <Input id={id} value={form.iban} onChange={(e) => setForm({ ...form, iban: e.target.value })} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
+          {editing === 'new' && (
+            <div>
+              <p className="mb-1 text-[13px] font-medium">{t(form.kind === 'investment' ? 'balance.newInvestment' : 'balance.newTitle')}</p>
+              <p className="mb-2 text-xs text-muted">{t('balance.newHint')}</p>
+              <BalanceFields value={form.balance} date={form.balanceDate} currency={form.currency} onValue={(balance) => setForm({ ...form, balance })} onDate={(balanceDate) => setForm({ ...form, balanceDate })} />
+              {form.balance.trim() !== '' && balanceCents === null && <p className="mt-1 text-xs text-negative">{t('budgets.invalid')}</p>}
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={!form.name.trim()}>{t('settings.save')}</Button>
+            <Button type="submit" variant="primary" disabled={!form.name.trim() || (form.balance.trim() !== '' && balanceCents === null)}>{t('settings.save')}</Button>
           </div>
         </form>
       </Modal>
+      <BankBalanceModal account={balanceOf} onClose={() => setBalanceOf(null)} onSaved={() => void accounts.reload()} />
     </Card>
   )
 }

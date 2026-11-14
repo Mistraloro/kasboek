@@ -174,6 +174,10 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
       const acc = db.prepare('SELECT name, currency FROM accounts WHERE id = ?').get(input['accountId']) as { name: string; currency: string } | undefined
       return `Record that ${acc?.name ?? 'the account'} was worth ${money(db, Number(input['valueCents']), acc?.currency)} on ${String(input['date'])}`
     }
+    case 'balances.set': {
+      const acc = db.prepare('SELECT name, currency FROM accounts WHERE id = ?').get(input['accountId']) as { name: string; currency: string } | undefined
+      return `Record that the bank showed ${money(db, Number(input['balanceCents']), acc?.currency)} for ${acc?.name ?? 'the account'} at the end of ${String(input['date'])}`
+    }
     case 'fx.setRate':
       return `Set the exchange rate on ${String(input['date'])}: 1 EUR = ${String(input['perEur'])} ${String(input['currency'])}`
     default:

@@ -19,7 +19,7 @@ ES419=[
  (r'\botro puerto u ordenador','otro puerto o computadora'),(r'\botro ordenador','otra computadora'),(r'\bcualquier ordenador','cualquier computadora'),
  (r'\bdel ordenador','de la computadora'),(r'\bel ordenador','la computadora'),(r'\btu ordenador','tu computadora'),(r'ordenador','computadora'),
  (r'móvil','celular'),
- (r'Sin añadir','Sin agregar'),(r'Añadido','Agregado'),(r'añadida','agregada'),(r'añadirá','agregará'),(r'Añadir','Agregar'),(r'Añade','Agrega'),(r'añade','agrega'),
+ (r'Sin añadir','Sin agregar'),(r'añadirlo','agregarlo'),(r'Añadido','Agregado'),(r'añadida','agregada'),(r'añadirá','agregará'),(r'Añadir','Agregar'),(r'Añade','Agrega'),(r'añade','agrega'),
  (r'Ajustes','Configuración'),
  (r'\bImportes\b','Montos'),(r'estos importes','estos montos'),(r'\bImporte\b','Monto'),(r'\bimporte\b','monto'),
  (r'¿Has olvidado la contraseña\?','¿Olvidaste la contraseña?'),(r'Has desbloqueado','Desbloqueaste'),(r'He guardado','Guardé'),
@@ -27,6 +27,7 @@ ES419=[
  (r'un USB','una memoria USB'),(r'entra en reposo','entra en suspensión'),(r'^Nómina$','Sueldo'),
 ]
 PTBR=[
+ (r'Também pode adicioná-lo','Você também pode adicioná-lo'),(r'repara quando','percebe quando'),
  (r'palavras-passe','senhas'),(r'[Pp]alavra-passe',lambda m:'Senha' if m.group(0)[0]=='P' else 'senha'),
  (r'ficheiros','arquivos'),(r'[Ff]icheiro',lambda m:'Arquivo' if m.group(0)[0]=='F' else 'arquivo'),
  (r'o ecrã','a tela'),(r'ecrã','tela'),(r'telemóvel','celular'),

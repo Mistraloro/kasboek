@@ -127,5 +127,8 @@
     "stop": "Dejar de sincronizar en esta computadora",
     "stopHint": "Los datos se quedan aquí y en los demás computadoraes, que siguen sincronizándose entre sí.",
     "stopConfirm": "Esta computadora deja de enviar y recibir cambios. Sus datos se quedan como están. Para volver a sincronizar, únete de nuevo a la carpeta."
+  },
+  "balance": {
+    "why": "Así Kasboek conoce el saldo de esta cuenta y se da cuenta cuando falta un movimiento. También puedes agregarlo más tarde en Configuración → Cuentas."
   }
 }

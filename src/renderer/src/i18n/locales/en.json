@@ -210,7 +210,8 @@
       "currency": "Currency",
       "bankReference": "Bank reference",
       "status": "Status",
-      "description": "Description (one or more columns)"
+      "description": "Description (one or more columns)",
+      "balance": "Balance after the transaction"
     },
     "dateOrder": "Date format",
     "decimal": "Number format",
@@ -781,5 +782,35 @@
     "stopHint": "The data stays here and on the other computers; they keep syncing with each other.",
     "stopButton": "Stop syncing",
     "stopConfirm": "This computer stops sending and receiving changes. Its data stays as it is now. To sync again later, join the folder again."
+  },
+  "balance": {
+    "matches": "Matches what Kasboek counted.",
+    "differs": "Kasboek expected {{expected}}: a difference of {{difference}}.",
+    "differsSince": "Kasboek expected {{expected}}: a difference of {{difference}} since {{date}}.",
+    "moreAtBank": "Your bank has more: income may be missing, or a payment counted twice.",
+    "lessAtBank": "Your bank has less: a payment may be missing, or income counted twice.",
+    "amount": "Balance ({{currency}})",
+    "onDate": "At the end of",
+    "title": "Bank balance · {{name}}",
+    "help": "Enter the balance your bank shows (in its app or on a statement) at the end of a day. Kasboek counts the account balance from it and compares it with what it expected, so a missing or doubled transaction shows up.",
+    "save": "Save balance",
+    "recorded": "Recorded balances",
+    "fromCsv": "From the CSV",
+    "ok": "matches",
+    "off": "{{difference}} off",
+    "readFromCsv": "Balance from the file at the end of {{date}}: {{amount}}.",
+    "saved": "Bank balance of {{date}} saved.",
+    "kasboekOn": "Balance in Kasboek at the end of {{date}}: {{amount}}.",
+    "compare": "Compare with your bank",
+    "ask": "What balance does your bank show at the end of {{date}}?",
+    "askCompare": "Balance at your bank at the end of {{date}}",
+    "skip": "Skip",
+    "why": "Then Kasboek knows the balance of this account and notices when a transaction is missing. You can also add it later in Settings → Accounts.",
+    "checkedOn": "Bank balance of {{date}}",
+    "notChecked": "No bank balance yet",
+    "button": "Bank balance",
+    "newTitle": "Balance at your bank (optional)",
+    "newInvestment": "Value (optional)",
+    "newHint": "What your bank shows now. Kasboek counts the balance from here, also when you import older transactions later."
   }
 }

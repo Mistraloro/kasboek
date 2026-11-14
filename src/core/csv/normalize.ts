@@ -17,6 +17,8 @@ export interface CleanRow {
   counterpartyIban: string | null
   communication: string | null
   bankReference: string | null
+  /** The account balance after this transaction, when the file has it. */
+  balanceCents: number | null
   issues: RowIssue[]
   raw: string[]
 }
@@ -99,6 +101,7 @@ export function normalizeRows(rawRows: string[][], mapping: CsvMapping, accountC
       counterpartyIban: /^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/.test(ibanRaw) ? ibanRaw : ibanRaw || null,
       communication,
       bankReference: get(c.bankReference) || null,
+      balanceCents: c.balance !== undefined && get(c.balance) ? parseAmount(get(c.balance), mapping.decimal) : null,
       issues,
       raw
     }

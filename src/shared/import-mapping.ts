@@ -21,7 +21,8 @@ export const mappingSchema = z
         description: z.array(z.number().int().min(0)).max(6).default([]),
         communication: z.number().int().min(0).optional(),
         bankReference: z.number().int().min(0).optional(),
-        status: z.number().int().min(0).optional()
+        status: z.number().int().min(0).optional(),
+        balance: z.number().int().min(0).optional()
       })
       .strict()
       .refine((c) => c.amount !== undefined || c.debit !== undefined || c.credit !== undefined, 'An amount column is needed.')

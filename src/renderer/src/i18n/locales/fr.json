@@ -210,7 +210,8 @@
       "currency": "Devise",
       "bankReference": "Référence bancaire",
       "status": "Statut",
-      "description": "Description (une ou plusieurs colonnes)"
+      "description": "Description (une ou plusieurs colonnes)",
+      "balance": "Solde après l’opération"
     },
     "dateOrder": "Format de date",
     "decimal": "Format des nombres",
@@ -781,5 +782,35 @@
     "stopHint": "Les données restent ici et sur les autres ordinateurs, qui continuent à se synchroniser entre eux.",
     "stopButton": "Arrêter",
     "stopConfirm": "Cet ordinateur n’envoie et ne reçoit plus de modifications. Ses données restent telles quelles. Pour synchroniser à nouveau, rejoignez le dossier."
+  },
+  "balance": {
+    "matches": "Correspond à ce que Kasboek a compté.",
+    "differs": "Kasboek attendait {{expected}} : une différence de {{difference}}.",
+    "differsSince": "Kasboek attendait {{expected}} : une différence de {{difference}} depuis le {{date}}.",
+    "moreAtBank": "Votre banque a plus : un revenu manque peut-être, ou un paiement est compté deux fois.",
+    "lessAtBank": "Votre banque a moins : un paiement manque peut-être, ou un revenu est compté deux fois.",
+    "amount": "Solde ({{currency}})",
+    "onDate": "À la fin du",
+    "title": "Solde bancaire · {{name}}",
+    "help": "Indiquez le solde affiché par votre banque (dans l’app ou sur un extrait) à la fin d’une journée. Kasboek calcule le solde du compte à partir de là et le compare à ce qu’il attendait : une transaction manquante ou en double se voit.",
+    "save": "Enregistrer le solde",
+    "recorded": "Soldes enregistrés",
+    "fromCsv": "Du CSV",
+    "ok": "correct",
+    "off": "{{difference}} d’écart",
+    "readFromCsv": "Solde du fichier à la fin du {{date}} : {{amount}}.",
+    "saved": "Solde bancaire du {{date}} enregistré.",
+    "kasboekOn": "Solde dans Kasboek à la fin du {{date}} : {{amount}}.",
+    "compare": "Comparer avec votre banque",
+    "ask": "Quel solde votre banque affiche-t-elle à la fin du {{date}} ?",
+    "askCompare": "Solde à votre banque à la fin du {{date}}",
+    "skip": "Passer",
+    "why": "Kasboek connaît alors le solde de ce compte et remarque quand une transaction manque. Vous pouvez aussi l’ajouter plus tard dans Réglages → Comptes.",
+    "checkedOn": "Solde bancaire du {{date}}",
+    "notChecked": "Pas encore de solde bancaire",
+    "button": "Solde bancaire",
+    "newTitle": "Solde à votre banque (facultatif)",
+    "newInvestment": "Valeur (facultatif)",
+    "newHint": "Ce que votre banque affiche maintenant. Kasboek calcule le solde à partir de là, même si vous importez plus tard des transactions plus anciennes."
   }
 }

@@ -3,10 +3,11 @@
  * confirmation) can change the mapping, skip rows and set categories first.
  */
 import { randomUUID } from 'node:crypto'
-import type { CheckPart, CheckSummary, ImportBatch, ImportPreview, ImportRow } from '@shared/types'
+import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { categorizeTransactions, createRule, insertTransaction, listRules, matchRule } from './finance'
+import { balanceOn, setBankBalance } from './balance'
 import { fingerprint } from './fingerprint'
 import { autoMap, detectLayout, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
 import { normalizeRows, type CleanRow } from './csv/normalize'
@@ -407,7 +408,7 @@ export function rawWindow(id: string, from = 0, count = 40): { headerRow: number
   }
 }
 
-export function commit(db: Db, id: string, saveProfile: boolean): { batchId: number; imported: number; skipped: number } {
+export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitResult {
   const s = session(id)
   if (!s.mapping) throw new AppError('import.no_mapping', 'Choose which columns hold the date and amount first.')
   const built = buildRows(db, s)
@@ -447,7 +448,44 @@ export function commit(db: Db, id: string, saveProfile: boolean): { batchId: num
     }
   })()
   sessions.delete(id)
-  return { batchId, imported: ready.length, skipped: built.length - ready.length }
+  const dates = built.flatMap((b) => (b.row.bookingDate ? [b.row.bookingDate] : [])).sort()
+  const lastDate = dates.at(-1) ?? null
+  const kind = (db.prepare('SELECT kind FROM accounts WHERE id = ?').get(s.accountId) as { kind: string }).kind
+  // A balance column: the balance after the last transaction of the file is what the bank showed
+  // that day, so it is recorded (and compared with what Kasboek expected).
+  let bankBalance: ImportCommitResult['bankBalance'] = null
+  const fromFile = fileBalance(built.map((b) => b.raw))
+  if (fromFile && kind !== 'investment') {
+    try {
+      bankBalance = setBankBalance(db, { accountId: s.accountId, date: fromFile.date, balanceCents: fromFile.cents, note: 'From the CSV' })
+    } catch {
+      // A date in the future: not recorded.
+    }
+  }
+  const hasBalance = !!db.prepare('SELECT 1 FROM valuations WHERE account_id = ?').get(s.accountId)
+  return {
+    batchId,
+    imported: ready.length,
+    skipped: built.length - ready.length,
+    lastDate,
+    balanceOnLastDate: lastDate ? balanceOn(db, s.accountId, lastDate).cents : null,
+    bankBalance,
+    askBalance: kind !== 'investment' && !hasBalance
+  }
+}
+
+/**
+ * The balance at the end of the file's last day, from a balance column: the balance after that
+ * day's last transaction (files list either the newest or the oldest first).
+ */
+export function fileBalance(rows: Pick<CleanRow, 'bookingDate' | 'balanceCents'>[]): { date: string; cents: number } | null {
+  const dated = rows.filter((r): r is typeof r & { bookingDate: string } => !!r.bookingDate)
+  if (!dated.some((r) => r.balanceCents !== null)) return null
+  const newestFirst = dated.length > 1 && dated[0]!.bookingDate > dated.at(-1)!.bookingDate
+  const last = dated.reduce((m, r) => (r.bookingDate > m ? r.bookingDate : m), '')
+  const sameDay = dated.filter((r) => r.bookingDate === last && r.balanceCents !== null)
+  const row = newestFirst ? sameDay[0] : sameDay.at(-1)
+  return row ? { date: last, cents: row.balanceCents! } : null
 }
 
 export function discard(id: string): void {

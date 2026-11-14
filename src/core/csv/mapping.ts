@@ -24,7 +24,8 @@ const SYNONYMS: Record<Field | 'description' | 'ignore', string[]> = {
   description: ['omschrijving', 'beschrijving', 'details', 'description', 'libelle', 'type verrichting', 'type de transaction', 'transaction type', 'verwendungszweck', 'memo', 'narrative', 'omschrijving transactie'],
   communication: ['mededeling', 'communication', 'vrije mededeling', 'gestructureerde mededeling', 'message', 'reference de paiement'],
   bankReference: ['referentie', 'reference', 'volgnummer', 'numero de sequence', 'uittrekselnummer', 'extrait', 'transactie id', 'transaction id'],
-  status: ['status', 'statut']
+  status: ['status', 'statut'],
+  balance: ['saldo', 'solde', 'balance', 'kontostand', 'saldo na verrichting', 'saldo na transactie', 'nieuw saldo', 'solde apres operation', 'solde apres transaction', 'running balance', 'balance after', 'saldo rekening']
 }
 
 export function scoreHeaderRow(cells: string[]): number {
@@ -70,7 +71,7 @@ export function autoMap(rows: string[][], delimiter: CsvMapping['delimiter']): C
       }
     }
   }
-  const order: (Field | 'ignore')[] = ['ignore', 'bookingDate', 'valueDate', 'currency', 'counterpartyName', 'counterpartyIban', 'amount', 'debit', 'credit', 'communication', 'bankReference', 'status']
+  const order: (Field | 'ignore')[] = ['ignore', 'bookingDate', 'valueDate', 'currency', 'counterpartyName', 'counterpartyIban', 'amount', 'debit', 'credit', 'communication', 'bankReference', 'status', 'balance']
   for (const exact of [true, false]) for (const f of order) if (f === 'ignore' || cols[f as Field] === undefined) claim(f, exact)
   for (const syn of SYNONYMS.description) {
     const i = headers.findIndex((h, idx) => !used.has(idx) && h === syn)

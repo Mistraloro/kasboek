@@ -215,5 +215,13 @@
     "startHint": "Escolha uma pasta que o seu aplicativo de nuvem sincroniza. O Kasboek coloca lá dentro uma pasta «Kasboek sync».",
     "joinHint": "Escolha a pasta de sincronização que outro computador já usa. Isto substitui os dados daqui; precisa da senha e do código (ou da chave de recuperação) desses dados.",
     "risk": "Os dados criptografados ficam na sua pasta na nuvem. Se alguém entrar nessa conta, é a sua senha que os protege: mantenha-a longa e única. O acesso sem senha configura-se em cada computador."
+  },
+  "balance": {
+    "help": "Indique o saldo que o seu banco mostra (na app ou em um extrato) no fim de um dia. O Kasboek calcula o saldo da conta a partir dele e compara-o com o que esperava, assim nota-se um movimento em falta ou duplicado.",
+    "save": "Salvar saldo",
+    "recorded": "Saldos registrados",
+    "readFromCsv": "Saldo do arquivo no fim de {{date}}: {{amount}}.",
+    "saved": "Saldo bancário de {{date}} salvo.",
+    "why": "Assim o Kasboek conhece o saldo desta conta e percebe quando falta um movimento. Você também pode adicioná-lo mais tarde em Configurações → Contas."
   }
 }

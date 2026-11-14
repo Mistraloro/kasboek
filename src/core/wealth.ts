@@ -2,8 +2,9 @@
  * Net worth, investments and the year view.
  *
  * An account's value on a day is its opening balance plus its transactions up to that day. When
- * the person recorded a value for the account (a broker portfolio, a house), the latest recorded
- * value counts instead, plus the transactions after it. Everything is converted to the main
+ * the person recorded a value for the account (a broker portfolio, a house, or the balance the bank
+ * showed), the latest recorded value counts instead, plus the transactions after it; before the
+ * first recorded balance of a bank account, its value is worked back from that balance. Everything is converted to the main
  * currency with the rate of that day.
  */
 import { addMonths, monthRange } from '@shared/month'
@@ -65,7 +66,13 @@ function valueOn(a: AccountRow, h: History, date: string): { value: number; inve
   const invested = a.opening_balance_cents + txUpTo(h, date)
   let valuation: { date: string; value: number } | null = null
   for (const v of h.valuations) if (v.date <= date) valuation = v
-  if (!valuation) return { value: invested, invested, valuation: null }
+  if (!valuation) {
+    // A bank account before its first recorded balance: work back from that balance, so the
+    // starting balance doesn't have to be known. (An investment counts what was paid in.)
+    const next = h.valuations[0]
+    if (next && a.kind !== 'investment') return { value: next.value - (txUpTo(h, next.date) - txUpTo(h, date)), invested, valuation: null }
+    return { value: invested, invested, valuation: null }
+  }
   return { value: valuation.value + txUpTo(h, date) - txUpTo(h, valuation.date), invested, valuation }
 }
 

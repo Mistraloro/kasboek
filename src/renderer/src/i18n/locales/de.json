@@ -210,7 +210,8 @@
       "currency": "Währung",
       "bankReference": "Bankreferenz",
       "status": "Status",
-      "description": "Beschreibung (eine oder mehrere Spalten)"
+      "description": "Beschreibung (eine oder mehrere Spalten)",
+      "balance": "Kontostand nach der Buchung"
     },
     "dateOrder": "Datumsformat",
     "decimal": "Zahlenformat",
@@ -781,5 +782,35 @@
     "stopHint": "Die Daten bleiben hier und auf den anderen Computern; die synchronisieren weiter miteinander.",
     "stopButton": "Beenden",
     "stopConfirm": "Dieser Computer sendet und empfängt keine Änderungen mehr. Seine Daten bleiben, wie sie jetzt sind. Um später wieder zu synchronisieren, tritt dem Ordner erneut bei."
+  },
+  "balance": {
+    "matches": "Stimmt mit dem überein, was Kasboek gezählt hat.",
+    "differs": "Kasboek hat {{expected}} erwartet: {{difference}} Unterschied.",
+    "differsSince": "Kasboek hat {{expected}} erwartet: {{difference}} Unterschied seit {{date}}.",
+    "moreAtBank": "Deine Bank zeigt mehr: Vielleicht fehlt eine Einnahme oder eine Zahlung ist doppelt gezählt.",
+    "lessAtBank": "Deine Bank zeigt weniger: Vielleicht fehlt eine Zahlung oder eine Einnahme ist doppelt gezählt.",
+    "amount": "Kontostand ({{currency}})",
+    "onDate": "Am Ende von",
+    "title": "Kontostand bei der Bank · {{name}}",
+    "help": "Gib den Kontostand ein, den deine Bank (in der App oder auf einem Auszug) am Ende eines Tages zeigt. Kasboek rechnet den Kontostand von dort aus und vergleicht ihn mit dem erwarteten, so fällt eine fehlende oder doppelte Buchung auf.",
+    "save": "Kontostand speichern",
+    "recorded": "Erfasste Kontostände",
+    "fromCsv": "Aus der CSV",
+    "ok": "stimmt",
+    "off": "{{difference}} Unterschied",
+    "readFromCsv": "Kontostand aus der Datei am Ende von {{date}}: {{amount}}.",
+    "saved": "Kontostand vom {{date}} gespeichert.",
+    "kasboekOn": "Kontostand in Kasboek am Ende von {{date}}: {{amount}}.",
+    "compare": "Mit der Bank vergleichen",
+    "ask": "Welchen Kontostand zeigt deine Bank am Ende von {{date}}?",
+    "askCompare": "Kontostand bei deiner Bank am Ende von {{date}}",
+    "skip": "Überspringen",
+    "why": "Dann kennt Kasboek den Kontostand dieses Kontos und merkt, wenn eine Buchung fehlt. Du kannst ihn auch später unter Einstellungen → Konten eintragen.",
+    "checkedOn": "Kontostand vom {{date}}",
+    "notChecked": "Noch kein Kontostand der Bank",
+    "button": "Kontostand",
+    "newTitle": "Kontostand bei der Bank (optional)",
+    "newInvestment": "Wert (optional)",
+    "newHint": "Was deine Bank jetzt zeigt. Kasboek rechnet den Kontostand von hier aus, auch wenn du später ältere Buchungen importierst."
   }
 }

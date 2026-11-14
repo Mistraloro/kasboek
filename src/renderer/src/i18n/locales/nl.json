@@ -210,7 +210,8 @@
       "currency": "Munt",
       "bankReference": "Bankreferentie",
       "status": "Status",
-      "description": "Omschrijving (een of meer kolommen)"
+      "description": "Omschrijving (een of meer kolommen)",
+      "balance": "Saldo na de verrichting"
     },
     "dateOrder": "Datumnotatie",
     "decimal": "Getalnotatie",
@@ -781,5 +782,35 @@
     "stopHint": "De gegevens blijven hier en op de andere computers; die synchroniseren verder met elkaar.",
     "stopButton": "Stoppen",
     "stopConfirm": "Deze computer stuurt en ontvangt geen wijzigingen meer. De gegevens blijven zoals ze nu zijn. Wil je later weer synchroniseren, sluit dan opnieuw aan bij de map."
+  },
+  "balance": {
+    "matches": "Klopt met wat Kasboek telde.",
+    "differs": "Kasboek verwachtte {{expected}}: een verschil van {{difference}}.",
+    "differsSince": "Kasboek verwachtte {{expected}}: een verschil van {{difference}} sinds {{date}}.",
+    "moreAtBank": "Je bank heeft meer: misschien ontbreekt een inkomst of is een betaling dubbel geteld.",
+    "lessAtBank": "Je bank heeft minder: misschien ontbreekt een betaling of is een inkomst dubbel geteld.",
+    "amount": "Saldo ({{currency}})",
+    "onDate": "Op het einde van",
+    "title": "Banksaldo · {{name}}",
+    "help": "Vul het saldo in dat je bank toont (in de app of op een uittreksel) op het einde van een dag. Kasboek telt het saldo van de rekening vanaf daar en vergelijkt het met wat het verwachtte, zo valt een ontbrekende of dubbele transactie op.",
+    "save": "Saldo bewaren",
+    "recorded": "Ingevulde saldi",
+    "fromCsv": "Uit de CSV",
+    "ok": "klopt",
+    "off": "{{difference}} verschil",
+    "readFromCsv": "Saldo uit het bestand op het einde van {{date}}: {{amount}}.",
+    "saved": "Banksaldo van {{date}} bewaard.",
+    "kasboekOn": "Saldo in Kasboek op het einde van {{date}}: {{amount}}.",
+    "compare": "Vergelijken met je bank",
+    "ask": "Welk saldo toont je bank op het einde van {{date}}?",
+    "askCompare": "Saldo bij je bank op het einde van {{date}}",
+    "skip": "Overslaan",
+    "why": "Dan kent Kasboek het saldo van deze rekening en merkt het wanneer een transactie ontbreekt. Je kunt het ook later toevoegen in Instellingen → Rekeningen.",
+    "checkedOn": "Banksaldo van {{date}}",
+    "notChecked": "Nog geen banksaldo",
+    "button": "Banksaldo",
+    "newTitle": "Saldo bij je bank (optioneel)",
+    "newInvestment": "Waarde (optioneel)",
+    "newHint": "Wat je bank nu toont. Kasboek telt het saldo vanaf hier, ook als je later oudere transacties importeert."
   }
 }

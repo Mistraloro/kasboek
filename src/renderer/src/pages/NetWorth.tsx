@@ -12,6 +12,7 @@ import { formatDate, formatNumber, monthShort } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { Stat } from './Overview'
+import { BankBalanceModal } from '../components/BankBalance'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 const GROUPS: { kinds: AccountKind[]; key: string }[] = [
@@ -22,7 +23,6 @@ const GROUPS: { kinds: AccountKind[]; key: string }[] = [
 ]
 const RANGES = [12, 24, 60, 0] as const
 /** Accounts whose value isn't just their payments: a portfolio, a savings plan, a loan balance. */
-const VALUED: AccountKind[] = ['investment', 'savings', 'loan', 'other']
 
 export function NetWorthPage() {
   const { t } = useTranslation()
@@ -30,6 +30,7 @@ export function NetWorthPage() {
   const [range, setRange] = useState<(typeof RANGES)[number]>(24)
   const data = useOp('networth.summary', { months: range })
   const [valuing, setValuing] = useState<NetWorthAccount | null>(null)
+  const [balanceOf, setBalanceOf] = useState<NetWorthAccount | null>(null)
   useEffect(() => window.kasboek.onEvent((e) => e.type === 'data.changed' && void data.reload()), []) // eslint-disable-line react-hooks/exhaustive-deps
   const nw = data.data
   const sym = currencySymbol(settings.currency)
@@ -101,10 +102,10 @@ export function NetWorthPage() {
                     <span className="block font-medium">{money(a.valueCents, a.currency)}</span>
                     {a.currency !== settings.currency && <span className="block text-xs text-muted">{a.valueMainCents === null ? t('fx.noRateShort') : `≈ ${money(a.valueMainCents)}`}</span>}
                   </span>
-                  {VALUED.includes(a.kind) || a.lastValuation ? (
+                  {a.kind === 'investment' ? (
                     <Button size="sm" variant="ghost" onClick={() => setValuing(a)}>{t('networth.setValue')}</Button>
                   ) : (
-                    <span className="w-[104px]" />
+                    <Button size="sm" variant="ghost" onClick={() => setBalanceOf(a)}>{t('balance.button')}</Button>
                   )}
                 </div>
               ))}
@@ -113,6 +114,7 @@ export function NetWorthPage() {
         })}
       {nw && nw.accounts.length === 0 && <p className="mt-4 text-[13px] text-muted">{t('settings.noAccounts')}</p>}
       <ValuationModal account={valuing} onClose={() => setValuing(null)} onSaved={() => void data.reload()} />
+      <BankBalanceModal account={balanceOf} onClose={() => setBalanceOf(null)} onSaved={() => void data.reload()} />
     </>
   )
 }

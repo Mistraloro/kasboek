@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -187,6 +187,16 @@ export const contract = {
     input: z.object({ accountId: id, date, valueCents: z.number().int(), note: z.string().trim().max(200).nullable().optional() }).strict(),
     output: out<Valuation[]>()
   },
+  'balances.list': {
+    description: 'Balances the bank showed for an account (end of day), newest first, each compared with what Kasboek expected from the one before: a difference means a missing or doubled transaction.',
+    input: z.object({ accountId: id }).strict(),
+    output: out<BankBalance[]>()
+  },
+  'balances.set': {
+    description: 'Record the balance the bank shows for an account at the end of a day (today or earlier), in cents of the account currency. The account balance is then counted from it. Returns what Kasboek expected and the difference.',
+    input: z.object({ accountId: id, date, balanceCents: z.number().int(), note: z.string().trim().max(200).nullable().optional() }).strict(),
+    output: out<BankBalanceResult>()
+  },
   'valuations.delete': { input: z.object({ accountId: id, date }).strict(), output: out<Valuation[]>() },
   'summary.year': {
     description: 'One year: income and spending per month and per category (main currency, transfers left out), and totals for every year with data.',
@@ -242,7 +252,9 @@ export const contract = {
         iban: z.string().trim().max(34).nullable().optional(),
         currency: currency.default('EUR'),
         kind: z.enum(ACCOUNT_KINDS).default('current'),
-        openingBalanceCents: z.number().int().default(0)
+        openingBalanceCents: z.number().int().default(0),
+        /** What the bank shows on a day (usually today): the balance is counted from there. */
+        bankBalance: z.object({ date, cents: z.number().int() }).strict().optional()
       })
       .strict(),
     output: out<Account>()
@@ -429,7 +441,7 @@ export const contract = {
   'import.commit': {
     description: 'Save the ready rows of the open import as transactions. Only after the person has reviewed the preview.',
     input: z.object({ sessionId: z.string().uuid().optional(), saveProfile: z.boolean().default(true) }).strict(),
-    output: out<{ batchId: number; imported: number; skipped: number }>()
+    output: out<ImportCommitResult>()
   },
   'import.checkApply': {
     input: z.object({ sessionId: z.string().uuid(), rules: z.array(z.number().int()).max(1000), existing: z.array(z.number().int()).max(1000) }).strict(),

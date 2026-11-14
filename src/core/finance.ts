@@ -5,6 +5,7 @@ import type { Db } from './database'
 import { AppError } from './errors'
 import { fingerprint } from './fingerprint'
 import { getSettings } from './settings'
+import { currentBalance } from './balance'
 
 /** A transaction's amount in currency `to` (SQL parameter by default), NULL when there is no rate. */
 const FX = (to = '?'): string => `fx(t.amount_cents, t.currency, t.booking_date, ${to})`
@@ -450,13 +451,18 @@ export function monthSummary(db: Db, month: string): MonthSummary {
 export function accountBalances(db: Db, today = new Date().toISOString().slice(0, 10)): Map<number, { balance: number; balanceMain: number | null; count: number }> {
   const rows = db
     .prepare(
-      `SELECT a.id, a.currency, a.opening_balance_cents + coalesce(sum(${FX('a.currency')}), 0) AS bal, count(t.id) AS n
+      `SELECT a.id, a.currency, a.opening_balance_cents + coalesce(sum(${FX('a.currency')}), 0) AS bal, count(t.id) AS n,
+         EXISTS (SELECT 1 FROM valuations v WHERE v.account_id = a.id) AS checked
        FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id GROUP BY a.id`
     )
-    .all() as { id: number; currency: string; bal: number; n: number }[]
+    .all() as { id: number; currency: string; bal: number; n: number; checked: number }[]
   const main = mainCurrency(db)
   return new Map(
-    rows.map((r) => [r.id, { balance: r.bal, balanceMain: (db.prepare('SELECT fx(?, ?, ?, ?) AS v').get(r.bal, r.currency, today, main) as { v: number | null }).v, count: r.n }])
+    rows.map((r) => {
+      // With a recorded bank balance (or value), that is the starting point.
+      const balance = r.checked ? currentBalance(db, r.id) : r.bal
+      return [r.id, { balance, balanceMain: (db.prepare('SELECT fx(?, ?, ?, ?) AS v').get(balance, r.currency, today, main) as { v: number | null }).v, count: r.n }]
+    })
   )
 }
 
