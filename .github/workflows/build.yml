@@ -71,7 +71,7 @@ jobs:
         run: |
           found=0
           for a in $(find release -name app.asar); do
-            bad=$(npx --no-install asar list "$a" | grep -E '^[/\\](src|tests|tools|scripts|release)([/\\]|$)|\.ts$' | grep -v node_modules | head -5)
+            bad=$(npx --no-install asar list "$a" | grep -E '^[/\\](src|tests|tools|scripts|release)([/\\]|$)|\.ts$' | grep -v node_modules | head -5 || true)
             if [ -n "$bad" ]; then echo "Unexpected files in $a:"; echo "$bad"; exit 1; fi
             found=1
           done
