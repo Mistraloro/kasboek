@@ -62,11 +62,39 @@ describe('assistant loop', () => {
     expect(JSON.stringify(messages[2])).toContain('Invalid input')
   })
 
-  it('never runs a tool call cut off by max_tokens, and stops on refusal', async () => {
-    const a = deps([msg([{ type: 'tool_use', id: 't1', name: 'budgets_set', input: {} }], 'max_tokens')])
+  it('never runs a tool call cut off by max_tokens, and gives up after a few tries', async () => {
+    const cut = () => msg([{ type: 'tool_use', id: 't1', name: 'budgets_set', input: {} }], 'max_tokens')
+    const a = deps([cut(), cut(), cut()])
     expect(await runTurn([{ role: 'user', content: 'x' } as never], a.d, new AbortController().signal)).toBe('max_tokens')
     expect(a.calls).toEqual([])
     const b = deps([msg([], 'refusal')])
     expect(await runTurn([{ role: 'user', content: 'x' } as never], b.d, new AbortController().signal)).toBe('refusal')
+  })
+
+  it('after a cut-off reply, asks the model to continue in smaller steps', async () => {
+    const { d, calls } = deps([
+      msg([{ type: 'text', text: 'Sorting them now.' }, { type: 'tool_use', id: 't1', name: 'budgets_set', input: {} }], 'max_tokens'),
+      msg([{ type: 'tool_use', id: 't2', name: 'summary_month', input: {} }], 'tool_use'),
+      msg([{ type: 'text', text: 'Done.' }], 'end_turn')
+    ])
+    const messages: never[] = [{ role: 'user', content: 'categorise everything' } as never]
+    expect(await runTurn(messages, d, new AbortController().signal)).toBe('done')
+    expect(calls).toEqual(['summary_month'])
+    const m = messages as unknown as { role: string; content: unknown }[]
+    // The partial text is kept, its broken tool call dropped, and roles still alternate.
+    expect(JSON.stringify(m[1])).toContain('Sorting them now.')
+    expect(JSON.stringify(m[1])).not.toContain('tool_use')
+    expect(m[2]!.role).toBe('user')
+    expect(JSON.stringify(m[2])).toContain('cut off')
+    for (let i = 1; i < m.length; i++) expect(m[i]!.role).not.toBe(m[i - 1]!.role)
+  })
+
+  it('adds the continue note to the last user message when nothing was kept', async () => {
+    const { d } = deps([msg([{ type: 'tool_use', id: 't1', name: 'budgets_set', input: {} }], 'max_tokens'), msg([{ type: 'text', text: 'Done.' }], 'end_turn')])
+    const messages: never[] = [{ role: 'user', content: 'x' } as never]
+    expect(await runTurn(messages, d, new AbortController().signal)).toBe('done')
+    const m = messages as unknown as { role: string; content: unknown }[]
+    expect(m).toHaveLength(2)
+    expect(JSON.stringify(m[0])).toContain('cut off')
   })
 })

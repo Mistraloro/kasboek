@@ -185,7 +185,15 @@ export async function chat(
   onThinking?: (t: string) => void
 ): Promise<Message> {
   const tools: OaTool[] = opts.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: plainSchema(t.input_schema) } }))
-  const res = await post(p, '/chat/completions', { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages, { toolNames: p.preset.id === 'mistral' }), tools, stream: true, max_tokens: opts.maxTokens }, signal)
+  const body = { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages, { toolNames: p.preset.id === 'mistral' }), tools, stream: true, max_tokens: opts.maxTokens }
+  let res: Response
+  try {
+    res = await post(p, '/chat/completions', body, signal)
+  } catch (err) {
+    // Some models allow fewer output tokens than asked for: try again with a common limit.
+    if (!(err instanceof ProviderError) || (err.status !== 400 && err.status !== 422) || signal.aborted || !/token/i.test(err.message) || opts.maxTokens <= 8192) throw err
+    res = await post(p, '/chat/completions', { ...body, max_tokens: 8192 }, signal)
+  }
   let text = ''
   let finish: string | null = null
   const calls: { id: string; name: string; args: string }[] = []

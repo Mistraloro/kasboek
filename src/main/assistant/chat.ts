@@ -34,6 +34,7 @@ How the data works:
 - Look things up with the tools; never guess or invent amounts, dates or names. If something isn't in the data, say so.
 - Tools that change data (budgets, categories, rules, categorising, committing an import) pause for the person to approve in the app. Just call them; don't ask for permission in text first. If they decline, accept it.
 - For CSV imports: use import_current and import_raw to understand the open file, fix the mapping with import_remap, fix or skip individual rows and set categories with import_updateRows (add a short note per change), and only commit with import_commit when the person asks you to import.
+- To categorise many transactions: first look at the uncategorised ones and the categories. For a shop or counterparty that comes back, create a rule (rules_create) instead of listing ids. Categorise what is left in batches of at most 200 ids per call. Keep each reply and your reasoning short, so nothing gets cut off.
 
 Style: short and plain. Lead with the answer. Write money with its currency, e.g. €1,234.56 or $80.00. Use the person's language. No tables unless asked.`
 
@@ -125,7 +126,7 @@ export function send(text: string): AssistantStatus {
     history,
     {
       call: async (messages, onText, signal, onThinking) => {
-        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 8192 }, onText, signal, onThinking)
+        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 32000 }, onText, signal, onThinking)
         const stream = anthropic.beta.messages.stream(
           {
             ...modelParams(settings.chatModel, settings.chatEffort),

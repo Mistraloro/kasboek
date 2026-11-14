@@ -30,9 +30,23 @@ export interface LoopDeps {
 export type TurnEnd = 'done' | 'refusal' | 'max_tokens' | 'aborted' | 'too_many_steps'
 
 const MAX_STEPS = 16
+/** How often a reply that hit the length limit is picked up again before giving up. */
+const MAX_CONTINUES = 2
+const CONTINUE =
+  'Your previous reply was cut off because it got too long (any unfinished tool call was dropped). Continue from there in smaller steps: keep your reasoning brief, use rules for shops that repeat, and send at most 200 ids per tool call.'
+
+/** Adds a note for the model to the end of the conversation, keeping user and assistant turns alternating. */
+function nudge(messages: MessageParam[], text: string): void {
+  const last = messages.at(-1)
+  if (last?.role !== 'user') return void messages.push({ role: 'user', content: text })
+  const content = typeof last.content === 'string' ? [{ type: 'text' as const, text: last.content }] : [...last.content]
+  content.push({ type: 'text', text })
+  last.content = content
+}
 
 export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: AbortSignal): Promise<TurnEnd> {
   let retries = 0
+  let continues = 0
   for (let step = 0; step < MAX_STEPS; step++) {
     if (signal.aborted) return 'aborted'
     let message: Message
@@ -59,12 +73,18 @@ export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: 
 
     if (message.stop_reason === 'refusal') return 'refusal'
     const uses = message.content.filter((b): b is ToolUse => b.type === 'tool_use')
-    if (!uses.length) return message.stop_reason === 'max_tokens' ? 'max_tokens' : 'done'
-    // A tool call cut off at max_tokens may parse as a partial object: never run it.
     if (message.stop_reason === 'max_tokens') {
+      // A tool call cut off at max_tokens may parse as a partial object: never run it. Keep the
+      // text (and thinking) written so far, and ask the model to carry on in smaller pieces.
       messages.pop()
-      return 'max_tokens'
+      const kept = message.content.filter((b) => b.type !== 'tool_use' && b.type !== 'server_tool_use')
+      if (kept.some((b) => b.type === 'text' && b.text.trim())) messages.push({ role: 'assistant', content: kept })
+      if (continues++ >= MAX_CONTINUES) return 'max_tokens'
+      nudge(messages, CONTINUE)
+      if (kept.some((b) => b.type === 'text' && b.text.trim())) deps.onEvent({ type: 'text', text: '\n\n' })
+      continue
     }
+    if (!uses.length) return 'done'
 
     const results: ToolResult[] = []
     for (const use of uses) {
