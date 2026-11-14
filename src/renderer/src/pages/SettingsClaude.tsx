@@ -93,7 +93,7 @@ export function ClaudeSection() {
             {modelInput(s.aiChatModel, 'aiChatModel', t('claude.chat'), preset.suggestedModels[0])}
           </Row>
           <Row label={t('claude.csv')} hint={t('ai.csvModelHint')}>
-            {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), s.aiChatModel || preset.suggestedModels[0])}
+            {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
           </Row>
           <Row label={t('ai.models')} hint={t('ai.modelsHint', { name: preset.id === 'custom' ? t('ai.theServer') : preset.name })}>
             <Button size="sm" disabled={loadingModels} onClick={loadModels}>{loadingModels ? t('ai.loadingModels') : t('ai.loadModels')}</Button>
@@ -185,6 +185,7 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
       {enabled && st && (
         <>
           {!st.helperFound && <p className="px-5 pt-3 text-xs text-warning">{t('mcp.helperMissing')}</p>}
+          {st.bridgeError && <p className="px-5 pt-3 text-xs text-warning">{t('mcp.bridgeError', { error: st.bridgeError })}</p>}
           <Row label={t('mcp.desktopLabel')} hint={st.desktop ? <span className="selectable break-all">{st.desktop.configPath}</span> : t('mcp.desktopUnavailable')}>
             {st.desktop && (
               <>

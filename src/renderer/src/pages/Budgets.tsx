@@ -1,10 +1,10 @@
-import { Copy, ListChecks, Tags, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Copy, ListChecks, Tags, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
 import { centsToInput } from '@shared/format'
 import { monthOf } from '@shared/month'
-import type { BudgetRow, RuleField } from '@shared/types'
+import type { BudgetRow, RuleField, RuleMatch, RulePreview } from '@shared/types'
 import { Meter } from '../components/charts'
 import { Badge, Button, Card, Field, Input, Modal, MonthNav, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -165,29 +165,53 @@ function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const cats = useOp('categories.list')
   const [pattern, setPattern] = useState('')
   const [field, setField] = useState<RuleField>('counterparty')
+  const [match, setMatch] = useState<RuleMatch>('contains')
   const [categoryId, setCategoryId] = useState<number | null>(null)
+  const [reach, setReach] = useState<RulePreview | null>(null)
+  const category = categoryId ?? cats.data?.[0]?.id ?? null
+  // What the rule would do, shown while typing.
+  useEffect(() => {
+    if (pattern.trim().length < 2) return setReach(null)
+    const timer = setTimeout(() => void call('rules.preview', { field, pattern, match, categoryId: category }).then(setReach, () => setReach(null)), 250)
+    return () => clearTimeout(timer)
+  }, [pattern, field, match, category])
+  const list = rules.data ?? []
+  const move = (i: number, by: -1 | 1): void => {
+    const ids = list.map((r) => r.id)
+    const j = i + by
+    if (j < 0 || j >= ids.length) return
+    ;[ids[i], ids[j]] = [ids[j]!, ids[i]!]
+    void call('rules.reorder', { ids }).then(() => rules.reload(), (err) => toast(errText(err), 'error'))
+  }
   return (
     <Modal open={open} title={t('budgets.rules')} onClose={onClose}>
       <p className="mb-3 text-[13px] text-muted">{t('budgets.rulesHint')}</p>
       <div className="flex max-h-72 flex-col overflow-y-auto">
-        {(rules.data ?? []).length === 0 && <p className="py-2 text-[13px] text-muted">{t('budgets.noRules')}</p>}
-        {(rules.data ?? []).map((r) => (
-          <div key={r.id} className="flex items-center gap-2 border-b border-border py-2 text-[13px] last:border-b-0">
-            <span className="flex-1">
-              <span className="text-muted">{t(`budgets.field.${r.field}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
+        {list.length === 0 && <p className="py-2 text-[13px] text-muted">{t('budgets.noRules')}</p>}
+        {list.map((r, i) => (
+          <div key={r.id} className="flex items-center gap-1 border-b border-border py-1.5 text-[13px] last:border-b-0">
+            <span className="min-w-0 flex-1 truncate">
+              <span className="text-muted">{t(`budgets.field.${r.field}`)} {t(`budgets.match.${r.match}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
             </span>
+            <button type="button" aria-label={t('budgets.moveUp')} disabled={i === 0} className="rounded p-1 text-muted hover:text-text disabled:opacity-30" onClick={() => move(i, -1)}>
+              <ArrowUp size={14} />
+            </button>
+            <button type="button" aria-label={t('budgets.moveDown')} disabled={i === list.length - 1} className="rounded p-1 text-muted hover:text-text disabled:opacity-30" onClick={() => move(i, 1)}>
+              <ArrowDown size={14} />
+            </button>
             <button type="button" aria-label={t('transactions.delete')} className="rounded p-1 text-muted hover:text-negative" onClick={() => void call('rules.delete', { id: r.id }).then(() => rules.reload())}>
               <Trash2 size={14} />
             </button>
           </div>
         ))}
       </div>
+      {list.length > 1 && <p className="mt-1 text-xs text-muted">{t('budgets.rulesOrder')}</p>}
       <form
         className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4"
         onSubmit={(e) => {
           e.preventDefault()
-          if (!categoryId) return
-          void call('rules.create', { field, pattern, categoryId, applyToExisting: true }).then(
+          if (!category) return
+          void call('rules.create', { field, pattern, match, categoryId: category, applyToExisting: true }).then(
             (r) => { toast(t('transactions.ruleCreated', { count: r.applied })); setPattern(''); void rules.reload() },
             (err) => toast(errText(err), 'error')
           )
@@ -197,8 +221,19 @@ function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
         <Field label={t('budgets.appearsIn')}>
           {(id) => <Select id={id} value={field} onChange={(e) => setField(e.target.value as RuleField)}>{(['counterparty', 'description', 'any'] as const).map((f) => <option key={f} value={f}>{t(`budgets.field.${f}`)}</option>)}</Select>}
         </Field>
-        <div className="col-span-2"><Field label={t('budgets.putIn')}>{() => <CategorySelect label={t('budgets.putIn')} allowNone={false} value={categoryId ?? cats.data?.[0]?.id ?? null} categories={cats.data ?? []} onChange={setCategoryId} />}</Field></div>
-        <div className="col-span-2 flex justify-end"><Button type="submit" variant="primary" disabled={pattern.trim().length < 2 || !categoryId}>{t('budgets.addRule')}</Button></div>
+        <Field label={t('budgets.howMatch')}>
+          {(id) => <Select id={id} value={match} onChange={(e) => setMatch(e.target.value as RuleMatch)}>{(['contains', 'word', 'starts'] as const).map((m) => <option key={m} value={m}>{t(`budgets.matchOption.${m}`)}</option>)}</Select>}
+        </Field>
+        <Field label={t('budgets.putIn')}>{() => <CategorySelect label={t('budgets.putIn')} allowNone={false} value={category} categories={cats.data ?? []} onChange={setCategoryId} />}</Field>
+        {reach && (
+          <p className="col-span-2 text-xs text-muted">
+            {t('budgets.reach', { count: reach.matches, uncategorised: reach.uncategorised })}
+            {reach.otherCategory > 0 && ` ${t('budgets.reachOther', { count: reach.otherCategory })}`}
+            {reach.wholeWord && ` ${t('budgets.reachWord')}`}
+            {reach.examples.length > 0 && <span className="block truncate">{reach.examples.join(' · ')}</span>}
+          </p>
+        )}
+        <div className="col-span-2 flex justify-end"><Button type="submit" variant="primary" disabled={pattern.trim().length < 2 || !category}>{t('budgets.addRule')}</Button></div>
       </form>
     </Modal>
   )

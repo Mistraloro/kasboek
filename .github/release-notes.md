@@ -9,7 +9,10 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **Your number and date formats**, each part chosen separately, independent of language.
 - **Languages**: English, Nederlands, Français, Deutsch, Español (España and Latinoamérica), Português (Portugal and Brasil).
 - **Choose your AI**: Claude, or Mistral, Groq, DeepSeek, Gemini, OpenRouter, Together, Fireworks, a local model with Ollama or LM Studio, or any OpenAI-compatible server.
-- **Claude Desktop and Claude Code** connect with one click (MCP), now also on Windows.
+- **Check a CSV with your AI**: it categorises the rows, makes names and descriptions readable, and suggests rules so the next import sorts itself. It also offers to categorise older transactions that have none. You see what it did, can undo each part, and nothing outside the import changes until you accept.
+- **Better duplicate detection**: the bank's own reference is recognised even when the text changes, and rows that look like a transaction already in Kasboek (same amount, a few days apart) are marked "Maybe imported" for you to decide.
+- **Rules** can match anywhere, as a whole word or at the start, show what they would catch before you add them, and can be put in order.
+- **Claude Desktop and Claude Code** connect with one click (MCP), now also on Windows. Approval cards show which transactions a change touches, and waiting requests can be approved together.
 - Stronger passwords, 2FA remembered for 30 days on a computer, automatic backups after important changes, a launch screen, and installers that let you choose your shortcuts.
 
 ## Download

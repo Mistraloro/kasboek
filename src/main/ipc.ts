@@ -222,7 +222,14 @@ const desktopOps: OpTable = {
       // Dev/test only: skip the online check.
       if (app.isPackaged || process.env['KASBOEK_SKIP_KEY_CHECK'] !== '1') {
         if (id === 'anthropic') await checkKey(apiKey)
-        else await checkProviderKey({ ...activeProvider(db), preset: PROVIDERS[id], key: apiKey })
+        else {
+          // Check the key against this provider's own address: the stored address belongs to the
+          // active provider and only counts when that is the one this key is for.
+          const active = activeProvider(db)
+          const preset = PROVIDERS[id]
+          const baseUrl = active.preset.id === id ? active.baseUrl : preset.baseUrl
+          await checkProviderKey({ ...active, preset, baseUrl, key: apiKey })
+        }
       }
       setSecret(db, keyName(id), apiKey)
       publishStatus()

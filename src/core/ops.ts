@@ -192,14 +192,18 @@ export const coreOps: OpTable = {
   'transactions.list': { mutates: false, assistant: true, handler: ({ db }, f) => fin.listTransactions(db, f) },
   'transactions.create': { mutates: true, assistant: false, handler: ({ db }, t) => fin.createTransaction(db, t) },
   'transactions.update': { mutates: true, assistant: false, handler: ({ db }, t) => fin.updateTransaction(db, t) },
+  'transactions.edit': { mutates: true, assistant: true, handler: ({ db }, t) => fin.updateTransaction(db, t) },
   'transactions.categorize': { mutates: true, assistant: true, handler: ({ db }, i) => fin.categorizeTransactions(db, i.ids, i.categoryId) },
   'transactions.delete': { mutates: true, assistant: false, handler: ({ db }, i) => fin.deleteTransactions(db, i.ids) },
 
   'rules.list': { mutates: false, assistant: true, handler: ({ db }) => fin.listRules(db) },
   'rules.create': { mutates: true, assistant: true, handler: ({ db }, i) => fin.createRule(db, i) },
+  'rules.preview': { mutates: false, assistant: true, handler: ({ db }, i) => fin.previewRule(db, i) },
+  'rules.update': { mutates: true, assistant: true, handler: ({ db }, i) => fin.updateRule(db, i) },
+  'rules.reorder': { mutates: true, assistant: false, handler: ({ db }, { ids }) => fin.reorderRules(db, ids) },
   'rules.delete': {
     mutates: true,
-    assistant: false,
+    assistant: true,
     handler: ({ db }, { id }) => {
       fin.deleteRule(db, id)
       return fin.listRules(db)
@@ -239,6 +243,8 @@ export const coreOps: OpTable = {
       )
   },
   'import.commit': { mutates: true, assistant: true, handler: ({ db }, i) => imp.commit(db, i.sessionId ?? openSession(), i.saveProfile) },
+  'import.checkApply': { mutates: true, assistant: false, handler: ({ db }, { sessionId, rules, existing }) => imp.applyCheckProposals(db, sessionId, { rules, existing }) },
+  'import.checkUndo': { mutates: false, assistant: false, handler: ({ db }, { sessionId, part }) => imp.undoCheck(db, sessionId, part) },
   'import.discard': {
     mutates: false,
     assistant: false,

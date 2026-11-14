@@ -31,7 +31,13 @@ electronFuses:
 
 win:
   icon: build/icon.ico
+  # Platform files replace nothing but must list the app again: with only exclusions, electron-builder
+  # falls back to packing the whole project folder (sources, tests, tools).
   files:
+    - out/**
+    - resources/**
+    - package.json
+    - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux}*'
   # 64-bit only. MSI for managed/standard installs, NSIS .exe as a friendly per-user installer.
   target:
@@ -69,7 +75,13 @@ mac:
   # One app for Intel and Apple Silicon. The database's per-arch binaries are loaded by arch at
   # runtime, so they are kept as-is instead of being merged.
   x64ArchFiles: '**/better-sqlite3-multiple-ciphers/prebuilds/darwin-*.node'
+  # Platform files replace nothing but must list the app again: with only exclusions, electron-builder
+  # falls back to packing the whole project folder (sources, tests, tools).
   files:
+    - out/**
+    - resources/**
+    - package.json
+    - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,linux}*'
   category: public.app-category.finance
   hardenedRuntime: true
@@ -80,7 +92,13 @@ mac:
 
 linux:
   icon: build/icons
+  # Platform files replace nothing but must list the app again: with only exclusions, electron-builder
+  # falls back to packing the whole project folder (sources, tests, tools).
   files:
+    - out/**
+    - resources/**
+    - package.json
+    - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,darwin}*'
   category: Finance
   synopsis: Simple, local-first budgeting

@@ -1,6 +1,6 @@
 /** Transactions, categories, rules, budgets and monthly summaries. */
 import { addMonths, monthRange } from '@shared/month'
-import type { BudgetRow, MonthSummary, Rule, RuleField, Transaction, TransactionPage } from '@shared/types'
+import type { BudgetRow, MonthSummary, Rule, RuleField, RuleMatch, RulePreview, Transaction, TransactionPage } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { fingerprint } from './fingerprint'
@@ -128,8 +128,9 @@ export interface NewTx {
   fingerprint?: string
 }
 
-export function insertTransaction(db: Db, t: NewTx): number {
-  const categoryId = t.categoryId ?? matchRule(db, t)?.categoryId ?? null
+/** `rules` can be passed in when inserting many rows, so they are read once. */
+export function insertTransaction(db: Db, t: NewTx, rules?: Rule[]): number {
+  const categoryId = t.categoryId ?? matchRule(db, t, rules)?.categoryId ?? null
   const r = db
     .prepare(
       `INSERT INTO transactions (account_id, booking_date, value_date, amount_cents, currency, description, counterparty_name,
@@ -225,50 +226,128 @@ export function updateCategory(db: Db, input: { id: number; name?: string; archi
 interface RuleRow {
   id: number
   field: RuleField
+  match: RuleMatch
   pattern: string
   category_id: number
   category_name: string
+  priority: number
 }
+
+/** Short texts match too much anywhere ("Q8" inside a reference), so they only match whole words. */
+const SHORT_PATTERN = 4
 
 export function listRules(db: Db): Rule[] {
   return (
-    db.prepare('SELECT r.*, c.name AS category_name FROM rules r JOIN categories c ON c.id = r.category_id ORDER BY length(r.pattern) DESC, r.id').all() as RuleRow[]
-  ).map((r) => ({ id: r.id, field: r.field, pattern: r.pattern, categoryId: r.category_id, categoryName: r.category_name }))
+    db
+      .prepare(
+        `SELECT r.*, c.name AS category_name FROM rules r JOIN categories c ON c.id = r.category_id
+         ORDER BY r.priority DESC, r.field = 'counterparty' DESC, length(r.pattern) DESC, r.id`
+      )
+      .all() as RuleRow[]
+  ).map((r) => ({ id: r.id, field: r.field, match: r.match ?? 'contains', pattern: r.pattern, categoryId: r.category_id, categoryName: r.category_name, priority: r.priority ?? 0 }))
 }
 
-/** The most specific (longest) matching rule, case-insensitive substring match. */
+const fold = (s: string | null | undefined): string => (s ?? '').toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim()
+const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const wordCache = new Map<string, RegExp>()
+
+/** Whether one text matches a rule's pattern (case- and accent-insensitive). */
+export function textMatches(text: string, pattern: string, match: RuleMatch): boolean {
+  const t = fold(text)
+  const p = fold(pattern)
+  if (!p) return false
+  if (match === 'starts') return t.startsWith(p)
+  if (match === 'word') {
+    let re = wordCache.get(p)
+    if (!re) {
+      re = new RegExp(`(?:^|[^\\p{L}\\p{N}])${escape(p)}(?:$|[^\\p{L}\\p{N}])`, 'u')
+      if (wordCache.size > 500) wordCache.clear()
+      wordCache.set(p, re)
+    }
+    return re.test(t)
+  }
+  return t.includes(p)
+}
+
+export function ruleMatches(r: Pick<Rule, 'field' | 'pattern' | 'match'>, t: { counterpartyName?: string | null; description?: string | null }): boolean {
+  if (r.field !== 'description' && textMatches(t.counterpartyName ?? '', r.pattern, r.match)) return true
+  return r.field !== 'counterparty' && textMatches(t.description ?? '', r.pattern, r.match)
+}
+
+/** The first matching rule in rule order (priority, then counterparty rules, then the longest text). */
 export function matchRule(db: Db, t: { counterpartyName?: string | null; description?: string | null }, rules = listRules(db)): Rule | undefined {
-  const cp = (t.counterpartyName ?? '').toLowerCase()
-  const desc = (t.description ?? '').toLowerCase()
-  return rules.find((r) => {
-    const p = r.pattern.toLowerCase()
-    if (r.field === 'counterparty') return cp.includes(p)
-    if (r.field === 'description') return desc.includes(p)
-    return cp.includes(p) || desc.includes(p)
-  })
+  return rules.find((r) => ruleMatches(r, t))
 }
 
-export function createRule(db: Db, input: { field: RuleField; pattern: string; categoryId: number; applyToExisting: boolean }): { rule: Rule; applied: number } {
+/** A short "contains" text becomes a whole-word rule. */
+function effectiveMatch(pattern: string, match: RuleMatch | undefined): RuleMatch {
+  const m = match ?? 'contains'
+  return m === 'contains' && pattern.trim().length < SHORT_PATTERN ? 'word' : m
+}
+
+export function previewRule(db: Db, input: { field: RuleField; pattern: string; match?: RuleMatch; categoryId?: number | null }): RulePreview {
+  const match = effectiveMatch(input.pattern, input.match)
+  const rule = { field: input.field, pattern: input.pattern.trim(), match }
+  const rows = db.prepare('SELECT counterparty_name, description, category_id FROM transactions').all() as { counterparty_name: string | null; description: string; category_id: number | null }[]
+  const hits = rows.filter((r) => ruleMatches(rule, { counterpartyName: r.counterparty_name, description: r.description }))
+  const examples = [...new Set(hits.map((h) => h.counterparty_name || h.description))].slice(0, 3).map((e) => e.slice(0, 60))
+  return {
+    matches: hits.length,
+    uncategorised: hits.filter((h) => h.category_id === null).length,
+    otherCategory: hits.filter((h) => h.category_id !== null && h.category_id !== input.categoryId).length,
+    wholeWord: match !== (input.match ?? 'contains'),
+    examples
+  }
+}
+
+function applyRule(db: Db, rule: Rule): number {
+  const rows = db.prepare('SELECT id, counterparty_name, description FROM transactions WHERE category_id IS NULL').all() as { id: number; counterparty_name: string | null; description: string }[]
+  const hits = rows.filter((r) => ruleMatches(rule, { counterpartyName: r.counterparty_name, description: r.description })).map((r) => r.id)
+  return hits.length ? categorizeTransactions(db, hits, rule.categoryId).updated : 0
+}
+
+export function createRule(db: Db, input: { field: RuleField; pattern: string; match?: RuleMatch; categoryId: number; applyToExisting: boolean }): { rule: Rule; applied: number } {
   requireCategory(db, input.categoryId)
+  const pattern = input.pattern.trim()
   let id: number
   try {
-    id = Number(db.prepare('INSERT INTO rules (field, pattern, category_id) VALUES (?, ?, ?)').run(input.field, input.pattern.trim(), input.categoryId).lastInsertRowid)
+    id = Number(db.prepare('INSERT INTO rules (field, pattern, match, category_id) VALUES (?, ?, ?, ?)').run(input.field, pattern, effectiveMatch(pattern, input.match), input.categoryId).lastInsertRowid)
   } catch (err) {
     if (err instanceof Error && /UNIQUE/.test(err.message)) throw new AppError('rules.duplicate', 'A rule for this text already exists.')
     throw err
   }
   const rule = listRules(db).find((r) => r.id === id)!
-  let applied = 0
-  if (input.applyToExisting) {
-    const rows = db.prepare('SELECT id, counterparty_name, description FROM transactions WHERE category_id IS NULL').all() as {
-      id: number
-      counterparty_name: string | null
-      description: string
-    }[]
-    const hits = rows.filter((r) => matchRule(db, { counterpartyName: r.counterparty_name, description: r.description }, [rule])).map((r) => r.id)
-    applied = categorizeTransactions(db, hits, rule.categoryId).updated
+  return { rule, applied: input.applyToExisting ? applyRule(db, rule) : 0 }
+}
+
+export function updateRule(
+  db: Db,
+  input: { id: number; field?: RuleField; pattern?: string; match?: RuleMatch; categoryId?: number; applyToExisting?: boolean }
+): { rule: Rule; applied: number } {
+  const old = listRules(db).find((r) => r.id === input.id)
+  if (!old) throw new AppError('rules.not_found', 'That rule no longer exists.')
+  if (input.categoryId !== undefined) requireCategory(db, input.categoryId)
+  const pattern = input.pattern?.trim() ?? old.pattern
+  const match = effectiveMatch(pattern, input.match ?? old.match)
+  try {
+    db.prepare('UPDATE rules SET field = ?, pattern = ?, match = ?, category_id = ? WHERE id = ?').run(input.field ?? old.field, pattern, match, input.categoryId ?? old.categoryId, input.id)
+  } catch (err) {
+    if (err instanceof Error && /UNIQUE/.test(err.message)) throw new AppError('rules.duplicate', 'A rule for this text already exists.')
+    throw err
   }
-  return { rule, applied }
+  const rule = listRules(db).find((r) => r.id === input.id)!
+  return { rule, applied: input.applyToExisting ? applyRule(db, rule) : 0 }
+}
+
+/** Puts the rules in this order (first = checked first). Rules not listed keep their place after them. */
+export function reorderRules(db: Db, ids: number[]): Rule[] {
+  const set = db.prepare('UPDATE rules SET priority = ? WHERE id = ?')
+  db.transaction(() => {
+    const rest = listRules(db).filter((r) => !ids.includes(r.id))
+    const order = [...ids, ...rest.map((r) => r.id)]
+    order.forEach((id, i) => set.run(order.length - i, id))
+  })()
+  return listRules(db)
 }
 
 export function deleteRule(db: Db, id: number): void {

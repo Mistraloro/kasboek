@@ -1,7 +1,7 @@
-import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, RotateCcw, Sparkles, Square, Undo2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, ListChecks, RotateCcw, Sparkles, Square, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
+import type { CheckPart, ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
 import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -146,7 +146,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
 
 const clock = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
+const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', possible_duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
 
 function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: { batchId: number; imported: number }) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
   const { t } = useTranslation()
@@ -163,13 +163,15 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
     return () => clearInterval(id)
   }, [assisting])
-  const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : 'all')
+  const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : preview.stats.possibleDuplicates ? 'possible_duplicate' : 'all')
   const [limit, setLimit] = useState(300)
   const [mappingOpen, setMappingOpen] = useState(!preview.mapping)
   const [saveProfile, setSaveProfile] = useState(true)
   const [busy, setBusy] = useState(false)
   const s = preview.stats
   const rows = preview.rows.filter((r) => filter === 'all' || r.status === filter)
+  // Every row of the file is already in Kasboek: there is nothing to import.
+  const allKnown = !!preview.mapping && s.total > 0 && s.ready === 0 && s.duplicates + s.possibleDuplicates + s.skipped === s.total && s.duplicates > 0
   const update = (changes: Parameters<typeof call<'import.updateRows'>>[1]['changes']): void =>
     void call('import.updateRows', { sessionId: preview.sessionId, changes }).then(onChange, (e) => toast(errText(e), 'error'))
 
@@ -192,19 +194,32 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
         }
         action={
           <div className="flex gap-2">
-            <Button onClick={onCancel}>{t('settings.cancel')}</Button>
-            <Button variant="primary" disabled={!s.ready || busy} onClick={() => { setBusy(true); void call('import.commit', { sessionId: preview.sessionId, saveProfile }).then((r) => { toast(t('import.done', { count: r.imported })); onCommitted(r) }, (e) => toast(errText(e), 'error')).finally(() => setBusy(false)) }}>
+            <Button variant={allKnown ? 'primary' : undefined} onClick={onCancel}>{allKnown ? t('import.discard') : t('settings.cancel')}</Button>
+            {!allKnown && <Button variant="primary" disabled={!s.ready || busy} onClick={() => { setBusy(true); void call('import.commit', { sessionId: preview.sessionId, saveProfile }).then((r) => { toast(t('import.done', { count: r.imported })); onCommitted(r) }, (e) => toast(errText(e), 'error')).finally(() => setBusy(false)) }}>
               {t('import.commit', { count: s.ready })}
-            </Button>
+            </Button>}
           </div>
         }
       />
 
+      {allKnown && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-border bg-accent-soft px-4 py-3 text-[13px]">
+          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent" />
+          <span className="flex-1">
+            <span className="font-medium">{t('import.allKnown', { from: s.fileFrom ? formatDate(s.fileFrom, fmt) : '—', to: s.fileTo ? formatDate(s.fileTo, fmt) : '—' })}</span>
+            {onAssist && <span className="block text-muted">{t('import.allKnownHint', { name: assistant?.providerName ?? 'Claude' })}</span>}
+          </span>
+        </div>
+      )}
       <Card className="mb-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
-          <span className="num">{t('import.period')}: <span className="font-medium">{s.from ? `${formatDate(s.from, fmt)} – ${formatDate(s.to!, fmt)}` : '—'}</span></span>
-          <span className="num">{t('transactions.in')} <span className="font-medium">{money(s.inCents, preview.currency)}</span></span>
-          <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents, preview.currency)}</span></span>
+          {!allKnown && (
+            <>
+              <span className="num">{t('import.period')}: <span className="font-medium">{s.from ? `${formatDate(s.from, fmt)} – ${formatDate(s.to!, fmt)}` : '—'}</span></span>
+              <span className="num">{t('transactions.in')} <span className="font-medium">{money(s.inCents, preview.currency)}</span></span>
+              <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents, preview.currency)}</span></span>
+            </>
+          )}
           <span className="ml-auto flex items-center gap-2">
             {onAssist ? (
               assisting ? (
@@ -214,7 +229,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
                 </>
               ) : (
                 <Button size="sm" variant="primary" icon={<Sparkles size={14} />} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview)}>
-                  {t('import.checkWithClaude')}
+                  {allKnown ? t('import.categoriseExisting', { name: assistant?.providerName ?? 'Claude' }) : t('import.checkWithClaude')}
                 </Button>
               )
             ) : (
@@ -230,6 +245,8 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
         )}
       </Card>
 
+      {preview.check && <CheckSummaryCard preview={preview} onChange={onChange} />}
+
       {!preview.mapping ? (
         <Card className="px-5 py-6 text-[13px] text-muted"><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.noMapping')}</Card>
       ) : (
@@ -238,6 +255,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
             {chip('all', t('import.all'), s.total)}
             {chip('ready', t('import.status.ready'), s.ready)}
             {chip('duplicate', t('import.status.duplicate'), s.duplicates)}
+            {s.possibleDuplicates > 0 && chip('possible_duplicate', t('import.status.possible_duplicate'), s.possibleDuplicates)}
             {chip('problem', t('import.status.problem'), s.problems)}
             {chip('skipped', t('import.status.skipped'), s.skipped)}
             <label className="ml-auto flex items-center gap-2 text-[13px] text-muted">
@@ -282,6 +300,9 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
                     <td className="max-w-0 px-2 py-2">
                       <p className="truncate"><span className="font-medium text-text">{r.counterpartyName || r.description}</span>{r.counterpartyName && <span className="ml-2 text-[13px] text-muted">{r.description}</span>}</p>
                       {(r.note || r.communication) && <p className="truncate text-xs text-muted">{r.note ? `✦ ${r.note}` : r.communication}</p>}
+                      {r.match && r.status === 'possible_duplicate' && (
+                        <p className="truncate text-xs text-muted">{t('import.matches', { date: formatDate(r.match.bookingDate, fmt), text: r.match.counterpartyName || r.match.description })}</p>
+                      )}
                     </td>
                     <td className="px-2 py-1.5">
                       <CategorySelect label={t('transactions.category')} className="h-8 text-[13px]" value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
@@ -310,6 +331,110 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
       )}
       <MappingModal open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />
     </>
+  )
+}
+
+/** What Check did (each part can be undone) and what it proposes for later imports and older transactions. */
+function CheckSummaryCard({ preview, onChange }: { preview: ImportPreview; onChange: (p: ImportPreview) => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { money } = useSettings()
+  const c = preview.check!
+  const [rules, setRules] = useState<Set<number>>(() => new Set(c.rules.map((r) => r.id)))
+  const [existing, setExisting] = useState<Set<number>>(() => new Set(c.existing.map((e) => e.id)))
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    setRules(new Set(c.rules.map((r) => r.id)))
+    setExisting(new Set(c.existing.map((e) => e.id)))
+  }, [c.rules, c.existing])
+  const undo = (part: CheckPart): void => void call('import.checkUndo', { sessionId: preview.sessionId, part }).then(onChange, (e) => toast(errText(e), 'error'))
+  const toggle = (set: Set<number>, id: number, on: boolean): Set<number> => {
+    const next = new Set(set)
+    if (on) next.add(id)
+    else next.delete(id)
+    return next
+  }
+  const line = (text: string, part: CheckPart | null): ReactNode => (
+    <li className="flex items-center gap-2">
+      <CheckCircle2 size={14} className="shrink-0 text-accent" />
+      <span className="flex-1">{text}</span>
+      {part && <Button size="sm" variant="ghost" icon={<Undo2 size={13} />} onClick={() => undo(part)}>{t('import.undoPart')}</Button>}
+    </li>
+  )
+  const done = [
+    c.categorised > 0 && line(t('import.check.categorised', { count: c.categorised }), 'categories'),
+    c.renamed > 0 && line(t('import.check.renamed', { count: c.renamed }), 'names'),
+    c.fixed > 0 && line(t('import.check.fixed', { count: c.fixed }), 'fixes'),
+    c.mappingChanged && line(t('import.check.mapping'), null)
+  ].filter(Boolean)
+  const picked = rules.size + existing.size
+  const apply = (): void => {
+    setBusy(true)
+    void call('import.checkApply', { sessionId: preview.sessionId, rules: [...rules], existing: [...existing] })
+      .then((r) => {
+        onChange(r.preview)
+        toast(t('import.check.applied', { rules: r.rules, count: r.categorised }))
+      }, (e) => toast(errText(e), 'error'))
+      .finally(() => setBusy(false))
+  }
+  return (
+    <Card className="mb-4 px-5 py-4 text-[13px]">
+      <div className="mb-2 flex items-center gap-2">
+        <Sparkles size={15} className="text-accent" />
+        <h3 className="flex-1 font-semibold">{t('import.check.title', { name: c.by })}</h3>
+        <Button size="sm" variant="ghost" icon={<RotateCcw size={13} />} onClick={() => undo('all')}>{t('import.check.undoAll')}</Button>
+      </div>
+      {c.alreadyImported > 0 && <p className="mb-2 text-muted">{t('import.check.already', { count: c.alreadyImported, total: c.total })}</p>}
+      {done.length > 0 ? <ul className="space-y-1">{done}</ul> : <p className="text-muted">{t('import.check.nothingChanged')}</p>}
+      {(c.rules.length > 0 || c.existing.length > 0) && (
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 flex items-center gap-2 font-medium"><ListChecks size={14} /> {t('import.check.proposals')}</p>
+          {c.existing.length > 0 && (
+            <>
+              <p className="mb-1 text-xs text-muted">{t('import.check.existingTitle')}</p>
+              <ul className="mb-3 max-h-48 space-y-1 overflow-y-auto">
+                {c.existing.map((e) => (
+                  <li key={e.id}>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" className="accent-[var(--accent)]" checked={existing.has(e.id)} onChange={(ev) => setExisting((s) => toggle(s, e.id, ev.target.checked))} />
+                      <span className="min-w-0 flex-1 truncate"><span className="font-medium">{e.label}</span> → {e.categoryName}</span>
+                      <span className="num text-muted">{t('import.check.count', { count: e.count })} · {money(e.totalCents, preview.currency)}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {c.rules.length > 0 && (
+            <>
+              <p className="mb-1 text-xs text-muted">{t('import.check.rulesTitle')}</p>
+              <ul className="mb-3 max-h-48 space-y-1 overflow-y-auto">
+                {c.rules.map((r) => (
+                  <li key={r.id}>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" className="accent-[var(--accent)]" checked={rules.has(r.id)} onChange={(ev) => setRules((s) => toggle(s, r.id, ev.target.checked))} />
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="text-muted">{t(`budgets.field.${r.field}`)} {t(`budgets.match.${r.match}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
+                      </span>
+                      <span className="num text-muted">{t('import.check.ruleReach', { here: r.rowsHere, existing: r.existing })}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <div className="flex justify-end">
+            <Button size="sm" variant="primary" disabled={!picked || busy} onClick={apply}>{t('import.check.apply', { rules: rules.size, groups: existing.size })}</Button>
+          </div>
+        </div>
+      )}
+      {c.dropped.length > 0 && (
+        <details className="mt-3 text-xs text-muted">
+          <summary className="cursor-pointer">{t('import.check.dropped', { count: c.dropped.length })}</summary>
+          <ul className="mt-1 list-disc pl-5">{c.dropped.map((d, i) => <li key={i}>{d}</li>)}</ul>
+        </details>
+      )}
+    </Card>
   )
 }
 

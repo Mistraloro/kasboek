@@ -14,6 +14,7 @@ import type { McpSetupStatus } from '@shared/types'
 import { paths } from '../paths'
 import { stamp } from '../transfer/service'
 import { helperPath } from './channel'
+import { mcpBridgeError } from './bridge'
 
 export function serverEntry(): ServerEntry {
   return { command: helperPath(), args: ['--data-dir', paths.dataDir] }
@@ -124,6 +125,7 @@ export async function setupStatus(): Promise<McpSetupStatus> {
     helperFound: existsSync(helperPath()),
     desktop: path ? { configPath: path, state: desktopEntryState(await readConfig(path).catch(() => null), serverEntry()) } : null,
     code: exe ? { path: exe, installed: await codeInstalled(exe) } : null,
-    devBuild: !app.isPackaged
+    devBuild: !app.isPackaged,
+    bridgeError: mcpBridgeError()
   }
 }

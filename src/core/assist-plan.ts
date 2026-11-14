@@ -37,11 +37,20 @@ const FixPart = z.object({
 })
 /** One answer per group of similar transactions: its category and a readable name and description. */
 const GroupPart = z.object({ group: z.number().int(), categoryId: z.number().int().nullable(), name: z.string().nullable(), description: z.string().nullable() })
+/** A rule for a payee that comes back, so the next import is categorised without a check. */
+const RulePart = z.object({
+  group: z.number().int(),
+  field: z.enum(['counterparty', 'description', 'any']),
+  match: z.enum(['contains', 'word', 'starts']),
+  pattern: z.string(),
+  categoryId: z.number().int()
+})
 /** What the model must return (also sent as the JSON schema). */
 export const Plan = z.object({
   mapping: MappingPart.nullable(),
   fixes: z.array(FixPart),
   groups: z.array(GroupPart),
+  rules: z.array(RulePart),
   notes: z.array(z.string())
 })
 export type Plan = z.infer<typeof Plan>
@@ -56,7 +65,7 @@ type Row = ImportPreview['rows'][number]
  * description when there is none) once numbers, dates and references are taken out, and the same
  * direction. "Bancontact DELHAIZE LEUVEN 03/10 12:34" and "… 17/10 18:02" become one group.
  */
-export function groupKey(r: Pick<Row, 'counterpartyName' | 'description' | 'amountCents'>): string {
+export function groupKey(r: { counterpartyName: string | null; description: string; amountCents: number | null }): string {
   const text = (r.counterpartyName?.trim() || r.description || '')
     .toLowerCase()
     .replace(/[0-9][0-9/.:,\-]*/g, ' ')
@@ -67,17 +76,46 @@ export function groupKey(r: Pick<Row, 'counterpartyName' | 'description' | 'amou
   return `${(r.amountCents ?? 0) < 0 ? 'out' : 'in'}:${text}`
 }
 
-/** Ready rows in groups of similar transactions, the biggest first. */
-export function rowGroups(rows: Row[]): { key: string; sign: 'in' | 'out'; example: Row; rows: Row[] }[] {
-  const map = new Map<string, { key: string; sign: 'in' | 'out'; example: Row; rows: Row[] }>()
+/** A transaction already in Kasboek without a category, grouped with the import's rows. */
+export interface ExistingTx {
+  id: number
+  bookingDate: string
+  amountCents: number
+  counterpartyName: string | null
+  description: string
+}
+
+export interface RowGroup {
+  key: string
+  sign: 'in' | 'out'
+  /** The text shown to the model: the first row of the import, else the first existing one. */
+  example: { counterpartyName: string | null; description: string; communication: string | null; amountCents: number; categoryId: number | null }
+  rows: Row[]
+  existing: ExistingTx[]
+  totalCents: number
+}
+
+/**
+ * Ready rows of the import, and uncategorised transactions already in Kasboek, in groups of similar
+ * transactions, the biggest first.
+ */
+export function rowGroups(rows: Row[], existing: ExistingTx[] = []): RowGroup[] {
+  const map = new Map<string, RowGroup>()
+  const group = (key: string, amount: number, example: RowGroup['example']): RowGroup => {
+    let g = map.get(key)
+    if (!g) map.set(key, (g = { key, sign: amount < 0 ? 'out' : 'in', example, rows: [], existing: [], totalCents: 0 }))
+    g.totalCents += amount
+    return g
+  }
   for (const r of rows) {
     if (r.status !== 'ready') continue
-    const key = groupKey(r)
-    let g = map.get(key)
-    if (!g) map.set(key, (g = { key, sign: (r.amountCents ?? 0) < 0 ? 'out' : 'in', example: r, rows: [] }))
-    g.rows.push(r)
+    const amount = r.amountCents ?? 0
+    group(groupKey(r), amount, { counterpartyName: r.counterpartyName, description: r.description, communication: r.communication, amountCents: amount, categoryId: r.categoryId }).rows.push(r)
   }
-  return [...map.values()].sort((a, b) => b.rows.length - a.rows.length)
+  for (const t of existing) {
+    group(groupKey(t), t.amountCents, { counterpartyName: t.counterpartyName, description: t.description, communication: null, amountCents: t.amountCents, categoryId: null }).existing.push(t)
+  }
+  return [...map.values()].sort((a, b) => b.rows.length + b.existing.length - (a.rows.length + a.existing.length))
 }
 
 /**
@@ -111,9 +149,10 @@ export function parsePlan(text: string, name: string): Plan {
     mapping: mapping && mapping.success ? mapping.data : null,
     fixes: keep(FixPart, list(o['fixes'])),
     groups: keep(GroupPart, list(o['groups']).map((g) => (g && typeof g === 'object' ? { categoryId: null, name: null, description: null, ...g } : g))),
+    rules: keep(RulePart, list(o['rules']).map((r) => (r && typeof r === 'object' ? { match: 'contains', ...r } : r))),
     notes: list(o['notes']).filter((n): n is string => typeof n === 'string')
   }
-  if (!plan.fixes.length && !plan.groups.length && !plan.notes.length && !plan.mapping)
+  if (!plan.fixes.length && !plan.groups.length && !plan.rules.length && !plan.notes.length && !plan.mapping)
     throw new AppError('assistant.bad_plan', `${name}’s answer couldn’t be read. Try again, or try another model.`)
   return plan
 }

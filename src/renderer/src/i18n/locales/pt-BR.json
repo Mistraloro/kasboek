@@ -21,7 +21,9 @@
     "invalid": "Digite um valor como 150 ou 150,00.",
     "emptyHint": "Ainda sem orçamentos para este mês. Escreva um valor ao lado de uma categoria ou copie os do mês passado.",
     "renameShort": "Renomear",
-    "rulesHint": "As regras colocam os movimentos em uma categoria automaticamente quando o texto corresponde. Aplicam-se às importações e, ao serem criadas, aos movimentos sem categoria."
+    "rulesHint": "As regras colocam os movimentos em uma categoria automaticamente quando o texto corresponde. Aplicam-se às importações e, ao serem criadas, aos movimentos sem categoria.",
+    "reachOther_one": "{{count}} já está em outra categoria e fica lá.",
+    "reachOther_other": "{{count}} já estão em outra categoria e ficam lá."
   },
   "import": {
     "subtitle": "Traga os arquivos CSV do seu banco. Nada é salvo sem a sua aprovação.",
@@ -54,7 +56,12 @@
     "claudeOff": "Configure um assistente nas Configurações para revisar arquivos.",
     "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação.",
     "checkPrivacyLocal": "Envia as linhas deste arquivo para {{ai}} neste computador ou nesta rede.",
-    "checkSlowHint": "Arquivos grandes podem demorar alguns minutos. Para sozinho ao fim de 4 minutos."
+    "checkSlowHint": "Arquivos grandes podem demorar alguns minutos. Para sozinho ao fim de 4 minutos.",
+    "allKnown": "Tudo neste arquivo já está no Kasboek ({{from}} – {{to}}).",
+    "undoPart": "Desfazer",
+    "check": {
+      "nothingChanged": "Nada neste arquivo precisava de mudar."
+    }
   },
   "assistant": {
     "example3": "Coloque meus movimentos sem categoria na categoria certa.",

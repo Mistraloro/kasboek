@@ -118,7 +118,26 @@
       "counterparty": "Tegenpartij",
       "description": "Omschrijving",
       "any": "Tegenpartij of omschrijving"
-    }
+    },
+    "match": {
+      "contains": "bevat",
+      "word": "bevat het woord",
+      "starts": "begint met"
+    },
+    "matchOption": {
+      "contains": "Ergens in de tekst",
+      "word": "Als heel woord",
+      "starts": "Aan het begin"
+    },
+    "howMatch": "Hoe het overeenkomt",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "rulesOrder": "Als meerdere regels passen, wint de bovenste in deze lijst.",
+    "reach_one": "Past op {{count}} transactie, waarvan {{uncategorised}} zonder categorie.",
+    "reach_other": "Past op {{count}} transacties, waarvan {{uncategorised}} zonder categorie.",
+    "reachOther_one": "{{count}} staat al in een andere categorie en blijft daar.",
+    "reachOther_other": "{{count}} staan al in een andere categorie en blijven daar.",
+    "reachWord": "Korte teksten passen alleen als heel woord."
   },
   "import": {
     "title": "Importeren",
@@ -159,14 +178,16 @@
       "ready": "Klaar",
       "duplicate": "Dubbel",
       "problem": "Probleem",
-      "skipped": "Overgeslagen"
+      "skipped": "Overgeslagen",
+      "possible_duplicate": "Misschien al geïmporteerd"
     },
     "issue": {
       "date_invalid": "datum niet leesbaar",
       "amount_invalid": "bedrag niet leesbaar",
       "amount_zero": "bedrag is nul",
       "status_refused": "geweigerd door de bank",
-      "currency_other": "andere munt"
+      "currency_other": "andere munt",
+      "possible_duplicate": "lijkt op een transactie die al in Kasboek staat"
     },
     "remember": "Deze indeling onthouden",
     "statusCol": "Status",
@@ -207,7 +228,36 @@
     "layoutRecognised": "Indeling herkend",
     "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk.",
     "stopCheck": "Stoppen",
-    "checkSlowHint": "Grote bestanden kunnen enkele minuten duren. Na 4 minuten stopt het vanzelf."
+    "checkSlowHint": "Grote bestanden kunnen enkele minuten duren. Na 4 minuten stopt het vanzelf.",
+    "discard": "Weggooien",
+    "allKnown": "Alles in dit bestand staat al in Kasboek ({{from}} – {{to}}).",
+    "allKnownHint": "{{name}} kan nog de transacties van deze rekening zonder categorie sorteren.",
+    "categoriseExisting": "Categoriseren met {{name}}",
+    "matches": "Al in Kasboek: {{date}} · {{text}}",
+    "undoPart": "Ongedaan maken",
+    "check": {
+      "title": "Wat {{name}} deed",
+      "undoAll": "Hele controle ongedaan maken",
+      "already": "{{count}} van de {{total}} rijen stonden al in Kasboek en zijn niet opnieuw gecontroleerd.",
+      "categorised_one": "Categorie gezet voor {{count}} rij",
+      "categorised_other": "Categorie gezet voor {{count}} rijen",
+      "renamed_one": "Naam of omschrijving leesbaar gemaakt voor {{count}} rij",
+      "renamed_other": "Naam of omschrijving leesbaar gemaakt voor {{count}} rijen",
+      "fixed_one": "{{count}} rij verbeterd, overgeslagen of toegevoegd",
+      "fixed_other": "{{count}} rijen verbeterd, overgeslagen of toegevoegd",
+      "mapping": "Gewijzigd welke kolommen gelezen worden",
+      "nothingChanged": "Niets in dit bestand moest veranderd worden.",
+      "proposals": "Voorstellen (alleen toegepast als je ze aanvaardt)",
+      "existingTitle": "Transacties categoriseren die al in Kasboek staan",
+      "count_one": "{{count}} transactie",
+      "count_other": "{{count}} transacties",
+      "rulesTitle": "Regels, zodat volgende imports vanzelf gecategoriseerd worden",
+      "ruleReach": "{{here}} hier · {{existing}} ouder",
+      "apply": "Selectie toepassen",
+      "applied": "{{rules}} regel(s) gemaakt en {{count}} transactie(s) gecategoriseerd.",
+      "dropped_one": "{{count}} voorstel weggelaten",
+      "dropped_other": "{{count}} voorstellen weggelaten"
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -550,7 +600,13 @@
     "addedDesktop": "Toegevoegd. Sluit Claude Desktop volledig af (ook via het pictogram in het systeemvak of de menubalk) en open het opnieuw. Kasboek staat dan onder Instellingen → Developer en in het toolsmenu van een nieuwe chat, niet onder Connectors.",
     "removedDesktop": "Verwijderd uit Claude Desktop. Start het opnieuw om het toe te passen.",
     "codeAdded": "Toegevoegd aan Claude Code. Start een nieuwe sessie van Claude Code om het te gebruiken.",
-    "removedCode": "Verwijderd uit Claude Code."
+    "removedCode": "Verwijderd uit Claude Code.",
+    "requestExpired": "Dit verzoek wachtte te lang en is geweigerd. Claude kan het opnieuw vragen.",
+    "waiting_one": "Nog {{count}} verzoek wacht",
+    "waiting_other": "Nog {{count}} verzoeken wachten",
+    "close": "Sluiten",
+    "approveAll": "Alle {{count}} goedkeuren",
+    "bridgeError": "De verbinding voor Claude-apps kon niet starten: {{error}}. Kasboek probeert het elke 30 seconden opnieuw."
   },
   "fx": {
     "title": "Munten",
@@ -610,7 +666,8 @@
     "modelsLoaded_one": "{{count}} model gevonden.",
     "modelsLoaded_other": "{{count}} modellen gevonden.",
     "note": "Kies een model dat tools ondersteunt (function calling); kleine lokale modellen antwoorden soms minder betrouwbaar. Wijzigingen die de assistent voorstelt, wachten nog altijd op jouw akkoord.",
-    "theServer": "de server"
+    "theServer": "de server",
+    "sameAsChat": "Zelfde als het chatmodel ({{model}})"
   },
   "accountKind": {
     "current": "Zichtrekening",

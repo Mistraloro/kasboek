@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -305,6 +305,19 @@ export const contract = {
       .strict(),
     output: out<Transaction>()
   },
+  'transactions.edit': {
+    description: 'Fix one transaction: its category, notes, readable description or counterparty name. Dates and amounts can only be changed by the person.',
+    input: z
+      .object({
+        id,
+        categoryId: id.nullable().optional(),
+        notes: z.string().max(1000).nullable().optional(),
+        description: z.string().trim().min(1).max(300).optional(),
+        counterpartyName: z.string().trim().max(120).nullable().optional()
+      })
+      .strict(),
+    output: out<Transaction>()
+  },
   'transactions.categorize': {
     description: 'Set the category of one or more transactions (categoryId null = uncategorised).',
     input: z.object({ ids: z.array(id).min(1).max(5000), categoryId: id.nullable() }).strict(),
@@ -315,18 +328,46 @@ export const contract = {
   'rules.list': { description: 'List categorisation rules ("text in counterparty/description → category").', input: empty, output: out<Rule[]>() },
   'rules.create': {
     description:
-      'Create a rule that puts transactions whose counterparty and/or description contains `pattern` (case-insensitive) into a category. New imports use it; applyToExisting also categorises uncategorised transactions now.',
+      'Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.',
     input: z
       .object({
         field: z.enum(['counterparty', 'description', 'any']),
         pattern: z.string().trim().min(2).max(100),
+        match: z.enum(['contains', 'word', 'starts']).default('contains'),
         categoryId: id,
         applyToExisting: z.boolean().default(true)
       })
       .strict(),
     output: out<{ rule: Rule; applied: number }>()
   },
-  'rules.delete': { input: z.object({ id }).strict(), output: out<Rule[]>() },
+  'rules.preview': {
+    description: 'Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples.',
+    input: z
+      .object({
+        field: z.enum(['counterparty', 'description', 'any']),
+        pattern: z.string().trim().min(1).max(100),
+        match: z.enum(['contains', 'word', 'starts']).default('contains'),
+        categoryId: id.nullable().default(null)
+      })
+      .strict(),
+    output: out<RulePreview>()
+  },
+  'rules.update': {
+    description: 'Change a rule (its text, where it looks, how it matches, or its category). applyToExisting also categorises uncategorised transactions it now matches.',
+    input: z
+      .object({
+        id,
+        field: z.enum(['counterparty', 'description', 'any']).optional(),
+        pattern: z.string().trim().min(2).max(100).optional(),
+        match: z.enum(['contains', 'word', 'starts']).optional(),
+        categoryId: id.optional(),
+        applyToExisting: z.boolean().default(false)
+      })
+      .strict(),
+    output: out<{ rule: Rule; applied: number }>()
+  },
+  'rules.reorder': { input: z.object({ ids: z.array(id).min(1).max(5000) }).strict(), output: out<Rule[]>() },
+  'rules.delete': { description: 'Delete a rule. Transactions it already categorised keep their category.', input: z.object({ id }).strict(), output: out<Rule[]>() },
 
   'budgets.list': { description: 'Budgets and spending per spending category for a month (cents).', input: z.object({ month }).strict(), output: out<BudgetRow[]>() },
   'budgets.set': {
@@ -374,6 +415,7 @@ export const contract = {
                 bookingDate: date.optional(),
                 amountCents: cents.optional(),
                 description: z.string().trim().min(1).max(300).optional(),
+                counterpartyName: z.string().trim().max(120).nullable().optional(),
                 note: z.string().max(200).nullable().optional()
               })
               .strict()
@@ -389,6 +431,11 @@ export const contract = {
     input: z.object({ sessionId: z.string().uuid().optional(), saveProfile: z.boolean().default(true) }).strict(),
     output: out<{ batchId: number; imported: number; skipped: number }>()
   },
+  'import.checkApply': {
+    input: z.object({ sessionId: z.string().uuid(), rules: z.array(z.number().int()).max(1000), existing: z.array(z.number().int()).max(1000) }).strict(),
+    output: out<{ preview: ImportPreview; rules: number; categorised: number }>()
+  },
+  'import.checkUndo': { input: z.object({ sessionId: z.string().uuid(), part: z.enum(['categories', 'names', 'fixes', 'all']) }).strict(), output: out<ImportPreview>() },
   'import.discard': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
   'import.batches': { input: empty, output: out<ImportBatch[]>() },
   'import.undo': { input: z.object({ batchId: id }).strict(), output: out<{ deleted: number }>() },
@@ -440,4 +487,5 @@ export type AppEvent =
   | { type: 'import.updated' }
   | { type: 'sync.updated'; status: SyncStatus }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
-  | { type: 'mcp.request'; id: string; summary: string }
+  | { type: 'mcp.request'; id: string; op: string; summary: string }
+  | { type: 'mcp.expired'; id: string }

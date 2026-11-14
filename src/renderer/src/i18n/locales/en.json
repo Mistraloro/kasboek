@@ -118,7 +118,26 @@
       "counterparty": "Counterparty",
       "description": "Description",
       "any": "Counterparty or description"
-    }
+    },
+    "match": {
+      "contains": "contains",
+      "word": "contains the word",
+      "starts": "starts with"
+    },
+    "matchOption": {
+      "contains": "Anywhere in the text",
+      "word": "As a whole word",
+      "starts": "At the start"
+    },
+    "howMatch": "How it matches",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "rulesOrder": "When several rules match, the one highest in this list wins.",
+    "reach_one": "Matches {{count}} transaction, {{uncategorised}} of them without a category.",
+    "reach_other": "Matches {{count}} transactions, {{uncategorised}} of them without a category.",
+    "reachOther_one": "{{count}} is already in another category and stays there.",
+    "reachOther_other": "{{count}} are already in another category and stay there.",
+    "reachWord": "Short texts only match as a whole word."
   },
   "import": {
     "title": "Import",
@@ -159,14 +178,16 @@
       "ready": "Ready",
       "duplicate": "Duplicate",
       "problem": "Problem",
-      "skipped": "Skipped"
+      "skipped": "Skipped",
+      "possible_duplicate": "Maybe imported"
     },
     "issue": {
       "date_invalid": "date not readable",
       "amount_invalid": "amount not readable",
       "amount_zero": "amount is zero",
       "status_refused": "refused by the bank",
-      "currency_other": "other currency"
+      "currency_other": "other currency",
+      "possible_duplicate": "looks like a transaction already in Kasboek"
     },
     "remember": "Remember this layout",
     "statusCol": "Status",
@@ -207,7 +228,36 @@
     "layoutRecognised": "Layout recognised",
     "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network.",
     "stopCheck": "Stop",
-    "checkSlowHint": "Large files can take a few minutes. It stops by itself after 4 minutes."
+    "checkSlowHint": "Large files can take a few minutes. It stops by itself after 4 minutes.",
+    "discard": "Discard",
+    "allKnown": "Everything in this file is already in Kasboek ({{from}} – {{to}}).",
+    "allKnownHint": "{{name}} can still sort the transactions of this account that have no category yet.",
+    "categoriseExisting": "Categorise with {{name}}",
+    "matches": "Already in Kasboek: {{date}} · {{text}}",
+    "undoPart": "Undo",
+    "check": {
+      "title": "What {{name}} did",
+      "undoAll": "Undo the whole check",
+      "already": "{{count}} of {{total}} rows were already in Kasboek and weren’t checked again.",
+      "categorised_one": "Set a category for {{count}} row",
+      "categorised_other": "Set a category for {{count}} rows",
+      "renamed_one": "Made the name or description readable for {{count}} row",
+      "renamed_other": "Made the name or description readable for {{count}} rows",
+      "fixed_one": "Fixed, skipped or included {{count}} row",
+      "fixed_other": "Fixed, skipped or included {{count}} rows",
+      "mapping": "Changed which columns are read",
+      "nothingChanged": "Nothing in this file needed changing.",
+      "proposals": "Suggestions (only applied when you accept them)",
+      "existingTitle": "Categorise transactions already in Kasboek",
+      "count_one": "{{count}} transaction",
+      "count_other": "{{count}} transactions",
+      "rulesTitle": "Rules, so future imports are categorised automatically",
+      "ruleReach": "{{here}} here · {{existing}} older",
+      "apply": "Apply selected",
+      "applied": "Created {{rules}} rule(s) and categorised {{count}} transaction(s).",
+      "dropped_one": "{{count}} suggestion left out",
+      "dropped_other": "{{count}} suggestions left out"
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -550,7 +600,13 @@
     "addedDesktop": "Added. Quit Claude Desktop completely (also from the tray icon or menu bar) and open it again. Kasboek then shows up under Settings → Developer and in the tools menu of a new chat, not under Connectors.",
     "removedDesktop": "Removed from Claude Desktop. Restart it to apply.",
     "codeAdded": "Added to Claude Code. Start a new Claude Code session to use it.",
-    "removedCode": "Removed from Claude Code."
+    "removedCode": "Removed from Claude Code.",
+    "requestExpired": "This request waited too long and was declined. Claude can ask again.",
+    "waiting_one": "{{count}} more request waiting",
+    "waiting_other": "{{count}} more requests waiting",
+    "close": "Close",
+    "approveAll": "Approve all {{count}}",
+    "bridgeError": "The connection for Claude apps couldn’t start: {{error}}. Kasboek tries again every 30 seconds."
   },
   "fx": {
     "title": "Currencies",
@@ -610,7 +666,8 @@
     "modelsLoaded_one": "{{count}} model found.",
     "modelsLoaded_other": "{{count}} models found.",
     "note": "Pick a model that supports tools (function calling); small local models may answer less reliably. Changes the assistant proposes still wait for your OK.",
-    "theServer": "the server"
+    "theServer": "the server",
+    "sameAsChat": "Same as the chat model ({{model}})"
   },
   "accountKind": {
     "current": "Current account",

@@ -1,11 +1,15 @@
 /** Where the running app and the kasboek-mcp helper meet: a named pipe (Windows) or a Unix socket, found via a discovery file. */
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { app } from 'electron'
 
+/**
+ * A new random name on each start, published in the discovery file: another program can't claim
+ * the name first and so stop the bridge from starting.
+ */
 export function socketPath(): string {
-  const id = createHash('sha256').update(app.getPath('userData')).digest('hex').slice(0, 16)
+  const id = `${createHash('sha256').update(app.getPath('userData')).digest('hex').slice(0, 8)}-${randomBytes(8).toString('hex')}`
   return process.platform === 'win32' ? `\\\\.\\pipe\\kasboek-mcp-${id}` : join(tmpdir(), `kasboek-mcp-${id}.sock`)
 }
 

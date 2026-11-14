@@ -7,12 +7,12 @@ import { z } from 'zod'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
-import { listRules } from '@core/finance'
+import { listRules, ruleMatches } from '@core/finance'
 import * as imp from '@core/import'
 import { getSettings } from '@core/settings'
 import { mappingSchema } from '@shared/import-mapping'
-import type { ImportPreview } from '@shared/types'
-import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups } from '@core/assist-plan'
+import type { ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
+import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type RowGroup } from '@core/assist-plan'
 import { client, explainError, modelParams } from './claude'
 import * as openai from './openai'
 import { activeProvider, requireConfigured } from './provider'
@@ -21,30 +21,58 @@ import { activeProvider, requireConfigured } from './provider'
 
 const INSTRUCTIONS = `You check a bank CSV export before it is imported into a personal budget app (Belgium; banks such as Argenta, Hello bank!, Keytrade Bank; Dutch/French/English headers; dates usually DD/MM/YYYY; decimal comma).
 
-You get the raw cells, the column mapping the app detected, the rows it couldn't read or flagged, and the categories. Return a plan:
+You get the raw cells, the column mapping the app detected, the rows it couldn't read or flagged, groups of similar transactions and the categories. Rows that are exactly the same as transactions already in Kasboek are left out (the stats say how many). Return a plan:
 - mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines. Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
-- fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" only for a row flagged as duplicate that is clearly a separate real transaction. Set fields you don't change to null. reason: a few words.
-- groups: the transactions come in groups of similar ones (same counterparty or description, same direction), each with its full bank text. Give one entry per group; the app applies it to every row in the group. Banks write these texts differently, so read them carefully:
+- fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: a few words.
+- groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group; the app applies it to every row in the group. Banks write these texts differently, so read them carefully:
   - categoryId: for groups marked "uncategorised", a category id from the list. Most have an obvious category (supermarkets, bakeries, energy, telecom, rent, salary, restaurants, fuel, insurance, …): categorise every group where one fits; null only if you really can't tell. Transfers between the person's own accounts (savings, own accounts) go in a transfer category, not spending. Use only the category ids given. null for groups that already have a category.
   - name: who the money went to or came from, short and readable, as people would say it: the shop, company or person (e.g. "Delhaize", "Bakkerij De Roos", "Engie", "Jan Peeters"), found in the counterparty or inside the bank text (card payments often put the shop and its address after the card number). Use normal capitalisation, not all caps. null if the text gives no name.
   - description: a short, readable description without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Kaartbetaling Bancontact, Brugge", "Automatisch sparen", "Overschrijving via Wero"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
+- rules: rules make future imports categorise themselves. Suggest one only for a payee that comes back (a group with 2 or more transactions, or a known shop, employer, utility or subscription). field: where the text is ("counterparty" if the counterparty column holds the name, else "description"). pattern: a distinctive piece of the bank's own text (as written in the counterparty or bank text column, not your readable name), at least 4 characters, that is in every transaction of the group and wouldn't appear in unrelated payments: the shop or company name, not a city, card number, date or generic word like "BETALING". match: "word" for a name that must stand alone, else "contains". categoryId: the category for the group. Don't suggest rules that already exist.
 - notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain English.
 Never invent amounts or dates that are not supported by the raw cells.`
 
-function buildContext(db: Db, preview: ImportPreview): string {
+/** Account numbers don't help the check: only the country and last four digits are sent. */
+const IBAN = /\b([A-Z]{2})\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g
+export const maskIban = (text: string): string => text.replace(IBAN, (m, cc: string) => `${cc}…${m.replace(/\s/g, '').slice(-4)}`)
+
+/** At most `n` items spread over the whole list rather than only the first ones. */
+function spread<T>(items: T[], n: number): T[] {
+  if (items.length <= n) return items
+  return Array.from({ length: n }, (_, i) => items[Math.floor((i * items.length) / n)]!)
+}
+
+/** Uncategorised transactions of this account already in Kasboek, so Check can sort them too. */
+function existingUncategorised(db: Db, accountId: number): ExistingTx[] {
+  return (
+    db
+      .prepare(
+        `SELECT id, booking_date, amount_cents, counterparty_name, description FROM transactions
+         WHERE account_id = ? AND category_id IS NULL ORDER BY booking_date DESC LIMIT 5000`
+      )
+      .all(accountId) as { id: number; booking_date: string; amount_cents: number; counterparty_name: string | null; description: string }[]
+  ).map((r) => ({ id: r.id, bookingDate: r.booking_date, amountCents: r.amount_cents, counterpartyName: r.counterparty_name, description: r.description }))
+}
+
+function buildContext(db: Db, preview: ImportPreview, groups: RowGroup[]): string {
   const raw = imp.rawWindow(preview.sessionId, 0, 25)
-  const flagged = preview.rows.filter((r) => r.status !== 'ready').slice(0, 60)
-  const flaggedRaw = flagged.map((r) => ({ index: r.index, status: r.status, issues: r.issues, cells: imp.rawWindow(preview.sessionId, r.index, 1).rows[0]?.cells }))
+  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(maskIban)
+  // Exact duplicates are already in Kasboek: not sent again.
+  const flagged = spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), 150).map((r) => ({
+    index: r.index,
+    status: r.status,
+    issues: r.issues,
+    cells: cells(r.index),
+    ...(r.match ? { inKasboek: { date: r.match.bookingDate, counterparty: r.match.counterpartyName, description: maskIban(r.match.description.slice(0, 300)) } } : {})
+  }))
   const catName = new Map((db.prepare('SELECT id, name FROM categories').all() as { id: number; name: string }[]).map((c) => [c.id, c.name]))
-  const groups = rowGroups(preview.rows)
-    .slice(0, MAX_GROUPS)
-    .map((g, i) => {
-      const cat = g.example.categoryId === null ? 'uncategorised' : (catName.get(g.example.categoryId) ?? 'categorised')
-      const comm = g.example.communication ? ` | communication: ${g.example.communication.slice(0, 120)}` : ''
-      return `${i} | ${g.rows.length} | ${g.sign} | ${g.example.amountCents} | ${cat} | ${g.example.counterpartyName ?? ''} | ${g.example.description.slice(0, 400)}${comm}`
-    })
+  const lines = groups.map((g, i) => {
+    const cat = g.example.categoryId === null ? 'uncategorised' : (catName.get(g.example.categoryId) ?? 'categorised')
+    const comm = g.example.communication ? ` | communication: ${maskIban(g.example.communication.slice(0, 120))}` : ''
+    return `${i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${maskIban(g.example.counterpartyName ?? '')} | ${maskIban(g.example.description.slice(0, 400))}${comm}`
+  })
   const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${c.name} (${c.kind})`)
-  const account = db.prepare('SELECT name, currency, bank, iban FROM accounts WHERE id = ?').get(preview.accountId)
+  const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId)
   return JSON.stringify(
     {
       account,
@@ -53,24 +81,27 @@ function buildContext(db: Db, preview: ImportPreview): string {
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,
       stats: preview.stats,
-      linesAboveHeader: raw.preamble,
+      linesAboveHeader: raw.preamble.map((r) => r.map(maskIban)),
       header: raw.header.map((h, i) => `${i}: ${h}`),
-      firstRows: raw.rows,
-      flaggedRows: flaggedRaw,
-      groups: { format: 'group | rows | in/out | example amountCents | category now | counterparty | bank text', groups },
+      firstRows: raw.rows.map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })),
+      flaggedRows: flagged,
+      groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
-      rules: listRules(db).map((r) => `${r.field} contains "${r.pattern}" → ${r.categoryId}`)
+      rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`)
     },
     null,
     1
   )
 }
 
-function applyPlan(db: Db, preview: ImportPreview, plan: Plan, name: string): ImportPreview {
+type Change = Parameters<typeof imp.updateRows>[2][number]
+
+function applyPlan(db: Db, preview: ImportPreview, groups: RowGroup[], plan: Plan, name: string): ImportPreview {
   const notes = [...plan.notes.slice(0, 6)]
-  // The groups as the model saw them, before any column change.
-  const groupKeys = rowGroups(preview.rows).slice(0, MAX_GROUPS).map((g) => g.key)
+  const dropped: string[] = []
+  const before = imp.snapshot(preview.sessionId)
   let current = preview
+  let mappingChanged = false
   if (plan.mapping && preview.mapping) {
     const strip = <T extends Record<string, unknown>>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null)) as T
     const candidate = { ...plan.mapping, delimiter: preview.mapping.delimiter, columns: strip(plan.mapping.columns) }
@@ -78,11 +109,14 @@ function applyPlan(db: Db, preview: ImportPreview, plan: Plan, name: string): Im
     try {
       if (!parsed.success) throw new Error('invalid')
       const next = imp.remap(db, preview.sessionId, parsed.data, 'assistant')
-      // Keep Claude's mapping only if it doesn't make things worse.
+      // Keep the new mapping only if it doesn't make things worse.
       if (next.stats.ready + next.stats.duplicates < preview.stats.ready + preview.stats.duplicates) {
         current = imp.remap(db, preview.sessionId, preview.mapping, preview.mappingSource)
         notes.push(`${name} suggested different columns, but they read fewer rows, so the detected columns were kept.`)
-      } else current = next
+      } else {
+        current = next
+        mappingChanged = JSON.stringify(parsed.data) !== JSON.stringify(preview.mapping)
+      }
     } catch {
       notes.push(`${name}’s column suggestion didn’t fit this file, so the detected columns were kept.`)
     }
@@ -91,59 +125,179 @@ function applyPlan(db: Db, preview: ImportPreview, plan: Plan, name: string): Im
     if (parsed.success) {
       try {
         current = imp.remap(db, preview.sessionId, parsed.data, 'assistant')
+        mappingChanged = true
       } catch {
         notes.push(`${name}’s column suggestion didn’t fit this file.`)
       }
     }
   }
 
-  const maxIndex = current.rows.length - 1
-  const validCats = new Set((db.prepare('SELECT id FROM categories').all() as { id: number }[]).map((c) => c.id))
-  const changes: Parameters<typeof imp.updateRows>[2] = []
+  const byIndex = new Map(current.rows.map((r) => [r.index, r]))
+  const validCats = new Map((db.prepare('SELECT id, name FROM categories').all() as { id: number; name: string }[]).map((c) => [c.id, c.name]))
+  const changes: Change[] = []
+  const parts = { categories: [] as number[], names: [] as number[], fixes: [] as number[] }
   for (const f of plan.fixes) {
-    if (f.index < 0 || f.index > maxIndex) continue
+    const row = byIndex.get(f.index)
+    if (!row) continue
     const note = f.reason.slice(0, 200)
     if (f.action === 'skip') changes.push({ index: f.index, decided: 'skip', note })
-    else if (f.action === 'include') changes.push({ index: f.index, decided: 'include', note })
-    else {
-      const c: Parameters<typeof imp.updateRows>[2][number] = { index: f.index, note }
+    else if (f.action === 'include') {
+      if (row.status === 'problem') continue
+      changes.push({ index: f.index, decided: 'include', note })
+    } else {
+      const c: Change = { index: f.index, note }
       if (f.bookingDate && /^\d{4}-\d{2}-\d{2}$/.test(f.bookingDate) && !Number.isNaN(Date.parse(f.bookingDate))) c.bookingDate = f.bookingDate
       if (f.amountCents !== null && Number.isSafeInteger(f.amountCents) && f.amountCents !== 0) c.amountCents = f.amountCents
       if (f.description?.trim()) c.description = f.description.trim().slice(0, 300)
-      if (Object.keys(c).length > 2) changes.push(c)
+      if (Object.keys(c).length <= 2) continue
+      changes.push(c)
     }
+    parts.fixes.push(f.index)
   }
+
+  // Groups as the model saw them; after a column change rows are matched by their text again.
   const byKey = new Map<string, Plan['groups'][number]>()
   for (const g of plan.groups) {
-    const key = groupKeys[g.group]
-    if (key !== undefined) byKey.set(key, g)
+    const group = groups[g.group]
+    if (group) byKey.set(group.key, g)
   }
-  const fixed = new Set(changes.map((c) => c.index))
-  let categorised = 0
-  let renamed = 0
+  const fixed = new Set(parts.fixes)
   for (const r of current.rows) {
     if (r.status !== 'ready' || fixed.has(r.index)) continue
     const g = byKey.get(groupKey(r))
     if (!g) continue
-    const c: Parameters<typeof imp.updateRows>[2][number] = { index: r.index }
+    const c: Change = { index: r.index }
     if (r.categoryId === null && g.categoryId !== null && validCats.has(g.categoryId)) {
       c.categoryId = g.categoryId
       c.categorySource = 'assistant'
-      categorised++
+      parts.categories.push(r.index)
     }
     const newName = g.name?.trim().slice(0, 120)
     const newDescription = g.description?.trim().slice(0, 300)
     if (newName && newName !== r.counterpartyName) c.counterpartyName = newName
     if (newDescription && newDescription !== r.description) c.description = newDescription
-    if (c.counterpartyName || c.description) renamed++
+    if (c.counterpartyName || c.description) parts.names.push(r.index)
     if (Object.keys(c).length > 1) changes.push(c)
   }
-  if (categorised) notes.push(`${name} set a category for ${categorised} transaction${categorised === 1 ? '' : 's'}.`)
-  if (renamed) notes.push(`${name} made the name or description readable for ${renamed} transaction${renamed === 1 ? '' : 's'}; the bank's own text is kept for spotting duplicates.`)
-  if (categorised || renamed) notes.push('Check them before importing: you can change any row.')
   if (changes.length) current = imp.updateRows(db, preview.sessionId, changes)
+
+  // Transactions already in Kasboek: proposals only, applied when the person accepts them.
+  const existing: ProposedCategorisation[] = []
+  const existingIds = new Map<number, number[]>()
+  for (const g of plan.groups) {
+    const group = groups[g.group]
+    if (!group?.existing.length || g.categoryId === null || !validCats.has(g.categoryId)) continue
+    const id = existing.length + 1
+    existing.push({
+      id,
+      label: g.name?.trim() || group.example.counterpartyName || group.example.description.slice(0, 60),
+      categoryId: g.categoryId,
+      categoryName: validCats.get(g.categoryId)!,
+      count: group.existing.length,
+      totalCents: group.existing.reduce((t, e) => t + e.amountCents, 0)
+    })
+    existingIds.set(id, group.existing.map((e) => e.id))
+  }
+
+  const rules = checkRules(db, preview.sessionId, groups, plan, validCats, dropped)
+  const duplicates = current.stats.duplicates
+  imp.setCheck(preview.sessionId, {
+    summary: { by: name, alreadyImported: duplicates, total: current.stats.total, mappingChanged, rules, existing, dropped },
+    before,
+    parts,
+    existingIds
+  })
   imp.addNotes(preview.sessionId, notes)
   return imp.preview(db, preview.sessionId)
+}
+
+/** Shortest text a suggested rule may use: shorter ones catch unrelated payments. */
+const MIN_RULE_PATTERN = 4
+
+/**
+ * Keeps the suggested rules that are safe: the text is long enough, is in every transaction of its
+ * group (as the bank writes it, so the next import matches too), and doesn't catch transactions
+ * that belong in another category.
+ */
+function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, cats: Map<number, string>, dropped: string[]): ProposedRule[] {
+  const existingRules = listRules(db)
+  const rows = imp.rowsWithBankText(db, sessionId).filter((r) => r.row.status === 'ready')
+  // Which group each row was in when the model saw it (names may have changed since).
+  const groupOf = new Map<number, string>()
+  for (const g of groups) for (const r of g.rows) groupOf.set(r.index, g.key)
+  const planned = new Map<string, number | null>()
+  for (const g of plan.groups) {
+    const group = groups[g.group]
+    if (group) planned.set(group.key, g.categoryId ?? group.example.categoryId)
+  }
+  for (const g of groups) if (!planned.has(g.key)) planned.set(g.key, g.example.categoryId)
+  const categorised = db.prepare('SELECT counterparty_name, description, category_id FROM transactions WHERE category_id IS NOT NULL').all() as {
+    counterparty_name: string | null
+    description: string
+    category_id: number
+  }[]
+  const uncategorised = db.prepare('SELECT counterparty_name, description FROM transactions WHERE category_id IS NULL').all() as { counterparty_name: string | null; description: string }[]
+  const out: ProposedRule[] = []
+  const seen = new Set<string>()
+  for (const r of plan.rules) {
+    const group = groups[r.group]
+    const pattern = r.pattern.trim().replace(/\s+/g, ' ').slice(0, 100)
+    const rule = { field: r.field, pattern, match: r.match }
+    const label = `“${pattern}”`
+    if (!group || !cats.has(r.categoryId)) continue
+    if (pattern.length < MIN_RULE_PATTERN) {
+      dropped.push(`Rule ${label} left out: the text is too short to be safe.`)
+      continue
+    }
+    const key = `${r.field}|${pattern.toLowerCase()}`
+    if (seen.has(key) || existingRules.some((e) => e.field === r.field && e.pattern.toLowerCase() === pattern.toLowerCase())) continue
+    seen.add(key)
+    const hit = (t: { counterpartyName: string | null; description: string }): boolean => ruleMatches(rule, t)
+    const rowHit = (x: (typeof rows)[number]): boolean => hit(x.raw) || hit(x.row)
+    const own = rows.filter((x) => groupOf.get(x.row.index) === group.key)
+    if (own.length + group.existing.length === 0 || !own.every(rowHit) || !group.existing.every((e) => hit(e))) {
+      dropped.push(`Rule ${label} left out: it doesn’t match every transaction it was meant for.`)
+      continue
+    }
+    // Other payees it would also catch, in this file and among the uncategorised transactions.
+    const otherGroups = new Set<string>()
+    let clash = 0
+    for (const x of rows) {
+      const k = groupOf.get(x.row.index)
+      if (k === group.key || !rowHit(x)) continue
+      if (k) otherGroups.add(k)
+      if ((x.row.categoryId ?? (k ? planned.get(k) : null) ?? null) !== r.categoryId) clash++
+    }
+    for (const g of groups) {
+      if (g.key === group.key) continue
+      const n = g.existing.filter((e) => hit(e)).length
+      if (!n) continue
+      otherGroups.add(g.key)
+      if (planned.get(g.key) !== r.categoryId) clash += n
+    }
+    // A text like "BETALING" or "BANKREFERENTIE" is in many unrelated payments.
+    if (otherGroups.size > 5) {
+      dropped.push(`Rule ${label} left out: the text is too general (it is in ${otherGroups.size} other kinds of payment).`)
+      continue
+    }
+    const clashBefore = categorised.filter((t) => t.category_id !== r.categoryId && hit({ counterpartyName: t.counterparty_name, description: t.description })).length
+    const agreeBefore = categorised.filter((t) => t.category_id === r.categoryId && hit({ counterpartyName: t.counterparty_name, description: t.description })).length
+    if (clash || clashBefore > Math.max(1, agreeBefore / 5)) {
+      dropped.push(`Rule ${label} → ${cats.get(r.categoryId)} left out: it would also catch ${clash + clashBefore} transaction(s) that belong elsewhere.`)
+      continue
+    }
+    out.push({
+      id: out.length + 1,
+      field: r.field,
+      match: r.match,
+      pattern,
+      categoryId: r.categoryId,
+      categoryName: cats.get(r.categoryId)!,
+      rowsHere: rows.filter(rowHit).length,
+      existing: uncategorised.filter((t) => hit({ counterpartyName: t.counterparty_name, description: t.description })).length
+    })
+  }
+  return out
 }
 
 /** A check that runs too long is stopped, so the import screen never waits forever. */
@@ -176,6 +330,11 @@ export async function assistImport(db: Db, sessionId: string): Promise<ImportPre
 
 async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<ImportPreview> {
   const preview = imp.preview(db, sessionId)
+  const groups = rowGroups(preview.rows, existingUncategorised(db, preview.accountId)).slice(0, MAX_GROUPS)
+  if (!groups.length && !preview.rows.some((r) => r.status === 'problem' || r.status === 'possible_duplicate') && preview.mapping) {
+    const name = activeProvider(db).preset.assistantName
+    throw new AppError('assistant.nothing_to_check', `There is nothing for ${name} to check: every row is already in Kasboek and no transactions of this account are uncategorised.`)
+  }
   const settings = getSettings(db)
   const provider = activeProvider(db)
   requireConfigured(provider)
@@ -183,12 +342,12 @@ async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<Im
   let text = ''
   if (provider.preset.id !== 'anthropic') {
     try {
-      text = await openai.json(provider, { system: INSTRUCTIONS, user: buildContext(db, preview), schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 16000, signal })
+      text = await openai.json(provider, { system: INSTRUCTIONS, user: buildContext(db, preview, groups), schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal })
     } catch (err) {
       if (signal.aborted) throw err
       throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
     }
-    return applyPlan(db, preview, parsePlan(text, name), name)
+    return applyPlan(db, preview, groups, parsePlan(text, name), name)
   }
   const params = modelParams(settings.csvModel, settings.csvEffort)
   try {
@@ -197,7 +356,7 @@ async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<Im
       max_tokens: 32000,
       output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
       system: INSTRUCTIONS,
-      messages: [{ role: 'user', content: buildContext(db, preview) }]
+      messages: [{ role: 'user', content: buildContext(db, preview, groups) }]
     }, { signal })
     const message = await stream.finalMessage()
     if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
@@ -207,7 +366,7 @@ async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<Im
     if (signal.aborted) throw err
     throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
   }
-  return applyPlan(db, preview, parsePlan(text, name), name)
+  return applyPlan(db, preview, groups, parsePlan(text, name), name)
 }
 
 

@@ -15,6 +15,13 @@ import { discoveryFile, socketPath, type BridgeRequest, type BridgeResponse } fr
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 
 let server: Server | null = null
+/** Why the bridge couldn't start, shown in Settings → Assistant. */
+let lastError: string | null = null
+let failedAt = 0
+
+export function mcpBridgeError(): string | null {
+  return lastError
+}
 let token = ''
 const pending = new Map<string, (ok: boolean) => void>()
 
@@ -31,14 +38,18 @@ function enabled(): boolean {
   }
 }
 
-function askPerson(summary: string): Promise<boolean> {
+/** How long a change waits for the person before it counts as declined. */
+const APPROVAL_TIMEOUT_MS = 10 * 60_000
+
+function askPerson(op: string, summary: string): Promise<boolean> {
   const id = randomUUID()
-  broadcast({ type: 'mcp.request', id, summary })
+  broadcast({ type: 'mcp.request', id, op, summary })
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       pending.delete(id)
+      broadcast({ type: 'mcp.expired', id })
       resolve(false)
-    }, 120_000)
+    }, APPROVAL_TIMEOUT_MS)
     pending.set(id, (ok) => {
       clearTimeout(timer)
       resolve(ok)
@@ -58,13 +69,13 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   const invalid = precheck(def.name, req.input)
   if (invalid) return { id: req.id, ok: false, error: invalid }
   if (def.mutates) {
-    const approved = await askPerson(describeChange(db(), def.op, (req.input ?? {}) as Record<string, unknown>))
+    const approved = await askPerson(def.op, describeChange(db(), def.op, (req.input ?? {}) as Record<string, unknown>))
     if (!approved) return { id: req.id, ok: false, error: 'The person declined this change in Kasboek. Do not retry it unless they ask.' }
   }
   const r = await run(def.op, req.input ?? {}, 'assistant')
   if (!r.ok) return { id: req.id, ok: false, error: r.error.message }
   if (def.op.startsWith('import.')) broadcast({ type: 'import.updated' })
-  return { id: req.id, ok: true, result: compactResult(def.op, r.data) }
+  return { id: req.id, ok: true, result: compactResult(def.op, r.data, req.input) }
 }
 
 function serve(socket: Socket, run: Run): void {
@@ -84,7 +95,14 @@ function serve(socket: Socket, run: Run): void {
         socket.destroy()
         return
       }
-      void handle(req, run).then((res) => socket.write(JSON.stringify(res) + '\n'))
+      const reply = (res: BridgeResponse): void => {
+        if (!socket.destroyed && socket.writable) socket.write(JSON.stringify(res) + '\n')
+      }
+      // Every request gets an answer, also when something fails (e.g. Kasboek locked meanwhile).
+      handle(req, run).then(reply, (err: unknown) => {
+        console.error('[mcp bridge]', err)
+        reply({ id: req.id, ok: false, error: 'Kasboek couldn’t run this request. Check that it is open and unlocked, then try again.' })
+      })
     }
   })
   socket.on('error', () => socket.destroy())
@@ -93,14 +111,23 @@ function serve(socket: Socket, run: Run): void {
 /** Starts or stops the bridge to match the setting. Safe to call often. */
 export function syncMcpBridge(run: Run): void {
   const want = enabled()
-  if (want && !server) {
+  // After a failed start, try again every 30 seconds rather than every tick.
+  if (want && !server && Date.now() - failedAt > 30_000) {
     token = randomBytes(32).toString('hex')
     const path = socketPath()
     // Tells the kasboek-mcp helper where to connect and with which token. Readable only by this user.
     writeFileSync(discoveryFile(), JSON.stringify({ socket: path, token }), { mode: 0o600 })
     if (process.platform !== 'win32' && existsSync(path)) rmSync(path, { force: true })
     server = createServer((s) => serve(s, run))
-    server.on('error', (err) => console.error('[mcp bridge]', err))
+    lastError = null
+    server.on('error', (err) => {
+      console.error('[mcp bridge]', err)
+      lastError = err.message
+      failedAt = Date.now()
+      server?.close()
+      server = null
+      rmSync(discoveryFile(), { force: true })
+    })
     server.listen(path, () => {
       if (process.platform !== 'win32') import('node:fs').then((fs) => fs.chmodSync(path, 0o600)).catch(() => {})
     })

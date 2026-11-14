@@ -154,7 +154,7 @@ export function send(text: string): AssistantStatus {
         const r = await runner(def.op, input, 'assistant')
         if (!r.ok) return { ok: false, content: r.error.message }
         if (def.op.startsWith('import.')) broadcast({ type: 'import.updated' })
-        return { ok: true, content: compactResult(def.op, r.data) }
+        return { ok: true, content: compactResult(def.op, r.data, input) }
       },
       confirm: (name, input) => {
         const def = opForTool(name)
@@ -179,6 +179,8 @@ export function send(text: string): AssistantStatus {
     .then((end) => {
       // A turn that ended mid-tool-loop would leave tool calls without results: roll back.
       if (end !== 'done' && history.at(-1)?.role === 'assistant' && JSON.stringify(history.at(-1)).includes('"tool_use"')) history.length = before
+      // Stopped right after tools ran: close the turn, so the next question follows a reply.
+      else if (end !== 'done' && history.at(-1)?.role === 'user' && history.length > before + 1) history.push({ role: 'assistant', content: '(Stopped before finishing.)' })
       const name = provider.preset.assistantName
       if (end === 'refusal') current.error = `${name} declined to answer this.`
       if (end === 'max_tokens') current.error = 'The answer was cut off. Ask for something shorter.'

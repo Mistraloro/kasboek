@@ -266,13 +266,30 @@ export interface TransactionPage {
 }
 
 export type RuleField = 'counterparty' | 'description' | 'any'
+/** contains: anywhere in the text; word: as a whole word; starts: at the start of the text. */
+export type RuleMatch = 'contains' | 'word' | 'starts'
 
 export interface Rule {
   id: number
   field: RuleField
+  match: RuleMatch
   pattern: string
   categoryId: number
   categoryName: string
+  priority: number
+}
+
+/** What a rule would do, shown before it is created. */
+export interface RulePreview {
+  /** Transactions it matches. */
+  matches: number
+  /** Of those, how many have no category yet (these it would categorise). */
+  uncategorised: number
+  /** Of those, how many already sit in another category (left as they are). */
+  otherCategory: number
+  /** The rule was made a whole-word rule because the text is short. */
+  wholeWord: boolean
+  examples: string[]
 }
 
 export interface BudgetRow {
@@ -304,7 +321,8 @@ export interface AccountWithBalance extends Account {
   transactionCount: number
 }
 
-export type ImportRowStatus = 'ready' | 'duplicate' | 'problem' | 'skipped'
+/** possible_duplicate: looks like a transaction already in Kasboek (same amount, a few days apart, similar text); not imported unless included. */
+export type ImportRowStatus = 'ready' | 'duplicate' | 'possible_duplicate' | 'problem' | 'skipped'
 
 export interface ImportRow {
   index: number
@@ -323,7 +341,53 @@ export interface ImportRow {
   /** The person chose to include or skip this row. */
   decided: 'include' | 'skip' | null
   note: string | null
+  /** For a (possible) duplicate: the transaction already in Kasboek it matches. */
+  match: { id: number; bookingDate: string; counterpartyName: string | null; description: string } | null
 }
+
+/** What "Check" did to the open import, and what it proposes to change outside it. */
+export interface CheckSummary {
+  /** Who checked it (the assistant's name). */
+  by: string
+  /** Rows of this file already in Kasboek (not checked again). */
+  alreadyImported: number
+  total: number
+  /** Changes made to the rows of this import; each part can be undone. */
+  categorised: number
+  renamed: number
+  fixed: number
+  mappingChanged: boolean
+  /** Rules it suggests, checked against this file and what is already in Kasboek. */
+  rules: ProposedRule[]
+  /** Transactions already in Kasboek without a category that it would categorise. */
+  existing: ProposedCategorisation[]
+  /** Suggestions that were dropped, and why. */
+  dropped: string[]
+}
+
+export interface ProposedRule {
+  id: number
+  field: RuleField
+  match: RuleMatch
+  pattern: string
+  categoryId: number
+  categoryName: string
+  /** Rows of this import it categorises. */
+  rowsHere: number
+  /** Uncategorised transactions already in Kasboek it would categorise. */
+  existing: number
+}
+
+export interface ProposedCategorisation {
+  id: number
+  label: string
+  categoryId: number
+  categoryName: string
+  count: number
+  totalCents: number
+}
+
+export type CheckPart = 'categories' | 'names' | 'fixes' | 'all'
 
 export interface ImportColumns {
   bookingDate: number
@@ -364,8 +428,24 @@ export interface ImportPreview {
   sample: string[][]
   mapping: ImportMapping | null
   rows: ImportRow[]
-  stats: { total: number; ready: number; duplicates: number; problems: number; skipped: number; inCents: number; outCents: number; from: string | null; to: string | null }
+  stats: {
+    total: number
+    ready: number
+    duplicates: number
+    possibleDuplicates: number
+    problems: number
+    skipped: number
+    inCents: number
+    outCents: number
+    /** Period of the rows that will be imported. */
+    from: string | null
+    to: string | null
+    /** Period of the whole file. */
+    fileFrom: string | null
+    fileTo: string | null
+  }
   notes: string[]
+  check: CheckSummary | null
 }
 
 export interface ImportBatch {
@@ -392,4 +472,6 @@ export interface McpSetupStatus {
   /** null when the `claude` command wasn't found. */
   code: { path: string; installed: boolean } | null
   devBuild: boolean
+  /** Why the connection for Claude apps couldn't start, if it failed. */
+  bridgeError: string | null
 }

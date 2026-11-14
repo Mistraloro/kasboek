@@ -43,6 +43,7 @@ export function toOpenAi(system: string, messages: MessageParam[], opts: { toolN
   for (const m of messages) {
     if (!m.content) continue
     if (typeof m.content === 'string') {
+      if (m.role === 'user' && out.at(-1)?.role === 'tool') out.push({ role: 'assistant', content: '…' })
       out.push({ role: m.role, content: m.content } as OaMessage)
       continue
     }
@@ -61,7 +62,11 @@ export function toOpenAi(system: string, messages: MessageParam[], opts: { toolN
         out.push({ role: 'tool', tool_call_id: b.tool_use_id, content: b.is_error ? `Error: ${content}` : content, ...(opts.toolNames && name ? { name } : {}) })
       } else if (b.type === 'text') text.push(b.text)
     }
-    if (text.length) out.push({ role: 'user', content: text.join('\n') })
+    if (text.length) {
+      // Some providers (Mistral) refuse a user message straight after tool results.
+      if (out.at(-1)?.role === 'tool') out.push({ role: 'assistant', content: '…' })
+      out.push({ role: 'user', content: text.join('\n') })
+    }
   }
   return out
 }
@@ -87,17 +92,64 @@ async function failure(res: Response): Promise<ProviderError> {
   return new ProviderError(res.status, detail.slice(0, 300))
 }
 
-async function post(p: ActiveProvider, path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
-  let res: Response
-  try {
-    // No redirects: the API key must only ever go to the address the person entered.
-    res = await net.fetch(url(p, path), { method: 'POST', headers: headers(p), body: JSON.stringify(body), signal, redirect: 'error' })
-  } catch (err) {
-    if (signal?.aborted) throw err
-    throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
+/** How long one call may take before it counts as hanging. */
+const CHAT_TIMEOUT_MS = 10 * 60_000
+const MODELS_TIMEOUT_MS = 30_000
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504])
+const RETRIES = 2
+
+const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason)
+    const timer = setTimeout(resolve, ms)
+    signal?.addEventListener('abort', () => (clearTimeout(timer), reject(signal.reason)), { once: true })
+  })
+
+/** Seconds (or an HTTP date) in Retry-After, capped so the person isn't kept waiting long. */
+function retryDelay(res: Response | null, attempt: number): number {
+  const header = res?.headers.get('retry-after')
+  if (header) {
+    const secs = Number(header)
+    const ms = Number.isFinite(secs) ? secs * 1000 : Date.parse(header) - Date.now()
+    if (Number.isFinite(ms) && ms >= 0) return Math.min(ms, 20_000)
   }
-  if (!res.ok) throw await failure(res)
-  return res
+  return [1000, 3000][attempt] ?? 3000
+}
+
+/**
+ * One request with a time limit, retried twice on network errors and on 429/5xx answers. Retries
+ * only happen before any of the answer has arrived, so nothing is shown twice.
+ */
+async function request(p: ActiveProvider, path: string, init: { method?: string; body?: unknown }, signal: AbortSignal | undefined, timeoutMs: number): Promise<Response> {
+  const timeout = AbortSignal.timeout(timeoutMs)
+  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
+  for (let attempt = 0; ; attempt++) {
+    let res: Response | null = null
+    try {
+      // No redirects: the API key must only ever go to the address the person entered.
+      res = await net.fetch(url(p, path), {
+        method: init.method ?? 'GET',
+        headers: headers(p),
+        ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
+        signal: combined,
+        redirect: 'error'
+      })
+    } catch (err) {
+      if (signal?.aborted) throw err
+      if (timeout.aborted) throw new ProviderError(0, `no answer within ${Math.round(timeoutMs / 1000)} seconds`)
+      if (attempt >= RETRIES) throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
+    }
+    if (res?.ok) return res
+    if (res && (!RETRY_STATUS.has(res.status) || attempt >= RETRIES)) throw await failure(res)
+    await sleep(retryDelay(res, attempt), combined).catch((err: unknown) => {
+      if (signal?.aborted) throw err
+      throw new ProviderError(0, `no answer within ${Math.round(timeoutMs / 1000)} seconds`)
+    })
+  }
+}
+
+function post(p: ActiveProvider, path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+  return request(p, path, { method: 'POST', body }, signal, CHAT_TIMEOUT_MS)
 }
 
 /** Reads a server-sent-events stream of `data: {json}` lines. */
@@ -243,25 +295,34 @@ export async function chat(
  * provider supports it, and falls back to plain JSON mode (with the schema in the prompt).
  */
 export async function json(p: ActiveProvider, opts: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number; signal?: AbortSignal }): Promise<string> {
-  const base = { model: p.csvModel, max_tokens: opts.maxTokens }
-  let res: Response
-  try {
-    res = await post(p, '/chat/completions', {
-      ...base,
-      messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }],
-      response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }
-    }, opts.signal)
-  } catch (err) {
-    if (!(err instanceof ProviderError) || (err.status !== 400 && err.status !== 422) || opts.signal?.aborted) throw err
-    res = await post(p, '/chat/completions', {
-      ...base,
-      messages: [
-        { role: 'system', content: `${opts.system}\n\nAnswer with one JSON object only, matching this JSON schema:\n${JSON.stringify(opts.schema)}` },
-        { role: 'user', content: opts.user }
-      ],
-      response_format: { type: 'json_object' }
-    }, opts.signal)
+  const strict = { response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }, messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }] }
+  const loose = {
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: `${opts.system}\n\nAnswer with one JSON object only, matching this JSON schema:\n${JSON.stringify(opts.schema)}` },
+      { role: 'user', content: opts.user }
+    ]
   }
+  const rejected = (err: unknown): err is ProviderError => err instanceof ProviderError && (err.status === 400 || err.status === 422) && !opts.signal?.aborted
+  // A strict schema where the provider supports it, plain JSON mode otherwise; and a common output
+  // limit for models that allow less than asked for.
+  const attempts = [
+    { ...strict, max_tokens: opts.maxTokens },
+    { ...loose, max_tokens: opts.maxTokens },
+    { ...loose, max_tokens: Math.min(opts.maxTokens, 8192) }
+  ]
+  let res: Response | null = null
+  for (const [i, body] of attempts.entries()) {
+    try {
+      res = await post(p, '/chat/completions', { model: p.csvModel, ...body }, opts.signal)
+      break
+    } catch (err) {
+      if (!rejected(err) || i === attempts.length - 1) throw err
+      // Only a too-high output limit is worth the last attempt.
+      if (i === 1 && !/token/i.test(err.message)) throw err
+    }
+  }
+  if (!res) throw new ProviderError(0, 'no answer')
   const body = (await res.json()) as { choices?: { message?: { content?: unknown }; finish_reason?: string }[] }
   const choice = body.choices?.[0]
   if (choice?.finish_reason === 'length') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
@@ -270,17 +331,34 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
   return text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')
 }
 
-export async function listModels(p: ActiveProvider): Promise<string[]> {
-  let res: Response
-  try {
-    res = await net.fetch(url(p, '/models'), { headers: headers(p), redirect: 'error' })
-  } catch (err) {
-    throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
+interface ModelEntry {
+  id?: string
+  name?: string
+  deprecation?: string | null
+  capabilities?: { completion_chat?: boolean; function_calling?: boolean }
+  aliases?: string[]
+}
+
+/** Models that can chat with tools. Mistral also lists embedding, OCR and moderation models. */
+export function chatModels(body: { data?: ModelEntry[]; models?: ModelEntry[] }): string[] {
+  const groups = new Map<string, string[]>()
+  for (const e of body.data ?? body.models ?? []) {
+    const id = (e.id ?? e.name ?? '').replace(/^models\//, '')
+    if (!id || e.deprecation) continue
+    if (e.capabilities && !(e.capabilities.completion_chat && e.capabilities.function_calling)) continue
+    // Mistral lists one model under each of its names ("mistral-large-latest", "mistral-large-2411"):
+    // entries with the same set of names are one model.
+    const key = [id, ...(e.aliases ?? [])].sort().join('|')
+    groups.set(key, [...(groups.get(key) ?? []), id])
   }
-  if (!res.ok) throw await failure(res)
-  const body = (await res.json()) as { data?: { id?: string }[]; models?: { id?: string; name?: string }[] }
-  const ids = (body.data ?? body.models ?? []).map((m) => (m as { id?: string }).id ?? (m as { name?: string }).name ?? '').filter(Boolean)
-  return [...new Set(ids.map((id) => id.replace(/^models\//, '')))].sort()
+  // Per model, the name that follows new versions ("-latest") or else the first one listed.
+  const ids = [...groups.values()].map((names) => names.find((n) => n.endsWith('-latest')) ?? names[0]!)
+  return [...new Set(ids)].sort()
+}
+
+export async function listModels(p: ActiveProvider): Promise<string[]> {
+  const res = await request(p, '/models', {}, undefined, MODELS_TIMEOUT_MS)
+  return chatModels((await res.json()) as { data?: ModelEntry[]; models?: ModelEntry[] })
 }
 
 /** Plain-language errors for the person. */

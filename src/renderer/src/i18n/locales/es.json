@@ -118,7 +118,26 @@
       "counterparty": "Contraparte",
       "description": "Concepto",
       "any": "Contraparte o concepto"
-    }
+    },
+    "match": {
+      "contains": "contiene",
+      "word": "contiene la palabra",
+      "starts": "empieza por"
+    },
+    "matchOption": {
+      "contains": "En cualquier parte del texto",
+      "word": "Como palabra completa",
+      "starts": "Al principio"
+    },
+    "howMatch": "Cómo coincide",
+    "moveUp": "Subir",
+    "moveDown": "Bajar",
+    "rulesOrder": "Si coinciden varias reglas, gana la que está más arriba en esta lista.",
+    "reach_one": "Coincide con {{count}} movimiento, {{uncategorised}} sin categoría.",
+    "reach_other": "Coincide con {{count}} movimientos, {{uncategorised}} sin categoría.",
+    "reachOther_one": "{{count}} ya está en otra categoría y se queda allí.",
+    "reachOther_other": "{{count}} ya están en otra categoría y se quedan allí.",
+    "reachWord": "Los textos cortos solo coinciden como palabra completa."
   },
   "import": {
     "title": "Importar",
@@ -159,14 +178,16 @@
       "ready": "Lista",
       "duplicate": "Duplicada",
       "problem": "Problema",
-      "skipped": "Omitida"
+      "skipped": "Omitida",
+      "possible_duplicate": "Quizá importado"
     },
     "issue": {
       "date_invalid": "fecha ilegible",
       "amount_invalid": "importe ilegible",
       "amount_zero": "el importe es cero",
       "status_refused": "rechazado por el banco",
-      "currency_other": "otra moneda"
+      "currency_other": "otra moneda",
+      "possible_duplicate": "se parece a un movimiento que ya está en Kasboek"
     },
     "remember": "Recordar este formato",
     "statusCol": "Estado",
@@ -207,7 +228,36 @@
     "layoutRecognised": "Formato reconocido",
     "checkPrivacyLocal": "Envía las filas de este archivo a {{ai}} en este ordenador o esta red.",
     "stopCheck": "Detener",
-    "checkSlowHint": "Los archivos grandes pueden tardar unos minutos. Se detiene solo a los 4 minutos."
+    "checkSlowHint": "Los archivos grandes pueden tardar unos minutos. Se detiene solo a los 4 minutos.",
+    "discard": "Descartar",
+    "allKnown": "Todo este archivo ya está en Kasboek ({{from}} – {{to}}).",
+    "allKnownHint": "{{name}} aún puede clasificar los movimientos de esta cuenta que no tienen categoría.",
+    "categoriseExisting": "Clasificar con {{name}}",
+    "matches": "Ya en Kasboek: {{date}} · {{text}}",
+    "undoPart": "Deshacer",
+    "check": {
+      "title": "Lo que hizo {{name}}",
+      "undoAll": "Deshacer toda la revisión",
+      "already": "{{count}} de {{total}} filas ya estaban en Kasboek y no se revisaron de nuevo.",
+      "categorised_one": "Categoría puesta en {{count}} fila",
+      "categorised_other": "Categoría puesta en {{count}} filas",
+      "renamed_one": "Nombre o descripción más legible en {{count}} fila",
+      "renamed_other": "Nombre o descripción más legible en {{count}} filas",
+      "fixed_one": "{{count}} fila corregida, omitida o incluida",
+      "fixed_other": "{{count}} filas corregidas, omitidas o incluidas",
+      "mapping": "Cambió qué columnas se leen",
+      "nothingChanged": "No hacía falta cambiar nada en este archivo.",
+      "proposals": "Sugerencias (solo se aplican si las aceptas)",
+      "existingTitle": "Clasificar movimientos que ya están en Kasboek",
+      "count_one": "{{count}} movimiento",
+      "count_other": "{{count}} movimientos",
+      "rulesTitle": "Reglas, para que las próximas importaciones se clasifiquen solas",
+      "ruleReach": "{{here}} aquí · {{existing}} anteriores",
+      "apply": "Aplicar lo seleccionado",
+      "applied": "Se crearon {{rules}} regla(s) y se clasificaron {{count}} movimiento(s).",
+      "dropped_one": "{{count}} sugerencia descartada",
+      "dropped_other": "{{count}} sugerencias descartadas"
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -550,7 +600,13 @@
     "addedDesktop": "Añadido. Cierra Claude Desktop por completo (también desde el icono de la bandeja del sistema o la barra de menús) y vuelve a abrirlo. Kasboek aparece entonces en Ajustes → Developer y en el menú de herramientas de un chat nuevo, no en Connectors.",
     "removedDesktop": "Quitado de Claude Desktop. Reinícialo para aplicarlo.",
     "codeAdded": "Añadido a Claude Code. Abre una nueva sesión de Claude Code para usarlo.",
-    "removedCode": "Quitado de Claude Code."
+    "removedCode": "Quitado de Claude Code.",
+    "requestExpired": "Esta solicitud esperó demasiado y se rechazó. Claude puede volver a pedirla.",
+    "waiting_one": "{{count}} solicitud más en espera",
+    "waiting_other": "{{count}} solicitudes más en espera",
+    "close": "Cerrar",
+    "approveAll": "Aprobar las {{count}}",
+    "bridgeError": "La conexión para las apps de Claude no pudo iniciarse: {{error}}. Kasboek lo reintenta cada 30 segundos."
   },
   "fx": {
     "title": "Monedas",
@@ -610,7 +666,8 @@
     "modelsLoaded_one": "{{count}} modelo encontrado.",
     "modelsLoaded_other": "{{count}} modelos encontrados.",
     "note": "Elige un modelo que admita herramientas (function calling); los modelos locales pequeños pueden responder de forma menos fiable. Los cambios que propone el asistente siguen esperando tu aprobación.",
-    "theServer": "el servidor"
+    "theServer": "el servidor",
+    "sameAsChat": "Igual que el modelo del chat ({{model}})"
   },
   "accountKind": {
     "current": "Cuenta corriente",
