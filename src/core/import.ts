@@ -19,6 +19,7 @@ export interface RowOverride {
   bookingDate?: string
   amountCents?: number
   description?: string
+  counterpartyName?: string | null
   note?: string | null
 }
 
@@ -120,7 +121,7 @@ export function addNotes(id: string, notes: string[]): void {
   session(id).notes = notes
 }
 
-function buildRows(db: Db, s: Session): { clean: CleanRow; row: ImportRow }[] {
+function buildRows(db: Db, s: Session): { clean: CleanRow; row: ImportRow; fingerprint: string | null }[] {
   if (!s.mapping) return []
   const currency = (db.prepare('SELECT currency FROM accounts WHERE id = ?').get(s.accountId) as { currency: string }).currency
   const clean = normalizeRows(s.rows, s.mapping, currency)
@@ -129,12 +130,21 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; row: ImportRow }[] {
   const seen = new Map<string, number>()
   return clean.map((c) => {
     const o = s.overrides.get(c.index) ?? {}
-    const merged: CleanRow = { ...c, bookingDate: o.bookingDate ?? c.bookingDate, amountCents: o.amountCents ?? c.amountCents, description: o.description ?? c.description }
+    const merged: CleanRow = {
+      ...c,
+      bookingDate: o.bookingDate ?? c.bookingDate,
+      amountCents: o.amountCents ?? c.amountCents,
+      description: o.description ?? c.description,
+      counterpartyName: o.counterpartyName !== undefined ? o.counterpartyName : c.counterpartyName
+    }
+    // Duplicates are recognised on the bank's own text, so a cleaned-up name or description still
+    // matches the same transaction imported earlier (only corrected dates and amounts count).
+    let fp: string | null = null
     const issues = c.issues.filter((i) => !(i === 'date_invalid' && o.bookingDate) && !(i.startsWith('amount') && o.amountCents))
     let status: ImportRow['status'] = 'ready'
     if (issues.some((i) => i !== 'currency_other')) status = issues.includes('status_refused') ? 'skipped' : 'problem'
     else if (merged.bookingDate && merged.amountCents !== null) {
-      const fp = fingerprint({ accountId: s.accountId, bookingDate: merged.bookingDate, amountCents: merged.amountCents, counterpartyName: merged.counterpartyName, description: merged.description, bankReference: merged.bankReference })
+      fp = fingerprint({ accountId: s.accountId, bookingDate: merged.bookingDate, amountCents: merged.amountCents, counterpartyName: c.counterpartyName, description: c.description, bankReference: c.bankReference })
       // The n-th copy of a transaction counts as a duplicate only if the account already has n of them.
       const nth = (seen.get(fp) ?? 0) + 1
       seen.set(fp, nth)
@@ -142,9 +152,11 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; row: ImportRow }[] {
     }
     if (o.decided === 'skip') status = 'skipped'
     if (o.decided === 'include' && status !== 'problem') status = 'ready'
-    const rule = o.categoryId === undefined ? matchRule(db, merged, rules) : undefined
+    // Rules match the cleaned-up text or the bank's own.
+    const rule = o.categoryId === undefined ? (matchRule(db, merged, rules) ?? matchRule(db, c, rules)) : undefined
     return {
       clean: merged,
+      fingerprint: fp,
       row: {
         index: c.index,
         line: c.line,
@@ -227,7 +239,7 @@ export function commit(db: Db, id: string, saveProfile: boolean): { batchId: num
       db.prepare("INSERT INTO import_batches (account_id, file_name, csv_profile, row_count, status, committed_at) VALUES (?, ?, ?, ?, 'committed', strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
         .run(s.accountId, s.fileName, s.layout, ready.length).lastInsertRowid
     )
-    for (const { clean, row } of ready) {
+    for (const { clean, row, fingerprint: fp } of ready) {
       insertTransaction(db, {
         accountId: s.accountId,
         bookingDate: row.bookingDate!,
@@ -240,7 +252,8 @@ export function commit(db: Db, id: string, saveProfile: boolean): { batchId: num
         communication: row.communication,
         categoryId: row.categoryId,
         bankReference: clean.bankReference,
-        importBatchId: batchId
+        importBatchId: batchId,
+        fingerprint: fp ?? undefined
       })
     }
     if (saveProfile) {

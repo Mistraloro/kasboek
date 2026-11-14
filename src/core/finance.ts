@@ -124,6 +124,8 @@ export interface NewTx {
   notes?: string | null
   bankReference?: string | null
   importBatchId?: number | null
+  /** Set by imports: computed from the bank's own text, not the cleaned-up one. */
+  fingerprint?: string
 }
 
 export function insertTransaction(db: Db, t: NewTx): number {
@@ -148,7 +150,7 @@ export function insertTransaction(db: Db, t: NewTx): number {
       t.notes ?? null,
       t.importBatchId ?? null,
       t.bankReference ?? null,
-      fingerprint(t)
+      t.fingerprint ?? fingerprint(t)
     )
   return Number(r.lastInsertRowid)
 }

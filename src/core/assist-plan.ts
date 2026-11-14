@@ -35,12 +35,13 @@ const FixPart = z.object({
   description: z.string().nullable(),
   reason: z.string()
 })
-const CategoryPart = z.object({ group: z.number().int(), categoryId: z.number().int() })
+/** One answer per group of similar transactions: its category and a readable name and description. */
+const GroupPart = z.object({ group: z.number().int(), categoryId: z.number().int().nullable(), name: z.string().nullable(), description: z.string().nullable() })
 /** What the model must return (also sent as the JSON schema). */
 export const Plan = z.object({
   mapping: MappingPart.nullable(),
   fixes: z.array(FixPart),
-  categories: z.array(CategoryPart),
+  groups: z.array(GroupPart),
   notes: z.array(z.string())
 })
 export type Plan = z.infer<typeof Plan>
@@ -66,10 +67,11 @@ export function groupKey(r: Pick<Row, 'counterpartyName' | 'description' | 'amou
   return `${(r.amountCents ?? 0) < 0 ? 'out' : 'in'}:${text}`
 }
 
-export function uncategorisedGroups(rows: Row[]): { key: string; sign: 'in' | 'out'; example: Row; rows: Row[] }[] {
+/** Ready rows in groups of similar transactions, the biggest first. */
+export function rowGroups(rows: Row[]): { key: string; sign: 'in' | 'out'; example: Row; rows: Row[] }[] {
   const map = new Map<string, { key: string; sign: 'in' | 'out'; example: Row; rows: Row[] }>()
   for (const r of rows) {
-    if (r.status !== 'ready' || r.categoryId !== null) continue
+    if (r.status !== 'ready') continue
     const key = groupKey(r)
     let g = map.get(key)
     if (!g) map.set(key, (g = { key, sign: (r.amountCents ?? 0) < 0 ? 'out' : 'in', example: r, rows: [] }))
@@ -108,10 +110,10 @@ export function parsePlan(text: string, name: string): Plan {
   const plan: Plan = {
     mapping: mapping && mapping.success ? mapping.data : null,
     fixes: keep(FixPart, list(o['fixes'])),
-    categories: keep(CategoryPart, list(o['categories'])),
+    groups: keep(GroupPart, list(o['groups']).map((g) => (g && typeof g === 'object' ? { categoryId: null, name: null, description: null, ...g } : g))),
     notes: list(o['notes']).filter((n): n is string => typeof n === 'string')
   }
-  if (!plan.fixes.length && !plan.categories.length && !plan.notes.length && !plan.mapping)
+  if (!plan.fixes.length && !plan.groups.length && !plan.notes.length && !plan.mapping)
     throw new AppError('assistant.bad_plan', `${name}’s answer couldn’t be read. Try again, or try another model.`)
   return plan
 }
