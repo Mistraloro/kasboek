@@ -248,7 +248,9 @@
     },
     "privacyLocal": "{{ai}} draait op deze computer of je netwerk: je berichten en gegevens gaan alleen daarheen.",
     "thinkingLive": "Denkt na…",
-    "thinkingShown": "Gedachtegang"
+    "thinkingShown": "Gedachtegang",
+    "model": "Model",
+    "effortOption": "Inspanning: {{level}}"
   },
   "settings": {
     "title": "Instellingen",

@@ -248,7 +248,9 @@
     },
     "privacyLocal": "{{ai}} runs on this computer or your network: your messages and data are sent only there.",
     "thinkingLive": "Thinking…",
-    "thinkingShown": "Thinking"
+    "thinkingShown": "Thinking",
+    "model": "Model",
+    "effortOption": "{{level}} effort"
   },
   "settings": {
     "title": "Settings",

@@ -248,7 +248,9 @@
     },
     "privacyLocal": "{{ai}} fonctionne sur cet ordinateur ou votre réseau : vos messages et données ne vont que là.",
     "thinkingLive": "Réflexion…",
-    "thinkingShown": "Réflexion"
+    "thinkingShown": "Réflexion",
+    "model": "Modèle",
+    "effortOption": "Effort : {{level}}"
   },
   "settings": {
     "title": "Réglages",

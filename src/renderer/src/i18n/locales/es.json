@@ -248,7 +248,9 @@
     },
     "privacyLocal": "{{ai}} funciona en este ordenador o en tu red: tus mensajes y datos solo van allí.",
     "thinkingLive": "Pensando…",
-    "thinkingShown": "Razonamiento"
+    "thinkingShown": "Razonamiento",
+    "model": "Modelo",
+    "effortOption": "Esfuerzo: {{level}}"
   },
   "settings": {
     "title": "Ajustes",

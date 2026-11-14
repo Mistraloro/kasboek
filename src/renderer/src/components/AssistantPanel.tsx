@@ -1,7 +1,8 @@
 import { ArrowUp, Check, ChevronRight, RotateCcw, Sparkles, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AssistantStatus, ChatMessage } from '@shared/types'
+import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatMessage, type Effort, type Settings } from '@shared/types'
+import { PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import type { Page } from '../App'
 import { call } from '../lib/api'
 import { setAiName } from '../i18n'
@@ -39,6 +40,53 @@ function Rich({ text }: { text: string }) {
           return <ul key={i} className="list-disc space-y-0.5 pl-4">{lines.map((l, j) => <li key={j}>{inline(l.replace(/^\s*[-•*] /, ''), j)}</li>)}</ul>
         return <p key={i}>{lines.flatMap((l, j) => (j ? [<br key={`br${j}`} />, ...inline(l, j)] : inline(l, j)))}</p>
       })}
+    </div>
+  )
+}
+
+const EFFORTS: Effort[] = ['low', 'medium', 'high']
+
+/**
+ * The chat's model (and, for Claude, its effort), right under the message box. The same settings
+ * as Settings → Assistant → Chat; the CSV check keeps its own.
+ */
+function ModelPicker({ provider, disabled }: { provider: ProviderId; disabled: boolean }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const [s, setS] = useState<Settings | null>(null)
+  const [models, setModels] = useState<string[]>([])
+  useEffect(() => {
+    const load = (): void => void call('settings.get').then(setS, () => undefined)
+    load()
+    return window.kasboek.onEvent((e) => e.type === 'data.changed' && load())
+  }, [])
+  // Other providers: the models they offer (quietly skipped when the list can't be loaded).
+  useEffect(() => {
+    if (provider === 'anthropic') return
+    void call('assistant.models', {}).then(setModels, () => setModels([]))
+  }, [provider])
+  if (!s) return null
+  const configure = (patch: Parameters<typeof call<'assistant.configure'>>[1]): void =>
+    void call('assistant.configure', patch).then(setS, (e) => toast(errText(e), 'error'))
+  const small = 'h-7 rounded-md border-0 bg-transparent px-1.5 text-xs text-muted hover:bg-surface-2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50'
+  if (provider === 'anthropic')
+    return (
+      <div className="mt-1.5 flex min-w-0 items-center gap-1">
+        <select className={cx(small, 'min-w-0 flex-1 truncate')} disabled={disabled} aria-label={t('assistant.model')} value={s.chatModel} onChange={(e) => configure({ chatModel: e.target.value as AssistantModel })}>
+          {ASSISTANT_MODELS.map((m) => <option key={m} value={m}>{t(`claude.model.${m}`)}</option>)}
+        </select>
+        <select className={cx(small, 'shrink-0')} disabled={disabled} aria-label={t('claude.effortLabel')} value={s.chatEffort} onChange={(e) => configure({ chatEffort: e.target.value as Effort })}>
+          {EFFORTS.map((x) => <option key={x} value={x}>{t('assistant.effortOption', { level: t(`claude.effort.${x}`) })}</option>)}
+        </select>
+      </div>
+    )
+  const options = [...new Set([s.aiChatModel, ...models, ...PROVIDERS[provider].suggestedModels].filter(Boolean))]
+  if (!options.length) return null
+  return (
+    <div className="mt-1.5 flex min-w-0 items-center gap-1">
+      <select className={cx(small, 'min-w-0 max-w-full truncate')} disabled={disabled} aria-label={t('assistant.model')} value={s.aiChatModel} onChange={(e) => configure({ aiChatModel: e.target.value })}>
+        {options.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
     </div>
   )
 }
@@ -162,6 +210,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
                 <button type="submit" aria-label={t('assistant.send')} disabled={!text.trim()} className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg disabled:opacity-40"><ArrowUp size={15} /></button>
               )}
             </div>
+            <ModelPicker provider={status.provider} disabled={status.busy} />
           </form>
         </>
       )}

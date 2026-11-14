@@ -248,7 +248,9 @@
     },
     "privacyLocal": "{{ai}} läuft auf diesem Computer oder in deinem Netzwerk: Deine Nachrichten und Daten gehen nur dorthin.",
     "thinkingLive": "Denkt nach…",
-    "thinkingShown": "Gedankengang"
+    "thinkingShown": "Gedankengang",
+    "model": "Modell",
+    "effortOption": "Aufwand: {{level}}"
   },
   "settings": {
     "title": "Einstellungen",
