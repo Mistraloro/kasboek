@@ -18,7 +18,7 @@ interface OaTool {
 type OaMessage =
   | { role: 'system' | 'user'; content: string }
   | { role: 'assistant'; content: string | null; tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[] }
-  | { role: 'tool'; tool_call_id: string; content: string }
+  | { role: 'tool'; tool_call_id: string; content: string; name?: string }
 
 /** A streamed tool call whose arguments weren't valid JSON; the turn may be retried. */
 export class ToolArgumentsError extends Error {}
@@ -37,8 +37,9 @@ const textOf = (content: MessageParam['content'] | undefined): string =>
   typeof content === 'string' ? content : (content ?? []).map((b) => (b.type === 'text' ? b.text : '')).join('')
 
 /** Anthropic-shaped history → OpenAI messages. */
-export function toOpenAi(system: string, messages: MessageParam[]): OaMessage[] {
+export function toOpenAi(system: string, messages: MessageParam[], opts: { toolNames?: boolean } = {}): OaMessage[] {
   const out: OaMessage[] = [{ role: 'system', content: system }]
+  const names = new Map<string, string>()
   for (const m of messages) {
     if (!m.content) continue
     if (typeof m.content === 'string') {
@@ -47,14 +48,17 @@ export function toOpenAi(system: string, messages: MessageParam[]): OaMessage[] 
     }
     if (m.role === 'assistant') {
       const calls = m.content.flatMap((b) => (b.type === 'tool_use' ? [{ id: b.id, type: 'function' as const, function: { name: b.name, arguments: JSON.stringify(b.input ?? {}) } }] : []))
-      out.push({ role: 'assistant', content: textOf(m.content) || null, ...(calls.length ? { tool_calls: calls } : {}) })
+      for (const c of calls) names.set(c.id, c.function.name)
+      // Empty text rather than null next to tool calls: some providers (Mistral) refuse null.
+      out.push({ role: 'assistant', content: textOf(m.content) || (calls.length ? '' : null), ...(calls.length ? { tool_calls: calls } : {}) })
       continue
     }
     const text: string[] = []
     for (const b of m.content) {
       if (b.type === 'tool_result') {
         const content = typeof b.content === 'string' ? b.content : (b.content ?? []).map((c) => (c.type === 'text' ? c.text : '')).join('')
-        out.push({ role: 'tool', tool_call_id: b.tool_use_id, content: b.is_error ? `Error: ${content}` : content })
+        const name = names.get(b.tool_use_id)
+        out.push({ role: 'tool', tool_call_id: b.tool_use_id, content: b.is_error ? `Error: ${content}` : content, ...(opts.toolNames && name ? { name } : {}) })
       } else if (b.type === 'text') text.push(b.text)
     }
     if (text.length) out.push({ role: 'user', content: text.join('\n') })
@@ -149,6 +153,9 @@ export function contentText(content: unknown): string {
     .join('')
 }
 
+/** A call id when the provider sent none: 9 letters and digits, a form every provider accepts. */
+const callId = (i: number): string => `k${Date.now().toString(36).slice(-6)}${i.toString(36).padStart(2, '0')}`.slice(0, 9)
+
 /** JSON schema without the `$schema` marker, which some providers reject. */
 function plainSchema(schema: unknown): unknown {
   if (!schema || typeof schema !== 'object') return { type: 'object', properties: {} }
@@ -164,7 +171,7 @@ export async function chat(
   signal: AbortSignal
 ): Promise<Message> {
   const tools: OaTool[] = opts.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: plainSchema(t.input_schema) } }))
-  const res = await post(p, '/chat/completions', { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages), tools, stream: true, max_tokens: opts.maxTokens }, signal)
+  const res = await post(p, '/chat/completions', { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages, { toolNames: p.preset.id === 'mistral' }), tools, stream: true, max_tokens: opts.maxTokens }, signal)
   let text = ''
   let finish: string | null = null
   const calls: { id: string; name: string; args: string }[] = []
@@ -199,7 +206,7 @@ export async function chat(
       if (finish === 'length') break
       throw new ToolArgumentsError(`The model sent unreadable arguments for ${c.name}.`)
     }
-    content.push({ type: 'tool_use', id: c.id || `call_${i}`, name: c.name, input } as Message['content'][number])
+    content.push({ type: 'tool_use', id: c.id || callId(i), name: c.name, input } as Message['content'][number])
   }
   const stop = finish === 'length' ? 'max_tokens' : finish === 'content_filter' ? 'refusal' : calls.length ? 'tool_use' : 'end_turn'
   return { content, stop_reason: stop } as unknown as Message
