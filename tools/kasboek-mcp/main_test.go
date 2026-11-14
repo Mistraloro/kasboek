@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,24 +12,20 @@ import (
 	"time"
 )
 
-// fakeApp imitates Kasboek's bridge on a Unix socket.
+// fakeApp imitates Kasboek's bridge: a named pipe on Windows, a Unix socket elsewhere (see
+// fake_*_test.go), so the helper's real way of connecting is what gets tested.
 func fakeApp(t *testing.T, dir string) {
 	t.Helper()
-	sock := filepath.Join(os.TempDir(), "kb-mcp-test-"+time.Now().Format("150405.000000")+".sock")
-	ln, err := net.Listen("unix", sock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { ln.Close(); os.Remove(sock) })
-	disc, _ := json.Marshal(discovery{Socket: sock, Token: "secret"})
+	ln := listen(t)
+	disc, _ := json.Marshal(discovery{Socket: ln.addr, Token: "secret"})
 	os.WriteFile(filepath.Join(dir, "mcp-bridge.json"), disc, 0o600)
 	go func() {
 		for {
-			c, err := ln.Accept()
+			c, err := ln.accept()
 			if err != nil {
 				return
 			}
-			go func(c net.Conn) {
+			go func(c io.ReadWriteCloser) {
 				defer c.Close()
 				line, _ := bufio.NewReader(c).ReadBytes('\n')
 				var req map[string]any
