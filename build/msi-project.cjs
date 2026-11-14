@@ -7,9 +7,9 @@ const { readFile, writeFile } = require('node:fs/promises')
 const path = require('node:path')
 
 const art = (name) => path.resolve(__dirname, 'installer', name)
-// Fixed GUIDs: a component must keep its GUID across versions so upgrades replace it cleanly.
-const DESKTOP_GUID = '3b9a1f0e-6c2d-4e7a-9d41-5f8c2a7b6e10'
-const STARTMENU_GUID = '8d4e2c71-0b5a-4f39-a6e2-1c7d9b3f4a52'
+// Fixed GUIDs (uppercase, as WiX requires): a component keeps its GUID across versions so upgrades replace it cleanly.
+const DESKTOP_GUID = '3B9A1F0E-6C2D-4E7A-9D41-5F8C2A7B6E10'
+const STARTMENU_GUID = '8D4E2C71-0B5A-4F39-A6E2-1C7D9B3F4A52'
 
 function replaceOnce(text, find, replace, what) {
   if (typeof find === 'string' ? !text.includes(find) : !find.test(text)) throw new Error(`msi-project: couldn't find ${what}`)
