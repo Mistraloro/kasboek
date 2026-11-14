@@ -205,7 +205,9 @@
     "claudeOff": "Configure um assistente nas Definições para rever ficheiros.",
     "anyBank": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação.",
     "layoutRecognised": "Formato reconhecido",
-    "checkPrivacyLocal": "Envia as linhas deste ficheiro para {{ai}} neste computador ou nesta rede."
+    "checkPrivacyLocal": "Envia as linhas deste ficheiro para {{ai}} neste computador ou nesta rede.",
+    "stopCheck": "Parar",
+    "checkSlowHint": "Ficheiros grandes podem demorar alguns minutos. Para sozinho ao fim de 4 minutos."
   },
   "assistant": {
     "title": "{{ai}}",

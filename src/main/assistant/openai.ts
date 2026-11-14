@@ -191,7 +191,7 @@ export async function chat(
  * One call that must answer with JSON matching `schema`. Uses a strict JSON schema where the
  * provider supports it, and falls back to plain JSON mode (with the schema in the prompt).
  */
-export async function json(p: ActiveProvider, opts: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number }): Promise<string> {
+export async function json(p: ActiveProvider, opts: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number; signal?: AbortSignal }): Promise<string> {
   const base = { model: p.csvModel, max_tokens: opts.maxTokens }
   let res: Response
   try {
@@ -199,9 +199,9 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
       ...base,
       messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }],
       response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }
-    })
+    }, opts.signal)
   } catch (err) {
-    if (!(err instanceof ProviderError) || (err.status !== 400 && err.status !== 422)) throw err
+    if (!(err instanceof ProviderError) || (err.status !== 400 && err.status !== 422) || opts.signal?.aborted) throw err
     res = await post(p, '/chat/completions', {
       ...base,
       messages: [
@@ -209,7 +209,7 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
         { role: 'user', content: opts.user }
       ],
       response_format: { type: 'json_object' }
-    })
+    }, opts.signal)
   }
   const body = (await res.json()) as { choices?: { message?: { content?: string | null }; finish_reason?: string }[] }
   const choice = body.choices?.[0]

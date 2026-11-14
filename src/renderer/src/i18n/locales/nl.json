@@ -205,7 +205,9 @@
     "claudeOff": "Stel in Instellingen een assistent in om bestanden te laten nakijken.",
     "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import.",
     "layoutRecognised": "Indeling herkend",
-    "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk."
+    "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk.",
+    "stopCheck": "Stoppen",
+    "checkSlowHint": "Grote bestanden kunnen enkele minuten duren. Na 4 minuten stopt het vanzelf."
   },
   "assistant": {
     "title": "{{ai}}",

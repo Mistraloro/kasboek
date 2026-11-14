@@ -22,7 +22,7 @@ import { checkKey } from './assistant/claude'
 import { activeProvider, keyName } from './assistant/provider'
 import { checkProviderKey, listProviderModels } from './assistant/models'
 import { PROVIDERS } from '@shared/ai-providers'
-import { assistImport } from './assistant/csv'
+import { assistImport, cancelAssist } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { helperPath } from './mcp/channel'
 import * as mcpSetup from './mcp/setup'
@@ -282,6 +282,14 @@ const desktopOps: OpTable = {
     }
   },
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'import.assistCancel': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { sessionId }) => {
+      cancelAssist(sessionId)
+      return { ok: true as const }
+    }
+  },
   'mcp.setupStatus': { mutates: false, assistant: false, handler: () => mcpSetup.setupStatus() },
   'mcp.desktopAdd': { mutates: false, assistant: false, handler: () => mcpSetup.addToDesktop() },
   'mcp.desktopRemove': { mutates: false, assistant: false, handler: () => mcpSetup.removeFromDesktop() },

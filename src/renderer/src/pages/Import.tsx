@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, RotateCcw, Sparkles, Undo2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, RotateCcw, Sparkles, Square, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
@@ -6,7 +6,7 @@ import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
-import { call, useOp } from '../lib/api'
+import { ApiError, call, useOp } from '../lib/api'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
@@ -73,7 +73,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
                   .then((next) => {
                     setPreview(next)
                     toast(t('import.checked'))
-                  }, (e) => toast(errText(e), 'error'))
+                  }, (e) => (e instanceof ApiError && e.code === 'assistant.cancelled' ? undefined : toast(errText(e), 'error')))
                   .finally(() => setAssisting(false))
               }
             : undefined
@@ -144,6 +144,8 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   )
 }
 
+const clock = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
 const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
 
 function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: { batchId: number; imported: number }) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
@@ -152,6 +154,15 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
   const { money, fmt } = useSettings()
   const assistant = useAssistant()
   const categories = useOp('categories.list')
+  // Seconds since the check started, so a slow answer visibly isn't stuck.
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!assisting) return
+    setElapsed(0)
+    const started = Date.now()
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [assisting])
   const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : 'all')
   const [limit, setLimit] = useState(300)
   const [mappingOpen, setMappingOpen] = useState(!preview.mapping)
@@ -196,9 +207,16 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           <span className="num">{t('transactions.out')} <span className="font-medium">{money(s.outCents, preview.currency)}</span></span>
           <span className="ml-auto flex items-center gap-2">
             {onAssist ? (
-              <Button size="sm" variant="primary" icon={<Sparkles size={14} />} disabled={assisting} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview)}>
-                {assisting ? t('import.checking') : t('import.checkWithClaude')}
-              </Button>
+              assisting ? (
+                <>
+                  <span className="text-xs text-muted" title={t('import.checkSlowHint')}>{t('import.checking')} <span className="num">{clock(elapsed)}</span></span>
+                  <Button size="sm" icon={<Square size={12} />} onClick={() => void call('import.assistCancel', { sessionId: preview.sessionId })}>{t('import.stopCheck')}</Button>
+                </>
+              ) : (
+                <Button size="sm" variant="primary" icon={<Sparkles size={14} />} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview)}>
+                  {t('import.checkWithClaude')}
+                </Button>
+              )
             ) : (
               <span className="text-xs text-muted">{t('import.claudeOff')}</span>
             )}

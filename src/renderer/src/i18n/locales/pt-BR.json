@@ -53,7 +53,8 @@
     "checkPrivacy": "Envia as linhas deste arquivo para {{aiCompany}}.",
     "claudeOff": "Configure um assistente nas Configurações para revisar arquivos.",
     "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação.",
-    "checkPrivacyLocal": "Envia as linhas deste arquivo para {{ai}} neste computador ou nesta rede."
+    "checkPrivacyLocal": "Envia as linhas deste arquivo para {{ai}} neste computador ou nesta rede.",
+    "checkSlowHint": "Arquivos grandes podem demorar alguns minutos. Para sozinho ao fim de 4 minutos."
   },
   "assistant": {
     "example3": "Revise este CSV do meu banco e importe-o.",

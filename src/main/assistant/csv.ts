@@ -150,7 +150,35 @@ function applyPlan(db: Db, preview: ImportPreview, plan: Plan): ImportPreview {
   return imp.preview(db, preview.sessionId)
 }
 
+/** A check that runs too long is stopped, so the import screen never waits forever. */
+const TIME_LIMIT_MS = 4 * 60_000
+const running = new Map<string, AbortController>()
+
+/** Stops a running check for this import (the "Stop" button). */
+export function cancelAssist(sessionId: string): void {
+  running.get(sessionId)?.abort('cancelled')
+}
+
 export async function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
+  running.get(sessionId)?.abort('cancelled')
+  const controller = new AbortController()
+  running.set(sessionId, controller)
+  const timer = setTimeout(() => controller.abort('timeout'), TIME_LIMIT_MS)
+  try {
+    return await check(db, sessionId, controller.signal)
+  } catch (err) {
+    if (!controller.signal.aborted) throw err
+    const name = activeProvider(db).preset.assistantName
+    if (controller.signal.reason === 'timeout')
+      throw new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
+    throw new AppError('assistant.cancelled', 'Check stopped.')
+  } finally {
+    clearTimeout(timer)
+    if (running.get(sessionId) === controller) running.delete(sessionId)
+  }
+}
+
+async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<ImportPreview> {
   const preview = imp.preview(db, sessionId)
   const settings = getSettings(db)
   const provider = activeProvider(db)
@@ -159,8 +187,9 @@ export async function assistImport(db: Db, sessionId: string): Promise<ImportPre
   let text = ''
   if (provider.preset.id !== 'anthropic') {
     try {
-      text = await openai.json(provider, { system: INSTRUCTIONS, user: buildContext(db, preview), schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 16000 })
+      text = await openai.json(provider, { system: INSTRUCTIONS, user: buildContext(db, preview), schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 16000, signal })
     } catch (err) {
+      if (signal.aborted) throw err
       throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
     }
     return applyPlan(db, preview, parsePlan(text, name))
@@ -173,12 +202,13 @@ export async function assistImport(db: Db, sessionId: string): Promise<ImportPre
       output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
       system: INSTRUCTIONS,
       messages: [{ role: 'user', content: buildContext(db, preview) }]
-    })
+    }, { signal })
     const message = await stream.finalMessage()
     if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
     if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
     for (const b of message.content) if (b.type === 'text') text += b.text
   } catch (err) {
+    if (signal.aborted) throw err
     throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
   }
   return applyPlan(db, preview, parsePlan(text, name))

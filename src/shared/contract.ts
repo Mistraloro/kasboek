@@ -159,6 +159,7 @@ export const contract = {
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },
   'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'import.assistCancel': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
   'mcp.setupStatus': { input: empty, output: out<McpSetupStatus>() },
   'mcp.desktopAdd': { input: empty, output: out<{ path: string; backup: string | null }>() },
   'mcp.desktopRemove': { input: empty, output: out<{ path: string; backup: string | null }>() },

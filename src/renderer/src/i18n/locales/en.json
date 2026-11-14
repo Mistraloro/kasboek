@@ -205,7 +205,9 @@
     "claudeOff": "Set up an assistant in Settings to have it check files.",
     "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import.",
     "layoutRecognised": "Layout recognised",
-    "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network."
+    "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network.",
+    "stopCheck": "Stop",
+    "checkSlowHint": "Large files can take a few minutes. It stops by itself after 4 minutes."
   },
   "assistant": {
     "title": "{{ai}}",

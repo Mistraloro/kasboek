@@ -205,7 +205,9 @@
     "claudeOff": "Configurez un assistant dans les Réglages pour faire vérifier les fichiers.",
     "anyBank": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import.",
     "layoutRecognised": "Mise en page reconnue",
-    "checkPrivacyLocal": "Envoie les lignes de ce fichier à {{ai}} sur cet ordinateur ou ce réseau."
+    "checkPrivacyLocal": "Envoie les lignes de ce fichier à {{ai}} sur cet ordinateur ou ce réseau.",
+    "stopCheck": "Arrêter",
+    "checkSlowHint": "Les gros fichiers peuvent prendre quelques minutes. La vérification s’arrête d’elle-même après 4 minutes."
   },
   "assistant": {
     "title": "{{ai}}",

@@ -205,7 +205,9 @@
     "claudeOff": "Richte in den Einstellungen einen Assistenten ein, um Dateien prüfen zu lassen.",
     "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import.",
     "layoutRecognised": "Format erkannt",
-    "checkPrivacyLocal": "Sendet die Zeilen dieser Datei an {{ai}} auf diesem Computer oder in diesem Netzwerk."
+    "checkPrivacyLocal": "Sendet die Zeilen dieser Datei an {{ai}} auf diesem Computer oder in diesem Netzwerk.",
+    "stopCheck": "Stopp",
+    "checkSlowHint": "Große Dateien können ein paar Minuten dauern. Nach 4 Minuten wird automatisch abgebrochen."
   },
   "assistant": {
     "title": "{{ai}}",
