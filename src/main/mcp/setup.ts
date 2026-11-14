@@ -3,13 +3,13 @@
  * own `claude mcp` command. Only on a button press; the file is backed up before it changes.
  */
 import { execFile } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { AppError } from '@core/errors'
-import { desktopEntryState, withKasboek, withoutKasboek, type ServerEntry } from '@core/mcp-config'
+import { claudeDesktopConfigPaths, desktopEntryState, withKasboek, withoutKasboek, type ServerEntry } from '@core/mcp-config'
 import type { McpSetupStatus } from '@shared/types'
 import { paths } from '../paths'
 import { stamp } from '../transfer/service'
@@ -19,34 +19,9 @@ export function serverEntry(): ServerEntry {
   return { command: helperPath(), args: ['--data-dir', paths.dataDir] }
 }
 
-const CONFIG = 'claude_desktop_config.json'
-
-/**
- * Claude Desktop's config files. On Windows, Claude Desktop installed as an app package (MSIX)
- * reads its own private copy of AppData (…\Packages\Claude_…\LocalCache\Roaming\Claude) once
- * that exists, so a change to the normal %APPDATA% file would go unseen; every copy that exists is
- * updated. The first path is the one Claude Desktop reads. Linux has no official Claude Desktop;
- * offered only if the folder exists.
- */
+/** Claude Desktop's config files; the first is the one it reads (see core/mcp-config). */
 function desktopConfigPaths(): string[] {
-  if (process.platform === 'win32') {
-    const roaming = join(process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'), 'Claude', CONFIG)
-    const packages = join(process.env['LOCALAPPDATA'] ?? join(homedir(), 'AppData', 'Local'), 'Packages')
-    let packaged: string[] = []
-    try {
-      packaged = readdirSync(packages)
-        .filter((d) => /^(Anthropic\.)?Claude_/i.test(d))
-        .map((d) => join(packages, d, 'LocalCache', 'Roaming', 'Claude'))
-        .filter((dir) => existsSync(dir))
-        .map((dir) => join(dir, CONFIG))
-    } catch {
-      // No packaged apps folder.
-    }
-    return [...packaged, roaming]
-  }
-  if (process.platform === 'darwin') return [join(homedir(), 'Library', 'Application Support', 'Claude', CONFIG)]
-  const dir = join(process.env['XDG_CONFIG_HOME'] ?? join(homedir(), '.config'), 'Claude')
-  return existsSync(dir) ? [join(dir, CONFIG)] : []
+  return claudeDesktopConfigPaths(process.platform, process.env, homedir())
 }
 
 async function readConfig(path: string): Promise<string | null> {

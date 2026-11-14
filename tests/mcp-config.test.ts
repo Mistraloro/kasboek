@@ -35,3 +35,26 @@ describe('Claude Desktop config', () => {
     expect(removed.mcpServers.rea).toBeTruthy()
   })
 })
+
+describe('finding Claude Desktop config files on Windows', () => {
+  it('finds the Claude-Data and app-package copies before the old AppData file', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const { claudeDesktopConfigPaths } = await import('@core/mcp-config')
+    const home = mkdtempSync(join(tmpdir(), 'kb-cd-'))
+    const local = join(home, 'AppData', 'Local')
+    const env = { LOCALAPPDATA: local, APPDATA: join(home, 'AppData', 'Roaming') }
+    // Only the old location: that one, even if it doesn't exist yet.
+    expect(claudeDesktopConfigPaths('win32', env, home)).toEqual([join(home, 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json')])
+    const data = join(local, 'Claude-Data', 'claude_pzs8sxrjxfjjc')
+    mkdirSync(data, { recursive: true })
+    writeFileSync(join(data, 'claude_desktop_config.json'), '{}')
+    const pkg = join(local, 'Packages', 'Claude_pzs8sxrjxfjjc', 'LocalCache', 'Roaming', 'Claude')
+    mkdirSync(pkg, { recursive: true })
+    mkdirSync(join(local, 'Claude-Data', 'other-app'), { recursive: true })
+    const paths = claudeDesktopConfigPaths('win32', env, home)
+    expect(paths[0]).toBe(join(data, 'claude_desktop_config.json'))
+    expect(paths).toHaveLength(2) // the package folder has no config file, so it isn't touched
+  })
+})
