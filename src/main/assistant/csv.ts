@@ -192,5 +192,3 @@ function parsePlan(text: string, name: string): Plan {
   }
 }
 
-/** Exposed for tests. */
-export const _internal = { applyPlan, Plan }

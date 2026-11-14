@@ -102,9 +102,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           find dist -type f | sort
-          # Creates the tag on the built commit if it doesn't exist yet; fails if the release exists.
-          gh release create "$TAG" $(find dist -type f) \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Kasboek ${TAG#v}" \
-            --notes-file .github/release-notes.md
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Made by hand (e.g. "Draft a new release" on GitHub): add the installers to it.
+            gh release upload "$TAG" $(find dist -type f) --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            # Creates the tag on the built commit. GitHub refuses this from a workflow when that
+            # commit changes workflow files not yet on the default branch; then create the release
+            # (and its tag) on GitHub first and run this again.
+            gh release create "$TAG" $(find dist -type f) \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Kasboek ${TAG#v}" \
+              --notes-file .github/release-notes.md
+          fi

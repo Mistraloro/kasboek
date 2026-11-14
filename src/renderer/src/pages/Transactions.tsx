@@ -20,11 +20,11 @@ export interface TxFilter {
   search?: string
 }
 
-export function CategorySelect({ value, categories, onChange, className, allowNone = true, label }: { value: number | null; categories: Category[]; onChange: (id: number | null) => void; className?: string; allowNone?: boolean; label: string }) {
+export function CategorySelect({ value, categories, onChange, className, allowNone = true, label, id }: { value: number | null; categories: Category[]; onChange: (id: number | null) => void; className?: string; allowNone?: boolean; label: string; id?: string }) {
   const { t } = useTranslation()
   const groups: Category['kind'][] = ['expense', 'income', 'transfer']
   return (
-    <Select aria-label={label} className={className} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+    <Select id={id} aria-label={label} className={className} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
       {allowNone && <option value="">{t('transactions.uncategorized')}</option>}
       {groups.map((g) => (
         <optgroup key={g} label={t(`categories.kind.${g}`)}>
@@ -270,7 +270,7 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
         <Field label={t('transactions.amount')} hint={t('transactions.amountHint')}>{(id) => <Input id={id} className="num" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="-12,50" />}</Field>
         <div className="col-span-2"><Field label={t('transactions.counterparty')}>{(id) => <Input id={id} value={form.counterpartyName} onChange={(e) => setForm({ ...form, counterpartyName: e.target.value })} />}</Field></div>
         <div className="col-span-2"><Field label={t('transactions.description')}>{(id) => <Input id={id} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}</Field></div>
-        <div className="col-span-2"><Field label={t('transactions.category')}>{(id) => <CategorySelect label={t('transactions.category')} value={form.categoryId} categories={categories} onChange={(c) => setForm({ ...form, categoryId: c })} />}</Field></div>
+        <div className="col-span-2"><Field label={t('transactions.category')}>{(id) => <CategorySelect id={id} label={t('transactions.category')} value={form.categoryId} categories={categories} onChange={(c) => setForm({ ...form, categoryId: c })} />}</Field></div>
         <div className="col-span-2"><Field label={t('transactions.notes')}>{(id) => <Input id={id} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}</Field></div>
         {base?.communication && <p className="selectable col-span-2 text-xs text-muted">{t('transactions.communication')}: {base.communication}</p>}
         {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: {base.counterpartyIban}</p>}

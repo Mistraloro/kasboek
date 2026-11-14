@@ -86,7 +86,8 @@ async function failure(res: Response): Promise<ProviderError> {
 async function post(p: ActiveProvider, path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
   let res: Response
   try {
-    res = await net.fetch(url(p, path), { method: 'POST', headers: headers(p), body: JSON.stringify(body), signal })
+    // No redirects: the API key must only ever go to the address the person entered.
+    res = await net.fetch(url(p, path), { method: 'POST', headers: headers(p), body: JSON.stringify(body), signal, redirect: 'error' })
   } catch (err) {
     if (signal?.aborted) throw err
     throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
@@ -221,7 +222,7 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
 export async function listModels(p: ActiveProvider): Promise<string[]> {
   let res: Response
   try {
-    res = await net.fetch(url(p, '/models'), { headers: headers(p) })
+    res = await net.fetch(url(p, '/models'), { headers: headers(p), redirect: 'error' })
   } catch (err) {
     throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
   }

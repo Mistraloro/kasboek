@@ -210,7 +210,6 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Pregunta sobre tu dinero o deja que {{ai}} haga cambios. Todo lo que cambia tus datos espera tu aprobación.",
-    "examplesTitle": "Por ejemplo",
     "example1": "¿Cuánto gasté en supermercado en octubre?",
     "example2": "Pon mi presupuesto de restaurantes en 150 € al mes.",
     "example3": "Revisa este CSV de mi banco e impórtalo.",
@@ -371,9 +370,6 @@
     "accountKind": "Tipo",
     "accountKindInvestment": "Anota su valor de vez en cuando en la página Patrimonio; las aportaciones y retiradas salen de sus movimientos."
   },
-  "errors": {
-    "generic": "Algo ha salido mal."
-  },
   "auth": {
     "welcome": "Te damos la bienvenida a Kasboek",
     "welcomeBody": "Tu presupuesto se queda en este ordenador, cifrado. Primero, elige cómo lo desbloquearás.",
@@ -486,8 +482,6 @@
     }
   },
   "claude": {
-    "title": "Claude",
-    "hint": "Usa tu propia clave API de Anthropic. La factura Anthropic, aparte de una suscripción a Claude.ai.",
     "apiKey": "Clave API",
     "apiKeyHint": "Se guarda en tus datos cifrados. No se vuelve a mostrar.",
     "keySet": "Configurada ({{hint}})",
@@ -496,7 +490,6 @@
     "replaceKey": "Sustituir",
     "removeKey": "Quitar clave API",
     "keyHelp": "Crea una clave en la Anthropic Console y pégala aquí. Kasboek la comprueba una vez con Anthropic.",
-    "getKey": "Obtener una clave",
     "checking": "Comprobando…",
     "keySaved": "Clave API guardada.",
     "chat": "Chat",

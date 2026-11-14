@@ -306,7 +306,7 @@ export function stopSync(): SyncStatus {
   const db = liveDb()
   db.transaction(() => {
     sync.disable(db)
-    for (const k of ['groupId', 'deviceId', 'seq', 'cursors', 'snapshotAt', 'clock']) sync.setMeta(db, k, null)
+    for (const k of ['groupId', 'deviceId', 'seq', 'cursors', 'snapshotAt', 'snapshotApplied', 'clock']) sync.setMeta(db, k, null)
     db.prepare('DELETE FROM sync_rows').run()
     db.prepare('DELETE FROM sync_pending').run()
     setSecret(db, 'syncKey', null)

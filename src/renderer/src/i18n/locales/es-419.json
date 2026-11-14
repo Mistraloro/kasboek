@@ -53,9 +53,6 @@
     "forgotten": "Esta computadora volverá a pedir el código.",
     "negative": "Montos negativos"
   },
-  "errors": {
-    "generic": "Algo salió mal."
-  },
   "auth": {
     "welcomeBody": "Tu presupuesto se queda en esta computadora, cifrado. Primero, elige cómo lo desbloquearás.",
     "choosePasswordBody": "La opción más segura. Funciona en cualquier computadora.",

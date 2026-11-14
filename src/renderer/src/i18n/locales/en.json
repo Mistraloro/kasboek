@@ -210,7 +210,6 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Ask about your money, or let {{ai}} make changes. Anything that changes your data waits for your OK.",
-    "examplesTitle": "For example",
     "example1": "How much did I spend on groceries in October?",
     "example2": "Set my eating-out budget to €150 a month.",
     "example3": "Check this Keytrade CSV and import it.",
@@ -371,9 +370,6 @@
     "accountKind": "Type",
     "accountKindInvestment": "Record its value now and then on the Net worth page; deposits and withdrawals come from its transactions."
   },
-  "errors": {
-    "generic": "Something went wrong."
-  },
   "auth": {
     "welcome": "Welcome to Kasboek",
     "welcomeBody": "Your budget stays on this computer, encrypted. First, choose how you’ll unlock it.",
@@ -486,8 +482,6 @@
     }
   },
   "claude": {
-    "title": "Claude",
-    "hint": "Uses your own Anthropic API key. Billed by Anthropic, separately from a Claude.ai subscription.",
     "apiKey": "API key",
     "apiKeyHint": "Stored inside your encrypted data. Never shown again.",
     "keySet": "Set ({{hint}})",
@@ -496,7 +490,6 @@
     "replaceKey": "Replace",
     "removeKey": "Remove API key",
     "keyHelp": "Create a key in the Anthropic Console and paste it here. Kasboek checks it once with Anthropic.",
-    "getKey": "Get a key",
     "checking": "Checking…",
     "keySaved": "API key saved.",
     "chat": "Chat",

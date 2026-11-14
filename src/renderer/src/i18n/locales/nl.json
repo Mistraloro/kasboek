@@ -210,7 +210,6 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Stel vragen over je geld, of laat {{ai}} wijzigingen doen. Alles wat je gegevens verandert, wacht op jouw akkoord.",
-    "examplesTitle": "Bijvoorbeeld",
     "example1": "Hoeveel heb ik in oktober aan boodschappen uitgegeven?",
     "example2": "Zet mijn budget voor uit eten op €150 per maand.",
     "example3": "Kijk deze CSV van mijn bank na en importeer hem.",
@@ -371,9 +370,6 @@
     "accountKind": "Soort",
     "accountKindInvestment": "Vul af en toe de waarde in op de pagina Vermogen; stortingen en opnames komen uit de verrichtingen."
   },
-  "errors": {
-    "generic": "Er ging iets mis."
-  },
   "auth": {
     "welcome": "Welkom bij Kasboek",
     "welcomeBody": "Je budget blijft op deze computer, versleuteld. Kies eerst hoe je het ontgrendelt.",
@@ -486,8 +482,6 @@
     }
   },
   "claude": {
-    "title": "Claude",
-    "hint": "Gebruikt je eigen API-sleutel van Anthropic. Aangerekend door Anthropic, los van een Claude.ai-abonnement.",
     "apiKey": "API-sleutel",
     "apiKeyHint": "Bewaard in je versleutelde gegevens. Wordt nooit meer getoond.",
     "keySet": "Ingesteld ({{hint}})",
@@ -496,7 +490,6 @@
     "replaceKey": "Vervangen",
     "removeKey": "API-sleutel verwijderen",
     "keyHelp": "Maak een sleutel in de Anthropic Console en plak hem hier. Kasboek controleert hem één keer bij Anthropic.",
-    "getKey": "Sleutel aanvragen",
     "checking": "Controleren…",
     "keySaved": "API-sleutel bewaard.",
     "chat": "Chat",

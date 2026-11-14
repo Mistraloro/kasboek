@@ -1,7 +1,7 @@
 # Kasboek
 
-A simple, local-first budget app for Windows (macOS and Linux from the same code), with Claude
-built in. Your data stays on your computer, encrypted, and is locked to your computer and login.
+A simple, local-first budget app for Windows, macOS and Linux, with an AI assistant built in
+(Claude, or any OpenAI-compatible provider, including local models). Your data stays on your computer, encrypted, and is locked to your computer and login.
 
 See [PLAN.md](PLAN.md) for the design, the security model and what still needs testing.
 
@@ -9,19 +9,26 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
 
 - **Budget**: accounts, transactions (search, filter, edit, bulk categorise), categories, rules
   ("Delhaize → Groceries"), monthly budgets, and an overview with income, spending, budget left
-  and a 6-month chart. Dark and light mode.
+  and a 6-month chart; a year view per category; net worth over time with investments and loans.
+  Dark and light mode, eight languages, number and date formats chosen part by part.
+- **Currencies**: each account in its own currency; totals in a main currency at the rate of each
+  transaction's date (ECB reference rates, downloaded on request, or your own).
 - **CSV import**: drop a bank export. Kasboek recognises Argenta, Hello bank! and Keytrade Bank
   (and most other layouts), flags duplicates and unreadable rows, applies your rules, and shows
   everything before saving. Undo per import.
-- **Claude**: ask questions about your money or let Claude make changes, which you approve one by
-  one. "Check with Claude" fixes messy CSV files before import.
-- **MCP**: use Kasboek from Claude Desktop or Claude Code (Settings → Claude).
+- **Assistant**: ask questions about your money or let the assistant make changes, which you
+  approve one by one. "Check with …" fixes messy CSV files before import. Claude, Mistral, Groq,
+  DeepSeek, Gemini, OpenRouter, Together, Fireworks, Ollama, LM Studio or any OpenAI-compatible server.
+- **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (Settings → Assistant).
+- **Sync**: keep several computers in step through a cloud folder you already use; only encrypted
+  files go there, and changes merge per field.
 - **Same everywhere**: Windows, macOS and Linux use the same encrypted database and the same export
   format, so an export from one opens on any other (with your login).
 - **Security**: password (Argon2id) or passwordless (Windows Hello / Touch ID), optional two-factor codes,
   recovery key, auto-lock. Encrypted database; the data folder can't be opened on another
   computer. Moving computers only works through an encrypted **export** that opens with your login.
-- **Backups**: automatic, encrypted, daily, to a folder you choose.
+- **Backups**: automatic and encrypted, after important changes and daily, kept by age (24 hours,
+  30 days, a year), to a folder you choose.
 
 ## Run it
 
@@ -58,25 +65,36 @@ app → Open, once). The Mac app is ad-hoc signed so it runs on Apple Silicon. T
 add `CSC_LINK` / `CSC_KEY_PASSWORD` repository secrets (Apple Developer ID, or a Windows
 code-signing certificate).
 
-## Claude
+## Assistant
 
-1. Create an API key at console.anthropic.com (billed by Anthropic, separately from Claude.ai).
-2. In Kasboek: Settings → Claude → Add API key. The key is stored inside your encrypted data.
-3. Defaults: chat with Claude Sonnet 5.5 (medium effort), CSV checks with Claude Opus 5.5
-   (medium). Both can be changed in Settings.
+1. Settings → Assistant → choose a provider. For Claude, create an API key at
+   console.anthropic.com (billed by Anthropic, separately from Claude.ai); other providers have
+   their own key page, linked there. Ollama and LM Studio run on your computer and need no key.
+2. Add the key. It is stored inside your encrypted data, separately per provider.
+3. Claude defaults: chat with Claude Sonnet 5.5 (medium effort), CSV checks with Claude Opus 5.5
+   (medium). Other providers: type a model name or load the list from the provider.
 
-Messages and the data Claude looks up are sent to Anthropic. Nothing is sent until you ask.
+Messages and the data the assistant looks up go to the chosen provider (or stay on your
+computer for local models). Nothing is sent until you ask.
 
 **Claude Desktop / Claude Code (MCP)**: switch on “Claude Desktop & Claude Code (MCP)” in
-Settings → Claude and copy the snippet shown there. It works while Kasboek is running and
-unlocked; changes wait for your approval in Kasboek.
+Settings → Assistant and press “Add to Claude Desktop” or “Add to Claude Code”. It works while
+Kasboek is running and unlocked; changes wait for your approval in Kasboek.
+
+## Sync
+
+Settings → Sync between computers → Choose folder (a folder your cloud app syncs). On the other
+computer: Join a sync folder, then your password and 2FA code (or recovery key). Kasboek writes
+encrypted change files there; the key never leaves your encrypted data except inside an
+encrypted snapshot. Passwordless sign-in is set up per computer.
 
 ## Checks
 
 ```bash
 npm run typecheck
 npm test            # runs under Electron's Node, so the native module matches
-npm run check:i18n  # every text key used in the UI exists in en.json
+npm run check:i18n  # every text key exists in en.json, and every translation matches it
+npm run test:mcp    # the Go MCP helper
 ```
 
 ## Where your data lives
@@ -89,7 +107,8 @@ npm run check:i18n  # every text key used in the UI exists in en.json
 
 - `kasboek.db`: encrypted database
 - `account.json`: login key slots, sealed by the operating system (only opens on this computer and account)
-- `prefs.json`: theme, language, auto-lock (nothing sensitive)
+- `prefs.json`: theme, language, formats, auto-lock (nothing sensitive)
+- `sync.json`: this computer's sync id and folder, when syncing
 - `safety-backups/`: copies made automatically before an import
 
 Copying this folder to another computer does **not** work, by design. Use Settings → Move to
@@ -103,7 +122,8 @@ src/shared/       operation contract, types, amount/month helpers (used everywhe
 src/core/         database, migrations, account & crypto, export format, finance, CSV import,
                   assistant tool loop (no Electron; unit-tested)
 src/main/         Electron main: window & security, IPC, session/lock, OS keychain,
-                  Windows Hello / Touch ID, backups, Claude, MCP bridge and --mcp helper
+                  Windows Hello / Touch ID, backups, sync, AI providers, MCP bridge
+tools/kasboek-mcp/  the small Go helper Claude apps start for MCP
 src/preload/      the small bridge exposed to the page
 src/renderer/     React UI, theme tokens, i18n strings (src/renderer/src/i18n/locales)
 assets/brand/     logo and icon sources;  npm run icons  regenerates build/ icons
@@ -112,5 +132,7 @@ tests/            unit tests and CSV fixtures
 
 ## Adding a language
 
-Copy `src/renderer/src/i18n/locales/en.json` to e.g. `nl.json`, translate the values, and add it
-to `LANGUAGES` in `src/renderer/src/i18n/index.ts`. `npm run check:i18n` lists missing keys.
+Copy `src/renderer/src/i18n/locales/en.json` to e.g. `it.json`, translate the values, add it to
+`LANGUAGES` in `src/shared/languages.ts` and to the resources in `src/renderer/src/i18n/index.ts`.
+A regional variant can hold only the texts that differ (see `scripts/regional-locales.py`).
+`npm run check:i18n` lists missing keys and placeholder mistakes.

@@ -210,7 +210,6 @@
   "assistant": {
     "title": "{{ai}}",
     "intro": "Posez des questions sur votre argent, ou laissez {{ai}} faire des modifications. Tout ce qui modifie vos données attend votre accord.",
-    "examplesTitle": "Par exemple",
     "example1": "Combien ai-je dépensé en courses en octobre ?",
     "example2": "Mets mon budget restaurants à 150 € par mois.",
     "example3": "Vérifie ce CSV de ma banque et importe-le.",
@@ -371,9 +370,6 @@
     "accountKind": "Type",
     "accountKindInvestment": "Saisissez sa valeur de temps en temps sur la page Patrimoine ; les versements et retraits viennent de ses opérations."
   },
-  "errors": {
-    "generic": "Un problème est survenu."
-  },
   "auth": {
     "welcome": "Bienvenue dans Kasboek",
     "welcomeBody": "Votre budget reste sur cet ordinateur, chiffré. Choisissez d’abord comment le déverrouiller.",
@@ -486,8 +482,6 @@
     }
   },
   "claude": {
-    "title": "Claude",
-    "hint": "Utilise votre propre clé API Anthropic. Facturé par Anthropic, indépendamment d’un abonnement Claude.ai.",
     "apiKey": "Clé API",
     "apiKeyHint": "Gardée dans vos données chiffrées. Plus jamais affichée.",
     "keySet": "Définie ({{hint}})",
@@ -496,7 +490,6 @@
     "replaceKey": "Remplacer",
     "removeKey": "Supprimer la clé API",
     "keyHelp": "Créez une clé dans l’Anthropic Console et collez-la ici. Kasboek la vérifie une fois auprès d’Anthropic.",
-    "getKey": "Obtenir une clé",
     "checking": "Vérification…",
     "keySaved": "Clé API enregistrée.",
     "chat": "Discussion",

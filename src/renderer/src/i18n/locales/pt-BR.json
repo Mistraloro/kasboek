@@ -147,7 +147,6 @@
     "needsNewPassword": "Esta exportação usava o Windows Hello ou o Touch ID, que não estão disponíveis aqui. Escolha uma senha para este computador."
   },
   "claude": {
-    "hint": "Usa a sua própria chave API da Anthropic. Cobrado pela Anthropic, separadamente de uma assinatura Claude.ai.",
     "apiKeyHint": "Salva nos seus dados criptografados. Nunca mais é mostrada.",
     "keyHelp": "Crie uma chave na Anthropic Console e cole-a aqui. O Kasboek a verifica uma vez com a Anthropic.",
     "checking": "Verificando…",
