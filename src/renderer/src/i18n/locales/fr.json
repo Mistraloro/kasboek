@@ -541,9 +541,9 @@
     "removeTitle": "Retirer Kasboek de Claude Desktop",
     "addBody": "Kasboek ajoute (ou met à jour) uniquement sa propre entrée dans ce fichier. Les autres serveurs et réglages restent inchangés.",
     "removeBody": "Kasboek retire uniquement sa propre entrée de ce fichier.",
-    "backupNote": "Une copie du fichier est d’abord enregistrée à côté. Redémarrez ensuite Claude Desktop.",
+    "backupNote": "Une copie du fichier est d’abord enregistrée à côté. Ensuite, quittez complètement Claude Desktop (aussi depuis la zone de notification ou la barre des menus) et rouvrez-le.",
     "confirmAdd": "Ajouter",
-    "addedDesktop": "Ajouté. Redémarrez Claude Desktop pour voir les outils de Kasboek.",
+    "addedDesktop": "Ajouté. Quittez complètement Claude Desktop (aussi depuis l’icône de la zone de notification ou la barre des menus) puis rouvrez-le. Kasboek apparaît alors sous Réglages → Developer et dans le menu des outils d’une nouvelle discussion, pas sous Connectors.",
     "removedDesktop": "Retiré de Claude Desktop. Redémarrez-le pour appliquer.",
     "codeAdded": "Ajouté à Claude Code. Démarrez une nouvelle session Claude Code pour l’utiliser.",
     "removedCode": "Retiré de Claude Code."

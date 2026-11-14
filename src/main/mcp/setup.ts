@@ -3,7 +3,7 @@
  * own `claude mcp` command. Only on a button press; the file is backed up before it changes.
  */
 import { execFile } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { copyFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -19,12 +19,34 @@ export function serverEntry(): ServerEntry {
   return { command: helperPath(), args: ['--data-dir', paths.dataDir] }
 }
 
-/** Claude Desktop's config location. Linux has no official Claude Desktop; offered only if the folder exists. */
-function desktopConfigPath(): string | null {
-  if (process.platform === 'win32') return join(process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'), 'Claude', 'claude_desktop_config.json')
-  if (process.platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
+const CONFIG = 'claude_desktop_config.json'
+
+/**
+ * Claude Desktop's config files. On Windows, Claude Desktop installed as an app package (MSIX)
+ * reads its own private copy of AppData (…\Packages\Claude_…\LocalCache\Roaming\Claude) once
+ * that exists, so a change to the normal %APPDATA% file would go unseen; every copy that exists is
+ * updated. The first path is the one Claude Desktop reads. Linux has no official Claude Desktop;
+ * offered only if the folder exists.
+ */
+function desktopConfigPaths(): string[] {
+  if (process.platform === 'win32') {
+    const roaming = join(process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'), 'Claude', CONFIG)
+    const packages = join(process.env['LOCALAPPDATA'] ?? join(homedir(), 'AppData', 'Local'), 'Packages')
+    let packaged: string[] = []
+    try {
+      packaged = readdirSync(packages)
+        .filter((d) => /^(Anthropic\.)?Claude_/i.test(d))
+        .map((d) => join(packages, d, 'LocalCache', 'Roaming', 'Claude'))
+        .filter((dir) => existsSync(dir))
+        .map((dir) => join(dir, CONFIG))
+    } catch {
+      // No packaged apps folder.
+    }
+    return [...packaged, roaming]
+  }
+  if (process.platform === 'darwin') return [join(homedir(), 'Library', 'Application Support', 'Claude', CONFIG)]
   const dir = join(process.env['XDG_CONFIG_HOME'] ?? join(homedir(), '.config'), 'Claude')
-  return existsSync(dir) ? join(dir, 'claude_desktop_config.json') : null
+  return existsSync(dir) ? [join(dir, CONFIG)] : []
 }
 
 async function readConfig(path: string): Promise<string | null> {
@@ -45,16 +67,27 @@ async function writeConfig(path: string, next: string): Promise<string | null> {
 }
 
 export async function addToDesktop(): Promise<{ path: string; backup: string | null }> {
-  const path = desktopConfigPath()
-  if (!path) throw new AppError('mcp.no_desktop', 'Claude Desktop isn’t available on this system.')
-  const next = withKasboek(await readConfig(path), serverEntry())
-  return { path, backup: await writeConfig(path, next) }
+  const all = desktopConfigPaths()
+  if (!all.length) throw new AppError('mcp.no_desktop', 'Claude Desktop isn’t available on this system.')
+  // Check every file first, so a broken one stops the change before anything is written.
+  const updates = await Promise.all(all.map(async (path) => ({ path, next: withKasboek(await readConfig(path), serverEntry()) })))
+  let backup: string | null = null
+  for (const [i, u] of updates.entries()) {
+    const b = await writeConfig(u.path, u.next)
+    if (i === 0) backup = b
+  }
+  return { path: all[0]!, backup }
 }
 
 export async function removeFromDesktop(): Promise<{ path: string; backup: string | null }> {
-  const path = desktopConfigPath()
-  if (!path || !existsSync(path)) throw new AppError('mcp.no_desktop', 'Kasboek isn’t in Claude Desktop’s config.')
-  return { path, backup: await writeConfig(path, withoutKasboek(await readConfig(path))) }
+  const all = desktopConfigPaths().filter((p) => existsSync(p))
+  if (!all.length) throw new AppError('mcp.no_desktop', 'Kasboek isn’t in Claude Desktop’s config.')
+  let backup: string | null = null
+  for (const [i, path] of all.entries()) {
+    const b = await writeConfig(path, withoutKasboek(await readConfig(path)))
+    if (i === 0) backup = b
+  }
+  return { path: all[0]!, backup }
 }
 
 /* ---------- Claude Code ---------- */
@@ -109,7 +142,7 @@ export async function removeFromCode(): Promise<void> {
 }
 
 export async function setupStatus(): Promise<McpSetupStatus> {
-  const path = desktopConfigPath()
+  const path = desktopConfigPaths()[0] ?? null
   const exe = findClaudeCode()
   return {
     entry: serverEntry(),

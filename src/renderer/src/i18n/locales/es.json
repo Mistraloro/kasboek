@@ -541,9 +541,9 @@
     "removeTitle": "Quitar Kasboek de Claude Desktop",
     "addBody": "Kasboek solo añadirá (o actualizará) su propia entrada en este archivo. Los demás servidores y ajustes se quedan como están.",
     "removeBody": "Kasboek solo quitará su propia entrada de este archivo.",
-    "backupNote": "Antes se guarda una copia del archivo a su lado. Después, reinicia Claude Desktop.",
+    "backupNote": "Antes se guarda una copia del archivo a su lado. Después, cierra Claude Desktop por completo (también desde la bandeja del sistema o la barra de menús) y vuelve a abrirlo.",
     "confirmAdd": "Añadir",
-    "addedDesktop": "Añadido. Reinicia Claude Desktop para ver las herramientas de Kasboek.",
+    "addedDesktop": "Añadido. Cierra Claude Desktop por completo (también desde el icono de la bandeja del sistema o la barra de menús) y vuelve a abrirlo. Kasboek aparece entonces en Ajustes → Developer y en el menú de herramientas de un chat nuevo, no en Connectors.",
     "removedDesktop": "Quitado de Claude Desktop. Reinícialo para aplicarlo.",
     "codeAdded": "Añadido a Claude Code. Abre una nueva sesión de Claude Code para usarlo.",
     "removedCode": "Quitado de Claude Code."

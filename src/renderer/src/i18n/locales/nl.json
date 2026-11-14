@@ -541,9 +541,9 @@
     "removeTitle": "Kasboek verwijderen uit Claude Desktop",
     "addBody": "Kasboek voegt alleen zijn eigen regel toe aan dit bestand (of werkt hem bij). Andere servers en instellingen blijven zoals ze zijn.",
     "removeBody": "Kasboek verwijdert alleen zijn eigen regel uit dit bestand.",
-    "backupNote": "Eerst wordt er een kopie van het bestand naast bewaard. Start Claude Desktop daarna opnieuw.",
+    "backupNote": "Eerst wordt er een kopie van het bestand naast bewaard. Sluit Claude Desktop daarna volledig af (ook via het systeemvak of de menubalk) en open het opnieuw.",
     "confirmAdd": "Toevoegen",
-    "addedDesktop": "Toegevoegd. Start Claude Desktop opnieuw om de tools van Kasboek te zien.",
+    "addedDesktop": "Toegevoegd. Sluit Claude Desktop volledig af (ook via het pictogram in het systeemvak of de menubalk) en open het opnieuw. Kasboek staat dan onder Instellingen → Developer en in het toolsmenu van een nieuwe chat, niet onder Connectors.",
     "removedDesktop": "Verwijderd uit Claude Desktop. Start het opnieuw om het toe te passen.",
     "codeAdded": "Toegevoegd aan Claude Code. Start een nieuwe sessie van Claude Code om het te gebruiken.",
     "removedCode": "Verwijderd uit Claude Code."

@@ -92,7 +92,7 @@
     "addTitle": "Agregar Kasboek a Claude Desktop",
     "addBody": "Kasboek solo agregará (o actualizará) su propia entrada en este archivo. Los demás servidores y ajustes se quedan como están.",
     "confirmAdd": "Agregar",
-    "addedDesktop": "Agregado. Reinicia Claude Desktop para ver las herramientas de Kasboek.",
+    "addedDesktop": "Agregado. Cierra Claude Desktop por completo (también desde el icono de la bandeja del sistema o la barra de menús) y vuelve a abrirlo. Kasboek aparece entonces en Configuración → Developer y en el menú de herramientas de un chat nuevo, no en Connectors.",
     "codeAdded": "Agregado a Claude Code. Abre una nueva sesión de Claude Code para usarlo."
   },
   "fx": {

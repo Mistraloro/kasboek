@@ -541,9 +541,9 @@
     "removeTitle": "Remover o Kasboek do Claude Desktop",
     "addBody": "O Kasboek só adiciona (ou atualiza) a sua própria entrada neste ficheiro. Os outros servidores e definições ficam como estão.",
     "removeBody": "O Kasboek só remove a sua própria entrada deste ficheiro.",
-    "backupNote": "Primeiro é guardada uma cópia do ficheiro ao lado. Depois, reinicie o Claude Desktop.",
+    "backupNote": "Primeiro é guardada uma cópia do ficheiro ao lado. Depois, feche completamente o Claude Desktop (também pela área de notificação ou pela barra de menus) e volte a abri-lo.",
     "confirmAdd": "Adicionar",
-    "addedDesktop": "Adicionado. Reinicie o Claude Desktop para ver as ferramentas do Kasboek.",
+    "addedDesktop": "Adicionado. Feche completamente o Claude Desktop (também pelo ícone na área de notificação ou na barra de menus) e volte a abri-lo. O Kasboek aparece depois em Definições → Developer e no menu de ferramentas de uma nova conversa, não em Connectors.",
     "removedDesktop": "Removido do Claude Desktop. Reinicie-o para aplicar.",
     "codeAdded": "Adicionado ao Claude Code. Inicie uma nova sessão do Claude Code para o usar.",
     "removedCode": "Removido do Claude Code."
