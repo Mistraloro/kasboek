@@ -116,5 +116,19 @@
   },
   "defaultCategories": {
     "Salary": "Sueldo"
+  },
+  "sync": {
+    "title": "Sincronizar entre computadoraes",
+    "hint": "Mantén los mismos datos en varios computadoraes mediante una carpeta en la nube que ya usas (OneDrive, Google Drive, Dropbox, iCloud Drive). No hay servidor de Kasboek: a esa carpeta solo van archivos cifrados.",
+    "join": "Unirse desde otra computadora",
+    "joinHint": "Elige la carpeta de sincronización que ya usa otra computadora. Esto sustituye los datos de aquí; necesitarás la contraseña y el código (o la clave de recuperación) de esos datos.",
+    "risk": "Los datos cifrados se quedan en tu carpeta de la nube. Si alguien entra en esa cuenta, lo que los protege es tu contraseña: que sea larga y única. El acceso sin contraseña se configura en cada computadora.",
+    "detachedHint": "Estos datos se sincronizan mediante una carpeta en la nube. Indica dónde está esa carpeta en esta computadora para seguir sincronizando.",
+    "thisComputer": "esta computadora",
+    "noOthers": "Aún no se ha unido ningún otra computadora.",
+    "conflictsHint": "Algo se cambió a la vez en dos computadoraes. Se conservó el cambio más reciente; aquí ves lo que se sustituyó.",
+    "stop": "Dejar de sincronizar en esta computadora",
+    "stopHint": "Los datos se quedan aquí y en los demás computadoraes, que siguen sincronizándose entre sí.",
+    "stopConfirm": "Esta computadora deja de enviar y recibir cambios. Sus datos se quedan como están. Para volver a sincronizar, únete de nuevo a la carpeta."
   }
 }

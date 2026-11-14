@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Kasboek" },
+  "app": {
+    "name": "Kasboek"
+  },
   "nav": {
     "overview": "Resumen",
     "transactions": "Movimientos",
@@ -690,5 +692,38 @@
     "Fees & taxes": "Comisiones e impuestos",
     "Own transfers": "Transferencias propias",
     "Savings": "Ahorro"
+  },
+  "sync": {
+    "title": "Sincronizar entre ordenadores",
+    "hint": "Mantén los mismos datos en varios ordenadores mediante una carpeta en la nube que ya usas (OneDrive, Google Drive, Dropbox, iCloud Drive). No hay servidor de Kasboek: a esa carpeta solo van archivos cifrados.",
+    "start": "Empezar a sincronizar",
+    "startHint": "Elige una carpeta que tu app de la nube sincronice. Kasboek pone dentro una carpeta «Kasboek sync».",
+    "startButton": "Elegir carpeta…",
+    "join": "Unirse desde otro ordenador",
+    "joinHint": "Elige la carpeta de sincronización que ya usa otro ordenador. Esto sustituye los datos de aquí; necesitarás la contraseña y el código (o la clave de recuperación) de esos datos.",
+    "joinFolder": "Unirse a una carpeta de sincronización…",
+    "risk": "Los datos cifrados se quedan en tu carpeta de la nube. Si alguien entra en esa cuenta, lo que los protege es tu contraseña: que sea larga y única. El acceso sin contraseña se configura en cada ordenador.",
+    "detached": "Elige la carpeta de sincronización",
+    "detachedHint": "Estos datos se sincronizan mediante una carpeta en la nube. Indica dónde está esa carpeta en este ordenador para seguir sincronizando.",
+    "chooseFolder": "Elegir carpeta…",
+    "folder": "Carpeta de sincronización",
+    "on": "Sincronizado",
+    "syncing": "Sincronizando…",
+    "problem": "Requiere atención",
+    "now": "Sincronizar ahora",
+    "computers": "Ordenadores",
+    "last": "Última sincronización: {{date}}",
+    "thisComputer": "este ordenador",
+    "noOthers": "Aún no se ha unido ningún otro ordenador.",
+    "conflicts_one": "{{count}} cambio en conflicto",
+    "conflicts_other": "{{count}} cambios en conflicto",
+    "conflictsHint": "Algo se cambió a la vez en dos ordenadores. Se conservó el cambio más reciente; aquí ves lo que se sustituyó.",
+    "show": "Mostrar",
+    "conflictsTitle": "Cambios en conflicto",
+    "dismiss": "Marcar como visto",
+    "stop": "Dejar de sincronizar en este ordenador",
+    "stopHint": "Los datos se quedan aquí y en los demás ordenadores, que siguen sincronizándose entre sí.",
+    "stopButton": "Dejar de sincronizar",
+    "stopConfirm": "Este ordenador deja de enviar y recibir cambios. Sus datos se quedan como están. Para volver a sincronizar, únete de nuevo a la carpeta."
   }
 }

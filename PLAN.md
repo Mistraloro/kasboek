@@ -228,18 +228,13 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    OS (so it can't be copied to another computer), is cleared by changing the password, turning
    2FA off/on, or "Forget remembered computers" in Settings, and never applies to the recovery
    key flow.
-8. **Sync between computers (Windows, macOS, Linux).** Through a cloud folder the person
-   chooses (Google Drive, OneDrive, Dropbox, iCloud Drive), no Kasboek server.
-   - Each computer writes its changes as small encrypted change files (not the whole database);
-     the others merge them. Conflicts are resolved per field, latest change wins, nothing is
-     silently dropped (a conflict note is shown where two edits clashed).
-   - The cloud only ever holds encrypted data (same protection as an export). Joining a new
-     computer: choose the sync folder, then the password + 2FA code (or the recovery key). After
-     that it unlocks locally as usual; passwordless is set up per computer.
-   - Backups (item 5) stay separate and keep working per computer.
-   - Risk to state in the UI: encrypted data lives permanently in the cloud, so a long password
-     (item 6) is what protects it if the cloud account is compromised. Optional extra: a separate
-     sync key that is never stored in the cloud.
+8. **Sync between computers (Windows, macOS, Linux).** Done: through a cloud folder the person
+   chooses, no Kasboek server. Triggers record every change; each computer writes numbered,
+   AES-256-GCM encrypted change files (key inside the encrypted database), merged per field with
+   hybrid-clock timestamps (later change wins, a deletion wins over edits, a note is kept when two
+   computers changed the same field). Joining opens the newest snapshot (an export: password and
+   2FA code, or the recovery key) and then follows the change files. Old change files are removed
+   once every active computer and snapshot has them. Phone app: later.
 9. **One-click MCP setup for Claude Desktop and Claude Code** (Settings → Claude).
    - *Add to Claude Desktop*: finds `claude_desktop_config.json` (Windows `%APPDATA%\Claude\`,
      macOS `~/Library/Application Support/Claude/`), shows the exact entry it will add, then adds

@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Kasboek" },
+  "app": {
+    "name": "Kasboek"
+  },
   "nav": {
     "overview": "Übersicht",
     "transactions": "Buchungen",
@@ -690,5 +692,38 @@
     "Fees & taxes": "Gebühren und Steuern",
     "Own transfers": "Eigene Umbuchungen",
     "Savings": "Sparen"
+  },
+  "sync": {
+    "title": "Zwischen Computern synchronisieren",
+    "hint": "Halte dieselben Daten auf mehreren Computern über einen Cloud-Ordner, den du schon nutzt (OneDrive, Google Drive, Dropbox, iCloud Drive). Es gibt keinen Kasboek-Server: In den Ordner kommen nur verschlüsselte Dateien.",
+    "start": "Synchronisierung starten",
+    "startHint": "Wähle einen Ordner, den deine Cloud-App synchronisiert. Kasboek legt darin einen Ordner „Kasboek sync“ an.",
+    "startButton": "Ordner wählen…",
+    "join": "Von einem anderen Computer beitreten",
+    "joinHint": "Wähle den Sync-Ordner, den ein anderer Computer schon nutzt. Das ersetzt die Daten hier; du brauchst Passwort und Code (oder den Wiederherstellungsschlüssel) dieser Daten.",
+    "joinFolder": "Einem Sync-Ordner beitreten…",
+    "risk": "Die verschlüsselten Daten bleiben in deinem Cloud-Ordner. Kommt jemand an dieses Cloud-Konto, schützt sie dein Passwort: Halte es lang und einzigartig. Anmeldung ohne Passwort richtest du auf jedem Computer einzeln ein.",
+    "detached": "Sync-Ordner wählen",
+    "detachedHint": "Diese Daten werden über einen Cloud-Ordner synchronisiert. Wähle, wo dieser Ordner auf diesem Computer liegt, um weiter zu synchronisieren.",
+    "chooseFolder": "Ordner wählen…",
+    "folder": "Sync-Ordner",
+    "on": "Synchronisiert",
+    "syncing": "Wird synchronisiert…",
+    "problem": "Braucht Aufmerksamkeit",
+    "now": "Jetzt synchronisieren",
+    "computers": "Computer",
+    "last": "Zuletzt synchronisiert am {{date}}",
+    "thisComputer": "dieser Computer",
+    "noOthers": "Noch kein anderer Computer beigetreten.",
+    "conflicts_one": "{{count}} Änderung kollidierte",
+    "conflicts_other": "{{count}} Änderungen kollidierten",
+    "conflictsHint": "Etwas wurde gleichzeitig auf zwei Computern geändert. Die spätere Änderung blieb; hier siehst du, was ersetzt wurde.",
+    "show": "Anzeigen",
+    "conflictsTitle": "Kollidierende Änderungen",
+    "dismiss": "Als gesehen markieren",
+    "stop": "Synchronisierung auf diesem Computer beenden",
+    "stopHint": "Die Daten bleiben hier und auf den anderen Computern; die synchronisieren weiter miteinander.",
+    "stopButton": "Beenden",
+    "stopConfirm": "Dieser Computer sendet und empfängt keine Änderungen mehr. Seine Daten bleiben, wie sie jetzt sind. Um später wieder zu synchronisieren, tritt dem Ordner erneut bei."
   }
 }

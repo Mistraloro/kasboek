@@ -14,6 +14,7 @@ import { applyTheme } from './theme'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
 import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
 import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
+import { afterImport as afterSyncImport, attach as attachSync, changedLocally as syncChangedLocally, dismissConflicts as dismissSyncConflicts, onRemoteChanges, pickJoin, runSync, startSync, stopSync, syncStatus } from './sync/service'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
@@ -206,6 +207,8 @@ const desktopOps: OpTable = {
     handler: async (_c, input) => {
       if ((await session.status()).state === 'locked') throw new AppError('auth.locked', 'Unlock Kasboek first.')
       await importTransfer(input)
+      // Joining a sync folder: from now on this computer syncs with it too.
+      await afterSyncImport(input.token).catch((err: unknown) => console.warn('[sync] join failed:', err))
       return session.status()
     }
   },
@@ -335,6 +338,20 @@ const desktopOps: OpTable = {
       return { ...fxStatus(db), added }
     }
   },
+  'sync.status': { mutates: false, assistant: false, handler: () => syncStatus() },
+  'sync.start': { mutates: false, assistant: false, handler: () => startSync() },
+  'sync.pickJoin': { mutates: false, assistant: false, handler: () => pickJoin() },
+  'sync.attach': { mutates: false, assistant: false, handler: () => attachSync() },
+  'sync.now': {
+    mutates: false,
+    assistant: false,
+    handler: async () => {
+      await runSync()
+      return syncStatus()
+    }
+  },
+  'sync.stop': { mutates: false, assistant: false, handler: () => stopSync() },
+  'sync.dismissConflicts': { mutates: false, assistant: false, handler: () => dismissSyncConflicts() },
   'backup.runNow': { mutates: false, assistant: false, handler: async () => ({ file: await runAutoBackup() }) },
   'backup.list': { mutates: false, assistant: false, handler: () => backupList() },
   'backup.pick': { mutates: false, assistant: false, handler: (_c, { name }) => pickBackup(name) },
@@ -370,6 +387,7 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
   if (result.ok && allOps[name]?.mutates) {
     notifyChanged(actor)
     dataChanged(name, input)
+    syncChangedLocally()
   }
   return result
 }
@@ -377,11 +395,15 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
 /** Work that waits for the database: due backups and, when switched on, fresh exchange rates. */
 function afterUnlock(): void {
   backupAfterUnlock()
+  void runSync()
   if (!session.isUnlocked() || !shouldAutoUpdate(session.db())) return
   updateEcbRates(session.db())
     .then(({ added }) => added > 0 && notifyChanged('system'))
     .catch((err: unknown) => console.warn('[fx] automatic update failed:', err instanceof Error ? err.message : err))
 }
+
+// Changes from another computer: refresh open pages.
+onRemoteChanges(() => notifyChanged('system'))
 
 let changeTimer: NodeJS.Timeout | null = null
 function notifyChanged(actor: OpContext['actor']): void {

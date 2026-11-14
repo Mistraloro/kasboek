@@ -1,4 +1,5 @@
 import type { Db } from './database'
+import { installSyncSchema } from './sync-schema'
 
 const now = `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`
 
@@ -183,7 +184,8 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
         UNIQUE (account_id, date)
       );
     `)
-  }
+  },
+  (db) => installSyncSchema(db)
 ]
 
 export function schemaVersion(db: Db): number {

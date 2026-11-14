@@ -101,6 +101,25 @@ export interface YearSummary {
   years: { year: number; incomeCents: number; spendingCents: number }[]
 }
 
+export interface SyncDevice {
+  id: string
+  label: string
+  lastSeen: string | null
+  thisComputer: boolean
+}
+
+export interface SyncStatus {
+  /** off: not syncing. on: syncing. detached: this data syncs, but this computer hasn't chosen the folder yet. */
+  state: 'off' | 'on' | 'detached'
+  folder: string | null
+  devices: SyncDevice[]
+  lastSyncAt: string | null
+  /** A problem with the last sync, in plain words. */
+  error: string | null
+  conflicts: { id: number; at: string; summary: string }[]
+  busy: boolean
+}
+
 /** Data settings, stored in the encrypted database. */
 export interface Settings {
   /** Main currency: totals, budgets and net worth are shown in it. */

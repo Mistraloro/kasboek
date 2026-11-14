@@ -200,5 +200,11 @@
   "defaultCategories": {
     "Subscriptions": "Assinaturas",
     "Fees & taxes": "Tarifas e impostos"
+  },
+  "sync": {
+    "hint": "Mantenha os mesmos dados em vários computadores através de uma pasta na nuvem que já usa (OneDrive, Google Drive, Dropbox, iCloud Drive). Não há servidor do Kasboek: só vão arquivos criptografados para essa pasta.",
+    "startHint": "Escolha uma pasta que o seu aplicativo de nuvem sincroniza. O Kasboek coloca lá dentro uma pasta «Kasboek sync».",
+    "joinHint": "Escolha a pasta de sincronização que outro computador já usa. Isto substitui os dados daqui; precisa da senha e do código (ou da chave de recuperação) desses dados.",
+    "risk": "Os dados criptografados ficam na sua pasta na nuvem. Se alguém entrar nessa conta, é a sua senha que os protege: mantenha-a longa e única. O acesso sem senha configura-se em cada computador."
   }
 }

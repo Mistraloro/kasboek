@@ -9,6 +9,7 @@ import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
 import { broadcast, initSession, lock, onLock, startAutoLock } from './session'
 import { startBackupScheduler } from './transfer/scheduler'
+import { startSyncScheduler } from './sync/service'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT, trackOverlay } from './theme'
 
 const MCP_MODE = process.argv.includes('--mcp')
@@ -125,6 +126,7 @@ void app.whenReady().then(async () => {
   // Never leave the person with only the launch window.
   setTimeout(reveal, 20_000)
   startBackupScheduler()
+  startSyncScheduler()
   startAutoLock()
   // Keep the MCP bridge in step with the lock state and the setting.
   setInterval(() => syncMcpBridge(dispatch), 2000)

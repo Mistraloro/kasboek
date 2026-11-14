@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Kasboek" },
+  "app": {
+    "name": "Kasboek"
+  },
   "nav": {
     "overview": "Resumo",
     "transactions": "Movimentos",
@@ -690,5 +692,38 @@
     "Fees & taxes": "Comissões e impostos",
     "Own transfers": "Transferências próprias",
     "Savings": "Poupança"
+  },
+  "sync": {
+    "title": "Sincronizar entre computadores",
+    "hint": "Mantenha os mesmos dados em vários computadores através de uma pasta na nuvem que já usa (OneDrive, Google Drive, Dropbox, iCloud Drive). Não há servidor do Kasboek: só vão ficheiros encriptados para essa pasta.",
+    "start": "Começar a sincronizar",
+    "startHint": "Escolha uma pasta que a sua aplicação de nuvem sincroniza. O Kasboek coloca lá dentro uma pasta «Kasboek sync».",
+    "startButton": "Escolher pasta…",
+    "join": "Juntar a partir de outro computador",
+    "joinHint": "Escolha a pasta de sincronização que outro computador já usa. Isto substitui os dados daqui; precisa da palavra-passe e do código (ou da chave de recuperação) desses dados.",
+    "joinFolder": "Juntar a uma pasta de sincronização…",
+    "risk": "Os dados encriptados ficam na sua pasta na nuvem. Se alguém entrar nessa conta, é a sua palavra-passe que os protege: mantenha-a longa e única. O acesso sem palavra-passe configura-se em cada computador.",
+    "detached": "Escolha a pasta de sincronização",
+    "detachedHint": "Estes dados sincronizam através de uma pasta na nuvem. Indique onde está essa pasta neste computador para continuar.",
+    "chooseFolder": "Escolher pasta…",
+    "folder": "Pasta de sincronização",
+    "on": "Sincronizado",
+    "syncing": "A sincronizar…",
+    "problem": "Precisa de atenção",
+    "now": "Sincronizar agora",
+    "computers": "Computadores",
+    "last": "Última sincronização: {{date}}",
+    "thisComputer": "este computador",
+    "noOthers": "Ainda nenhum outro computador se juntou.",
+    "conflicts_one": "{{count}} alteração em conflito",
+    "conflicts_other": "{{count}} alterações em conflito",
+    "conflictsHint": "Algo foi alterado em dois computadores ao mesmo tempo. Ficou a alteração mais recente; aqui vê o que foi substituído.",
+    "show": "Mostrar",
+    "conflictsTitle": "Alterações em conflito",
+    "dismiss": "Marcar como visto",
+    "stop": "Parar de sincronizar neste computador",
+    "stopHint": "Os dados ficam aqui e nos outros computadores, que continuam a sincronizar entre si.",
+    "stopButton": "Parar",
+    "stopConfirm": "Este computador deixa de enviar e receber alterações. Os dados ficam como estão. Para voltar a sincronizar, junte-se novamente à pasta."
   }
 }

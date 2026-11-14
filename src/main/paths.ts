@@ -20,6 +20,10 @@ export const paths = {
   get prefsFile() {
     return ud('prefs.json')
   },
+  /** This computer's sync identity and folder (paths differ per computer, so not in the database). */
+  get syncFile() {
+    return ud('sync.json')
+  },
   get safetyDir() {
     return ud('safety-backups')
   },

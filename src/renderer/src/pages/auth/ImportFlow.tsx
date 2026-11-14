@@ -1,10 +1,10 @@
-import { FileLock2 } from 'lucide-react'
+import { FileLock2, FolderSync } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthStatus, PickedTransfer } from '@shared/types'
 import { Button, Field, Input } from '../../components/ui'
 import { useToast } from '../../components/Toast'
-import { call } from '../../lib/api'
+import { ApiError, call } from '../../lib/api'
 import { formatDateTime } from '../../lib/format'
 import { usePrefsFmt } from '../../lib/settings'
 import { CodeInput, errText, PasswordFields, passwordsOk } from './parts'
@@ -29,6 +29,21 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
         {replacing && <p className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">{t('transfer.replaceWarning')}</p>}
         <div className="flex justify-end gap-2">
           <Button onClick={onCancel}>{t('settings.cancel')}</Button>
+          <Button
+            icon={<FolderSync size={14} />}
+            title={t('sync.joinHint')}
+            onClick={() =>
+              void call('sync.pickJoin').then(
+                (p) => {
+                  setPicked(p)
+                  setUseRecovery(!p.hasPassword)
+                },
+                (e) => (e instanceof ApiError && e.code === 'sync.cancelled' ? undefined : toast(errText(e), 'error'))
+              )
+            }
+          >
+            {t('sync.joinFolder')}
+          </Button>
           <Button
             variant="primary"
             icon={<FileLock2 size={14} />}

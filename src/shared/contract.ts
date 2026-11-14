@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, Transaction, TransactionPage } from './types'
+import type { Account, AccountWithBalance, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -192,6 +192,18 @@ export const contract = {
     input: z.object({ year: z.number().int().min(1900).max(2200) }).strict(),
     output: out<YearSummary>()
   },
+
+  /* ----- Sync between computers ----- */
+  'sync.status': { input: empty, output: out<SyncStatus>() },
+  /** Choose a folder and start syncing this computer's data through it. */
+  'sync.start': { input: empty, output: out<SyncStatus>() },
+  /** Choose an existing sync folder to join: returns its newest snapshot to open with Import. */
+  'sync.pickJoin': { input: empty, output: out<PickedTransfer>() },
+  /** For data that syncs: choose where the sync folder is on this computer. */
+  'sync.attach': { input: empty, output: out<SyncStatus>() },
+  'sync.now': { input: empty, output: out<SyncStatus>() },
+  'sync.stop': { input: empty, output: out<SyncStatus>() },
+  'sync.dismissConflicts': { input: empty, output: out<SyncStatus>() },
 
   /* ----- Currencies ----- */
   'fx.status': {
@@ -402,6 +414,7 @@ export const PUBLIC_OPS: readonly OpName[] = [
   'prefs.update',
   'auth.status',
   'auth.setup',
+  'sync.pickJoin',
   'auth.unlock',
   'auth.unlockRecovery',
   'auth.erase',
@@ -424,5 +437,6 @@ export type AppEvent =
   | { type: 'auth.refresh' }
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
+  | { type: 'sync.updated'; status: SyncStatus }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
   | { type: 'mcp.request'; id: string; summary: string }
