@@ -124,13 +124,15 @@ export function send(text: string): AssistantStatus {
   void runTurn(
     history,
     {
-      call: async (messages, onText, signal) => {
-        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 8192 }, onText, signal)
+      call: async (messages, onText, signal, onThinking) => {
+        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 8192 }, onText, signal, onThinking)
         const stream = anthropic.beta.messages.stream(
           {
             ...modelParams(settings.chatModel, settings.chatEffort),
             max_tokens: 32000,
             system,
+            // A readable summary of Claude's reasoning, shown in the panel (the default is empty).
+            thinking: { type: 'adaptive', display: 'summarized' },
             cache_control: { type: 'ephemeral' },
             tools,
             messages
@@ -138,6 +140,7 @@ export function send(text: string): AssistantStatus {
           { signal }
         )
         stream.on('text', onText)
+        if (onThinking) stream.on('thinking', (delta) => onThinking(delta))
         return stream.finalMessage()
       },
       retryable: (err) =>
@@ -165,6 +168,7 @@ export function send(text: string): AssistantStatus {
       },
       onEvent: (e) => {
         if (e.type === 'text') current.text += e.text
+        else if (e.type === 'thinking') current.thinking = (current.thinking ?? '') + e.text
         else current.tools.push({ name: e.name, ok: e.ok })
         publish()
       }
@@ -186,7 +190,7 @@ export function send(text: string): AssistantStatus {
       history.length = before
     })
     .finally(() => {
-      display = display.filter((m) => !(m.role === 'assistant' && !m.text && !m.tools.length && !m.error))
+      display = display.filter((m) => !(m.role === 'assistant' && !m.text && !m.tools.length && !m.error && !m.thinking))
       busy = null
       publish(true)
     })

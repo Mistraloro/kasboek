@@ -246,7 +246,9 @@
       "import_updateRows": "Lignes d’import",
       "import_commit": "Import"
     },
-    "privacyLocal": "{{ai}} fonctionne sur cet ordinateur ou votre réseau : vos messages et données ne vont que là."
+    "privacyLocal": "{{ai}} fonctionne sur cet ordinateur ou votre réseau : vos messages et données ne vont que là.",
+    "thinkingLive": "Réflexion…",
+    "thinkingShown": "Réflexion"
   },
   "settings": {
     "title": "Réglages",

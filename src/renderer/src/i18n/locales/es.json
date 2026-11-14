@@ -246,7 +246,9 @@
       "import_updateRows": "Filas de importación",
       "import_commit": "Importar"
     },
-    "privacyLocal": "{{ai}} funciona en este ordenador o en tu red: tus mensajes y datos solo van allí."
+    "privacyLocal": "{{ai}} funciona en este ordenador o en tu red: tus mensajes y datos solo van allí.",
+    "thinkingLive": "Pensando…",
+    "thinkingShown": "Razonamiento"
   },
   "settings": {
     "title": "Ajustes",

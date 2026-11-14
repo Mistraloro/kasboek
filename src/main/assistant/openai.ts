@@ -132,7 +132,7 @@ async function* events(res: Response, signal: AbortSignal): AsyncGenerator<unkno
 }
 
 interface Chunk {
-  choices?: { delta?: { content?: unknown; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[] }; finish_reason?: string | null }[]
+  choices?: { delta?: { content?: unknown; reasoning_content?: unknown; reasoning?: unknown; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[] }; finish_reason?: string | null }[]
   error?: { message?: string }
 }
 
@@ -153,6 +153,19 @@ export function contentText(content: unknown): string {
     .join('')
 }
 
+/** The thinking parts of a message or chunk (Mistral: `{ type: 'thinking', thinking: [{ type: 'text', text }] }`). */
+export function contentThinking(content: unknown): string {
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((part) => {
+      const p = part as { type?: string; thinking?: unknown }
+      if (p.type !== 'thinking') return ''
+      if (typeof p.thinking === 'string') return p.thinking
+      return Array.isArray(p.thinking) ? p.thinking.map((t) => (typeof t === 'string' ? t : typeof (t as { text?: unknown }).text === 'string' ? (t as { text: string }).text : '')).join('') : ''
+    })
+    .join('')
+}
+
 /** A call id when the provider sent none: 9 letters and digits, a form every provider accepts. */
 const callId = (i: number): string => `k${Date.now().toString(36).slice(-6)}${i.toString(36).padStart(2, '0')}`.slice(0, 9)
 
@@ -168,7 +181,8 @@ export async function chat(
   p: ActiveProvider,
   opts: { system: string; messages: MessageParam[]; tools: { name: string; description: string; input_schema: unknown }[]; maxTokens: number },
   onText: (t: string) => void,
-  signal: AbortSignal
+  signal: AbortSignal,
+  onThinking?: (t: string) => void
 ): Promise<Message> {
   const tools: OaTool[] = opts.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: plainSchema(t.input_schema) } }))
   const res = await post(p, '/chat/completions', { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages, { toolNames: p.preset.id === 'mistral' }), tools, stream: true, max_tokens: opts.maxTokens }, signal)
@@ -181,6 +195,10 @@ export async function chat(
     const choice = chunk.choices?.[0]
     if (!choice) continue
     const d = choice.delta
+    // Reasoning, where the provider shares it: thinking parts (Mistral) or a separate field
+    // (reasoning_content: DeepSeek; reasoning: OpenRouter, Groq and others).
+    const thought = contentThinking(d?.content) + (typeof d?.reasoning_content === 'string' ? d.reasoning_content : '') + (typeof d?.reasoning === 'string' ? d.reasoning : '')
+    if (thought) onThinking?.(thought)
     const piece = contentText(d?.content)
     if (piece) {
       text += piece

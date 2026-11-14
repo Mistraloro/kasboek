@@ -1,4 +1,4 @@
-import { ArrowUp, Check, RotateCcw, Sparkles, Square, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronRight, RotateCcw, Sparkles, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AssistantStatus, ChatMessage } from '@shared/types'
@@ -43,6 +43,22 @@ function Rich({ text }: { text: string }) {
   )
 }
 
+/** The model's reasoning: collapsed, and open while it is still thinking with no answer yet. */
+function Thinking({ text, live }: { text: string; live: boolean }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const shown = open || live
+  return (
+    <div className="mb-2 rounded-lg border border-border bg-surface/60">
+      <button type="button" aria-expanded={shown} onClick={() => setOpen(!shown)} className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs text-muted hover:text-text">
+        <ChevronRight size={13} className={cx('transition-transform', shown && 'rotate-90')} />
+        <span className={cx(live && 'animate-pulse')}>{live ? t('assistant.thinkingLive') : t('assistant.thinkingShown')}</span>
+      </button>
+      {shown && <p className="selectable max-h-56 overflow-y-auto px-3 pb-2 text-xs whitespace-pre-wrap text-muted">{text.trim()}</p>}
+    </div>
+  )
+}
+
 function Bubble({ m }: { m: ChatMessage }) {
   const { t } = useTranslation()
   const toast = useToast()
@@ -64,6 +80,7 @@ function Bubble({ m }: { m: ChatMessage }) {
     )
   return (
     <div className="text-[13px] leading-relaxed">
+      {m.thinking?.trim() && <Thinking text={m.thinking} live={!m.text && !m.error} />}
       {m.tools.length > 0 && (
         <p className="mb-1 text-xs text-muted">
           {[...new Set(m.tools.map((x) => t(`assistant.tool.${x.name}`, { defaultValue: x.name.replace(/_/g, ' ') })))].join(' · ')}

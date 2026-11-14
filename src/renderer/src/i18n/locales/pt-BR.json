@@ -63,7 +63,8 @@
     "tool": {
       "settings_get": "Configurações",
       "import_raw": "Arquivo CSV"
-    }
+    },
+    "thinkingLive": "Pensando…"
   },
   "settings": {
     "title": "Configurações",

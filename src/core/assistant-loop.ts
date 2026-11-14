@@ -11,11 +11,12 @@ type ToolResult = Anthropic.Beta.Messages.BetaToolResultBlockParam
 
 export type LoopEvent =
   | { type: 'text'; text: string }
+  | { type: 'thinking'; text: string }
   | { type: 'tool'; name: string; ok: boolean }
 
 export interface LoopDeps {
-  /** One model call. Streams text through `onText`; resolves with the final message. */
-  call(messages: MessageParam[], onText: (t: string) => void, signal: AbortSignal): Promise<Message>
+  /** One model call. Streams text through `onText` and the model's thinking (when shown) through `onThinking`; resolves with the final message. */
+  call(messages: MessageParam[], onText: (t: string) => void, signal: AbortSignal, onThinking?: (t: string) => void): Promise<Message>
   /** True for errors worth re-issuing the same turn for (an unparseable streamed tool input). */
   retryable(err: unknown): boolean
   runTool(name: string, input: unknown): Promise<{ ok: boolean; content: string }>
@@ -35,8 +36,18 @@ export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: 
   for (let step = 0; step < MAX_STEPS; step++) {
     if (signal.aborted) return 'aborted'
     let message: Message
+    let firstThought = true
     try {
-      message = await deps.call(messages, (t) => deps.onEvent({ type: 'text', text: t }), signal)
+      message = await deps.call(
+        messages,
+        (t) => deps.onEvent({ type: 'text', text: t }),
+        signal,
+        (t) => {
+          // Each step's reasoning starts on its own paragraph.
+          deps.onEvent({ type: 'thinking', text: firstThought && step > 0 ? `\n\n${t}` : t })
+          firstThought = false
+        }
+      )
       retries = 0
     } catch (err) {
       if (signal.aborted) return 'aborted'

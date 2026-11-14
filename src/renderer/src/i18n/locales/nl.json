@@ -246,7 +246,9 @@
       "import_updateRows": "Importregels",
       "import_commit": "Importeren"
     },
-    "privacyLocal": "{{ai}} draait op deze computer of je netwerk: je berichten en gegevens gaan alleen daarheen."
+    "privacyLocal": "{{ai}} draait op deze computer of je netwerk: je berichten en gegevens gaan alleen daarheen.",
+    "thinkingLive": "Denkt na…",
+    "thinkingShown": "Gedachtegang"
   },
   "settings": {
     "title": "Instellingen",

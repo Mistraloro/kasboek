@@ -246,7 +246,9 @@
       "import_updateRows": "Import rows",
       "import_commit": "Import"
     },
-    "privacyLocal": "{{ai}} runs on this computer or your network: your messages and data are sent only there."
+    "privacyLocal": "{{ai}} runs on this computer or your network: your messages and data are sent only there.",
+    "thinkingLive": "Thinking…",
+    "thinkingShown": "Thinking"
   },
   "settings": {
     "title": "Settings",
