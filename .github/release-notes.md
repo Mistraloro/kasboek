@@ -35,5 +35,7 @@ These builds are not yet signed with a certificate:
 
 ## Good to know
 
+- **Syncing between computers? Update all of them.** A computer on an older version ignores the newer rule settings (whole-word matching, order) it receives.
+
 - Windows Hello and Touch ID were only tested in simulation; please report anything odd.
 - If you used 0.9 with a short password, Kasboek asks for a stronger one at the next unlock.

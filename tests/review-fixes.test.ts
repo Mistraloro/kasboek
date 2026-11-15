@@ -286,6 +286,9 @@ describe('assistant plumbing', () => {
   it('masks account numbers before a check is sent', async () => {
     const { maskIban } = await import('../src/main/assistant/csv')
     expect(maskIban('Naar BE68 5390 0754 7034 voor huur')).toBe('Naar BE…7034 voor huur')
+    // Stuck to other text (a mandate reference), and only when the checksum is right.
+    expect(maskIban('MANDAAT NUMMER : 864551BE68539007547034XYZ')).toBe('MANDAAT NUMMER : 864551BE…7034XYZ')
+    expect(maskIban('REF AB12CDEFGHIJKLMNOP')).toBe('REF AB12CDEFGHIJKLMNOP')
   })
 })
 
@@ -361,5 +364,19 @@ describe('review 14, medium items', () => {
     })
     expect(await json(p, { system: 's', user: 'u', schema: {}, maxTokens: 32000 })).toBe('{"ok":true}')
     expect(bodies.map((b) => [b.response_format.type, b.max_tokens])).toEqual([['json_schema', 32000], ['json_schema', 8192]])
+  })
+})
+
+describe('review 14, low items', () => {
+  it('#18 reordering writes only the rules that moved', () => {
+    const { d } = db()
+    const g = cat(d, 'Groceries')
+    const ids = ['aaaa', 'bbbb', 'cccc', 'dddd'].map((p) => createRule(d, { field: 'any', pattern: p, categoryId: g, applyToExisting: false }).rule.id)
+    reorderRules(d, ids)
+    const before = (d.prepare('SELECT total_changes() AS n').get() as { n: number }).n
+    // Swap the last two: only those two change.
+    reorderRules(d, [ids[0]!, ids[1]!, ids[3]!, ids[2]!])
+    expect((d.prepare('SELECT total_changes() AS n').get() as { n: number }).n - before).toBe(2)
+    expect(listRules(d).map((r) => r.id)).toEqual([ids[0], ids[1], ids[3], ids[2]])
   })
 })

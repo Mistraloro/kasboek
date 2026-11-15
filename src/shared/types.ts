@@ -210,6 +210,8 @@ export type KeyProtection = 'os' | 'weak'
 export interface AppInfo {
   name: string
   version: string
+  /** The commit the build was made from (empty in a development run without git). */
+  commit: string
   platform: NodeJSPlatform
   dataDir: string
   /** Command and arguments to run Kasboek as an MCP server. */

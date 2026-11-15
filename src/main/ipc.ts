@@ -63,6 +63,7 @@ const desktopOps: OpTable = {
     handler: () => ({
       name: app.getName(),
       version: app.getVersion(),
+      commit: __BUILD_COMMIT__,
       platform: process.platform,
       dataDir: paths.dataDir,
       mcpCommand: { command: helperPath(), args: ['--data-dir', paths.dataDir] }

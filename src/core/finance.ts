@@ -377,9 +377,15 @@ export function updateRule(
 export function reorderRules(db: Db, ids: number[]): Rule[] {
   const set = db.prepare('UPDATE rules SET priority = ? WHERE id = ?')
   db.transaction(() => {
-    const rest = listRules(db).filter((r) => !ids.includes(r.id))
+    const now = listRules(db)
+    const rest = now.filter((r) => !ids.includes(r.id))
     const order = [...ids, ...rest.map((r) => r.id)]
-    order.forEach((id, i) => set.run(order.length - i, id))
+    const current = new Map(now.map((r) => [r.id, r.priority]))
+    // Only rules whose place changed are written (each write is a change to sync).
+    order.forEach((id, i) => {
+      const priority = order.length - i
+      if (current.get(id) !== priority) set.run(priority, id)
+    })
   })()
   return listRules(db)
 }

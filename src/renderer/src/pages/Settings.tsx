@@ -143,7 +143,7 @@ function SecuritySection() {
         </Badge>
       </Row>
       <Row label={t('settings.dataFolder')} hint={<span className="selectable break-all">{info.dataDir}</span>}>
-        <span className="text-[13px] text-muted">{t('settings.version', { version: info.version })}</span>
+        <span className="text-[13px] text-muted">{t('settings.version', { version: info.commit ? `${info.version} (${info.commit})` : info.version })}</span>
       </Row>
 
       <Modal open={modal === 'password'} title={device ? t('settings.usePassword') : t('settings.changePassword')} onClose={close}>

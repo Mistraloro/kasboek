@@ -135,7 +135,11 @@ export function syncMcpBridge(run: Run): void {
     server.close()
     server = null
     rmSync(discoveryFile(), { force: true })
-    for (const resolve of pending.values()) resolve(false)
+    // Waiting approvals are declined; their cards say so instead of staying clickable.
+    for (const [id, resolve] of pending) {
+      broadcast({ type: 'mcp.expired', id })
+      resolve(false)
+    }
     pending.clear()
   }
 }
