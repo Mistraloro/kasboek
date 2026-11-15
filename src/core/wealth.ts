@@ -7,7 +7,7 @@
  * first recorded balance of a bank account, its value is worked back from that balance. Everything is converted to the main
  * currency with the rate of that day.
  */
-import { addMonths, monthRange } from '@shared/month'
+import { addMonths, localToday, monthRange } from '@shared/month'
 import type { AccountKind, NetWorth, NetWorthAccount, Valuation, YearSummary } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
@@ -85,7 +85,7 @@ const monthEnd = (month: string): string => {
   return d.toISOString().slice(0, 10)
 }
 
-export function netWorth(db: Db, opts: { months: number }, today = new Date().toISOString().slice(0, 10)): NetWorth {
+export function netWorth(db: Db, opts: { months: number }, today = localToday()): NetWorth {
   const main = getSettings(db).currency
   const accounts = db.prepare('SELECT id, name, kind, currency, opening_balance_cents, archived, created_at FROM accounts ORDER BY archived, name').all() as AccountRow[]
   const histories = new Map(accounts.map((a) => [a.id, history(db, a)]))

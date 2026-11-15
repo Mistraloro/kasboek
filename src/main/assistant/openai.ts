@@ -105,24 +105,61 @@ const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
     signal?.addEventListener('abort', () => (clearTimeout(timer), reject(signal.reason)), { once: true })
   })
 
-/** Seconds (or an HTTP date) in Retry-After, capped so the person isn't kept waiting long. */
-function retryDelay(res: Response | null, attempt: number): number {
+/**
+ * How long to wait before a retry: Retry-After (seconds or an HTTP date) when given, else 1 s, then
+ * 3 s. null when the server asks for a long wait: retrying sooner would only fail again.
+ */
+function retryDelay(res: Response | null, attempt: number): number | null {
   const header = res?.headers.get('retry-after')
   if (header) {
     const secs = Number(header)
     const ms = Number.isFinite(secs) ? secs * 1000 : Date.parse(header) - Date.now()
-    if (Number.isFinite(ms) && ms >= 0) return Math.min(ms, 20_000)
+    if (Number.isFinite(ms) && ms >= 0) return ms > 20_000 ? null : ms
   }
   return [1000, 3000][attempt] ?? 3000
 }
 
+/** No new data from a streaming answer for this long: it counts as hanging. */
+const IDLE_MS = 90_000
+
+/** An open answer. `touch` marks new data (streams); `close` ends the time limits. */
+interface Open {
+  res: Response
+  touch(): void
+  close(): void
+  /** Why the time limit ended the request, if it did. */
+  timedOut(): string | null
+}
+
 /**
- * One request with a time limit, retried twice on network errors and on 429/5xx answers. Retries
- * only happen before any of the answer has arrived, so nothing is shown twice.
+ * One request, retried twice on network errors and on 429/5xx answers. Retries only happen before
+ * any of the answer has arrived, so nothing is shown twice. The time limit covers getting an answer;
+ * with `idleMs` (streams) it then becomes a limit on silence, so a long but steady answer isn't cut.
  */
-async function request(p: ActiveProvider, path: string, init: { method?: string; body?: unknown }, signal: AbortSignal | undefined, timeoutMs: number): Promise<Response> {
-  const timeout = AbortSignal.timeout(timeoutMs)
-  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
+export async function request(
+  p: ActiveProvider,
+  path: string,
+  init: { method?: string; body?: unknown },
+  signal: AbortSignal | undefined,
+  opts: { timeoutMs: number; idleMs?: number }
+): Promise<Open> {
+  const ctrl = new AbortController()
+  const onAbort = (): void => ctrl.abort(signal?.reason)
+  if (signal?.aborted) onAbort()
+  signal?.addEventListener('abort', onAbort, { once: true })
+  let why: string | null = null
+  let timer = setTimeout(() => {
+    why = `no answer within ${Math.round(opts.timeoutMs / 1000)} seconds`
+    ctrl.abort('timeout')
+  }, opts.timeoutMs)
+  const close = (): void => {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', onAbort)
+  }
+  const stopped = (): never => {
+    close()
+    throw why ? new ProviderError(0, why) : new DOMException('Aborted', 'AbortError')
+  }
   for (let attempt = 0; ; attempt++) {
     let res: Response | null = null
     try {
@@ -131,38 +168,79 @@ async function request(p: ActiveProvider, path: string, init: { method?: string;
         method: init.method ?? 'GET',
         headers: headers(p),
         ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
-        signal: combined,
+        signal: ctrl.signal,
         redirect: 'error'
       })
     } catch (err) {
-      if (signal?.aborted) throw err
-      if (timeout.aborted) throw new ProviderError(0, `no answer within ${Math.round(timeoutMs / 1000)} seconds`)
-      if (attempt >= RETRIES) throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
+      if (ctrl.signal.aborted) stopped()
+      if (attempt >= RETRIES) {
+        close()
+        throw new ProviderError(0, err instanceof Error ? err.message : 'network error')
+      }
     }
-    if (res?.ok) return res
-    if (res && (!RETRY_STATUS.has(res.status) || attempt >= RETRIES)) throw await failure(res)
-    await sleep(retryDelay(res, attempt), combined).catch((err: unknown) => {
-      if (signal?.aborted) throw err
-      throw new ProviderError(0, `no answer within ${Math.round(timeoutMs / 1000)} seconds`)
-    })
+    if (res?.ok) {
+      if (opts.idleMs) {
+        const idle = opts.idleMs
+        const touch = (): void => {
+          clearTimeout(timer)
+          timer = setTimeout(() => {
+            why = `no answer for ${Math.round(idle / 1000)} seconds`
+            ctrl.abort('idle')
+          }, idle)
+        }
+        touch()
+        return { res, touch, close, timedOut: () => why }
+      }
+      return { res, touch: () => {}, close, timedOut: () => why }
+    }
+    const wait = res ? retryDelay(res, attempt) : retryDelay(null, attempt)
+    if (res && (!RETRY_STATUS.has(res.status) || attempt >= RETRIES || wait === null)) {
+      close()
+      throw await failure(res)
+    }
+    // Free the failed answer before asking again.
+    await res?.body?.cancel().catch(() => {})
+    await sleep(wait ?? 3000, ctrl.signal).catch(() => stopped())
   }
 }
 
-function post(p: ActiveProvider, path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
-  return request(p, path, { method: 'POST', body }, signal, CHAT_TIMEOUT_MS)
+/** A request whose whole answer is read at once (JSON); the time limit lasts until it is read. */
+async function readJson<T>(open: Open): Promise<T> {
+  try {
+    return (await open.res.json()) as T
+  } catch (err) {
+    const why = open.timedOut()
+    throw why ? new ProviderError(0, why) : err
+  } finally {
+    open.close()
+  }
+}
+
+function post(p: ActiveProvider, path: string, body: unknown, signal?: AbortSignal, stream = false): Promise<Open> {
+  return request(p, path, { method: 'POST', body }, signal, stream ? { timeoutMs: CHAT_TIMEOUT_MS, idleMs: IDLE_MS } : { timeoutMs: CHAT_TIMEOUT_MS })
 }
 
 /** Reads a server-sent-events stream of `data: {json}` lines. */
-async function* events(res: Response, signal: AbortSignal): AsyncGenerator<unknown> {
-  if (!res.body) return
+async function* events(open: Open, signal: AbortSignal): AsyncGenerator<unknown> {
+  const res = open.res
+  if (!res.body) return open.close()
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
   try {
     for (;;) {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
-      const { value, done } = await reader.read()
+      let chunk: Awaited<ReturnType<typeof reader.read>>
+      try {
+        chunk = await reader.read()
+      } catch (err) {
+        // A stream ended by the time limit says why, instead of a bare "aborted".
+        const why = open.timedOut()
+        throw why && !signal.aborted ? new ProviderError(0, why) : err
+      }
+      const { value, done } = chunk
       if (done) break
+      open.touch()
       buf += decoder.decode(value, { stream: true })
       let nl: number
       while ((nl = buf.indexOf('\n')) >= 0) {
@@ -179,6 +257,7 @@ async function* events(res: Response, signal: AbortSignal): AsyncGenerator<unkno
       }
     }
   } finally {
+    open.close()
     reader.releaseLock()
   }
 }
@@ -238,13 +317,13 @@ export async function chat(
 ): Promise<Message> {
   const tools: OaTool[] = opts.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: plainSchema(t.input_schema) } }))
   const body = { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages, { toolNames: p.preset.id === 'mistral' }), tools, stream: true, max_tokens: opts.maxTokens }
-  let res: Response
+  let res: Open
   try {
-    res = await post(p, '/chat/completions', body, signal)
+    res = await post(p, '/chat/completions', body, signal, true)
   } catch (err) {
     // Some models allow fewer output tokens than asked for: try again with a common limit.
     if (!(err instanceof ProviderError) || (err.status !== 400 && err.status !== 422) || signal.aborted || !/token/i.test(err.message) || opts.maxTokens <= 8192) throw err
-    res = await post(p, '/chat/completions', { ...body, max_tokens: 8192 }, signal)
+    res = await post(p, '/chat/completions', { ...body, max_tokens: 8192 }, signal, true)
   }
   let text = ''
   let finish: string | null = null
@@ -304,26 +383,23 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
     ]
   }
   const rejected = (err: unknown): err is ProviderError => err instanceof ProviderError && (err.status === 400 || err.status === 422) && !opts.signal?.aborted
-  // A strict schema where the provider supports it, plain JSON mode otherwise; and a common output
-  // limit for models that allow less than asked for.
-  const attempts = [
-    { ...strict, max_tokens: opts.maxTokens },
-    { ...loose, max_tokens: opts.maxTokens },
-    { ...loose, max_tokens: Math.min(opts.maxTokens, 8192) }
-  ]
-  let res: Response | null = null
-  for (const [i, body] of attempts.entries()) {
+  // A strict schema where the provider supports it, else plain JSON mode. A too-high output limit
+  // is lowered first (keeping the schema); only a refused schema drops it.
+  let strictMode = true
+  let maxTokens = opts.maxTokens
+  let open: Open
+  for (;;) {
     try {
-      res = await post(p, '/chat/completions', { model: p.csvModel, ...body }, opts.signal)
+      open = await post(p, '/chat/completions', { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: maxTokens }, opts.signal)
       break
     } catch (err) {
-      if (!rejected(err) || i === attempts.length - 1) throw err
-      // Only a too-high output limit is worth the last attempt.
-      if (i === 1 && !/token/i.test(err.message)) throw err
+      if (!rejected(err)) throw err
+      if (/token/i.test(err.message) && maxTokens > 8192) maxTokens = 8192
+      else if (strictMode) strictMode = false
+      else throw err
     }
   }
-  if (!res) throw new ProviderError(0, 'no answer')
-  const body = (await res.json()) as { choices?: { message?: { content?: unknown }; finish_reason?: string }[] }
+  const body = await readJson<{ choices?: { message?: { content?: unknown }; finish_reason?: string }[] }>(open)
   const choice = body.choices?.[0]
   if (choice?.finish_reason === 'length') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
   const text = contentText(choice?.message?.content)
@@ -357,8 +433,8 @@ export function chatModels(body: { data?: ModelEntry[]; models?: ModelEntry[] })
 }
 
 export async function listModels(p: ActiveProvider): Promise<string[]> {
-  const res = await request(p, '/models', {}, undefined, MODELS_TIMEOUT_MS)
-  return chatModels((await res.json()) as { data?: ModelEntry[]; models?: ModelEntry[] })
+  const open = await request(p, '/models', {}, undefined, { timeoutMs: MODELS_TIMEOUT_MS })
+  return chatModels(await readJson<{ data?: ModelEntry[]; models?: ModelEntry[] }>(open))
 }
 
 /** Plain-language errors for the person. */

@@ -51,14 +51,12 @@ describe('bank balances', () => {
     expect(listBankBalances(d, acc)[0]!.differenceCents).toBe(0)
   })
 
-  it('refuses a balance in the future and leaves investments alone', () => {
+  it('refuses a balance in the future, and on an investment account', () => {
     const { d, acc } = db()
     expect(() => setBankBalance(d, { accountId: acc, date: '2026-12-01', balanceCents: 1 }, '2026-11-14')).toThrow(/today or an earlier day/)
+    // An investment has a value (valuations), not a bank balance.
     const inv = db('investment')
-    tx(inv.d, inv.acc, '2026-10-01', 100000)
-    setBankBalance(inv.d, { accountId: inv.acc, date: '2026-10-01', balanceCents: 100000 }, '2026-11-14')
-    // A changed market value is a gain, not a mistake.
-    expect(setBankBalance(inv.d, { accountId: inv.acc, date: '2026-11-01', balanceCents: 110000 }, '2026-11-14').differenceCents).toBeNull()
+    expect(() => setBankBalance(inv.d, { accountId: inv.acc, date: '2026-10-01', balanceCents: 100000 }, '2026-11-14')).toThrow(/investment account has a value/)
   })
 
   it('net worth before the first recorded balance follows it too', () => {

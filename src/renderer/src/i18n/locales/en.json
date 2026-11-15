@@ -262,7 +262,8 @@
       "dropped_one": "{{count}} suggestion left out",
       "dropped_other": "{{count}} suggestions left out",
       "skippedSince_one": "{{count}} already had a category by then and was left alone.",
-      "skippedSince_other": "{{count}} already had a category by then and were left alone."
+      "skippedSince_other": "{{count}} already had a category by then and were left alone.",
+      "saved": "Saved: {{rules}} rule(s) and {{count}} categorised transaction(s). Undoing the check doesn’t undo these; change them in Rules or Transactions."
     },
     "checkingGroups": "{{ai}} is checking: {{done}} of {{total}} groups…"
   },

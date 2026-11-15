@@ -190,7 +190,12 @@ export function applyCheckProposals(db: Db, id: string, pick: { rules: number[];
       }
     }
   })()
-  c.summary = { ...c.summary, rules: c.summary.rules.filter((x) => !pick.rules.includes(x.id)), existing: c.summary.existing.filter((x) => !pick.existing.includes(x.id)) }
+  c.summary = {
+    ...c.summary,
+    rules: c.summary.rules.filter((x) => !pick.rules.includes(x.id)),
+    existing: c.summary.existing.filter((x) => !pick.existing.includes(x.id)),
+    applied: { rules: (c.summary.applied?.rules ?? 0) + rules, categorised: (c.summary.applied?.categorised ?? 0) + categorised }
+  }
   return { preview: preview(db, id), rules, categorised, skipped }
 }
 
@@ -502,11 +507,13 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
   // that day, so it is recorded (and compared with what Kasboek expected).
   let bankBalance: ImportCommitResult['bankBalance'] = null
   const fromFile = fileBalance(built.map((b) => b.raw))
+  let balanceNote: string | null = null
   if (fromFile && kind !== 'investment') {
     try {
       bankBalance = setBankBalance(db, { accountId: s.accountId, date: fromFile.date, balanceCents: fromFile.cents, note: 'From the CSV' })
-    } catch {
-      // A date in the future: not recorded.
+    } catch (err) {
+      console.warn('[import] closing balance from the CSV not recorded:', err instanceof Error ? err.message : err)
+      balanceNote = err instanceof Error ? err.message : 'The closing balance in the file could not be recorded.'
     }
   }
   const hasBalance = !!db.prepare('SELECT 1 FROM valuations WHERE account_id = ?').get(s.accountId)
@@ -517,7 +524,26 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
     lastDate,
     balanceOnLastDate: lastDate ? balanceOn(db, s.accountId, lastDate).cents : null,
     bankBalance,
+    balanceNote,
     askBalance: kind !== 'investment' && !hasBalance
+  }
+}
+
+/** What committing the open import would do, for the approval text. */
+export function commitSummary(db: Db, id: string): { rows: number; totalCents: number; from: string | null; to: string | null; accountName: string; currency: string; closing: { date: string; cents: number } | null } {
+  const s = session(id)
+  const built = buildRows(db, s)
+  const ready = built.filter((b) => b.row.status === 'ready')
+  const dates = ready.map((b) => b.row.bookingDate!).sort()
+  const account = db.prepare('SELECT name, currency, kind FROM accounts WHERE id = ?').get(s.accountId) as { name: string; currency: string; kind: string }
+  return {
+    rows: ready.length,
+    totalCents: ready.reduce((t, b) => t + (b.row.amountCents ?? 0), 0),
+    from: dates[0] ?? null,
+    to: dates.at(-1) ?? null,
+    accountName: account.name,
+    currency: account.currency,
+    closing: account.kind === 'investment' ? null : fileBalance(built.map((b) => b.raw))
   }
 }
 

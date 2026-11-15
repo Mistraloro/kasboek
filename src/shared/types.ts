@@ -359,6 +359,8 @@ export interface ImportCommitResult {
   balanceOnLastDate: number | null
   /** A balance read from the CSV and recorded, compared with what Kasboek expected. */
   bankBalance: BankBalanceResult | null
+  /** Why the file's closing balance wasn't recorded, if it wasn't. */
+  balanceNote: string | null
   /** The account has no recorded bank balance yet: ask for one. */
   askBalance: boolean
 }
@@ -400,6 +402,8 @@ export interface CheckSummary {
   existing: ProposedCategorisation[]
   /** Suggestions that were dropped, and why. */
   dropped: string[]
+  /** What "Apply selected" already saved (not undone with the check; change it in Rules or Transactions). */
+  applied: { rules: number; categorised: number } | null
 }
 
 export interface ProposedRule {

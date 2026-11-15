@@ -262,7 +262,8 @@
       "dropped_one": "{{count}} voorstel weggelaten",
       "dropped_other": "{{count}} voorstellen weggelaten",
       "skippedSince_one": "{{count}} had intussen al een categorie en bleef ongemoeid.",
-      "skippedSince_other": "{{count}} hadden intussen al een categorie en bleven ongemoeid."
+      "skippedSince_other": "{{count}} hadden intussen al een categorie en bleven ongemoeid.",
+      "saved": "Bewaard: {{rules}} regel(s) en {{count}} gecategoriseerde transactie(s). De controle ongedaan maken doet dit niet ongedaan; pas ze aan in Regels of Verrichtingen."
     },
     "checkingGroups": "{{ai}} kijkt na: {{done}} van {{total}} groepen…"
   },

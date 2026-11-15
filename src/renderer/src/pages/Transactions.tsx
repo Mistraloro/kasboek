@@ -12,6 +12,7 @@ import { call, useOp } from '../lib/api'
 import { formatDate, monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
+import { localToday } from '@shared/month'
 
 export interface TxFilter {
   accountId?: number
@@ -241,7 +242,7 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
     if (!tx) return
     setForm({
       accountId: base?.accountId ?? accounts[0]?.id ?? 0,
-      bookingDate: base?.bookingDate ?? new Date().toISOString().slice(0, 10),
+      bookingDate: base?.bookingDate ?? localToday(),
       amount: base ? centsToInput(base.amountCents, fmt.formats) : '',
       description: base?.description ?? '',
       counterpartyName: base?.counterpartyName ?? '',

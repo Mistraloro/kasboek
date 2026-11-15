@@ -262,7 +262,8 @@
       "dropped_one": "{{count}} sugestão deixada de fora",
       "dropped_other": "{{count}} sugestões deixadas de fora",
       "skippedSince_one": "{{count}} já tinha categoria entretanto e ficou como estava.",
-      "skippedSince_other": "{{count}} já tinham categoria entretanto e ficaram como estavam."
+      "skippedSince_other": "{{count}} já tinham categoria entretanto e ficaram como estavam.",
+      "saved": "Guardado: {{rules}} regra(s) e {{count}} movimento(s) classificado(s). Anular a verificação não os anula; altere-os em Regras ou Movimentos."
     },
     "checkingGroups": "{{ai}} está a rever: {{done}} de {{total}} grupos…"
   },

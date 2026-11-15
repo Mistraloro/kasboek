@@ -9,8 +9,9 @@ import { formatDate } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { useToast } from './Toast'
 import { Badge, Button, Field, Input, Modal, cx } from './ui'
+import { localToday } from '@shared/month'
 
-const today = (): string => new Date().toISOString().slice(0, 10)
+const today = (): string => localToday()
 
 /** "Matches your bank" or "€40.00 difference since 14/11: a transaction may be missing". */
 export function BalanceVerdict({ result, currency, since }: { result: Pick<BankBalanceResult, 'expectedCents' | 'differenceCents'>; currency: string; since?: string | null }): ReactNode {

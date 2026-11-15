@@ -5,6 +5,7 @@ import { coreOps } from '@core/ops'
 import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
 import { previewRule } from '@core/finance'
+import { commitSummary, latestSession } from '@core/import'
 import type { RuleField, RuleMatch } from '@shared/types'
 import { getPrefs } from '../prefs'
 import { contract, type ContractEntry, type OpName } from '@shared/contract'
@@ -166,8 +167,19 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
     }
     case 'categories.create':
       return `Create the ${String(input['kind'])} category “${String(input['name'])}”`
-    case 'import.commit':
-      return 'Import the ready rows of the open CSV as transactions'
+    case 'import.commit': {
+      const id = typeof input['sessionId'] === 'string' ? input['sessionId'] : latestSession()
+      if (!id) return 'Import the ready rows of the open CSV as transactions'
+      try {
+        const c = commitSummary(db, id)
+        const fmt = getPrefs().formats
+        const range = c.from && c.to ? (c.from === c.to ? `, ${formatDate(c.from, fmt)}` : `, ${formatDate(c.from, fmt)} – ${formatDate(c.to, fmt)}`) : ''
+        const closing = c.closing ? `, and record the file’s closing balance ${money(db, c.closing.cents, c.currency)} on ${formatDate(c.closing.date, fmt)}` : ''
+        return `Import ${c.rows} row${c.rows === 1 ? '' : 's'} (${money(db, c.totalCents, c.currency)}${range}) into ${c.accountName}${closing}`
+      } catch {
+        return 'Import the ready rows of the open CSV as transactions'
+      }
+    }
     case 'accounts.create':
       return `Add the account “${String(input['name'])}”${input['currency'] && input['currency'] !== getSettings(db).currency ? ` in ${String(input['currency'])}` : ''}`
     case 'valuations.set': {

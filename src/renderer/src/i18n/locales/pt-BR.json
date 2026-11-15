@@ -60,7 +60,8 @@
     "allKnown": "Tudo neste arquivo já está no Kasboek ({{from}} – {{to}}).",
     "undoPart": "Desfazer",
     "check": {
-      "nothingChanged": "Nada neste arquivo precisava de mudar."
+      "nothingChanged": "Nada neste arquivo precisava de mudar.",
+      "saved": "Salvo: {{rules}} regra(s) e {{count}} movimento(s) classificado(s). Anular a verificação não os anula; altere-os em Regras ou Movimentos."
     },
     "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…"
   },

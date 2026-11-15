@@ -14,6 +14,7 @@ import * as openai from './openai'
 import { activeProvider, isConfigured, requireConfigured } from './provider'
 import { PROVIDERS } from '@shared/ai-providers'
 import { assistantTools, compactResult, describeChange, opForTool, precheck } from './tools'
+import { localToday } from '@shared/month'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 let run: Run | null = null
@@ -99,6 +100,20 @@ export function confirm(id: string, approve: boolean): void {
   publish(true)
 }
 
+/**
+ * Leaves the conversation valid after a turn that didn't finish: an unanswered tool call is
+ * dropped; changes that already ran stay in the history (so the model knows they were made) and
+ * the turn is closed with a short note; a turn where nothing ran is taken back.
+ */
+export function settleTurn(history: Anthropic.Beta.Messages.BetaMessageParam[], before: number, note: string): void {
+  const last = history.at(-1)
+  if (last?.role === 'assistant' && JSON.stringify(last.content).includes('"tool_use"')) history.pop()
+  const ranTools = history.slice(before).some((m) => m.role === 'user' && Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_result'))
+  if (history.at(-1)?.role !== 'user') return
+  if (ranTools) history.push({ role: 'assistant', content: note })
+  else history.length = before
+}
+
 export function send(text: string): AssistantStatus {
   if (busy) throw new AppError('assistant.busy', 'The assistant is still answering.')
   if (!run) throw new Error('assistant not initialised')
@@ -109,7 +124,7 @@ export function send(text: string): AssistantStatus {
   const native = provider.preset.id === 'anthropic'
   const anthropic = native ? client(database) : null
   const tools = assistantTools().map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema as Anthropic.Beta.Messages.BetaTool.InputSchema, eager_input_streaming: true }))
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const system = `${systemPrompt(provider.preset.assistantName)}\n\nToday is ${today}.`
 
   display.push({ id: randomUUID(), role: 'user', text })
@@ -177,10 +192,7 @@ export function send(text: string): AssistantStatus {
     controller.signal
   )
     .then((end) => {
-      // A turn that ended mid-tool-loop would leave tool calls without results: roll back.
-      if (end !== 'done' && history.at(-1)?.role === 'assistant' && JSON.stringify(history.at(-1)).includes('"tool_use"')) history.length = before
-      // Stopped right after tools ran: close the turn, so the next question follows a reply.
-      else if (end !== 'done' && history.at(-1)?.role === 'user' && history.length > before + 1) history.push({ role: 'assistant', content: '(Stopped before finishing.)' })
+      if (end !== 'done') settleTurn(history, before, '(Stopped before finishing.)')
       const name = provider.preset.assistantName
       if (end === 'refusal') current.error = `${name} declined to answer this.`
       if (end === 'max_tokens') current.error = 'The answer was cut off. Ask for something shorter.'
@@ -189,8 +201,7 @@ export function send(text: string): AssistantStatus {
     })
     .catch((err: unknown) => {
       current.error = native ? explainError(err) : openai.explainProviderError(err, provider.preset.assistantName)
-      // Roll back to before this turn so the conversation stays valid (no tool call without its result).
-      history.length = before
+      settleTurn(history, before, `(Stopped: ${current.error})`)
     })
     .finally(() => {
       display = display.filter((m) => !(m.role === 'assistant' && !m.text && !m.tools.length && !m.error && !m.thinking))

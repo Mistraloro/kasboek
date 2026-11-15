@@ -103,6 +103,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
           {done.lastDate && done.balanceOnLastDate !== null && (
             <div className="mt-1 pl-7">
               <ImportBalanceCheck key={done.batchId} accountId={done.accountId} currency={done.currency} date={done.lastDate} kasboekCents={done.balanceOnLastDate} ask={done.askBalance} fromCsv={done.bankBalance} />
+              {done.balanceNote && <p className="mt-1 text-xs text-warning">{done.balanceNote}</p>}
             </div>
           )}
         </div>
@@ -384,7 +385,8 @@ function CheckSummaryCard({ preview, onChange }: { preview: ImportPreview; onCha
     c.categorised > 0 && line(t('import.check.categorised', { count: c.categorised }), 'categories'),
     c.renamed > 0 && line(t('import.check.renamed', { count: c.renamed }), 'names'),
     c.fixed > 0 && line(t('import.check.fixed', { count: c.fixed }), 'fixes'),
-    c.mappingChanged && line(t('import.check.mapping'), null)
+    c.mappingChanged && line(t('import.check.mapping'), null),
+    c.applied && line(t('import.check.saved', { rules: c.applied.rules, count: c.applied.categorised }), null)
   ].filter(Boolean)
   const picked = rules.size + existing.size
   const apply = (): void => {

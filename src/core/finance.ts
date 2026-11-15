@@ -6,6 +6,7 @@ import { AppError } from './errors'
 import { fingerprint } from './fingerprint'
 import { getSettings } from './settings'
 import { currentBalance } from './balance'
+import { localToday } from '@shared/month'
 
 /** A transaction's amount in currency `to` (SQL parameter by default), NULL when there is no rate. */
 const FX = (to = '?'): string => `fx(t.amount_cents, t.currency, t.booking_date, ${to})`
@@ -480,7 +481,7 @@ export function monthSummary(db: Db, month: string): MonthSummary {
  * Balance per account in the account's own currency (a transaction in another currency is
  * converted at its date's rate), and that balance in the main currency at today's rate.
  */
-export function accountBalances(db: Db, today = new Date().toISOString().slice(0, 10)): Map<number, { balance: number; balanceMain: number | null; count: number }> {
+export function accountBalances(db: Db, today = localToday()): Map<number, { balance: number; balanceMain: number | null; count: number }> {
   const rows = db
     .prepare(
       `SELECT a.id, a.currency, a.opening_balance_cents + coalesce(sum(${FX('a.currency')}), 0) AS bal, count(t.id) AS n,

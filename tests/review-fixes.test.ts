@@ -175,7 +175,8 @@ describe('check results', () => {
         mappingChanged: false,
         rules: [{ id: 1, field: 'any', match: 'contains', pattern: 'COLRUYT', categoryId: groceries, categoryName: 'Groceries', rowsHere: 1, existing: 1 }],
         existing: [{ id: 1, label: 'Colruyt', categoryId: groceries, categoryName: 'Groceries', count: 1, totalCents: -500 }],
-        dropped: []
+        dropped: [],
+        applied: null
       },
       before,
       parts: { categories: [0], names: [0], fixes: [1] },
@@ -285,5 +286,80 @@ describe('assistant plumbing', () => {
   it('masks account numbers before a check is sent', async () => {
     const { maskIban } = await import('../src/main/assistant/csv')
     expect(maskIban('Naar BE68 5390 0754 7034 voor huur')).toBe('Naar BE…7034 voor huur')
+  })
+})
+
+describe('review 14, medium items', () => {
+  it('#6 a refused bank balance leaves no half-made account', async () => {
+    const { coreOps } = await import('@core/ops')
+    const { d } = db()
+    const create = coreOps['accounts.create'].handler as (c: unknown, i: unknown) => unknown
+    expect(() => create({ db: d }, { name: 'New', bank: '', currency: 'EUR', kind: 'current', openingBalanceCents: 0, iban: 'BE68539007547034', bankBalance: { date: '2999-01-01', cents: 100 } })).toThrow(/today or an earlier day/)
+    expect((d.prepare("SELECT count(*) AS n FROM accounts WHERE name = 'New'").get() as { n: number }).n).toBe(0)
+  })
+
+  it('#7 today is the local date', async () => {
+    const { localToday } = await import('@shared/month')
+    expect(localToday(new Date(2026, 10, 15, 0, 30))).toBe('2026-11-15')
+  })
+
+  it('#10 #11 a turn that stops keeps changes that ran, and never leaves two questions in a row', async () => {
+    const { settleTurn } = await import('../src/main/assistant/chat')
+    const q = { role: 'user', content: 'categorise' }
+    const call = { role: 'assistant', content: [{ type: 'tool_use', id: 't1', name: 'rules_create', input: {} }] }
+    const result = { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] }
+    const call2 = { role: 'assistant', content: [{ type: 'tool_use', id: 't2', name: 'budgets_set', input: {} }] }
+    const h1 = [q, call, result, call2] as never[]
+    settleTurn(h1, 0, '(Stopped: error)')
+    expect((h1 as { role: string }[]).map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant'])
+    expect(JSON.stringify(h1.at(-1))).toContain('Stopped')
+    // Nothing ran: the question is taken back.
+    const h2 = [{ role: 'user', content: 'earlier' }, { role: 'assistant', content: 'answer' }, q] as never[]
+    settleTurn(h2, 2, '(Stopped)')
+    expect(h2).toHaveLength(2)
+  })
+
+  it('#12 a stream that goes silent ends with a clear message', async () => {
+    const electron = await import('electron')
+    const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
+    fetch.mockReset()
+    fetch.mockImplementation(async (_u: string, init: { signal: AbortSignal }) => {
+      const body = new ReadableStream({
+        start(c) {
+          c.enqueue(new TextEncoder().encode('data: {"choices":[]}\n'))
+          init.signal.addEventListener('abort', () => c.error(new DOMException('Aborted', 'AbortError')))
+        }
+      })
+      return new Response(body, { status: 200 })
+    })
+    const { request } = await import('../src/main/assistant/openai')
+    const { PROVIDERS } = await import('@shared/ai-providers')
+    const open = await request({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm' }, '/x', {}, undefined, { timeoutMs: 1000, idleMs: 50 })
+    const reader = open.res.body!.getReader()
+    await reader.read()
+    await expect(reader.read()).rejects.toThrow()
+    expect(open.timedOut()).toMatch(/no answer for/)
+  })
+
+  it('#13 a long Retry-After fails at once; #14 a too-high limit is lowered before the schema is dropped', async () => {
+    const electron = await import('electron')
+    const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
+    const { json, listModels } = await import('../src/main/assistant/openai')
+    const { PROVIDERS } = await import('@shared/ai-providers')
+    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm' }
+    fetch.mockReset()
+    fetch.mockResolvedValueOnce(new Response('{"message":"rate limited"}', { status: 429, headers: { 'retry-after': '120' } }))
+    await expect(listModels(p)).rejects.toThrow()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    fetch.mockReset()
+    const bodies: { response_format: { type: string }; max_tokens: number }[] = []
+    fetch.mockImplementation(async (_u: string, init: { body: string }) => {
+      const b = JSON.parse(init.body)
+      bodies.push(b)
+      if (b.max_tokens > 8192) return new Response('{"message":"max_tokens is too large"}', { status: 400 })
+      return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }] }), { status: 200 })
+    })
+    expect(await json(p, { system: 's', user: 'u', schema: {}, maxTokens: 32000 })).toBe('{"ok":true}')
+    expect(bodies.map((b) => [b.response_format.type, b.max_tokens])).toEqual([['json_schema', 32000], ['json_schema', 8192]])
   })
 })

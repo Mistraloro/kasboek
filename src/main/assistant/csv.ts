@@ -139,7 +139,9 @@ type Change = Parameters<typeof imp.updateRows>[2][number]
 function applyPlan(db: Db, preview: ImportPreview, groups: RowGroup[], plan: Plan, name: string): ImportPreview {
   const notes = [...plan.notes.slice(0, 6)]
   const dropped: string[] = []
-  const before = imp.snapshot(preview.sessionId)
+  // Checked before: Undo goes back to how the rows were before the first check.
+  const earlier = imp.getCheck(preview.sessionId)
+  const before = earlier?.before ?? imp.snapshot(preview.sessionId)
   let current = preview
   let mappingChanged = false
   if (plan.mapping && preview.mapping) {
@@ -241,10 +243,11 @@ function applyPlan(db: Db, preview: ImportPreview, groups: RowGroup[], plan: Pla
 
   const rules = checkRules(db, preview.sessionId, groups, plan, validCats, dropped)
   const duplicates = current.stats.duplicates
+  const merge = (a: number[] = [], b: number[]): number[] => [...new Set([...a, ...b])]
   imp.setCheck(preview.sessionId, {
-    summary: { by: name, alreadyImported: duplicates, total: current.stats.total, mappingChanged, rules, existing, dropped },
+    summary: { by: name, alreadyImported: duplicates, total: current.stats.total, mappingChanged: mappingChanged || !!earlier?.summary.mappingChanged, rules, existing, dropped, applied: earlier?.summary.applied ?? null },
     before,
-    parts,
+    parts: { categories: merge(earlier?.parts.categories, parts.categories), names: merge(earlier?.parts.names, parts.names), fixes: merge(earlier?.parts.fixes, parts.fixes) },
     existingIds
   })
   imp.addNotes(preview.sessionId, notes)

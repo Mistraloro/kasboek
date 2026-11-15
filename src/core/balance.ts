@@ -9,6 +9,7 @@ import type { BankBalance, BankBalanceResult } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { setValuation } from './wealth'
+import { localToday } from '@shared/month'
 
 interface Checkpoint {
   date: string
@@ -62,8 +63,9 @@ export function currentBalance(db: Db, accountId: number): number {
  * Records what the bank showed on a day and compares it with what Kasboek expected from the other
  * checkpoints, so a missing or doubled transaction shows up as a difference.
  */
-export function setBankBalance(db: Db, input: { accountId: number; date: string; balanceCents: number; note?: string | null }, today = new Date().toISOString().slice(0, 10)): BankBalanceResult {
+export function setBankBalance(db: Db, input: { accountId: number; date: string; balanceCents: number; note?: string | null }, today = localToday()): BankBalanceResult {
   const a = account(db, input.accountId)
+  if (a.kind === 'investment') throw new AppError('balance.investment', 'An investment account has a value, not a bank balance: record it as a value (valuations.set, or Set value on the Net worth page).')
   if (input.date > today) throw new AppError('balance.future', 'Enter the balance of today or an earlier day.')
   const others = checkpoints(db, input.accountId).filter((c) => c.date !== input.date)
   let expectedCents: number | null = null
@@ -73,8 +75,7 @@ export function setBankBalance(db: Db, input: { accountId: number; date: string;
     date: input.date,
     balanceCents: input.balanceCents,
     expectedCents,
-    // Market value changes of an investment are gains, not mistakes.
-    differenceCents: expectedCents === null || a.kind === 'investment' ? null : input.balanceCents - expectedCents
+    differenceCents: expectedCents === null ? null : input.balanceCents - expectedCents
   }
 }
 

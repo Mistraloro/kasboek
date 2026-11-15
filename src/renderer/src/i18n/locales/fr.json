@@ -262,7 +262,8 @@
       "dropped_one": "{{count}} suggestion écartée",
       "dropped_other": "{{count}} suggestions écartées",
       "skippedSince_one": "{{count}} avait déjà une catégorie entre-temps et n’a pas été modifiée.",
-      "skippedSince_other": "{{count}} avaient déjà une catégorie entre-temps et n’ont pas été modifiées."
+      "skippedSince_other": "{{count}} avaient déjà une catégorie entre-temps et n’ont pas été modifiées.",
+      "saved": "Enregistré : {{rules}} règle(s) et {{count}} transaction(s) classée(s). Annuler la vérification ne les annule pas ; modifiez-les dans Règles ou Opérations."
     },
     "checkingGroups": "{{ai}} vérifie : {{done}} groupes sur {{total}}…"
   },

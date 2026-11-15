@@ -94,7 +94,17 @@ export const coreOps: OpTable = {
   },
   'networth.summary': { mutates: false, assistant: true, handler: ({ db }, input) => wealth.netWorth(db, input) },
   'valuations.list': { mutates: false, assistant: true, handler: ({ db }, input) => wealth.listValuations(db, input.accountId) },
-  'valuations.set': { mutates: true, assistant: true, handler: ({ db }, input) => wealth.setValuation(db, input) },
+  'valuations.set': {
+    mutates: true,
+    assistant: true,
+    handler: ({ db }, input) => {
+      // A value is the market value of an investment; for a bank account it is the bank balance.
+      const kind = (db.prepare('SELECT kind FROM accounts WHERE id = ?').get(input.accountId) as { kind: string } | undefined)?.kind
+      if (kind && kind !== 'investment')
+        throw new AppError('valuations.bank_account', 'For a bank account, record the balance the bank shows instead (balances.set, or Bank balance in Settings → Accounts).')
+      return wealth.setValuation(db, input)
+    }
+  },
   'valuations.delete': { mutates: true, assistant: false, handler: ({ db }, input) => wealth.deleteValuation(db, input) },
   'summary.year': { mutates: false, assistant: true, handler: ({ db }, input) => wealth.yearSummary(db, input.year) },
   'fx.status': { mutates: false, assistant: true, handler: ({ db }) => fxStatus(db) },
@@ -165,15 +175,19 @@ export const coreOps: OpTable = {
     handler: ({ db }, input) => {
       const iban = normalizeIban(input.iban)
       try {
-        const row = db
-          .prepare(
-            `INSERT INTO accounts (name, bank, iban, currency, kind, opening_balance_cents)
-             VALUES (?, ?, ?, ?, ?, ?) RETURNING *`
-          )
-          .get(input.name, input.bank, iban, input.currency, input.kind, input.openingBalanceCents) as AccountRow
-        // The balance the bank shows now: the starting point for the balance from here on.
-        if (input.bankBalance) setBankBalance(db, { accountId: row.id, date: input.bankBalance.date, balanceCents: input.bankBalance.cents })
-        return toAccount(row)
+        // Account and its first bank balance together: a refused balance leaves no account behind.
+        return db.transaction(() => {
+          const row = db
+            .prepare(
+              `INSERT INTO accounts (name, bank, iban, currency, kind, opening_balance_cents)
+               VALUES (?, ?, ?, ?, ?, ?) RETURNING *`
+            )
+            .get(input.name, input.bank, iban, input.currency, input.kind, input.openingBalanceCents) as AccountRow
+          // The balance the bank shows now: the starting point for the balance from here on.
+          if (input.bankBalance && input.kind === 'investment') wealth.setValuation(db, { accountId: row.id, date: input.bankBalance.date, valueCents: input.bankBalance.cents })
+          else if (input.bankBalance) setBankBalance(db, { accountId: row.id, date: input.bankBalance.date, balanceCents: input.bankBalance.cents })
+          return toAccount(row)
+        })()
       } catch (err) {
         if (err instanceof Error && /UNIQUE/.test(err.message)) {
           throw new AppError('accounts.duplicate_iban', 'An account with this IBAN already exists.')

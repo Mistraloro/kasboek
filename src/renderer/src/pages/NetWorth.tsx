@@ -13,6 +13,7 @@ import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { Stat } from './Overview'
 import { BankBalanceModal } from '../components/BankBalance'
+import { localToday } from '@shared/month'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 const GROUPS: { kinds: AccountKind[]; key: string }[] = [
@@ -124,7 +125,7 @@ function ValuationModal({ account, onClose, onSaved }: { account: NetWorthAccoun
   const toast = useToast()
   const { money, fmt } = useSettings()
   const list = useOp('valuations.list', { accountId: account?.id ?? 0 })
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const [form, setForm] = useState({ date: today, value: '', note: '' })
   useEffect(() => {
     if (account) setForm({ date: today, value: centsToInput(account.valueCents, fmt.formats), note: '' })

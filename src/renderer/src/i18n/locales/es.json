@@ -262,7 +262,8 @@
       "dropped_one": "{{count}} sugerencia descartada",
       "dropped_other": "{{count}} sugerencias descartadas",
       "skippedSince_one": "{{count}} ya tenía categoría para entonces y no se tocó.",
-      "skippedSince_other": "{{count}} ya tenían categoría para entonces y no se tocaron."
+      "skippedSince_other": "{{count}} ya tenían categoría para entonces y no se tocaron.",
+      "saved": "Guardado: {{rules}} regla(s) y {{count}} movimiento(s) clasificado(s). Deshacer la revisión no los deshace; cámbialos en Reglas o Movimientos."
     },
     "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…"
   },

@@ -262,7 +262,8 @@
       "dropped_one": "{{count}} Vorschlag weggelassen",
       "dropped_other": "{{count}} Vorschläge weggelassen",
       "skippedSince_one": "{{count}} hatte inzwischen schon eine Kategorie und blieb unverändert.",
-      "skippedSince_other": "{{count}} hatten inzwischen schon eine Kategorie und blieben unverändert."
+      "skippedSince_other": "{{count}} hatten inzwischen schon eine Kategorie und blieben unverändert.",
+      "saved": "Gespeichert: {{rules}} Regel(n) und {{count}} eingeordnete Buchung(en). Die Prüfung rückgängig zu machen ändert diese nicht; ändere sie unter Regeln oder Buchungen."
     },
     "checkingGroups": "{{ai}} prüft: {{done}} von {{total}} Gruppen…"
   },

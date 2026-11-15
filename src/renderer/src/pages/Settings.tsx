@@ -17,6 +17,7 @@ import { ClaudeSection } from './SettingsClaude'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
 import { parseAmount } from '@shared/amount'
+import { localToday } from '@shared/month'
 
 export function Row({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -409,7 +410,7 @@ function CurrenciesSection() {
   const manual = useOp('fx.rates', {})
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const [rate, setRate] = useState({ currency: 'USD', date: today, perEur: '' })
   const reload = (): void => {
     void status.reload()
@@ -498,7 +499,7 @@ function AccountsSection() {
   const [editing, setEditing] = useState<AccountWithBalance | 'new' | null>(null)
   const { settings } = useSettings()
   const { fmt, money } = useSettings()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind, balance: '', balanceDate: today })
   const [balanceOf, setBalanceOf] = useState<AccountWithBalance | null>(null)
   const open = (a: AccountWithBalance | 'new'): void => {
