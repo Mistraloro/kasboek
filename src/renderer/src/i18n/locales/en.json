@@ -983,7 +983,7 @@
     },
     "modeHint": {
       "ask": "Every change waits for your OK.",
-      "smart": "Categorising, names, splits, transfers, rules, categories, budgets and goals happen by themselves; balances, deleting rules, new accounts and imports ask. Changes to more than {{limit}} transactions always ask.",
+      "smart": "Categorising, names, splits, transfers, rules, categories, budgets and goals happen by themselves; balances, deleting rules, new accounts, imports and remembering things ask. Changes to more than {{limit}} transactions always ask.",
       "trust": "Every change happens by itself, large ones too. Only when you check the results afterwards.",
       "custom": "Choose below for each kind of change. Changes to more than {{limit}} transactions always ask."
     },
@@ -996,7 +996,8 @@
       "balances": "Balances, values and rates",
       "deleteRules": "Deleting rules",
       "accounts": "Adding accounts",
-      "import": "Importing a CSV"
+      "import": "Importing a CSV",
+      "memory": "Remembering things"
     },
     "kindHint": {
       "categorise": "Setting categories, readable names and notes, splitting payments, pairing transfers.",
@@ -1005,9 +1006,31 @@
       "balances": "Recording a bank balance, an investment value or an exchange rate.",
       "deleteRules": "Transactions keep their category.",
       "accounts": "A new account in Kasboek.",
-      "import": "Saving the ready rows of the open import."
+      "import": "Saving the ready rows of the open import.",
+      "memory": "Saving or forgetting something in the assistant’s memory. What it remembers is sent along with every chat."
     },
     "mcp": "Claude Desktop and Claude Code always ask",
     "mcpHint": "Changes asked for by Claude apps over MCP wait for your OK in Kasboek, whatever the mode above. Switch this off to let the mode decide for them too."
+  },
+  "memory": {
+    "title": "What the assistant remembers",
+    "hint": "Facts and preferences for later conversations, such as when you get paid or which category a shop belongs in. Kept encrypted on this computer only: not synced and not given to Claude apps over MCP. They are sent to {{name}} with each message so it can use them.",
+    "enabled": "Remember between conversations",
+    "enabledHint": "When off, nothing is remembered and nothing from the memory is sent. What is saved stays until you remove it.",
+    "items": "Remembered: {{count}} of {{limit}}",
+    "empty": "Nothing yet. Ask the assistant to remember something, or add it here.",
+    "byYou": "Added by you",
+    "byAssistant": "Saved by {{name}}",
+    "edit": "Change",
+    "save": "Save",
+    "forget": "Forget",
+    "add": "Add",
+    "placeholder": "E.g. “I get paid on the 25th” or “Colruyt is Groceries”",
+    "full": "The memory is full: remove something first.",
+    "noNumbers": "No account or card numbers, passwords or other secrets: Kasboek refuses numbers that look like an account or card.",
+    "forgetAll": "Forget everything",
+    "forgetAllTitle": "Forget everything?",
+    "forgetAllText": "All remembered items ({{count}}) are removed. This can’t be undone.",
+    "refused": "Kasboek doesn’t remember account or card numbers. Leave the number out."
   }
 }

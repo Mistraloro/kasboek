@@ -13,7 +13,8 @@ import { client, explainError, modelParams } from './claude'
 import * as openai from './openai'
 import { activeProvider, isConfigured, requireConfigured } from './provider'
 import { PROVIDERS } from '@shared/ai-providers'
-import { assistantTools, compactResult, describeChange, opForTool, precheck } from './tools'
+import { assistantTools, compactResult, describeChange, isMemoryTool, opForTool, precheck } from './tools'
+import { memoryPrompt } from '@core/memory'
 import { localToday } from '@shared/month'
 import { reasoningParams } from '@shared/reasoning'
 import { needsApproval } from '@shared/permissions'
@@ -173,9 +174,10 @@ export function send(text: string): AssistantStatus {
   requireConfigured(provider)
   const native = provider.preset.id === 'anthropic'
   const anthropic = native ? client(database) : null
-  const tools = assistantTools().map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema as Anthropic.Beta.Messages.BetaTool.InputSchema, eager_input_streaming: true }))
+  const memory = memoryPrompt(database)
+  const tools = assistantTools().filter((t) => memory || !isMemoryTool(t)).map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema as Anthropic.Beta.Messages.BetaTool.InputSchema, eager_input_streaming: true }))
   const today = localToday()
-  const system = `${systemPrompt(provider.preset.assistantName)}\n\nToday is ${today}.`
+  const system = `${systemPrompt(provider.preset.assistantName)}\n\nToday is ${today}.${memory ? `\n\n${memory}` : ''}`
 
   display.push({ id: randomUUID(), role: 'user', text })
   let current: Extract<ChatMessage, { role: 'assistant' }> = { id: randomUUID(), role: 'assistant', text: '', tools: [] }

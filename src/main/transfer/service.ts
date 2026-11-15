@@ -36,12 +36,25 @@ export function backupStatus(): BackupStatus {
 }
 
 /** Writes an export/backup of the live data to `file`. Needs Kasboek to be unlocked. */
-export async function writeTransfer(file: string, kind: 'export' | 'backup'): Promise<string> {
+/** Empties tables in a snapshot copy (e.g. the assistant's memory, which stays on its own computer). */
+function leaveOut(tmp: string, dbKey: string, tables: string[]): void {
+  if (!tables.length) return
+  const copy = openDatabase(tmp, dbKey, { migrate: false })
+  try {
+    for (const t of tables) copy.exec(`DELETE FROM ${t}`)
+    copy.exec('VACUUM')
+  } finally {
+    copy.close()
+  }
+}
+
+export async function writeTransfer(file: string, kind: 'export' | 'backup', opts: { leaveOut?: string[] } = {}): Promise<string> {
   const { account, master, vault } = secrets()
   const live = db()
   const tmp = join(paths.dataDir, `snapshot-${randomUUID()}.tmp`)
   try {
     snapshotEncrypted(live, tmp)
+    leaveOut(tmp, vault.dbKey, opts.leaveOut ?? [])
     const bytes = encodeTransfer({ kind, account, master, vault, dbFile: await readFile(tmp), appVersion: app.getVersion(), schemaVersion: schemaVersion(live) })
     const partial = file + '.partial'
     await writeFile(partial, bytes, { mode: 0o600 })

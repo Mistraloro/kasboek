@@ -415,7 +415,8 @@ export async function runSync(opts: { forceSnapshot?: boolean } = {}): Promise<v
     const snapAt = sync.getMeta(db, 'snapshotAt')
     let snapshotApplied: Record<string, number> | null = null
     if (opts.forceSnapshot || !snapAt || Date.now() - Date.parse(snapAt) > SNAPSHOT_EVERY_MS) {
-      await writeTransfer(join(groupDir(folder), me, 'snapshot.kasboek'), 'export')
+      // The assistant's memory stays on this computer: a computer that joins starts without it.
+      await writeTransfer(join(groupDir(folder), me, 'snapshot.kasboek'), 'export', { leaveOut: ['memories'] })
       sync.setMeta(db, 'snapshotAt', new Date().toISOString())
       sync.setMeta(db, 'snapshotApplied', JSON.stringify({ ...sync.cursors(db), [me]: seq }))
       snapshotted = true

@@ -14,6 +14,7 @@ import { CURRENCIES } from './currency'
 import { LANGUAGE_CODES, type LanguageCode } from './languages'
 import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
 import { EFFORTS, REASONING_LEVELS } from './reasoning'
+import { SENSITIVE_MESSAGE, looksSensitive } from './sensitive'
 import { PERMISSION_KINDS, PERMISSION_MODES, type PermissionKind } from './permissions'
 
 const currency = z
@@ -22,7 +23,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, Memory, MemoryState, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -410,6 +411,22 @@ export const contract = {
     output: out<Goal[]>()
   },
   'goals.delete': { input: z.object({ id }).strict(), output: out<Goal[]>() },
+  'memory.list': { input: empty, output: out<MemoryState>() },
+  'memory.remember': {
+    description: 'Remember a lasting fact or preference for later conversations: one short sentence (max 300 characters) in the person’s language. No account or card numbers, passwords, or amounts you can look up.',
+    // Refused before the person is asked to approve it.
+    input: z.object({ text: z.string().trim().min(1).max(300).refine((t) => !looksSensitive(t), SENSITIVE_MESSAGE) }).strict(),
+    output: out<MemoryState>()
+  },
+  'memory.add': { input: z.object({ text: z.string().trim().min(1).max(300) }).strict(), output: out<MemoryState>() },
+  'memory.update': { input: z.object({ id, text: z.string().trim().min(1).max(300) }).strict(), output: out<MemoryState>() },
+  'memory.forget': {
+    description: 'Forget remembered items, by the ids shown in brackets in your memory.',
+    input: z.object({ ids: z.array(id).min(1).max(50) }).strict(),
+    output: out<MemoryState>()
+  },
+  'memory.forgetAll': { input: empty, output: out<MemoryState>() },
+  'memory.setEnabled': { input: z.object({ enabled: z.boolean() }).strict(), output: out<MemoryState>() },
   'alerts.list': {
     description: 'Warnings now: budgets at 80% or more this month, and current accounts whose balance would go below zero before the next income (counting fixed costs still due).',
     input: empty,

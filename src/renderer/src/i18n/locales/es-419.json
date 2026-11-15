@@ -155,5 +155,10 @@
     "kindHint": {
       "organise": "Agregar una categoría, fijar un presupuesto, crear una meta de ahorro."
     }
+  },
+  "memory": {
+    "hint": "Datos y preferencias para conversaciones futuras, como cuándo cobras o en qué categoría va una tienda. Se guardan cifrados solo en esta computadora: no se sincronizan ni se dan a las apps de Claude por MCP. Se envían a {{name}} con cada mensaje para que pueda usarlos.",
+    "byYou": "Agregado por ti",
+    "add": "Agregar"
   }
 }

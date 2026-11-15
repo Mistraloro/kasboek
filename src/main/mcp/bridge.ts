@@ -9,7 +9,7 @@ import { createServer, type Server, type Socket } from 'node:net'
 import { getSettings } from '@core/settings'
 import { needsApproval } from '@shared/permissions'
 import type { OpName, OpResult } from '@shared/contract'
-import { assistantTools, compactResult, describeChange, opForTool, precheck } from '../assistant/tools'
+import { compactResult, describeChange, mcpTools, precheck } from '../assistant/tools'
 import { broadcast, db, isUnlocked } from '../session'
 import { discoveryFile, socketPath, type BridgeRequest, type BridgeResponse } from './channel'
 
@@ -71,8 +71,8 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { id: req.id, ok: false, error: 'Not authorised.' }
   if (!isUnlocked()) return { id: req.id, ok: false, error: 'Kasboek is locked. Unlock it on your computer, then try again.' }
   if (!enabled()) return { id: req.id, ok: false, error: 'MCP access is switched off in Kasboek (Settings → Claude).' }
-  if (req.call === 'list') return { id: req.id, ok: true, result: assistantTools().map(({ name, description, inputSchema, mutates }) => ({ name, description, inputSchema, mutates })) }
-  const def = opForTool(String(req.name))
+  if (req.call === 'list') return { id: req.id, ok: true, result: mcpTools().map(({ name, description, inputSchema, mutates }) => ({ name, description, inputSchema, mutates })) }
+  const def = mcpTools().find((t) => t.name === String(req.name))
   if (!def) return { id: req.id, ok: false, error: `Unknown tool ${String(req.name)}.` }
   const invalid = precheck(def.name, req.input)
   if (invalid) return { id: req.id, ok: false, error: invalid }

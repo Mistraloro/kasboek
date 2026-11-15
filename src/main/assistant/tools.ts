@@ -48,6 +48,14 @@ export function opForTool(name: string): ToolDef | undefined {
   return assistantTools().find((t) => t.name === name)
 }
 
+/** The in-app assistant's memory stays with the in-app assistant: Claude apps (MCP) don't get it. */
+const CHAT_ONLY = new Set<OpName>(['memory.remember', 'memory.forget'])
+export const isMemoryTool = (def: ToolDef): boolean => CHAT_ONLY.has(def.op)
+
+export function mcpTools(): ToolDef[] {
+  return assistantTools().filter((t) => !CHAT_ONLY.has(t.op))
+}
+
 /** Keeps tool results small enough for the model: import previews are summarised. */
 export function compactResult(op: OpName, data: unknown, input?: unknown): string {
   if (op.startsWith('import.') && data && typeof data === 'object' && 'rows' in data) {
@@ -155,6 +163,13 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
     }
     case 'transactions.rename':
       return `Rename ${describeTransactions(db, input['ids'])} to “${String(input['counterpartyName'])}”`
+    case 'memory.remember':
+      return `Remember: “${String(input['text']).slice(0, 300)}”`
+    case 'memory.forget': {
+      const ids = Array.isArray(input['ids']) ? (input['ids'] as unknown[]) : []
+      const texts = ids.map((id) => (db.prepare('SELECT text FROM memories WHERE id = ?').get(id) as { text: string } | undefined)?.text).filter(Boolean)
+      return texts.length ? `Forget: ${texts.map((t) => `“${String(t).slice(0, 120)}”`).join(', ')}` : 'Forget something that is no longer remembered'
+    }
     case 'goals.create':
       return `Create the savings goal “${String(input['name'])}”: ${money(db, Number(input['targetCents']))}${input['targetDate'] ? ` by ${String(input['targetDate'])}` : ''}`
     case 'transactions.split': {

@@ -983,7 +983,7 @@
     },
     "modeHint": {
       "ask": "Chaque changement attend votre accord.",
-      "smart": "Classer, noms, répartitions, virements, règles, catégories, budgets et objectifs se font seuls ; soldes, suppression de règles, nouveaux comptes et imports demandent. Les changements sur plus de {{limit}} opérations demandent toujours.",
+      "smart": "Classer, noms, répartitions, virements, règles, catégories, budgets et objectifs se font seuls ; soldes, suppression de règles, nouveaux comptes, imports et mémorisation demandent. Les changements sur plus de {{limit}} opérations demandent toujours.",
       "trust": "Chaque changement se fait seul, même les gros. Seulement si vous vérifiez les résultats ensuite.",
       "custom": "Choisissez ci-dessous pour chaque type de changement. Les changements sur plus de {{limit}} opérations demandent toujours."
     },
@@ -996,7 +996,8 @@
       "balances": "Soldes, valeurs et taux",
       "deleteRules": "Supprimer des règles",
       "accounts": "Ajouter des comptes",
-      "import": "Importer un CSV"
+      "import": "Importer un CSV",
+      "memory": "Mémoriser"
     },
     "kindHint": {
       "categorise": "Définir catégories, noms lisibles et notes, répartir des paiements, associer des virements.",
@@ -1005,9 +1006,31 @@
       "balances": "Indiquer un solde bancaire, une valeur de placement ou un taux de change.",
       "deleteRules": "Les opérations gardent leur catégorie.",
       "accounts": "Un nouveau compte dans Kasboek.",
-      "import": "Enregistrer les lignes prêtes de l’import ouvert."
+      "import": "Enregistrer les lignes prêtes de l’import ouvert.",
+      "memory": "Garder ou oublier quelque chose dans la mémoire de l’assistant. Ce qu’il retient est envoyé avec chaque conversation."
     },
     "mcp": "Claude Desktop et Claude Code demandent toujours",
     "mcpHint": "Les changements demandés par les apps Claude via MCP attendent votre accord dans Kasboek, quel que soit le mode ci-dessus. Désactivez pour laisser le mode décider pour elles aussi."
+  },
+  "memory": {
+    "title": "Ce que l’assistant retient",
+    "hint": "Des faits et préférences pour les conversations suivantes, comme le jour de votre salaire ou la catégorie d’un magasin. Gardés chiffrés sur cet ordinateur uniquement : pas synchronisés et pas transmis aux applis Claude via MCP. Ils sont envoyés à {{name}} avec chaque message pour qu’il puisse s’en servir.",
+    "enabled": "Retenir entre les conversations",
+    "enabledHint": "Désactivé : rien n’est retenu et rien de la mémoire n’est envoyé. Ce qui est gardé reste jusqu’à ce que vous le supprimiez.",
+    "items": "Retenu : {{count}} sur {{limit}}",
+    "empty": "Rien pour l’instant. Demandez à l’assistant de retenir quelque chose, ou ajoutez-le ici.",
+    "byYou": "Ajouté par vous",
+    "byAssistant": "Gardé par {{name}}",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "forget": "Oublier",
+    "add": "Ajouter",
+    "placeholder": "P. ex. « Mon salaire arrive le 25 » ou « Colruyt, c’est Courses »",
+    "full": "La mémoire est pleine : supprimez d’abord quelque chose.",
+    "noNumbers": "Pas de numéros de compte ou de carte, de mots de passe ni d’autres secrets : Kasboek refuse les numéros qui ressemblent à un compte ou une carte.",
+    "forgetAll": "Tout oublier",
+    "forgetAllTitle": "Tout oublier ?",
+    "forgetAllText": "Tout ce qui est retenu ({{count}}) est supprimé. C’est définitif.",
+    "refused": "Kasboek ne retient pas les numéros de compte ou de carte. Retirez le numéro."
   }
 }

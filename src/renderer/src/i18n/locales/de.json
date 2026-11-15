@@ -983,7 +983,7 @@
     },
     "modeHint": {
       "ask": "Jede Änderung wartet auf dein OK.",
-      "smart": "Einordnen, Namen, Aufteilungen, Umbuchungen, Regeln, Kategorien, Budgets und Ziele passieren von selbst; Kontostände, Regeln löschen, neue Konten und Importe fragen. Änderungen an mehr als {{limit}} Buchungen fragen immer.",
+      "smart": "Einordnen, Namen, Aufteilungen, Umbuchungen, Regeln, Kategorien, Budgets und Ziele passieren von selbst; Kontostände, Regeln löschen, neue Konten, Importe und Merken fragen. Änderungen an mehr als {{limit}} Buchungen fragen immer.",
       "trust": "Jede Änderung passiert von selbst, auch große. Nur wenn du die Ergebnisse danach prüfst.",
       "custom": "Wähle unten für jede Art von Änderung. Änderungen an mehr als {{limit}} Buchungen fragen immer."
     },
@@ -996,7 +996,8 @@
       "balances": "Kontostände, Werte und Kurse",
       "deleteRules": "Regeln löschen",
       "accounts": "Konten hinzufügen",
-      "import": "Eine CSV importieren"
+      "import": "Eine CSV importieren",
+      "memory": "Dinge merken"
     },
     "kindHint": {
       "categorise": "Kategorien, lesbare Namen und Notizen setzen, Zahlungen aufteilen, Umbuchungen verknüpfen.",
@@ -1005,9 +1006,31 @@
       "balances": "Einen Kontostand, einen Anlagewert oder einen Wechselkurs erfassen.",
       "deleteRules": "Buchungen behalten ihre Kategorie.",
       "accounts": "Ein neues Konto in Kasboek.",
-      "import": "Die fertigen Zeilen des offenen Imports speichern."
+      "import": "Die fertigen Zeilen des offenen Imports speichern.",
+      "memory": "Etwas im Gedächtnis des Assistenten speichern oder vergessen. Was er sich merkt, wird mit jedem Chat mitgeschickt."
     },
     "mcp": "Claude Desktop und Claude Code fragen immer",
     "mcpHint": "Änderungen, die Claude-Apps über MCP anfragen, warten in Kasboek auf dein OK, egal welcher Modus oben gilt. Schalte das aus, damit der Modus auch für sie entscheidet."
+  },
+  "memory": {
+    "title": "Was sich der Assistent merkt",
+    "hint": "Fakten und Vorlieben für spätere Gespräche, etwa wann dein Gehalt kommt oder in welche Kategorie ein Geschäft gehört. Verschlüsselt nur auf diesem Computer gespeichert: nicht synchronisiert und nicht an Claude-Apps über MCP weitergegeben. Sie werden mit jeder Nachricht an {{name}} gesendet, damit er sie nutzen kann.",
+    "enabled": "Zwischen Gesprächen merken",
+    "enabledHint": "Aus: Es wird nichts gemerkt und nichts aus dem Gedächtnis gesendet. Was gespeichert ist, bleibt, bis du es entfernst.",
+    "items": "Gemerkt: {{count}} von {{limit}}",
+    "empty": "Noch nichts. Bitte den Assistenten, sich etwas zu merken, oder füge es hier hinzu.",
+    "byYou": "Von dir hinzugefügt",
+    "byAssistant": "Gespeichert von {{name}}",
+    "edit": "Ändern",
+    "save": "Speichern",
+    "forget": "Vergessen",
+    "add": "Hinzufügen",
+    "placeholder": "Z. B. „Mein Gehalt kommt am 25.“ oder „Colruyt ist Lebensmittel“",
+    "full": "Das Gedächtnis ist voll: Entferne zuerst etwas.",
+    "noNumbers": "Keine Konto- oder Kartennummern, Passwörter oder anderen Geheimnisse: Kasboek lehnt Nummern ab, die wie ein Konto oder eine Karte aussehen.",
+    "forgetAll": "Alles vergessen",
+    "forgetAllTitle": "Alles vergessen?",
+    "forgetAllText": "Alles Gemerkte ({{count}}) wird entfernt. Das lässt sich nicht rückgängig machen.",
+    "refused": "Kasboek merkt sich keine Konto- oder Kartennummern. Lass die Nummer weg."
   }
 }

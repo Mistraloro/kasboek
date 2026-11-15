@@ -3,6 +3,7 @@
  * readable names, descriptions and categories per group of similar rows, notes) in a strict JSON format. Code then applies it through the same checks as a
  * manual change, so Claude never writes amounts straight into the database.
  */
+import { memoryState } from '@core/memory'
 import { z } from 'zod'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import type { Db } from '@core/database'
@@ -36,6 +37,7 @@ You get the raw cells, the column mapping the app detected, the rows it couldn't
   - description: a short, readable description without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Kaartbetaling Bancontact, Brugge", "Automatisch sparen", "Overschrijving via Wero"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
 - rules: rules make future imports categorise themselves. Suggest one only for a payee that comes back (a group with 2 or more transactions, or a known shop, employer, utility or subscription). field: where the text is ("counterparty" if the counterparty column holds the name, else "description"). pattern: a distinctive piece of the bank's own text (as written in the counterparty or bank text column, not your readable name), at least 4 characters, that is in every transaction of the group and wouldn't appear in unrelated payments: the shop or company name, not a city, card number, date or generic word like "BETALING". match: "word" for a name that must stand alone, else "contains". categoryId: the category for the group. Don't suggest rules that already exist.
 - notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
+personNotes, when given, are things the person told the assistant to remember (e.g. which category a payee belongs in): follow them.
 Never invent amounts or dates that are not supported by the raw cells.`
 
 /**
@@ -139,6 +141,8 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
   })
   const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${c.name} (${c.kind})`)
   const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId)
+  // What the assistant remembers (payees, categories, preferences) helps here too.
+  const memory = (({ enabled, items }) => (enabled ? items.map((m) => m.text) : []))(memoryState(db))
   return JSON.stringify(
     {
       ...(batch.of > 1
@@ -161,7 +165,8 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
       flaggedRows: batch.first ? flagged : [],
       groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
-      rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`)
+      rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`),
+      ...(memory.length ? { personNotes: memory } : {})
     },
     null,
     1

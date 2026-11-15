@@ -269,8 +269,24 @@
     }
   },
   "permissions": {
+    "kind": {
+      "memory": "Lembrar"
+    },
     "kindHint": {
-      "import": "Salvar as linhas prontas da importação aberta."
+      "import": "Salvar as linhas prontas da importação aberta.",
+      "memory": "Salvar ou esquecer algo na memória do assistente. O que lembra é enviado com cada conversa."
     }
+  },
+  "memory": {
+    "title": "O que o assistente lembra",
+    "hint": "Factos e preferências para conversas futuras, como quando recebe o salário ou em que categoria fica uma loja. Salvos cifrados só neste computador: não são sincronizados nem dados às apps Claude por MCP. São enviados a {{name}} com cada mensagem, para que os possa usar.",
+    "enabled": "Lembrar entre conversas",
+    "enabledHint": "Desligado: nada é lembrado e nada da memória é enviado. O que está salvo fica até o apagar.",
+    "items": "Lembrado: {{count}} de {{limit}}",
+    "byAssistant": "Salvo por {{name}}",
+    "save": "Salvar",
+    "noNumbers": "Sem números de conta ou cartão, senhas ou outros segredos: o Kasboek recusa números que parecem uma conta ou um cartão.",
+    "forgetAllText": "Tudo o que está lembrado ({{count}}) é apagado. Não pode ser desfeito.",
+    "refused": "O Kasboek não lembra números de conta ou de cartão. Retire o número."
   }
 }

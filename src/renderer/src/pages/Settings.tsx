@@ -14,6 +14,7 @@ import { useSettings } from '../lib/settings'
 import { ImportFlow } from './auth/ImportFlow'
 import { CurrencySelect } from '../components/CurrencySelect'
 import { ClaudeSection, PermissionsSection } from './SettingsClaude'
+import { MemorySection } from './SettingsMemory'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
 import { parseAmount } from '@shared/amount'
@@ -40,6 +41,7 @@ export function SettingsPage() {
         <SecuritySection />
         <ClaudeSection />
         <PermissionsSection />
+        <MemorySection />
         <SyncSection />
         <TransferSection />
         <BackupSection />

@@ -292,6 +292,18 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
     `)
     createSyncTriggers(db, SPEC.get('transaction_splits')!)
     createSyncTriggers(db, SPEC.get('goals')!)
+  },
+  (db) => {
+    db.exec(`
+      -- What the assistant remembers between conversations. On this computer only: not synced.
+      CREATE TABLE memories (
+        id INTEGER PRIMARY KEY,
+        text TEXT NOT NULL CHECK (length(text) BETWEEN 1 AND 300),
+        source TEXT NOT NULL CHECK (source IN ('person', 'assistant')),
+        created_at TEXT NOT NULL DEFAULT ${now},
+        updated_at TEXT NOT NULL DEFAULT ${now}
+      );
+    `)
   }
 ]
 

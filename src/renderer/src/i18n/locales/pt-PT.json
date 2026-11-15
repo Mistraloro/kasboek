@@ -983,7 +983,7 @@
     },
     "modeHint": {
       "ask": "Cada alteração espera pela sua aprovação.",
-      "smart": "Classificar, nomes, divisões, transferências, regras, categorias, orçamentos e objetivos acontecem sozinhos; saldos, apagar regras, novas contas e importações perguntam. Alterações a mais de {{limit}} movimentos perguntam sempre.",
+      "smart": "Classificar, nomes, divisões, transferências, regras, categorias, orçamentos e objetivos acontecem sozinhos; saldos, apagar regras, novas contas, importações e memorizar perguntam. Alterações a mais de {{limit}} movimentos perguntam sempre.",
       "trust": "Cada alteração acontece sozinha, também as grandes. Só se verificar os resultados depois.",
       "custom": "Escolha abaixo para cada tipo de alteração. Alterações a mais de {{limit}} movimentos perguntam sempre."
     },
@@ -996,7 +996,8 @@
       "balances": "Saldos, valores e taxas",
       "deleteRules": "Apagar regras",
       "accounts": "Adicionar contas",
-      "import": "Importar um CSV"
+      "import": "Importar um CSV",
+      "memory": "Memorizar"
     },
     "kindHint": {
       "categorise": "Definir categorias, nomes legíveis e notas, dividir pagamentos, emparelhar transferências.",
@@ -1005,9 +1006,31 @@
       "balances": "Registar um saldo bancário, um valor de investimento ou uma taxa de câmbio.",
       "deleteRules": "Os movimentos mantêm a categoria.",
       "accounts": "Uma conta nova no Kasboek.",
-      "import": "Guardar as linhas prontas da importação aberta."
+      "import": "Guardar as linhas prontas da importação aberta.",
+      "memory": "Guardar ou esquecer algo na memória do assistente. O que memoriza é enviado com cada conversa."
     },
     "mcp": "O Claude Desktop e o Claude Code perguntam sempre",
     "mcpHint": "As alterações pedidas pelas apps Claude via MCP esperam pela sua aprovação no Kasboek, seja qual for o modo acima. Desligue para deixar o modo decidir também por elas."
+  },
+  "memory": {
+    "title": "O que o assistente memoriza",
+    "hint": "Factos e preferências para conversas futuras, como quando recebe o salário ou em que categoria fica uma loja. Guardados cifrados só neste computador: não são sincronizados nem dados às apps Claude por MCP. São enviados a {{name}} com cada mensagem, para que os possa usar.",
+    "enabled": "Memorizar entre conversas",
+    "enabledHint": "Desligado: nada é memorizado e nada da memória é enviado. O que está guardado fica até o apagar.",
+    "items": "Memorizado: {{count}} de {{limit}}",
+    "empty": "Ainda nada. Peça ao assistente que memorize algo, ou adicione aqui.",
+    "byYou": "Adicionado por si",
+    "byAssistant": "Guardado por {{name}}",
+    "edit": "Alterar",
+    "save": "Guardar",
+    "forget": "Esquecer",
+    "add": "Adicionar",
+    "placeholder": "P. ex. «Recebo o salário a 25» ou «Colruyt é Supermercado»",
+    "full": "A memória está cheia: apague algo primeiro.",
+    "noNumbers": "Sem números de conta ou cartão, palavras-passe ou outros segredos: o Kasboek recusa números que parecem uma conta ou um cartão.",
+    "forgetAll": "Esquecer tudo",
+    "forgetAllTitle": "Esquecer tudo?",
+    "forgetAllText": "Tudo o que está memorizado ({{count}}) é apagado. Não pode ser desfeito.",
+    "refused": "O Kasboek não memoriza números de conta ou de cartão. Retire o número."
   }
 }

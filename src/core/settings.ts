@@ -23,7 +23,8 @@ export const DEFAULT_SETTINGS: Settings = {
   savedSearches: [],
   aiReasoning: 'default',
   aiCsvReasoning: 'default',
-  permissions: DEFAULT_PERMISSIONS
+  permissions: DEFAULT_PERMISSIONS,
+  memoryEnabled: true
 }
 
 export function getSettings(db: Db): Settings {

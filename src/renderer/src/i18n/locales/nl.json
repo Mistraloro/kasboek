@@ -983,7 +983,7 @@
     },
     "modeHint": {
       "ask": "Elke wijziging wacht op je akkoord.",
-      "smart": "Categoriseren, namen, verdelen, overboekingen, regels, categorieën, budgetten en doelen gebeuren vanzelf; saldi, regels verwijderen, nieuwe rekeningen en imports vragen eerst. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd.",
+      "smart": "Categoriseren, namen, verdelen, overboekingen, regels, categorieën, budgetten en doelen gebeuren vanzelf; saldi, regels verwijderen, nieuwe rekeningen, imports en dingen onthouden vragen eerst. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd.",
       "trust": "Elke wijziging gebeurt vanzelf, ook grote. Alleen als je de resultaten achteraf nakijkt.",
       "custom": "Kies hieronder per soort wijziging. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd."
     },
@@ -996,7 +996,8 @@
       "balances": "Saldi, waarden en koersen",
       "deleteRules": "Regels verwijderen",
       "accounts": "Rekeningen toevoegen",
-      "import": "Een CSV importeren"
+      "import": "Een CSV importeren",
+      "memory": "Dingen onthouden"
     },
     "kindHint": {
       "categorise": "Categorieën, leesbare namen en notities zetten, betalingen verdelen, overboekingen koppelen.",
@@ -1005,9 +1006,31 @@
       "balances": "Een banksaldo, een beleggingswaarde of een wisselkoers invullen.",
       "deleteRules": "Verrichtingen houden hun categorie.",
       "accounts": "Een nieuwe rekening in Kasboek.",
-      "import": "De klare rijen van de open import bewaren."
+      "import": "De klare rijen van de open import bewaren.",
+      "memory": "Iets in het geheugen van de assistent bewaren of vergeten. Wat hij onthoudt, wordt met elk gesprek meegestuurd."
     },
     "mcp": "Claude Desktop en Claude Code vragen altijd",
     "mcpHint": "Wijzigingen die Claude-apps via MCP vragen, wachten op je akkoord in Kasboek, wat de modus hierboven ook is. Zet dit uit om de modus ook voor hen te laten beslissen."
+  },
+  "memory": {
+    "title": "Wat de assistent onthoudt",
+    "hint": "Feiten en voorkeuren voor latere gesprekken, zoals wanneer je loon binnenkomt of in welke categorie een winkel hoort. Versleuteld bewaard, alleen op deze computer: niet gesynchroniseerd en niet gedeeld met Claude-apps via MCP. Ze worden met elk bericht naar {{name}} gestuurd, zodat die ze kan gebruiken.",
+    "enabled": "Onthouden tussen gesprekken",
+    "enabledHint": "Uit: er wordt niets onthouden en niets uit het geheugen verstuurd. Wat bewaard is, blijft tot je het verwijdert.",
+    "items": "Onthouden: {{count}} van {{limit}}",
+    "empty": "Nog niets. Vraag de assistent iets te onthouden, of voeg het hier toe.",
+    "byYou": "Door jou toegevoegd",
+    "byAssistant": "Bewaard door {{name}}",
+    "edit": "Wijzigen",
+    "save": "Bewaren",
+    "forget": "Vergeten",
+    "add": "Toevoegen",
+    "placeholder": "Bv. “Mijn loon komt op de 25ste” of “Colruyt is Boodschappen”",
+    "full": "Het geheugen is vol: verwijder eerst iets.",
+    "noNumbers": "Geen rekening- of kaartnummers, wachtwoorden of andere geheimen: Kasboek weigert nummers die op een rekening of kaart lijken.",
+    "forgetAll": "Alles vergeten",
+    "forgetAllTitle": "Alles vergeten?",
+    "forgetAllText": "Alles wat onthouden is ({{count}}) wordt verwijderd. Dit kan niet ongedaan worden.",
+    "refused": "Kasboek onthoudt geen rekening- of kaartnummers. Laat het nummer weg."
   }
 }

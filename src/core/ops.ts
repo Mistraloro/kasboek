@@ -14,6 +14,7 @@ import { findRecurring } from './recurring'
 import { monthReview } from './review'
 import { listAlerts } from './alerts'
 import { createGoal, deleteGoal, listGoals, updateGoal } from './goals'
+import { forget, forgetAll, memoryState, remember, setMemoryEnabled, updateMemory } from './memory'
 
 export function fxStatus(db: Db): FxStatus {
   const s = getSettings(db)
@@ -249,6 +250,13 @@ export const coreOps: OpTable = {
   'goals.create': { mutates: true, assistant: true, handler: ({ db }, g) => createGoal(db, g) },
   'goals.update': { mutates: true, assistant: false, handler: ({ db }, g) => updateGoal(db, g) },
   'goals.delete': { mutates: true, assistant: false, handler: ({ db }, { id }) => deleteGoal(db, id) },
+  'memory.list': { mutates: false, assistant: false, handler: ({ db }) => memoryState(db) },
+  'memory.remember': { mutates: true, assistant: true, handler: ({ db }, { text }) => remember(db, text, 'assistant') },
+  'memory.add': { mutates: true, assistant: false, handler: ({ db }, { text }) => remember(db, text, 'person') },
+  'memory.update': { mutates: true, assistant: false, handler: ({ db }, { id, text }) => updateMemory(db, id, text) },
+  'memory.forget': { mutates: true, assistant: true, handler: ({ db }, { ids }) => forget(db, ids) },
+  'memory.forgetAll': { mutates: true, assistant: false, handler: ({ db }) => forgetAll(db) },
+  'memory.setEnabled': { mutates: true, assistant: false, handler: ({ db }, { enabled }) => setMemoryEnabled(db, enabled) },
   'alerts.list': { mutates: false, assistant: true, handler: ({ db }) => listAlerts(db) },
   'summary.review': { mutates: false, assistant: true, handler: ({ db }, { month }) => monthReview(db, month) },
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },

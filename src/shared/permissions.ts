@@ -4,7 +4,10 @@
  * and the person can change single kinds. Some changes always ask (see needsApproval).
  */
 
-/** Kinds of change, with the operations they cover. "high" kinds are hard to undo or touch a lot. */
+/**
+ * Kinds of change, with the operations they cover. "high" kinds are hard to undo, touch a lot, or
+ * (memory) are sent along with every later chat.
+ */
 export const PERMISSION_KINDS = [
   { id: 'categorise', ops: ['transactions.categorize', 'transactions.edit', 'transactions.rename', 'transactions.split', 'transfers.pair'], risk: 'low' },
   { id: 'rules', ops: ['rules.create', 'rules.update'], risk: 'low' },
@@ -12,7 +15,8 @@ export const PERMISSION_KINDS = [
   { id: 'balances', ops: ['balances.set', 'valuations.set', 'fx.setRate'], risk: 'high' },
   { id: 'deleteRules', ops: ['rules.delete'], risk: 'high' },
   { id: 'accounts', ops: ['accounts.create'], risk: 'high' },
-  { id: 'import', ops: ['import.commit'], risk: 'high' }
+  { id: 'import', ops: ['import.commit'], risk: 'high' },
+  { id: 'memory', ops: ['memory.remember', 'memory.forget'], risk: 'high' }
 ] as const
 
 export type PermissionKind = (typeof PERMISSION_KINDS)[number]['id']

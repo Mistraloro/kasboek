@@ -162,6 +162,24 @@ export interface Settings {
   aiCsvReasoning: ReasoningLevel
   /** What the assistant may change without asking. */
   permissions: PermissionSettings
+  /** The assistant remembers facts and preferences between conversations (this computer only). */
+  memoryEnabled: boolean
+}
+
+/** Something the assistant remembers between conversations. */
+export interface Memory {
+  id: number
+  text: string
+  /** Typed by the person in Settings, or saved by the assistant (with their OK or permission). */
+  source: 'person' | 'assistant'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MemoryState {
+  enabled: boolean
+  items: Memory[]
+  limit: number
 }
 
 export const ASSISTANT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'] as const
