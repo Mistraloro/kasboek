@@ -232,16 +232,20 @@ async function withFallbacks(p: ActiveProvider, model: string, body: Record<stri
   const key = `${p.baseUrl}|${model}`
   let extra = Object.keys(reasoning).length && !noReasoning.has(key) ? reasoning : {}
   let maxTokens = body['max_tokens'] as number
+  let dropped = false
   for (let attempt = 0; ; attempt++) {
     try {
-      return await post(p, '/chat/completions', { ...body, ...extra, max_tokens: maxTokens }, signal, stream)
+      const open = await post(p, '/chat/completions', { ...body, ...extra, max_tokens: maxTokens }, signal, stream)
+      // Remembered only when leaving the fields out is what made the request work.
+      if (dropped) noReasoning.add(key)
+      return open
     } catch (err) {
       const refused = err instanceof ProviderError && (err.status === 400 || err.status === 422) && !signal?.aborted
       if (!refused || attempt >= 2) throw err
       if (/token/i.test(err.message) && maxTokens > 8192) maxTokens = 8192
       // Only when the refusal is about the reasoning fields (or unknown fields), not the schema.
       else if (Object.keys(extra).length && !/schema|response_format/i.test(err.message) && /reason|think|effort|extra|unrecogni|unknown|not (permitted|supported|allowed)|unsupported|invalid/i.test(err.message)) {
-        noReasoning.add(key)
+        dropped = true
         extra = {}
       } else throw err
     }

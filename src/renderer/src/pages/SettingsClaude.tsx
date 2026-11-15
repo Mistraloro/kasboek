@@ -12,7 +12,6 @@ import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
 import { Row } from './Settings'
 
-
 export function ClaudeSection() {
   const { t } = useTranslation()
   const toast = useToast()

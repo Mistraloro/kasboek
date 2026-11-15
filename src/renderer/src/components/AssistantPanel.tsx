@@ -45,7 +45,6 @@ function Rich({ text }: { text: string }) {
   )
 }
 
-
 /**
  * The chat's model (and, for Claude, its effort), right under the message box. The same settings
  * as Settings → Assistant → Chat; the CSV check keeps its own.
@@ -125,9 +124,9 @@ function Bubble({ m }: { m: ChatMessage }) {
   if (m.role === 'confirm' && m.state === 'auto')
     return (
       <p className="flex items-start gap-1.5 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-xs text-muted">
-        <Check size={13} className="mt-0.5 shrink-0 text-accent" />
+        {m.failed ? <X size={13} className="mt-0.5 shrink-0 text-negative" /> : <Check size={13} className="mt-0.5 shrink-0 text-accent" />}
         <span>
-          <span className="font-medium text-text">{t('assistant.autoDone')}</span> {m.summary}
+          <span className="font-medium text-text">{m.failed ? t('assistant.autoFailed') : t('assistant.autoDone')}</span> {m.summary}
         </span>
       </p>
     )

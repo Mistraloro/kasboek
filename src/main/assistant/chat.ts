@@ -189,6 +189,8 @@ export function send(text: string): AssistantStatus {
   publish(true)
 
   const runner = run
+  // The last change made without asking: marked when it then fails.
+  let auto: Extract<ChatMessage, { role: 'confirm' }> | null = null
   void runTurn(
     history,
     {
@@ -227,7 +229,8 @@ export function send(text: string): AssistantStatus {
         const summary = def ? describeChange(db(), def.op, (input ?? {}) as Record<string, unknown>) : name
         // Allowed by the person's permissions: done without asking, and shown as such.
         if (def && !needsApproval(getSettings(db()).permissions, def.op, input, 'chat')) {
-          display.push({ id, role: 'confirm', op: def.op, summary, state: 'auto' })
+          auto = { id, role: 'confirm', op: def.op, summary, state: 'auto' }
+          display.push(auto)
           current = { id: randomUUID(), role: 'assistant', text: '', tools: [] }
           display.push(current)
           publish(true)
@@ -243,7 +246,13 @@ export function send(text: string): AssistantStatus {
       onEvent: (e) => {
         if (e.type === 'text') current.text += e.text
         else if (e.type === 'thinking') current.thinking = (current.thinking ?? '') + e.text
-        else current.tools.push({ name: e.name, ok: e.ok })
+        else {
+          current.tools.push({ name: e.name, ok: e.ok })
+          if (auto && opForTool(e.name)?.op === auto.op) {
+            if (!e.ok) auto.failed = true
+            auto = null
+          }
+        }
         publish()
       }
     },

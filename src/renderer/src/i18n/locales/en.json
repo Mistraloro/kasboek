@@ -335,7 +335,8 @@
     "reasoningLabel": "Reasoning",
     "reasoningHint": "How much the model thinks before answering: less is faster and cheaper, more helps with harder questions. Not every model has this setting; if a model refuses it, Kasboek asks without it.",
     "reasoningUnsupported": "This model doesn't take a reasoning setting and uses its own.",
-    "autoDone": "Done without asking:"
+    "autoDone": "Done without asking:",
+    "autoFailed": "Tried without asking, but it didn’t work:"
   },
   "settings": {
     "title": "Settings",

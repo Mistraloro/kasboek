@@ -22,8 +22,10 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   (and most other layouts), flags duplicates (also by bank reference, and "maybe imported" when the
   bank changed the text), applies your rules and the names you tidied before, and shows everything
   before saving. Undo per import. Export to CSV, and a year report as PDF.
-- **Assistant**: ask questions about your money or let the assistant make changes, which you
-  approve one by one. "Check with …" categorises a CSV, makes names readable, suggests rules and
+- **Assistant**: ask questions about your money or let the assistant make changes. You choose which
+  kinds of change it may make by itself and which wait for your OK (Settings → "What the assistant
+  may do by itself"), how much it reasons per model, and what it remembers between conversations
+  (kept encrypted on this computer only). "Check with …" categorises a CSV, makes names readable, suggests rules and
   sorts older uncategorised transactions, showing its reasoning in the assistant panel; a monthly
   review on the Overview. Claude, Mistral, Groq,
   DeepSeek, Gemini, OpenRouter, Together, Fireworks, Ollama, LM Studio or any OpenAI-compatible server.
@@ -83,8 +85,17 @@ code-signing certificate).
 3. Claude defaults: chat with Claude Sonnet 5.5 (medium effort), CSV checks with Claude Opus 5.5
    (medium). Other providers: type a model name or load the list from the provider.
 
-Messages and the data the assistant looks up go to the chosen provider (or stay on your
-computer for local models). Nothing is sent until you ask.
+Messages, the data the assistant looks up and what it remembers go to the chosen provider (or
+stay on your computer for local models). Nothing is sent until you ask.
+
+**Permissions**: "Always ask" (the default), "Ask for important changes", "Decide by itself" or a
+choice per kind of change. Balances, deleting rules, new accounts, imports and remembering things
+ask unless you allow them; changes to more than 100 transactions always ask, except in "Decide by
+itself". Changes made without asking show in the chat.
+
+**Memory**: say "remember that …", or add items in Settings → "What the assistant remembers". Up to
+50 short items, stored in the encrypted database, not synced and not offered to Claude apps over
+MCP. Account and card numbers are refused. Switch it off to stop sending it.
 
 **Claude Desktop / Claude Code (MCP)**: switch on “Claude Desktop & Claude Code (MCP)” in
 Settings → Assistant and press “Add to Claude Desktop” or “Add to Claude Code”. It works while

@@ -335,7 +335,8 @@
     "reasoningLabel": "Réflexion",
     "reasoningHint": "Combien le modèle réfléchit avant de répondre : moins est plus rapide et moins cher, plus aide pour les questions difficiles. Tous les modèles n’ont pas ce réglage ; si un modèle le refuse, Kasboek demande sans.",
     "reasoningUnsupported": "Ce modèle n’accepte pas de réglage de réflexion et utilise le sien.",
-    "autoDone": "Fait sans demander :"
+    "autoDone": "Fait sans demander :",
+    "autoFailed": "Essayé sans demander, mais sans succès :"
   },
   "settings": {
     "title": "Réglages",

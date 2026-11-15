@@ -335,7 +335,8 @@
     "reasoningLabel": "Raciocínio",
     "reasoningHint": "Quanto o modelo pensa antes de responder: menos é mais rápido e barato, mais ajuda com perguntas difíceis. Nem todos os modelos têm esta definição; se um modelo a recusar, o Kasboek pergunta sem ela.",
     "reasoningUnsupported": "Este modelo não aceita uma definição de raciocínio e usa a sua.",
-    "autoDone": "Feito sem perguntar:"
+    "autoDone": "Feito sem perguntar:",
+    "autoFailed": "Tentado sem perguntar, mas não resultou:"
   },
   "settings": {
     "title": "Definições",

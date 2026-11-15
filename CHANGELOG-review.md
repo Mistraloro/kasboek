@@ -1,12 +1,11 @@
 # Kasboek: changes since build 14 (824f4f3), for review
 
 **What this covers**
-- **Range:** branch `ccr-0f0084e8-2jcj1g`, commits `cf32f63` to `8679bc2`. That is 67 files, about 4,440 lines added and 380 removed.
-- **Version:** still `0.10.0`. It is raised to 0.11.0 when the next installer is built (`CLAUDE.md`).
-- **Not built yet:** nothing has been built since build 14.
+- **Range:** branch `ccr-0f0084e8-2jcj1g`, from `cf32f63` up to the 0.11.0 version commit. Sections 1–5 cover up to `8679bc2`; section 6 covers what came after (reasoning, permissions, memory).
+- **Version:** 0.11.0, the first build since build 14.
 
 **Checks run**
-- 112 vitest tests pass; typecheck, lint and the i18n check are clean.
+- 120 vitest tests pass; typecheck and the i18n check are clean.
 - Electron end-to-end flows were run with a fake OpenAI-compatible server and a real 752-row Hello bank! export:
   - a Check in 3 parts, with one part timing out;
   - reasoning streamed into the assistant panel;
@@ -25,12 +24,13 @@
   - there is no Excel importer.
 
 **Migrations**
-- **Version:** schema 7 at build 14, now 10.
+- **Version:** schema 7 at build 14, now 11.
 - **Upgrade test:** `tests/upgrade.test.ts` upgrades a schema-7 database.
 - **The migrations:**
   - **8:** placeholder references become NULL (with the fingerprint recomputed), and short `contains` rules become `word` rules.
   - **9:** `transactions.bank_counterparty` and `bank_description` are added. The rules table is rebuilt to allow `field = 'iban'`, keeping ids and uids, and its sync triggers are made again.
   - **10:** adds `transactions.transfer_pair`, the tables `transaction_splits` and `goals` (both synced), and the view `tx_lines`.
+  - **11:** the table `memories` (not synced).
 
 ---
 
@@ -110,3 +110,32 @@
 - **Approvals:** "Approve all N" covers queued MCP requests of the same op. Also review the tray's "Stop Claude connection" (`setMcp`).
 - **Sync between versions:** saved searches are per computer, on purpose. A computer still on 0.10 ignores the new columns and tables it receives.
 - **Speed:** with 30,000 transactions and a 752-row import, lists and summaries take 25–85 ms, analyze about 100 ms, a preview after an edit about 80 ms, a commit about 270 ms, and `monthReview` about 300 ms.
+
+## 6. Added after the first review round
+
+### Reasoning per model and provider (`src/shared/reasoning.ts`)
+- **Claude:** levels off, low, medium, high, xhigh, max. "Off" exists only for Sonnet 5.5 (`thinking: {type: 'between_tools'}`) and Haiku 5.5 (`{type: 'disabled'}`); Opus 5.5 and Fable 5.2 always think. `claudeEffort()` falls back to "low" when a stored level doesn't exist for the model; `assistant.configure` keeps the stored level valid when the model changes. Otherwise `thinking: {type: 'adaptive', display: 'summarized'}` with `output_config.effort`.
+- **Other providers:** default, off, low, medium, high. `reasoningParams()`: DeepSeek gets its `thinking` switch, OpenRouter its `reasoning` object, the rest `reasoning_effort` ("none" for off). "Default" sends nothing.
+- **Refusals:** `withFallbacks()` in `openai.ts` retries a 400/422 at most twice: first lowering the output limit to 8192 when the error mentions tokens, then without the reasoning fields when the error is about them. A model is remembered as "doesn't take reasoning" only when the retry without them succeeds; the panel then strikes through the selector.
+- **UI:** the selector under the message box, and the chat and CSV-check settings.
+
+### Permissions (`src/shared/permissions.ts`)
+- **Kinds:** categorise, rules, organise (low risk); balances, deleteRules, accounts, import, memory (high risk). An op outside every kind always asks.
+- **Modes:** ask (default), smart (low-risk kinds allowed), trust (all allowed), custom (per kind).
+- **Always asks:** more than `BULK_LIMIT` (100) transactions in one change, except in trust; MCP requests while `mcpAlwaysAsk` is on (the default).
+- **Where:** `needsApproval()` is called in the chat's confirm handler (`chat.ts`) and in the MCP bridge. An allowed change shows as an "auto" card in the chat; when that change then fails, the card says so (`failed`).
+- **UI:** Settings → "What the assistant may do by itself".
+
+### Memory (`src/core/memory.ts`, migration 11)
+- **Storage:** the `memories` table in the encrypted database: text (max 300 characters), source (person or assistant), timestamps. At most 50 items; a duplicate (ignoring case) is not added twice.
+- **Local only:** not in `SYNC_TABLES`; the sync snapshot that other computers join from is written with the table emptied (`writeTransfer(…, { leaveOut: ['memories'] })`). Exports and backups keep it, so moving computers or restoring brings it along.
+- **Not over MCP:** `memory_remember` and `memory_forget` are left out of `mcpTools()`.
+- **Sensitive text:** `looksSensitive()` (`src/shared/sensitive.ts`) refuses IBANs and runs of 13+ digits. The `memory.remember` schema refuses them too, so the person is never asked to approve one.
+- **Prompt:** `memoryPrompt()` adds the items, with their ids and how to use the tools, to the chat's system prompt. When memory is off, neither the items nor the tools are sent. The CSV Check gets the items as `personNotes`.
+- **Permission:** the `memory` kind, high risk, so it asks in "smart" too.
+- **UI:** Settings → "What the assistant remembers": a switch, the list (change, forget), add by hand, and "Forget everything".
+
+### To look at
+- `looksSensitive` can refuse an uppercase phrase that looks like an IBAN, and it can't catch a password written in words; the system prompt also tells the model not to save those.
+- Memory items are sent with every chat message while memory is on; the Settings text says so.
+- `between_tools` for Sonnet 5.5 is cast in `claude.ts` because the SDK types may not list it yet.

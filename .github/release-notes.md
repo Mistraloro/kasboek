@@ -14,6 +14,11 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **Transactions**: rename or pair a selection, and saved searches. **Month picker**: click the month to jump to any month and year.
 - **Tray icon**: whether Claude apps are connected, with "Stop Claude connection" and Quit.
 
+**Assistant**
+- **Permissions**: choose what the assistant may change by itself and what waits for your OK, like Claude's permission modes. "Always ask" stays the default.
+- **Memory**: the assistant can remember facts and preferences between conversations ("remember that I get paid on the 25th"). Kept encrypted on this computer only, never synced, visible and editable in Settings; account and card numbers are refused.
+- **Reasoning**: turn the model's thinking off or set its level, per model and provider, right under the message box.
+
 **CSV import and Check**
 - Pending payments (Hello bank! “2026-”) are no longer imported twice once booked.
 - Duplicates are also found by bank reference, and rows the bank reworded are marked "Maybe imported".

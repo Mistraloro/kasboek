@@ -335,7 +335,8 @@
     "reasoningLabel": "Razonamiento",
     "reasoningHint": "Cuánto piensa el modelo antes de responder: menos es más rápido y barato, más ayuda con preguntas difíciles. No todos los modelos tienen este ajuste; si un modelo lo rechaza, Kasboek pregunta sin él.",
     "reasoningUnsupported": "Este modelo no acepta un ajuste de razonamiento y usa el suyo.",
-    "autoDone": "Hecho sin preguntar:"
+    "autoDone": "Hecho sin preguntar:",
+    "autoFailed": "Intentado sin preguntar, pero no funcionó:"
   },
   "settings": {
     "title": "Ajustes",

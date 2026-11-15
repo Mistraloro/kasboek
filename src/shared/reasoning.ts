@@ -16,7 +16,7 @@ export function claudeEfforts(model: AssistantModel): Effort[] {
 }
 
 /** The chosen level, or the nearest one this model has. */
-export function claudeEffort(model: AssistantModel, effort: Effort): Exclude<Effort, never> {
+export function claudeEffort(model: AssistantModel, effort: Effort): Effort {
   return claudeEfforts(model).includes(effort) ? effort : 'low'
 }
 

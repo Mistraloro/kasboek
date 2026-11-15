@@ -335,7 +335,8 @@
     "reasoningLabel": "Nachdenken",
     "reasoningHint": "Wie viel das Modell vor der Antwort nachdenkt: weniger ist schneller und günstiger, mehr hilft bei schwierigen Fragen. Nicht jedes Modell hat diese Einstellung; lehnt ein Modell sie ab, fragt Kasboek ohne.",
     "reasoningUnsupported": "Dieses Modell nimmt keine Einstellung fürs Nachdenken an und nutzt seine eigene.",
-    "autoDone": "Ohne Nachfrage erledigt:"
+    "autoDone": "Ohne Nachfrage erledigt:",
+    "autoFailed": "Ohne Nachfrage versucht, aber es hat nicht geklappt:"
   },
   "settings": {
     "title": "Einstellungen",

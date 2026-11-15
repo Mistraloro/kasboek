@@ -335,7 +335,8 @@
     "reasoningLabel": "Nadenken",
     "reasoningHint": "Hoeveel het model nadenkt voor het antwoordt: minder is sneller en goedkoper, meer helpt bij moeilijke vragen. Niet elk model heeft deze instelling; weigert een model ze, dan vraagt Kasboek het zonder.",
     "reasoningUnsupported": "Dit model neemt geen instelling voor nadenken aan en gebruikt zijn eigen.",
-    "autoDone": "Gedaan zonder te vragen:"
+    "autoDone": "Gedaan zonder te vragen:",
+    "autoFailed": "Zonder te vragen geprobeerd, maar het lukte niet:"
   },
   "settings": {
     "title": "Instellingen",

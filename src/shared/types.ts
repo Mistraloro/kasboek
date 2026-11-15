@@ -213,7 +213,7 @@ export type ChatMessage =
       /** A CSV check from the import screen, shown here while it runs and with its result. */
       check?: { fileName: string; groupsDone: number; groupsTotal: number; done: boolean; categorised?: number; renamed?: number; rules?: number; existing?: number }
     }
-  | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' | 'auto' }
+  | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' | 'auto'; /** An allowed change that then failed. */ failed?: boolean }
 
 /** A change to the preferences; `formats` may hold only the parts that change. */
 export type PrefsPatch = Partial<Omit<Prefs, 'formats'>> & { formats?: Partial<FormatPrefs> }
