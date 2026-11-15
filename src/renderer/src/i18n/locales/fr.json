@@ -734,7 +734,9 @@
     "note": "Note (facultatif)",
     "saveValue": "Enregistrer la valeur",
     "valueSaved": "Valeur enregistrée.",
-    "recorded": "Valeurs saisies"
+    "recorded": "Valeurs saisies",
+    "noOlder": "Pas encore de données plus anciennes : importez des exports CSV plus anciens pour remonter plus loin.",
+    "startsAt": "L’historique commence en {{month}}, avec votre opération ou valeur la plus ancienne. Importez des exports CSV plus anciens (ou indiquez un solde antérieur) pour remonter plus loin."
   },
   "year": {
     "title": "Année",

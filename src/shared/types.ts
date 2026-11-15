@@ -88,6 +88,8 @@ export interface NetWorth {
   accounts: NetWorthAccount[]
   /** Net worth at the end of each month (this month: today). */
   history: { month: string; cents: number; unconverted: number }[]
+  /** The first month with any data (oldest transaction or recorded value): history can't go further back. */
+  firstMonth: string | null
 }
 
 export interface YearSummary {

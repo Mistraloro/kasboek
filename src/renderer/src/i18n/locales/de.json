@@ -734,7 +734,9 @@
     "note": "Notiz (optional)",
     "saveValue": "Wert speichern",
     "valueSaved": "Wert gespeichert.",
-    "recorded": "Eingetragene Werte"
+    "recorded": "Eingetragene Werte",
+    "noOlder": "Noch keine älteren Daten: importiere ältere CSV-Exporte, um weiter zurückzusehen.",
+    "startsAt": "Der Verlauf beginnt im {{month}}, mit deiner ältesten Buchung oder erfassten Wert. Importiere ältere CSV-Exporte (oder erfasse einen früheren Kontostand), um weiter zurückzusehen."
   },
   "year": {
     "title": "Jahr",

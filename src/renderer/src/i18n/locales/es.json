@@ -734,7 +734,9 @@
     "note": "Nota (opcional)",
     "saveValue": "Guardar valor",
     "valueSaved": "Valor guardado.",
-    "recorded": "Valores anotados"
+    "recorded": "Valores anotados",
+    "noOlder": "Aún no hay datos más antiguos: importa exportaciones CSV más antiguas para ver más atrás.",
+    "startsAt": "El historial empieza en {{month}}, con tu movimiento o valor registrado más antiguo. Importa exportaciones CSV más antiguas (o registra un saldo anterior) para ver más atrás."
   },
   "year": {
     "title": "Año",

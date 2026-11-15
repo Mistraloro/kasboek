@@ -96,7 +96,7 @@ export function Segmented<T extends string>({
   label
 }: {
   value: T
-  options: { value: T; label: string; icon?: ReactNode }[]
+  options: { value: T; label: string; icon?: ReactNode; disabled?: boolean; title?: string }[]
   onChange: (v: T) => void
   label: string
 }) {
@@ -108,9 +108,11 @@ export function Segmented<T extends string>({
           type="button"
           role="radio"
           aria-checked={value === o.value}
+          disabled={o.disabled}
+          title={o.title}
           onClick={() => onChange(o.value)}
           className={cx(
-            'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors',
+            'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-default disabled:opacity-40',
             value === o.value ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text'
           )}
         >

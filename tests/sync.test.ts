@@ -123,4 +123,24 @@ describe('sync', () => {
     await opA('categories.create', { name: 'Games', kind: 'expense' })
     expect(sync.flush(a, 'A')).toEqual([])
   })
+
+  it('brings splits, goals, transfer pairs and the bank text across', async () => {
+    const { a, b, opA, opB, acc } = await pair()
+    const savings = await opA('accounts.create', { name: 'Savings' })
+    const cats = await opA('categories.list', {})
+    const cat = (n: string) => cats.find((c: any) => c.name === n).id
+    const receipt = await opA('transactions.create', { accountId: acc.id, bookingDate: '2026-11-03', amountCents: -10000, description: 'Receipt' })
+    await opA('transactions.split', { id: receipt.id, parts: [{ categoryId: cat('Groceries'), amountCents: -7000 }, { categoryId: cat('Shopping'), amountCents: -3000 }] })
+    await opA('goals.create', { name: 'Holiday', targetCents: 200000, accountId: savings.id })
+    const o = await opA('transactions.create', { accountId: acc.id, bookingDate: '2026-11-04', amountCents: -5000, description: 'To savings' })
+    const i = await opA('transactions.create', { accountId: savings.id, bookingDate: '2026-11-04', amountCents: 5000, description: 'From current' })
+    await opA('transfers.pair', { pairs: [{ outId: o.id, inId: i.id }] })
+    expect(exchange(a, 'A', b, 'B').deferred).toBe(0)
+    const bReceipt = (await opB('transactions.list', { search: 'Receipt' })).items[0]
+    expect(bReceipt.splitCount).toBe(2)
+    expect((await opB('transactions.splits', { id: bReceipt.id })).map((p: any) => [p.categoryName, p.amountCents])).toEqual([['Groceries', -7000], ['Shopping', -3000]])
+    expect((await opB('goals.list', {}))[0]).toMatchObject({ name: 'Holiday', accountName: 'Savings' })
+    expect((await opB('transactions.list', { search: 'To savings' })).items[0].transferAccount).toBe('Savings')
+    expect(b.prepare("SELECT bank_description FROM transactions WHERE description = 'Receipt'").get()).toEqual({ bank_description: 'Receipt' })
+  })
 })

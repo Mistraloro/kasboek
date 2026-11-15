@@ -8,12 +8,12 @@ import { TrendLine } from '../components/charts'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
-import { formatDate, formatNumber, monthShort } from '../lib/format'
+import { formatDate, formatNumber, monthLabel, monthShort } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { Stat } from './Overview'
 import { BankBalanceModal } from '../components/BankBalance'
-import { localToday } from '@shared/month'
+import { localToday, monthOf } from '@shared/month'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 const GROUPS: { kinds: AccountKind[]; key: string }[] = [
@@ -23,6 +23,7 @@ const GROUPS: { kinds: AccountKind[]; key: string }[] = [
   { kinds: ['credit_card', 'loan'], key: 'debts' }
 ]
 const RANGES = [12, 24, 60, 0] as const
+const monthsBetween = (a: string, b: string): number => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + Number(b.slice(5)) - Number(a.slice(5))
 /** Accounts whose value isn't just their payments: a portfolio, a savings plan, a loan balance. */
 
 export function NetWorthPage() {
@@ -41,6 +42,17 @@ export function NetWorthPage() {
     const n = a >= 1e6 ? `${formatNumber(v / 1e6, fmt, 1)}M` : a >= 1e4 ? `${formatNumber(v / 1e3, fmt, 0)}k` : formatNumber(v, fmt, 0)
     return fmt.formats.currencyPosition.startsWith('before') ? `${sym}${n}` : `${n} ${sym}`
   }
+  // Months of history there are (from the first month with data up to now).
+  const available = nw?.firstMonth ? monthsBetween(nw.firstMonth, monthOf()) + 1 : null
+  // The chosen range has no more history than a shorter one: show the shorter one as chosen.
+  useEffect(() => {
+    if (available === null || range === 0) return
+    const i = RANGES.indexOf(range)
+    if (i <= 0 || available > RANGES[i - 1]!) return
+    let k = i - 1
+    while (k > 0 && available <= RANGES[k - 1]!) k--
+    setRange(RANGES[k]!)
+  }, [available, range])
   const change = nw && nw.history.length > 1 ? nw.history[nw.history.length - 1]!.cents - nw.history[0]!.cents : null
 
   return (
@@ -57,7 +69,19 @@ export function NetWorthPage() {
         <CardHeader
           title={t('networth.history')}
           description={t('networth.historyHint')}
-          action={<Segmented label={t('networth.range')} value={String(range)} onChange={(v) => setRange(Number(v) as (typeof RANGES)[number])} options={RANGES.map((r) => ({ value: String(r), label: r === 0 ? t('networth.all') : t('networth.years', { count: r / 12 }) }))} />}
+          action={
+            <Segmented
+              label={t('networth.range')}
+              value={String(range)}
+              onChange={(v) => setRange(Number(v) as (typeof RANGES)[number])}
+              // A longer range than the history there is would look the same as a shorter one.
+              options={RANGES.map((r, i) => {
+                const shorter = i > 0 ? RANGES[i - 1]! : 0
+                const empty = r > 0 && available !== null && i > 0 && available <= shorter
+                return { value: String(r), label: r === 0 ? t('networth.all') : t('networth.years', { count: r / 12 }), disabled: empty, title: empty ? t('networth.noOlder') : undefined }
+              })}
+            />
+          }
         />
         <div className="px-5 py-4">
           {nw && nw.history.length > 0 ? (
@@ -69,6 +93,9 @@ export function NetWorthPage() {
             />
           ) : (
             <p className="text-[13px] text-muted">{t('networth.empty')}</p>
+          )}
+          {nw?.firstMonth && (range === 0 || (available !== null && available < range)) && (
+            <p className="mt-2 text-xs text-muted">{t('networth.startsAt', { month: monthLabel(toDate(nw.firstMonth), fmt) })}</p>
           )}
         </div>
       </Card>

@@ -135,7 +135,7 @@ export function netWorth(db: Db, opts: { months: number }, today = localToday())
     }
     history_.push({ month: m, cents: total, unconverted: missing })
   }
-  return { main, totalCents: assets + liabilities, assetsCents: assets, liabilitiesCents: liabilities, unconverted, accounts: rows, history: history_ }
+  return { main, totalCents: assets + liabilities, assetsCents: assets, liabilitiesCents: liabilities, unconverted, accounts: rows, history: history_, firstMonth: first?.slice(0, 7) ?? null }
 }
 
 export function listValuations(db: Db, accountId: number): Valuation[] {

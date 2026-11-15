@@ -734,7 +734,9 @@
     "note": "Notitie (optioneel)",
     "saveValue": "Waarde bewaren",
     "valueSaved": "Waarde bewaard.",
-    "recorded": "Ingevulde waarden"
+    "recorded": "Ingevulde waarden",
+    "noOlder": "Nog geen oudere gegevens: importeer oudere CSV-exports om verder terug te kijken.",
+    "startsAt": "De geschiedenis begint in {{month}}, bij je oudste verrichting of ingevulde waarde. Importeer oudere CSV-exports (of vul een vroeger saldo in) om verder terug te kijken."
   },
   "year": {
     "title": "Jaar",

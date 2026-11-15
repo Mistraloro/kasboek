@@ -214,3 +214,16 @@ describe('export (#35)', () => {
     expect(transactionsCsv(d, {}, { decimal: '.', labels }).csv).toContain('2026-11-01,Current,Employer,,tx 2026-11-01 250000,,Salary,2500.00,EUR,')
   })
 })
+
+describe('net worth ranges', () => {
+  it('shows 1, 2, 5 years or everything, from the first month with data', async () => {
+    const { netWorth } = await import('@core/wealth')
+    const { d, acc } = db()
+    const a = acc('Current')
+    tx(d, a, '2022-03-10', 100000)
+    tx(d, a, '2026-10-10', -1000)
+    const len = (months: number) => netWorth(d, { months }, '2026-11-10').history.length
+    expect([len(12), len(24), len(60), len(0)]).toEqual([12, 24, 57, 57])
+    expect(netWorth(d, { months: 0 }, '2026-11-10').firstMonth).toBe('2022-03')
+  })
+})

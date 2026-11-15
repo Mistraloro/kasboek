@@ -734,7 +734,9 @@
     "note": "Note (optional)",
     "saveValue": "Save value",
     "valueSaved": "Value saved.",
-    "recorded": "Recorded values"
+    "recorded": "Recorded values",
+    "noOlder": "No older data yet: import older CSV exports to see further back.",
+    "startsAt": "History starts in {{month}}, with your oldest transaction or recorded value. Import older CSV exports (or record an earlier balance) to see further back."
   },
   "year": {
     "title": "Year",
