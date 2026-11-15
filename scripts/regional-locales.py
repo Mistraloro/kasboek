@@ -17,7 +17,7 @@ def apply(rules, s):
 ES419=[
  (r'Otros ordenadores','Otras computadoras'),(r'\b[Ee]ste ordenador',lambda m:('Esta' if m.group(0)[0]=='E' else 'esta')+' computadora'),
  (r'\botro puerto u ordenador','otro puerto o computadora'),(r'\botro ordenador','otra computadora'),(r'\bcualquier ordenador','cualquier computadora'),
- (r'\bdel ordenador','de la computadora'),(r'\bel ordenador','la computadora'),(r'\btu ordenador','tu computadora'),(r'ordenador','computadora'),
+ (r'\bdel ordenador','de la computadora'),(r'\bel ordenador','la computadora'),(r'\btu ordenador','tu computadora'),(r'ordenadores','computadoras'),(r'ordenador','computadora'),
  (r'móvil','celular'),
  (r'Sin añadir','Sin agregar'),(r'añadirlo','agregarlo'),(r'Añadido','Agregado'),(r'añadida','agregada'),(r'añadirá','agregará'),(r'Añadir','Agregar'),(r'Añade','Agrega'),(r'añade','agrega'),
  (r'Ajustes','Configuración'),
@@ -57,10 +57,11 @@ PTBR=[
  (r'\breviu\b','revisou'),(r'Revê tudo','Você revisa tudo'),(r'\brever arquivos','revisar arquivos'),(r'^Rever$','Revisar'),(r'^Rever ','Revisar '),(r'\bRevê\b','Revisa'),(r'\brevê\b','revisa'),(r'Revisto por','Revisado por'),(r'Rever com','Revisar com'),
  (r'Não pode ser anulado','Não pode ser desfeito'),(r'assinala','marca'),(r'levantamentos','saques'),(r'registados','registrados'),
  (r'uma aplicação','um aplicativo'),(r'Uma aplicação','Um aplicativo'),(r'essa aplicação','esse aplicativo'),(r'sua aplicação','seu aplicativo'),(r'\bas aplicações','os aplicativos'),(r'\ba aplicação','o aplicativo'),(r'aplicações','aplicativos'),(r'aplicação','aplicativo'),(r'aplicativo Claude conectada','aplicativo Claude conectado'),(r'^Revisa este CSV do meu banco e importa-o\.$','Revise este CSV do meu banco e importe-o.'),
+ (r'^Saltar a visita$','Pular a visita'),(r'^Saltar$','Pular'),(r'^Seguinte$','Próximo'),(r'Largue uma','Solte uma'),(r'Planear','Planejar'),(r'objetivos de poupança','metas de economia'),(r'uma vista anual','uma visão anual'),(r'património','patrimônio'),(r'Poupe para algo','Economize para algo'),(r'mude o nome','renomeie'),(r'^Privado de raiz$','Privado desde a origem'),(r'Algumas escolhas e está pronto','Algumas escolhas e pronto'),(r'^Pode alterar tudo isto','Você pode alterar tudo isso'),(r'escolhem-se nas','são escolhidos nas'),(r'o contabilista','o contador'),(r'Este mês num relance','Este mês de relance'),(r'ao fim de algum tempo','depois de um tempo'),
  (r'Descarregado e verificado','Baixado e verificado'),(r'Descarregue-o','Baixe-o'),(r'pode fazer alterações por si','pode fazer alterações por você'),(r'ou salte este passo','ou pule esta etapa'),(r'^Saltar por agora$','Pular por enquanto'),(r'pode avisá-lo','pode avisar você'),(r'É o (utilizador|usuário) que decide','Você decide'),(r'\. Pode alterar isto','. Você pode alterar isso'),(r'^Tem a versão','Você tem a versão'),(r'^Tem a versão mais recente','Você tem a versão mais recente'),
  (r'\bnum\b','em um'),(r'\bnuma\b','em uma'),(r'\bnoutra\b','em outra'),(r'\bnoutro\b','em outro'),
  (r'Leia este código','Escaneie este código'),(r'Ativa\b(?! )','Ativada'),(r'Aguarde','Aguarde'),(r'Pasta de dados','Pasta de dados'),(r'Ligue','Conecte'),(r'ligada por','conectada via'),(r'ligados a','vinculados a'),(r'ligada a','vinculada a'),
- (r'aplicativo Claude conectada','aplicativo Claude conectado'),(r'a seu aplicativo','o seu aplicativo'),(r'respetiv','respectiv'),(r'^A pensar…$','Pensando…'),(r'^Coloca os meus movimentos sem categoria na categoria certa\.$','Coloque meus movimentos sem categoria na categoria certa.'),(r'\bativ(?=a\b|o\b|ar\b)','ativ'),(r'facto','fato'),(r'contacto','contato'),
+ (r'aplicativo Claude conectada','aplicativo Claude conectado'),(r'\bda aplicativo','do aplicativo'),(r'a seu aplicativo','o seu aplicativo'),(r'respetiv','respectiv'),(r'^A pensar…$','Pensando…'),(r'^Coloca os meus movimentos sem categoria na categoria certa\.$','Coloque meus movimentos sem categoria na categoria certa.'),(r'\bativ(?=a\b|o\b|ar\b)','ativ'),(r'facto','fato'),(r'contacto','contato'),
 ]
 for base, out, rules in [('es.json','es-419.json',ES419),('pt-PT.json','pt-BR.json',PTBR)]:
     src=load(base); res=collections.OrderedDict()

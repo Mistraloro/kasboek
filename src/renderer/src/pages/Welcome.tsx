@@ -1,73 +1,184 @@
-import { ArrowDownToLine, Check, Sparkles } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowDownToLine, Bot, Check, FileUp, FolderInput, Lock, Monitor, Moon, PiggyBank, ShieldCheck, Sparkles, Sun } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
-import type { Settings } from '@shared/types'
+import type { LanguageCode } from '@shared/languages'
+import type { BackupStatus, Settings } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
+import { CurrencySelect } from '../components/CurrencySelect'
 import { useToast } from '../components/Toast'
-import { Button, Field, Input, Select, Switch, cx } from '../components/ui'
+import { startTour } from '../components/Tour'
+import { Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
+import { LANGUAGES } from '../i18n'
 import { call } from '../lib/api'
-import { usePrefs } from '../lib/settings'
+import { formatDate, formatMoney } from '../lib/format'
+import { usePrefs, usePrefsFmt } from '../lib/settings'
 import { AuthCard, AuthLayout } from './auth/AuthLayout'
 import { errText } from './auth/parts'
 
-type Step = 'assistant' | 'updates'
+const STEPS = ['intro', 'basics', 'safety', 'assistant', 'updates'] as const
+type Step = (typeof STEPS)[number]
+
+/** One setting in the welcome window: an icon, a title and hint, and its control. */
+function Choice({ icon, title, hint, children }: { icon: ReactNode; title: string; hint?: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
+      <span className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">{icon}</span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">{title}</span>
+          {hint && <span className="block text-[13px] break-words text-muted">{hint}</span>}
+        </span>
+      </span>
+      {children && <span className="shrink-0">{children}</span>}
+    </div>
+  )
+}
 
 /**
- * Shown once per computer, after creating or opening the data: which AI the assistant uses (or
- * none yet), and whether Kasboek looks for updates (on unless switched off here).
+ * Shown once per computer, after creating or opening the data: an introduction, the basics
+ * (language, look, currency), safety (backups, auto-lock), the assistant's AI and the update check,
+ * and then, if wanted, a tour of the app.
  */
 export function Welcome() {
   const { t } = useTranslation()
   const toast = useToast()
   const { prefs, updatePrefs } = usePrefs()
+  const fmt = usePrefsFmt()
   const assistant = useAssistant()
-  const [step, setStep] = useState<Step>('assistant')
+  const [step, setStep] = useState<Step>('intro')
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [backup, setBackup] = useState<BackupStatus | null>(null)
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [updates, setUpdates] = useState(prefs.updateCheck)
-  useEffect(() => void call('settings.get').then(setSettings), [])
+  useEffect(() => {
+    void call('settings.get').then(setSettings)
+    void call('backup.status').then(setBackup)
+  }, [])
   const provider: ProviderId = settings?.aiProvider ?? 'anthropic'
   const preset = PROVIDERS[provider]
   const hasKey = !!assistant?.keyHint && assistant.provider === provider
+  const at = STEPS.indexOf(step)
+  const go = (s: Step): void => setStep(s)
+  const fail = (e: unknown): void => toast(errText(e), 'error')
 
-  const choose = (id: ProviderId): void => {
+  const chooseProvider = (id: ProviderId): void => {
     setKey('')
-    void call('assistant.configure', { aiProvider: id }).then(setSettings, (e) => toast(errText(e), 'error'))
+    void call('assistant.configure', { aiProvider: id }).then(setSettings, fail)
   }
-  const next = (): void => {
-    if (!key.trim()) return setStep('updates')
+  const saveKey = (): void => {
+    if (!key.trim()) return go('updates')
     setBusy(true)
     void call('assistant.setKey', { apiKey: key.trim(), provider })
       .then(() => {
         setKey('')
-        setStep('updates')
+        go('updates')
       })
-      .catch((e) => toast(errText(e), 'error'))
+      .catch(fail)
       .finally(() => setBusy(false))
   }
-  const finish = (): void => {
+  const toggleBackups = async (enabled: boolean): Promise<void> => {
+    try {
+      if (enabled && !backup?.folder && !(await call('backup.chooseFolder')).folder) return
+      await call('backup.configureAuto', { enabled })
+      setBackup(await call('backup.status'))
+    } catch (e) {
+      fail(e)
+    }
+  }
+  const finish = (tour: boolean): void => {
     void updatePrefs({ updateCheck: updates, welcomeDone: true }).then(() => {
       if (updates) void call('update.check')
+      if (tour) startTour()
     })
   }
 
   const dots = (
-    <div className="mb-4 flex justify-center gap-1.5" aria-hidden>
-      {(['assistant', 'updates'] as Step[]).map((s) => <span key={s} className={cx('h-1.5 w-6 rounded-full', s === step ? 'bg-accent' : 'bg-border')} />)}
+    <div className="mb-4 flex justify-center gap-1.5" aria-label={t('tour.progress', { n: at + 1, total: STEPS.length })}>
+      {STEPS.map((s, i) => <span key={s} className={cx('h-1.5 w-6 rounded-full', i <= at ? 'bg-accent' : 'bg-border')} />)}
+    </div>
+  )
+  const nav = (back: Step | null, next: ReactNode) => (
+    <div className="mt-5 flex items-center justify-between gap-2">
+      {back ? <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => go(back)}>{t('auth.back')}</button> : <span />}
+      {next}
     </div>
   )
 
   return (
     <AuthLayout wide>
       {dots}
-      {step === 'assistant' ? (
+      {step === 'intro' && (
+        <AuthCard title={t('welcome.introTitle')} body={t('welcome.introBody')}>
+          <div className="flex flex-col gap-2.5">
+            <Choice icon={<ShieldCheck size={16} />} title={t('welcome.introPrivate')} hint={t('welcome.introPrivateHint')} />
+            <Choice icon={<FileUp size={16} />} title={t('welcome.introImport')} hint={t('welcome.introImportHint')} />
+            <Choice icon={<PiggyBank size={16} />} title={t('welcome.introPlan')} hint={t('welcome.introPlanHint')} />
+            <Choice icon={<Bot size={16} />} title={t('welcome.introAssistant')} hint={t('welcome.introAssistantHint')} />
+          </div>
+          {nav(null, <Button variant="primary" onClick={() => go('basics')}>{t('welcome.start')}</Button>)}
+        </AuthCard>
+      )}
+
+      {step === 'basics' && (
+        <AuthCard title={t('welcome.basicsTitle')} body={t('welcome.basicsBody')}>
+          <div className="flex flex-col gap-4">
+            <Field label={t('settings.uiLanguage')}>
+              {(id) => (
+                <Select id={id} value={prefs.language} onChange={(e) => void updatePrefs({ language: e.target.value as LanguageCode })}>
+                  {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+                </Select>
+              )}
+            </Field>
+            <Field label={t('settings.theme')}>
+              {() => (
+                <Segmented
+                  label={t('settings.theme')}
+                  value={prefs.theme}
+                  onChange={(theme) => void updatePrefs({ theme })}
+                  options={[
+                    { value: 'system', label: t('settings.themeSystem'), icon: <Monitor size={14} /> },
+                    { value: 'light', label: t('settings.themeLight'), icon: <Sun size={14} /> },
+                    { value: 'dark', label: t('settings.themeDark'), icon: <Moon size={14} /> }
+                  ]}
+                />
+              )}
+            </Field>
+            <Field label={t('fx.main')} hint={t('fx.mainHint')}>
+              {(id) => <CurrencySelect id={id} value={settings?.currency ?? 'EUR'} onChange={(e) => void call('settings.update', { currency: e.target.value }).then(setSettings, fail)} />}
+            </Field>
+            <p className="text-xs text-muted">
+              {t('welcome.formats', { example: `${formatMoney(-123456, settings?.currency ?? 'EUR', fmt)} · ${formatDate('2026-12-31', fmt)}` })}
+            </p>
+          </div>
+          {nav('intro', <Button variant="primary" onClick={() => go('safety')}>{t('welcome.next')}</Button>)}
+        </AuthCard>
+      )}
+
+      {step === 'safety' && (
+        <AuthCard title={t('welcome.safetyTitle')} body={t('welcome.safetyBody')}>
+          <div className="flex flex-col gap-2.5">
+            <Choice icon={<FolderInput size={16} />} title={t('settings.auto')} hint={backup?.autoEnabled && backup.folder ? <span className="selectable">{backup.folder}</span> : t('settings.autoHint')}>
+              <Switch label={t('settings.auto')} checked={!!backup?.autoEnabled} onChange={(v) => void toggleBackups(v)} />
+            </Choice>
+            <Choice icon={<Lock size={16} />} title={t('settings.autoLock')} hint={t('settings.autoLockHint')}>
+              <Select className="w-40" aria-label={t('settings.autoLock')} value={prefs.autoLockMinutes} onChange={(e) => void updatePrefs({ autoLockMinutes: Number(e.target.value) })}>
+                {[1, 5, 10, 15, 30, 60, 0].map((m) => <option key={m} value={m}>{m === 0 ? t('settings.never') : t('settings.minutes', { count: m })}</option>)}
+              </Select>
+            </Choice>
+            <p className="text-xs text-muted">{t('welcome.safetyRecovery')}</p>
+          </div>
+          {nav('basics', <Button variant="primary" onClick={() => go('assistant')}>{t('welcome.next')}</Button>)}
+        </AuthCard>
+      )}
+
+      {step === 'assistant' && (
         <AuthCard title={t('welcome.aiTitle')} body={t('welcome.aiBody')}>
-          <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); next() }}>
+          <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); saveKey() }}>
             <Field label={t('welcome.provider')}>
               {(id) => (
-                <Select id={id} value={provider} onChange={(e) => choose(e.target.value as ProviderId)}>
+                <Select id={id} value={provider} onChange={(e) => chooseProvider(e.target.value as ProviderId)}>
                   {PROVIDER_IDS.filter((p) => p !== 'custom').map((p) => <option key={p} value={p}>{PROVIDERS[p].name}</option>)}
                 </Select>
               )}
@@ -88,30 +199,31 @@ export function Welcome() {
               {preset.company ? t('welcome.privacy', { name: preset.name, company: preset.company }) : t('welcome.privacyLocal')}
             </p>
             <div className="flex items-center justify-between gap-2">
-              <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => setStep('updates')}>{t('welcome.skip')}</button>
-              <Button type="submit" variant="primary" disabled={busy}>{busy ? t('claude.checking') : t('welcome.next')}</Button>
+              <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => go('safety')}>{t('auth.back')}</button>
+              <div className="flex items-center gap-3">
+                <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => go('updates')}>{t('welcome.skip')}</button>
+                <Button type="submit" variant="primary" disabled={busy}>{busy ? t('claude.checking') : t('welcome.next')}</Button>
+              </div>
             </div>
           </form>
         </AuthCard>
-      ) : (
+      )}
+
+      {step === 'updates' && (
         <AuthCard title={t('welcome.updatesTitle')} body={t('welcome.updatesBody')}>
           <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-              <span className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><ArrowDownToLine size={16} /></span>
-                <span>
-                  <span className="block text-sm font-semibold">{t('welcome.updatesSwitch')}</span>
-                  <span className="block text-[13px] text-muted">{t('welcome.updatesHint')}</span>
-                </span>
-              </span>
+            <Choice icon={<ArrowDownToLine size={16} />} title={t('welcome.updatesSwitch')} hint={t('welcome.updatesHint')}>
               <Switch label={t('welcome.updatesSwitch')} checked={updates} onChange={setUpdates} />
-            </div>
+            </Choice>
             <p className="text-xs text-muted">{t('welcome.updatesPrivacy')}</p>
-            <div className="flex items-center justify-between gap-2">
-              <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => setStep('assistant')}>{t('auth.back')}</button>
-              <Button variant="primary" onClick={finish}>{t('welcome.finish')}</Button>
-            </div>
           </div>
+          {nav(
+            'assistant',
+            <div className="flex items-center gap-3">
+              <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => finish(false)}>{t('welcome.noTour')}</button>
+              <Button variant="primary" onClick={() => finish(true)}>{t('welcome.tour')}</Button>
+            </div>
+          )}
         </AuthCard>
       )}
     </AuthLayout>

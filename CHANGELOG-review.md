@@ -154,9 +154,10 @@
 - **Development runs:** nothing is checked unless `KASBOEK_UPDATE_API` points at a stand-in server (ignored in packaged builds).
 - **UI:** `components/Update.tsx` (top-bar button only while a newer release waits; window with the notes from the first heading to "Download", progress, install), Settings row (switch, "Check now", last result).
 
-### Welcome window (`pages/Welcome.tsx`)
+### Welcome window (`pages/Welcome.tsx`) and tour (`components/Tour.tsx`)
 - Shown after unlocking on a computer where `prefs.welcomeDone` is false (new data, a join, or the first start after this update).
-- Step 1: AI provider (all presets but "custom") and key, or skip. Step 2: the update switch, on by default. "Start using Kasboek" stores both.
+- Steps: an introduction; basics (language, theme, main currency, with a preview of the number and date format); safety (automatic backups, which asks for a folder, and auto-lock, plus a note on the recovery key); the AI provider (all presets but "custom") and key, or skip; the update switch, on by default.
+- It ends with "Show me around" or "Skip the tour". The tour puts a spotlight on each part (the 8 pages, the assistant, Settings, Lock; targets carry `data-tour`), opens the page it talks about, and closes with Escape or a click outside. Settings has "Show the tour".
 
 ### To look at
 - The Windows path (silent MSI and restart) was not run here; only the AppImage path, the deb/dmg path and the "didn't install" note were run end to end. If `kasboek-mcp.exe` is in use by a Claude app during the MSI upgrade, Windows may hold that file until a restart.

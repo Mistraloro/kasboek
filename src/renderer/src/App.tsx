@@ -5,6 +5,7 @@ import { AssistantPanel } from './components/AssistantPanel'
 import { Mark } from './components/Mark'
 import { McpRequests } from './components/McpRequests'
 import { UpdateButton } from './components/Update'
+import { Tour } from './components/Tour'
 import { Welcome } from './pages/Welcome'
 import { ToastProvider, useToast } from './components/Toast'
 import { cx } from './components/ui'
@@ -108,6 +109,7 @@ function Shell() {
     <button
       key={p}
       type="button"
+      data-tour={p}
       onClick={() => setPage(p)}
       aria-current={page === p ? 'page' : undefined}
       className={cx(
@@ -132,6 +134,7 @@ function Shell() {
           {navItem('settings', <SettingsIcon size={17} />)}
           <button
             type="button"
+            data-tour="lock"
             onClick={() => void call('auth.lock').then(set)}
             className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
           >
@@ -146,6 +149,7 @@ function Shell() {
           <UpdateButton />
           <button
             type="button"
+            data-tour="assistant"
             onClick={() => setAssistantOpen((v) => !v)}
             aria-pressed={assistantOpen}
             title={t('nav.toggleAssistant')}
@@ -175,6 +179,7 @@ function Shell() {
           {assistantOpen && <AssistantPanel go={setPage} />}
         </div>
       </div>
+      <Tour go={setPage} openAssistant={() => setAssistantOpen(true)} />
     </div>
   )
 }

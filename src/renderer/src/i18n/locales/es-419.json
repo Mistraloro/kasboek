@@ -115,17 +115,17 @@
     "Salary": "Sueldo"
   },
   "sync": {
-    "title": "Sincronizar entre computadoraes",
-    "hint": "Mantén los mismos datos en varios computadoraes mediante una carpeta en la nube que ya usas (OneDrive, Google Drive, Dropbox, iCloud Drive). No hay servidor de Kasboek: a esa carpeta solo van archivos cifrados.",
+    "title": "Sincronizar entre computadoras",
+    "hint": "Mantén los mismos datos en varios computadoras mediante una carpeta en la nube que ya usas (OneDrive, Google Drive, Dropbox, iCloud Drive). No hay servidor de Kasboek: a esa carpeta solo van archivos cifrados.",
     "join": "Unirse desde otra computadora",
     "joinHint": "Elige la carpeta de sincronización que ya usa otra computadora. Esto sustituye los datos de aquí; necesitarás la contraseña y el código (o la clave de recuperación) de esos datos.",
     "risk": "Los datos cifrados se quedan en tu carpeta de la nube. Si alguien entra en esa cuenta, lo que los protege es tu contraseña: que sea larga y única. El acceso sin contraseña se configura en cada computadora.",
     "detachedHint": "Estos datos se sincronizan mediante una carpeta en la nube. Indica dónde está esa carpeta en esta computadora para seguir sincronizando.",
     "thisComputer": "esta computadora",
     "noOthers": "Aún no se ha unido ningún otra computadora.",
-    "conflictsHint": "Algo se cambió a la vez en dos computadoraes. Se conservó el cambio más reciente; aquí ves lo que se sustituyó.",
+    "conflictsHint": "Algo se cambió a la vez en dos computadoras. Se conservó el cambio más reciente; aquí ves lo que se sustituyó.",
     "stop": "Dejar de sincronizar en esta computadora",
-    "stopHint": "Los datos se quedan aquí y en los demás computadoraes, que siguen sincronizándose entre sí.",
+    "stopHint": "Los datos se quedan aquí y en los demás computadoras, que siguen sincronizándose entre sí.",
     "stopConfirm": "Esta computadora deja de enviar y recibir cambios. Sus datos se quedan como están. Para volver a sincronizar, únete de nuevo a la carpeta."
   },
   "balance": {
@@ -168,6 +168,18 @@
     "aiBody": "El asistente responde preguntas sobre tu dinero y puede hacer cambios por ti, que esperan tu aprobación. Elige un proveedor de IA, o sáltate este paso y configúralo más tarde en Configuración.",
     "local": "{{name}} funciona en tu propio computadora y no necesita clave. Ábrelo antes de usar el asistente.",
     "privacyLocal": "Todo se queda en tu computadora.",
-    "updatesPrivacy": "Kasboek pregunta a GitHub, donde se publica Kasboek, por la última versión. GitHub ve tu dirección IP; no se envía nada sobre tus datos. Puedes cambiarlo en Configuración."
+    "updatesPrivacy": "Kasboek pregunta a GitHub, donde se publica Kasboek, por la última versión. GitHub ve tu dirección IP; no se envía nada sobre tus datos. Puedes cambiarlo en Configuración.",
+    "introBody": "Una app de presupuesto que guarda tus finanzas en tu propio computadora. Unas cuantas elecciones y listo.",
+    "introPrivateHint": "Tus datos están cifrados y se quedan en esta computadora. Sin cuenta, sin servidor de Kasboek.",
+    "basicsBody": "Puedes cambiar todo esto más tarde en Configuración.",
+    "formats": "Los importes y las fechas se verán así: {{example}}. Otros formatos se eligen en Configuración.",
+    "safetyBody": "Los datos de Kasboek solo están en esta computadora, así que una copia de seguridad en otro sitio es importante."
+  },
+  "tour": {
+    "step": {
+      "budgets": "Fija un monto por categoría y mes y ve cuánto queda. Las reglas que clasifican los movimientos automáticamente también están aquí.",
+      "goals": "Ahorra para algo: un monto para una fecha, con lo que debes apartar cada mes.",
+      "settings": "Cuentas, copias de seguridad, sincronización entre computadoras, el asistente, formatos y más."
+    }
   }
 }

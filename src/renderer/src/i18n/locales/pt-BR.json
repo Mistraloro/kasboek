@@ -179,6 +179,7 @@
     "addedDesktop": "Adicionado. Feche completamente o Claude Desktop (também pelo ícone na área de notificação ou na barra de menus) e volte a abri-lo. O Kasboek aparece depois em Configurações → Developer e no menu de ferramentas de uma nova conversa, não em Connectors."
   },
   "fx": {
+    "hint": "Cada conta mantém a sua própria moeda. Totais, orçamentos e patrimônio são mostrados na moeda principal, à taxa de câmbio da data de cada movimento.",
     "noRate": "Ainda sem taxa de câmbio: estes valores ficam fora dos totais. Baixe as taxas do BCE ou adicione uma taxa.",
     "sourceManual": "digitada",
     "ecbHint": "Baixa a lista pública de taxas do Banco Central Europeu. Nada sobre os seus dados é enviado.",
@@ -208,6 +209,7 @@
     "unconverted_one": "{{count}} conta não tem taxa de câmbio e não é contada. Adicione taxas em Configurações → Moedas.",
     "unconverted_other": "{{count}} contas não têm taxa de câmbio e não são contadas. Adicione taxas em Configurações → Moedas.",
     "history": "Patrimônio ao longo do tempo",
+    "empty": "Adicione contas e movimentos para ver o seu patrimônio crescer.",
     "valueHelp": "Digite quanto valia a conta em um dia, tal como o seu banco ou corretora mostra. Os aportes e saques depois desse dia somam-se até digitar um novo valor.",
     "saveValue": "Salvar valor",
     "valueSaved": "Valor salvo.",
@@ -229,6 +231,7 @@
     "recorded": "Saldos registrados",
     "readFromCsv": "Saldo do arquivo no fim de {{date}}: {{amount}}.",
     "saved": "Saldo bancário de {{date}} salvo.",
+    "skip": "Pular",
     "why": "Assim o Kasboek conhece o saldo desta conta e percebe quando falta um movimento. Você também pode adicioná-lo mais tarde em Configurações → Contas."
   },
   "transfers": {
@@ -309,7 +312,36 @@
     "aiBody": "O assistente responde a perguntas sobre o seu dinheiro e pode fazer alterações por você, que aguardam a sua aprovação. Escolha um fornecedor de IA, ou pule esta etapa e configure-o mais tarde nas Configurações.",
     "keySaved": "Chave salva ({{hint}}).",
     "skip": "Pular por enquanto",
+    "next": "Próximo",
     "updatesBody": "O Kasboek pode avisar você quando sair uma nova versão. Você decide quando a instala.",
-    "updatesPrivacy": "O Kasboek pergunta ao GitHub, onde o Kasboek é publicado, pela versão mais recente. O GitHub vê o seu endereço IP; nada sobre os seus dados é enviado. Você pode alterar isso nas Configurações."
+    "updatesPrivacy": "O Kasboek pergunta ao GitHub, onde o Kasboek é publicado, pela versão mais recente. O GitHub vê o seu endereço IP; nada sobre os seus dados é enviado. Você pode alterar isso nas Configurações.",
+    "introTitle": "Boas-vindas ao Kasboek",
+    "introBody": "Um aplicativo de orçamento que guarda as suas finanças no seu próprio computador. Algumas escolhas e pronto.",
+    "introPrivate": "Privado desde a origem",
+    "introPrivateHint": "Os seus dados são criptografados e ficam neste computador. Sem conta, sem servidor do Kasboek.",
+    "introImportHint": "Solte uma exportação CSV do seu banco; o Kasboek mostra cada linha antes de salvar alguma coisa.",
+    "introPlan": "Planejar e acompanhar",
+    "introPlanHint": "Orçamentos, custos fixos, metas de economia, uma visão anual e o seu patrimônio.",
+    "basicsBody": "Você pode alterar tudo isso mais tarde nas Configurações.",
+    "formats": "Os valores e as datas vão ficar assim: {{example}}. Outros formatos são escolhidos nas Configurações.",
+    "safetyBody": "Os dados do Kasboek estão só neste computador, por isso uma cópia de segurança em outro lugar é importante.",
+    "safetyRecovery": "Guarde a sua chave de recuperação em um lugar seguro: sem a sua senha ou essa chave ninguém consegue abrir os seus dados, nem o Kasboek.",
+    "noTour": "Pular a visita",
+    "tour": "Mostrar o aplicativo"
+  },
+  "tour": {
+    "skip": "Pular",
+    "next": "Próximo",
+    "settingsHint": "Uma volta rápida por cada parte do aplicativo.",
+    "step": {
+      "overview": "Este mês de relance: receitas, despesas, o que resta nos orçamentos, avisos e os primeiros passos.",
+      "transactions": "Cada pagamento. Pesquise, filtre, defina categorias, renomeie, divida um pagamento ou junte transferências entre as suas contas.",
+      "budgets": "Defina um valor por categoria e por mês e veja quanto resta. As regras que classificam movimentos automaticamente também estão aqui.",
+      "recurring": "Assinaturas, aluguel, seguros e salário, encontrados nos seus movimentos, com o que ainda falta pagar este mês.",
+      "goals": "Economize para algo: um valor até uma data, com o que deve reservar por mês.",
+      "year": "O ano inteiro por mês e categoria, com exportação CSV e PDF para os impostos ou o contador.",
+      "import": "Traga uma exportação CSV do seu banco. Deixe o assistente verificá-la antes de salvar.",
+      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo."
+    }
   }
 }

@@ -16,6 +16,7 @@ import { CurrencySelect } from '../components/CurrencySelect'
 import { ClaudeSection, PermissionsSection } from './SettingsClaude'
 import { MemorySection } from './SettingsMemory'
 import { useUpdate } from '../components/Update'
+import { startTour } from '../components/Tour'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
 import { parseAmount } from '@shared/amount'
@@ -177,6 +178,9 @@ function SecuritySection() {
         <span className="text-[13px] text-muted">{t('settings.version', { version: info.commit ? `${info.version} (${info.commit})` : info.version })}</span>
       </Row>
       <UpdateRow />
+      <Row label={t('tour.settingsLabel')} hint={t('tour.settingsHint')}>
+        <Button size="sm" onClick={startTour}>{t('tour.show')}</Button>
+      </Row>
 
       <Modal open={modal === 'password'} title={device ? t('settings.usePassword') : t('settings.changePassword')} onClose={close}>
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); run(call('auth.changePassword', { current: device ? undefined : current, next: pw.a }), t('auth.passwordChanged')) }}>
