@@ -11,6 +11,7 @@ import { addMonths, localToday, monthRange } from '@shared/month'
 import type { AccountKind, NetWorth, NetWorthAccount, Valuation, YearSummary } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
+import { INCOME_SQL, SPENDING_SQL } from './finance'
 import { convert } from './fx'
 import { getSettings } from './settings'
 
@@ -171,7 +172,7 @@ export function yearSummary(db: Db, year: number): YearSummary {
       `SELECT substr(t.booking_date, 6, 2) AS m, t.category_id AS cat, c.name AS name, coalesce(c.kind, 'expense') AS kind,
               coalesce(sum(CASE WHEN t.amount_cents > 0 THEN ${FX} END), 0) AS inc,
               coalesce(-sum(CASE WHEN t.amount_cents < 0 THEN ${FX} END), 0) AS out
-       FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
+       FROM tx_lines t LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.booking_date >= ? AND t.booking_date < ?
        GROUP BY m, t.category_id`
     )
@@ -182,8 +183,12 @@ export function yearSummary(db: Db, year: number): YearSummary {
   for (const r of rows) {
     if (r.kind === 'transfer') continue
     const i = Number(r.m) - 1
-    months[i]!.incomeCents += r.inc
-    months[i]!.spendingCents += r.out
+    // Refunds lower spending, reversals lower income (as in the month summary).
+    if (r.cat === null) {
+      months[i]!.incomeCents += r.inc
+      months[i]!.spendingCents += r.out
+    } else if (r.kind === 'income') months[i]!.incomeCents += r.inc - r.out
+    else months[i]!.spendingCents += r.out - r.inc
     // Spending categories count money out minus refunds; income categories money in minus reversals.
     // Uncategorised money in is listed under income, money out under spending.
     const parts: ['income' | 'expense', number][] =
@@ -202,10 +207,8 @@ export function yearSummary(db: Db, year: number): YearSummary {
   const years = (
     db
       .prepare(
-        `SELECT CAST(substr(t.booking_date, 1, 4) AS INTEGER) AS y,
-                coalesce(sum(CASE WHEN t.amount_cents > 0 THEN ${FX} END), 0) AS inc,
-                coalesce(-sum(CASE WHEN t.amount_cents < 0 THEN ${FX} END), 0) AS out
-         FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
+        `SELECT CAST(substr(t.booking_date, 1, 4) AS INTEGER) AS y, ${INCOME_SQL} AS inc, ${SPENDING_SQL} AS out
+         FROM tx_lines t LEFT JOIN categories c ON c.id = t.category_id
          WHERE c.kind IS NULL OR c.kind != 'transfer'
          GROUP BY y ORDER BY y`
       )

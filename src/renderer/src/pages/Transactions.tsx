@@ -207,7 +207,13 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                     </button>
                   </td>
                   <td className="px-3 py-1.5">
-                    <CategorySelect label={t('transactions.category')} className={cx('h-8 text-[13px]', tx.categoryId === null && 'text-muted')} value={tx.categoryId} categories={cats} onChange={(id) => void categorize([tx.id], id, tx)} />
+                    {tx.splitCount > 0 ? (
+                      <button type="button" className="h-8 w-full truncate rounded-md border border-border px-2 text-left text-[13px] text-muted hover:text-text" onClick={() => setEditing(tx)}>
+                        {t('splits.badge', { count: tx.splitCount })}
+                      </button>
+                    ) : (
+                      <CategorySelect label={t('transactions.category')} className={cx('h-8 text-[13px]', tx.categoryId === null && 'text-muted')} value={tx.categoryId} categories={cats} onChange={(id) => void categorize([tx.id], id, tx)} />
+                    )}
                   </td>
                   <td className={cx('num py-2.5 pr-5 pl-3 text-right font-medium whitespace-nowrap', tx.amountCents > 0 && 'text-accent')}>
                     {tx.amountCents > 0 ? '+' : ''}
@@ -280,10 +286,15 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
         <Field label={t('transactions.amount')} hint={t('transactions.amountHint')}>{(id) => <Input id={id} className="num" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="-12,50" />}</Field>
         <div className="col-span-2"><Field label={t('transactions.counterparty')}>{(id) => <Input id={id} value={form.counterpartyName} onChange={(e) => setForm({ ...form, counterpartyName: e.target.value })} />}</Field></div>
         <div className="col-span-2"><Field label={t('transactions.description')}>{(id) => <Input id={id} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}</Field></div>
-        <div className="col-span-2"><Field label={t('transactions.category')}>{(id) => <CategorySelect id={id} label={t('transactions.category')} value={form.categoryId} categories={categories} onChange={(c) => setForm({ ...form, categoryId: c })} />}</Field></div>
+        <div className="col-span-2">
+          <Field label={t('transactions.category')} hint={cents !== null && cents > 0 && categories.find((c) => c.id === form.categoryId)?.kind === 'expense' ? t('transactions.refundHint') : undefined}>
+            {(id) => <CategorySelect id={id} label={t('transactions.category')} value={form.categoryId} categories={categories} onChange={(c) => setForm({ ...form, categoryId: c })} />}
+          </Field>
+        </div>
         <div className="col-span-2"><Field label={t('transactions.notes')}>{(id) => <Input id={id} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}</Field></div>
         {base?.communication && <p className="selectable col-span-2 text-xs text-muted">{t('transactions.communication')}: {base.communication}</p>}
         {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: {base.counterpartyIban}</p>}
+        {base && <div className="col-span-2"><SplitEditor tx={base} categories={categories} onSaved={onSaved} /></div>}
         {base?.transferAccount && (
           <p className="col-span-2 flex items-center gap-2 text-xs text-muted">
             ⇄ {t('transfers.pairedWith', { account: base.transferAccount })}
@@ -365,5 +376,52 @@ function TransfersModal({ open, onClose, onPaired }: { open: boolean; onClose: (
         <Button variant="primary" disabled={!picked.size} onClick={pair}>{t('transfers.pair', { count: picked.size })}</Button>
       </div>
     </Modal>
+  )
+}
+
+/** Split one transaction over categories; the parts add up to its amount. */
+function SplitEditor({ tx, categories, onSaved }: { tx: Transaction; categories: Category[]; onSaved: () => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { money, fmt } = useSettings()
+  const [parts, setParts] = useState<{ categoryId: number | null; amount: string }[] | null>(null)
+  useEffect(() => {
+    setParts(null)
+    if (tx.splitCount > 0)
+      void call('transactions.splits', { id: tx.id }).then((l) => setParts(l.map((p) => ({ categoryId: p.categoryId, amount: centsToInput(p.amountCents, fmt.formats) }))))
+  }, [tx.id, tx.splitCount]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!parts)
+    return (
+      <button type="button" className="text-xs font-medium text-accent hover:underline" onClick={() => setParts([{ categoryId: tx.categoryId, amount: centsToInput(tx.amountCents, fmt.formats) }, { categoryId: null, amount: '' }])}>
+        {t('splits.start')}
+      </button>
+    )
+  const cents = parts.map((p) => parseAmount(p.amount, 'auto', fmt.formats.decimal))
+  const sum = cents.reduce<number>((a, c) => a + (c ?? 0), 0)
+  const left = tx.amountCents - sum
+  const valid = parts.length >= 2 && cents.every((c) => c !== null && c !== 0) && left === 0
+  const save = (list: { categoryId: number | null; amountCents: number }[]): void =>
+    void call('transactions.split', { id: tx.id, parts: list }).then(onSaved, (e) => toast(errText(e), 'error'))
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <p className="mb-2 text-[13px] font-medium">{t('splits.title')}</p>
+      {parts.map((p, i) => (
+        <div key={i} className="mb-2 flex items-center gap-2">
+          <CategorySelect label={t('transactions.category')} className="h-8 flex-1 text-[13px]" value={p.categoryId} categories={categories} onChange={(c) => setParts(parts.map((x, j) => (j === i ? { ...x, categoryId: c } : x)))} />
+          <Input aria-label={t('transactions.amount')} className="num h-8! w-28!" value={p.amount} onChange={(e) => setParts(parts.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))} />
+          <button type="button" aria-label={t('transactions.delete')} className="rounded p-1 text-muted hover:text-negative" onClick={() => setParts(parts.filter((_, j) => j !== i))}>
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <button type="button" className="font-medium text-accent hover:underline" onClick={() => setParts([...parts, { categoryId: null, amount: left ? centsToInput(left, fmt.formats) : '' }])}>{t('splits.add')}</button>
+        <span className={cx('num ml-auto', left === 0 ? 'text-muted' : 'text-warning')}>{left === 0 ? t('splits.matches') : t('splits.left', { amount: money(left, tx.currency) })}</span>
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        {tx.splitCount > 0 && <Button size="sm" variant="ghost" onClick={() => save([])}>{t('splits.remove')}</Button>}
+        <Button size="sm" variant="primary" disabled={!valid} onClick={() => save(parts.map((p, i) => ({ categoryId: p.categoryId, amountCents: cents[i]! })))}>{t('splits.save')}</Button>
+      </div>
+    </div>
   )
 }

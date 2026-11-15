@@ -80,7 +80,8 @@
     "ruleSuggest": "Toujours mettre « {{name}} » dans {{category}} ?",
     "ruleCreate": "Créer la règle",
     "ruleCreated_one": "Règle créée. {{count}} opération de plus classée.",
-    "ruleCreated_other": "Règle créée. {{count}} opérations de plus classées."
+    "ruleCreated_other": "Règle créée. {{count}} opérations de plus classées.",
+    "refundHint": "De l’argent qui revient dans une catégorie de dépense (un remboursement, ou quelqu’un qui paie sa part) réduit cette dépense ; il ne compte pas comme revenu."
   },
   "budgets": {
     "title": "Budgets",
@@ -844,6 +845,13 @@
   },
   "splits": {
     "badge_one": "réparti en {{count}}",
-    "badge_other": "réparti en {{count}}"
+    "badge_other": "réparti en {{count}}",
+    "start": "Répartir sur plusieurs catégories…",
+    "title": "Répartir sur des catégories",
+    "add": "Ajouter une part",
+    "matches": "Le compte est bon",
+    "left": "Encore {{amount}} à répartir",
+    "remove": "Supprimer la répartition",
+    "save": "Enregistrer la répartition"
   }
 }

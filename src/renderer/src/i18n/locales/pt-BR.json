@@ -232,5 +232,8 @@
   "transfers": {
     "hint": "Dinheiro que sai de uma das suas contas e o mesmo valor que entra em outra em 3 dias. Emparelhadas, as duas metades contam como transferência: nem receita nem despesa.",
     "maybe": "mesmo valor"
+  },
+  "splits": {
+    "save": "Salvar a divisão"
   }
 }

@@ -80,7 +80,8 @@
     "ruleSuggest": "¿Poner siempre «{{name}}» en {{category}}?",
     "ruleCreate": "Crear regla",
     "ruleCreated_one": "Regla creada. {{count}} movimiento más clasificado.",
-    "ruleCreated_other": "Regla creada. {{count}} movimientos más clasificados."
+    "ruleCreated_other": "Regla creada. {{count}} movimientos más clasificados.",
+    "refundHint": "El dinero que vuelve a una categoría de gasto (un reembolso, o alguien que paga su parte) reduce ese gasto; no cuenta como ingreso."
   },
   "budgets": {
     "title": "Presupuestos",
@@ -844,6 +845,13 @@
   },
   "splits": {
     "badge_one": "dividido en {{count}}",
-    "badge_other": "dividido en {{count}}"
+    "badge_other": "dividido en {{count}}",
+    "start": "Repartir entre varias categorías…",
+    "title": "Repartir entre categorías",
+    "add": "Añadir una parte",
+    "matches": "Cuadra",
+    "left": "Quedan {{amount}} por repartir",
+    "remove": "Quitar el reparto",
+    "save": "Guardar el reparto"
   }
 }

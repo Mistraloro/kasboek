@@ -55,3 +55,29 @@ describe('transfers between own accounts (#28)', () => {
     expect(cats).toEqual([cat(d, 'Savings'), cat(d, 'Savings')])
   })
 })
+
+describe('refunds and splits (#29)', () => {
+  it('counts a split’s parts in summaries and budgets, and checks the parts add up', async () => {
+    const { setSplits, listSplits, setBudget } = await import('@core/finance')
+    const { d, acc } = db()
+    const a = acc('Current')
+    const groceries = cat(d, 'Groceries')
+    const shopping = cat(d, 'Shopping')
+    const receipt = tx(d, a, '2026-10-05', -10000, { categoryId: groceries })
+    tx(d, a, '2026-10-06', 2500, { categoryId: cat(d, 'Subscriptions') }) // a Netflix share paid back
+    tx(d, a, '2026-10-07', -5000, { categoryId: cat(d, 'Subscriptions') })
+    setBudget(d, { categoryId: groceries, month: '2026-10', amountCents: 20000 })
+    expect(() => setSplits(d, receipt, [{ categoryId: groceries, amountCents: -7000 }, { categoryId: shopping, amountCents: -2000 }])).toThrow(/add up/)
+    setSplits(d, receipt, [{ categoryId: groceries, amountCents: -7000 }, { categoryId: shopping, amountCents: -3000, note: 'towels' }])
+    expect(listSplits(d, receipt)).toHaveLength(2)
+    const s = monthSummary(d, '2026-10')
+    const by = Object.fromEntries(s.byCategory.map((c) => [c.name, c.cents]))
+    expect(by).toMatchObject({ Groceries: 7000, Shopping: 3000, Subscriptions: 2500 })
+    // The share paid back lowers spending; it isn't income.
+    expect(s.incomeCents).toBe(0)
+    expect(s.spendingCents).toBe(12500)
+    expect(s.leftCents).toBe(13000)
+    setSplits(d, receipt, [])
+    expect(Object.fromEntries(monthSummary(d, '2026-10').byCategory.map((c) => [c.name, c.cents]))).toMatchObject({ Groceries: 10000 })
+  })
+})

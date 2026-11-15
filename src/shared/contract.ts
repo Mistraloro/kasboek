@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -333,6 +333,17 @@ export const contract = {
       })
       .strict(),
     output: out<Transaction>()
+  },
+  'transactions.splits': { description: 'The parts of a split transaction (empty when it isn’t split).', input: z.object({ id }).strict(), output: out<SplitLine[]>() },
+  'transactions.split': {
+    description: 'Split one transaction over categories (e.g. a receipt with groceries and household). The parts’ amountCents must add up to the transaction’s amount (same sign as the transaction). An empty list removes the split.',
+    input: z
+      .object({
+        id,
+        parts: z.array(z.object({ categoryId: id.nullable(), amountCents: cents, note: z.string().max(200).nullable().optional() }).strict()).max(20)
+      })
+      .strict(),
+    output: out<SplitLine[]>()
   },
   'transactions.categorize': {
     description: 'Set the category of one or more transactions (categoryId null = uncategorised).',

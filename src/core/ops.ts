@@ -221,6 +221,8 @@ export const coreOps: OpTable = {
   'transactions.create': { mutates: true, assistant: false, handler: ({ db }, t) => fin.createTransaction(db, t) },
   'transactions.update': { mutates: true, assistant: false, handler: ({ db }, t) => fin.updateTransaction(db, t) },
   'transactions.edit': { mutates: true, assistant: true, handler: ({ db }, t) => fin.updateTransaction(db, t) },
+  'transactions.splits': { mutates: false, assistant: true, handler: ({ db }, { id }) => fin.listSplits(db, id) },
+  'transactions.split': { mutates: true, assistant: true, handler: ({ db }, { id, parts }) => fin.setSplits(db, id, parts) },
   'transactions.categorize': { mutates: true, assistant: true, handler: ({ db }, i) => fin.categorizeTransactions(db, i.ids, i.categoryId) },
   'transactions.delete': { mutates: true, assistant: false, handler: ({ db }, i) => fin.deleteTransactions(db, i.ids) },
 

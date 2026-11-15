@@ -153,6 +153,11 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
       if (input['notes'] !== undefined) parts.push(input['notes'] ? `note → “${String(input['notes']).slice(0, 80)}”` : 'remove the note')
       return `Change ${what}: ${parts.join(', ') || 'nothing'}`
     }
+    case 'transactions.split': {
+      const parts = (input['parts'] as { categoryId: number | null; amountCents: number }[] | undefined) ?? []
+      if (!parts.length) return 'Remove the split of a transaction'
+      return `Split a transaction into ${parts.map((p) => `${money(db, p.amountCents)} ${cat(p.categoryId)}`).join(', ')}`
+    }
     case 'transfers.pair': {
       const n = (input['pairs'] as unknown[] | undefined)?.length ?? 0
       return `Pair ${n} transfer${n === 1 ? '' : 's'} between your own accounts (both halves count as neither income nor spending)`

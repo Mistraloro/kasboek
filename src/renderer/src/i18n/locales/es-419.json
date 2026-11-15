@@ -134,5 +134,8 @@
   "transfers": {
     "hint": "Dinero que sale de una de tus cuentas y el mismo monto que entra en otra en 3 días. Emparejadas, ambas mitades cuentan como traspaso: ni ingreso ni gasto.",
     "maybe": "mismo monto"
+  },
+  "splits": {
+    "add": "Agregar una parte"
   }
 }

@@ -274,6 +274,14 @@ export interface Transaction {
   splitCount: number
 }
 
+/** One part of a split transaction. */
+export interface SplitLine {
+  categoryId: number | null
+  categoryName: string | null
+  amountCents: number
+  note?: string | null
+}
+
 /** Two transactions that look like one transfer between the person's own accounts. */
 export interface TransferPair {
   outId: number

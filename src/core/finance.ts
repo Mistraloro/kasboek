@@ -12,6 +12,15 @@ import { localToday } from '@shared/month'
 const FX = (to = '?'): string => `fx(t.amount_cents, t.currency, t.booking_date, ${to})`
 const mainCurrency = (db: Db): string => getSettings(db).currency
 
+/**
+ * Income and spending of a set of lines (each takes the main currency as one parameter):
+ * money back in a spending category (a refund, a shared cost paid back) lowers that spending
+ * instead of counting as income, and money out of an income category lowers income. Uncategorised
+ * money in is income, out is spending.
+ */
+export const INCOME_SQL = `coalesce(sum(CASE WHEN c.kind IS NULL AND t.amount_cents > 0 OR c.kind = 'income' THEN ${FX()} END), 0)`
+export const SPENDING_SQL = `coalesce(-sum(CASE WHEN c.kind IS NULL AND t.amount_cents < 0 OR c.kind = 'expense' THEN ${FX()} END), 0)`
+
 /* ---------- Transactions ---------- */
 
 interface TxRow {
@@ -407,7 +416,7 @@ function spentByCategory(db: Db, month: string): Map<number | null, number> {
   const r = monthRange(month)
   const rows = db
     .prepare(
-      `SELECT t.category_id AS id, -coalesce(sum(${FX()}), 0) AS spent FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
+      `SELECT t.category_id AS id, -coalesce(sum(${FX()}), 0) AS spent FROM tx_lines t LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.booking_date >= ? AND t.booking_date < ? AND (c.kind IS NULL OR c.kind = 'expense')
          AND (t.amount_cents < 0 OR c.kind = 'expense')
        GROUP BY t.category_id`
@@ -452,9 +461,8 @@ function incomeAndSpending(db: Db, month: string): { incomeCents: number; spendi
   const r = monthRange(month)
   const row = db
     .prepare(
-      `SELECT coalesce(sum(CASE WHEN t.amount_cents > 0 THEN ${FX()} END), 0) AS inc,
-              coalesce(-sum(CASE WHEN t.amount_cents < 0 THEN ${FX()} END), 0) AS spend
-       FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
+      `SELECT ${INCOME_SQL} AS inc, ${SPENDING_SQL} AS spend
+       FROM tx_lines t LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.booking_date >= ? AND t.booking_date < ? AND (c.kind IS NULL OR c.kind != 'transfer')`
     )
     .get(mainCurrency(db), mainCurrency(db), r.from, r.to) as { inc: number; spend: number }
@@ -473,7 +481,7 @@ export function monthSummary(db: Db, month: string): MonthSummary {
     .map(([id, cents]) => ({ categoryId: id, name: id === null ? '' : (names.get(id) ?? ''), cents }))
     .sort((a, b) => b.cents - a.cents)
   const r = monthRange(month)
-  const uncategorized = (db.prepare('SELECT count(*) AS n FROM transactions WHERE category_id IS NULL AND booking_date >= ? AND booking_date < ?').get(r.from, r.to) as { n: number }).n
+  const uncategorized = (db.prepare('SELECT count(DISTINCT tx_id) AS n FROM tx_lines WHERE category_id IS NULL AND booking_date >= ? AND booking_date < ?').get(r.from, r.to) as { n: number }).n
   const unconverted = (db.prepare(`SELECT count(*) AS n FROM transactions t WHERE t.booking_date >= ? AND t.booking_date < ? AND ${FX()} IS NULL`).get(r.from, r.to, mainCurrency(db)) as { n: number }).n
   const history = Array.from({ length: 6 }, (_, i) => addMonths(month, i - 5)).map((m) => ({ month: m, ...incomeAndSpending(db, m) }))
   return {
@@ -517,4 +525,45 @@ export function localizeDefaultCategories(db: Db, names: Record<string, string>)
   db.transaction(() => {
     for (const [en, local] of Object.entries(names)) if (local && local !== en) rename.run(local, en, local)
   })()
+}
+
+/* ---------- Splits ---------- */
+
+export interface SplitPart {
+  categoryId: number | null
+  amountCents: number
+  note?: string | null
+}
+
+export function listSplits(db: Db, txId: number): (SplitPart & { categoryName: string | null })[] {
+  return (
+    db.prepare('SELECT s.category_id, s.amount_cents, s.note, c.name AS category_name FROM transaction_splits s LEFT JOIN categories c ON c.id = s.category_id WHERE s.tx_id = ? ORDER BY s.id').all(txId) as {
+      category_id: number | null
+      amount_cents: number
+      note: string | null
+      category_name: string | null
+    }[]
+  ).map((r) => ({ categoryId: r.category_id, amountCents: r.amount_cents, note: r.note, categoryName: r.category_name }))
+}
+
+/**
+ * Splits a transaction over categories (e.g. one receipt: groceries and household). The parts must
+ * add up to the transaction's amount; summaries and budgets then count the parts. An empty list
+ * removes the split.
+ */
+export function setSplits(db: Db, txId: number, parts: SplitPart[]): (SplitPart & { categoryName: string | null })[] {
+  const tx = db.prepare('SELECT amount_cents FROM transactions WHERE id = ?').get(txId) as { amount_cents: number } | undefined
+  if (!tx) throw new AppError('tx.not_found', 'That transaction no longer exists.')
+  if (parts.length === 1) throw new AppError('splits.one', 'A split needs at least two parts.')
+  if (parts.some((p) => p.amountCents === 0)) throw new AppError('splits.zero', 'Each part needs an amount.')
+  const sum = parts.reduce((t, p) => t + p.amountCents, 0)
+  if (parts.length && sum !== tx.amount_cents) throw new AppError('splits.sum', 'The parts must add up to the amount of the transaction.')
+  for (const p of parts) requireCategory(db, p.categoryId)
+  db.transaction(() => {
+    db.prepare('DELETE FROM transaction_splits WHERE tx_id = ?').run(txId)
+    const add = db.prepare('INSERT INTO transaction_splits (tx_id, category_id, amount_cents, note) VALUES (?, ?, ?, ?)')
+    for (const p of parts) add.run(txId, p.categoryId, p.amountCents, p.note?.trim() || null)
+    db.prepare("UPDATE transactions SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(txId)
+  })()
+  return listSplits(db, txId)
 }

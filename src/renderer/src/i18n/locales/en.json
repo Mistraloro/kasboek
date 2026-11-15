@@ -80,7 +80,8 @@
     "ruleSuggest": "Always put “{{name}}” in {{category}}?",
     "ruleCreate": "Create rule",
     "ruleCreated_one": "Rule created. {{count}} more transaction categorised.",
-    "ruleCreated_other": "Rule created. {{count}} more transactions categorised."
+    "ruleCreated_other": "Rule created. {{count}} more transactions categorised.",
+    "refundHint": "Money back in a spending category (a refund, or someone paying their share) lowers that spending; it doesn’t count as income."
   },
   "budgets": {
     "title": "Budgets",
@@ -844,6 +845,13 @@
   },
   "splits": {
     "badge_one": "split in {{count}}",
-    "badge_other": "split in {{count}}"
+    "badge_other": "split in {{count}}",
+    "start": "Split over several categories…",
+    "title": "Split over categories",
+    "add": "Add a part",
+    "matches": "Adds up",
+    "left": "{{amount}} still to divide",
+    "remove": "Remove split",
+    "save": "Save split"
   }
 }

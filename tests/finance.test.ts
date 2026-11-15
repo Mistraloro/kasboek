@@ -33,8 +33,8 @@ describe('budgets and summaries', () => {
     await op('budgets.set', { categoryId: cat('Groceries'), month: '2026-10', amountCents: 30000 })
 
     const s = await op('summary.month', { month: '2026-10' })
-    expect(s.incomeCents).toBe(250500)
-    expect(s.spendingCents).toBe(11500) // transfers excluded
+    expect(s.incomeCents).toBe(250000) // the refund lowers spending, it isn't income
+    expect(s.spendingCents).toBe(11000) // transfers excluded
     expect(s.budgetedCents).toBe(30000)
     expect(s.leftCents).toBe(30000 - 9500) // refund lowers grocery spending
     expect(s.byCategory[0]).toMatchObject({ name: 'Groceries', cents: 9500 })

@@ -80,7 +80,8 @@
     "ruleSuggest": "“{{name}}” altijd in {{category}} zetten?",
     "ruleCreate": "Regel maken",
     "ruleCreated_one": "Regel gemaakt. Nog {{count}} verrichting ingedeeld.",
-    "ruleCreated_other": "Regel gemaakt. Nog {{count}} verrichtingen ingedeeld."
+    "ruleCreated_other": "Regel gemaakt. Nog {{count}} verrichtingen ingedeeld.",
+    "refundHint": "Geld terug in een uitgavencategorie (een terugbetaling, of iemand die zijn deel betaalt) verlaagt die uitgave; het telt niet als inkomen."
   },
   "budgets": {
     "title": "Budgetten",
@@ -844,6 +845,13 @@
   },
   "splits": {
     "badge_one": "in {{count}} gesplitst",
-    "badge_other": "in {{count}} gesplitst"
+    "badge_other": "in {{count}} gesplitst",
+    "start": "Over meerdere categorieën verdelen…",
+    "title": "Verdelen over categorieën",
+    "add": "Deel toevoegen",
+    "matches": "Klopt",
+    "left": "Nog {{amount}} te verdelen",
+    "remove": "Verdeling weghalen",
+    "save": "Verdeling bewaren"
   }
 }

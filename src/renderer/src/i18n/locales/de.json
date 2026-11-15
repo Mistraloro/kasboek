@@ -80,7 +80,8 @@
     "ruleSuggest": "„{{name}}“ immer in {{category}} einordnen?",
     "ruleCreate": "Regel erstellen",
     "ruleCreated_one": "Regel erstellt. {{count}} weitere Buchung eingeordnet.",
-    "ruleCreated_other": "Regel erstellt. {{count}} weitere Buchungen eingeordnet."
+    "ruleCreated_other": "Regel erstellt. {{count}} weitere Buchungen eingeordnet.",
+    "refundHint": "Geld zurück in einer Ausgabenkategorie (eine Erstattung, oder jemand zahlt seinen Anteil) senkt diese Ausgabe; es zählt nicht als Einnahme."
   },
   "budgets": {
     "title": "Budgets",
@@ -844,6 +845,13 @@
   },
   "splits": {
     "badge_one": "in {{count}} geteilt",
-    "badge_other": "in {{count}} geteilt"
+    "badge_other": "in {{count}} geteilt",
+    "start": "Auf mehrere Kategorien aufteilen…",
+    "title": "Auf Kategorien aufteilen",
+    "add": "Teil hinzufügen",
+    "matches": "Passt",
+    "left": "Noch {{amount}} aufzuteilen",
+    "remove": "Aufteilung entfernen",
+    "save": "Aufteilung speichern"
   }
 }

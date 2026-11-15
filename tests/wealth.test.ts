@@ -69,9 +69,10 @@ describe('year view', () => {
     await tx('2026-03-07', -40000, 'Own transfers')
     await tx('2025-12-20', -5000, 'Groceries')
     const y = await op('summary.year', { year: 2026 })
-    expect(y.incomeCents).toBe(251000)
-    expect(y.spendingCents).toBe(17000)
-    expect(y.months[0]).toMatchObject({ month: '2026-01', incomeCents: 251000, spendingCents: 8000 })
+    // The refund in Groceries lowers spending; it isn't income.
+    expect(y.incomeCents).toBe(250000)
+    expect(y.spendingCents).toBe(16000)
+    expect(y.months[0]).toMatchObject({ month: '2026-01', incomeCents: 250000, spendingCents: 7000 })
     const g = y.categories.find((c: any) => c.name === 'Groceries')
     expect(g.months[0]).toBe(7000)
     expect(g.months[2]).toBe(9000)
