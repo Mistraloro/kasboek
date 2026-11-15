@@ -13,7 +13,8 @@
     "assistant": "Asistente",
     "toggleAssistant": "Mostrar u ocultar el asistente",
     "lock": "Bloquear",
-    "recurring": "Gastos fijos"
+    "recurring": "Gastos fijos",
+    "goals": "Metas"
   },
   "overview": {
     "title": "Resumen",
@@ -886,5 +887,29 @@
     "budgetNear": "{{name}}: {{pct}} % del presupuesto usado ({{spent}} de {{budget}}).",
     "budgetOver": "{{name}}: presupuesto superado ({{spent}} de {{budget}}).",
     "balance": "{{name}} podría quedar en negativo antes del {{date}}: {{lowest}} tras {{due}} de gastos fijos pendientes."
+  },
+  "goals": {
+    "title": "Metas de ahorro",
+    "subtitle": "Ahorra para algo y mira cuánto apartar cada mes.",
+    "add": "Nueva meta",
+    "edit": "Editar meta",
+    "emptyTitle": "Aún no hay metas",
+    "emptyBody": "Un viaje, un coche, un colchón: elige un importe y una fecha, y Kasboek muestra cuánto apartar cada mes.",
+    "saved": "{{saved}} ahorrados ({{pct}} %)",
+    "reached": "¡Conseguido!",
+    "overdue": "La fecha ({{date}}) ya pasó; faltan {{left}}.",
+    "perMonth": "Aparta {{amount}} al mes para conseguirlo antes del {{date}}.",
+    "left": "Faltan {{left}}.",
+    "tracks": "sigue {{account}}",
+    "name": "Para qué",
+    "namePlaceholder": "Vacaciones",
+    "target": "Importe",
+    "date": "Antes del",
+    "dateHint": "Opcional.",
+    "trackWith": "Ahorrado hasta ahora",
+    "byHand": "Lo actualizo yo",
+    "balanceOf": "El saldo de {{account}}",
+    "savedSoFar": "Ahorrado hasta ahora (importe)",
+    "deleteConfirm": "¿Eliminar la meta «{{name}}»?"
   }
 }

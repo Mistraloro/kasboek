@@ -13,7 +13,8 @@
     "assistant": "Assistent",
     "toggleAssistant": "Assistent ein- oder ausblenden",
     "lock": "Sperren",
-    "recurring": "Fixkosten"
+    "recurring": "Fixkosten",
+    "goals": "Ziele"
   },
   "overview": {
     "title": "Übersicht",
@@ -886,5 +887,29 @@
     "budgetNear": "{{name}}: {{pct}} % des Budgets verbraucht ({{spent}} von {{budget}}).",
     "budgetOver": "{{name}}: Budget überschritten ({{spent}} von {{budget}}).",
     "balance": "{{name}} könnte vor dem {{date}} ins Minus gehen: {{lowest}} nach {{due}} noch fälligen Fixkosten."
+  },
+  "goals": {
+    "title": "Sparziele",
+    "subtitle": "Spare auf etwas hin und sieh, was du jeden Monat zurücklegen musst.",
+    "add": "Neues Ziel",
+    "edit": "Ziel bearbeiten",
+    "emptyTitle": "Noch keine Ziele",
+    "emptyBody": "Ein Urlaub, ein Auto, ein Polster: wähle einen Betrag und ein Datum, und Kasboek zeigt, was du jeden Monat zurücklegen musst.",
+    "saved": "{{saved}} gespart ({{pct}} %)",
+    "reached": "Erreicht!",
+    "overdue": "Das Datum ({{date}}) ist vorbei; noch {{left}}.",
+    "perMonth": "Lege {{amount}} pro Monat zurück, um es bis {{date}} zu erreichen.",
+    "left": "Noch {{left}}.",
+    "tracks": "folgt {{account}}",
+    "name": "Wofür",
+    "namePlaceholder": "Urlaub",
+    "target": "Betrag",
+    "date": "Bis",
+    "dateHint": "Optional.",
+    "trackWith": "Bisher gespart",
+    "byHand": "Ich trage es selbst ein",
+    "balanceOf": "Der Kontostand von {{account}}",
+    "savedSoFar": "Bisher gespart (Betrag)",
+    "deleteConfirm": "Das Ziel „{{name}}“ löschen?"
   }
 }

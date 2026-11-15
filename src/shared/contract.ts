@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -352,6 +352,23 @@ export const contract = {
   },
   'transactions.delete': { input: z.object({ ids: z.array(id).min(1).max(5000) }).strict(), output: out<{ deleted: number }>() },
 
+  'goals.list': {
+    description: 'Savings goals: target amount and date, how much is saved (an account’s balance or an amount kept by hand), what is left, and what to put aside per month to reach it by the date. Main currency, cents.',
+    input: empty,
+    output: out<Goal[]>()
+  },
+  'goals.create': {
+    description: 'Create a savings goal: a name, a target in cents of the main currency, optionally a date (YYYY-MM-DD), and either an account whose balance counts as saved, or an amount saved so far.',
+    input: z.object({ name: z.string().trim().min(1).max(80), targetCents: z.number().int().min(1).max(1e12), targetDate: date.nullable().optional(), accountId: id.nullable().optional(), savedCents: z.number().int().min(0).max(1e12).nullable().optional() }).strict(),
+    output: out<Goal[]>()
+  },
+  'goals.update': {
+    input: z
+      .object({ id, name: z.string().trim().min(1).max(80).optional(), targetCents: z.number().int().min(1).max(1e12).optional(), targetDate: date.nullable().optional(), accountId: id.nullable().optional(), savedCents: z.number().int().min(0).max(1e12).nullable().optional(), archived: z.boolean().optional() })
+      .strict(),
+    output: out<Goal[]>()
+  },
+  'goals.delete': { input: z.object({ id }).strict(), output: out<Goal[]>() },
   'alerts.list': {
     description: 'Warnings now: budgets at 80% or more this month, and current accounts whose balance would go below zero before the next income (counting fixed costs still due).',
     input: empty,

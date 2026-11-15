@@ -315,6 +315,25 @@ export interface RecurringItem {
   transactionIds: number[]
 }
 
+/** A savings goal and how far along it is (amounts in the main currency). */
+export interface Goal {
+  id: number
+  name: string
+  targetCents: number
+  targetDate: string | null
+  /** Tracked by this account's balance; otherwise by savedCents, kept by hand. */
+  accountId: number | null
+  accountName: string | null
+  savedCents: number | null
+  currentCents: number
+  remainingCents: number
+  reached: boolean
+  /** What to put aside per month to reach it by the date (null without a date or when reached). */
+  perMonthCents: number | null
+  overdue: boolean
+  archived: boolean
+}
+
 /** Something to warn about: a budget nearly or fully spent, or a balance heading below zero. */
 export type Alert =
   | { kind: 'budget'; key: string; categoryId: number; name: string; budgetCents: number; spentCents: number; level: 'near' | 'over' }

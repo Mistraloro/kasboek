@@ -240,5 +240,17 @@
   "recurring": {
     "subtitle": "Assinaturas, aluguel, seguros e receitas que se repetem, encontrados nos seus movimentos.",
     "emptyBody": "Após alguns meses de movimentos, o Kasboek encontra aqui as suas assinaturas e outros custos fixos."
+  },
+  "goals": {
+    "title": "Metas de economia",
+    "subtitle": "Economize para algo e veja quanto reservar por mês.",
+    "emptyBody": "Umas férias, um carro, uma reserva: escolha um valor e uma data, e o Kasboek mostra quanto reservar por mês.",
+    "saved": "{{saved}} economizados ({{pct}}%)",
+    "perMonth": "Reserve {{amount}} por mês para o atingir até {{date}}.",
+    "target": "Valor",
+    "trackWith": "Economizado até agora",
+    "byHand": "Eu mesmo atualizo",
+    "savedSoFar": "Economizado até agora (valor)",
+    "deleteConfirm": "Excluir o objetivo «{{name}}»?"
   }
 }

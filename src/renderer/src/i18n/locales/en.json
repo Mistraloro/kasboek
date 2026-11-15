@@ -13,7 +13,8 @@
     "assistant": "Assistant",
     "toggleAssistant": "Show or hide the assistant",
     "lock": "Lock",
-    "recurring": "Fixed costs"
+    "recurring": "Fixed costs",
+    "goals": "Goals"
   },
   "overview": {
     "title": "Overview",
@@ -886,5 +887,29 @@
     "budgetNear": "{{name}}: {{pct}}% of the budget used ({{spent}} of {{budget}}).",
     "budgetOver": "{{name}}: over budget ({{spent}} of {{budget}}).",
     "balance": "{{name}} may go below zero before {{date}}: {{lowest}} after {{due}} of fixed costs still due."
+  },
+  "goals": {
+    "title": "Savings goals",
+    "subtitle": "Save towards something, and see what to put aside each month.",
+    "add": "New goal",
+    "edit": "Edit goal",
+    "emptyTitle": "No goals yet",
+    "emptyBody": "A holiday, a car, a buffer: set an amount and a date, and Kasboek shows what to put aside each month.",
+    "saved": "{{saved}} saved ({{pct}}%)",
+    "reached": "Reached!",
+    "overdue": "The date ({{date}}) has passed; {{left}} to go.",
+    "perMonth": "Put aside {{amount}} a month to reach it by {{date}}.",
+    "left": "{{left}} to go.",
+    "tracks": "follows {{account}}",
+    "name": "What for",
+    "namePlaceholder": "Holiday",
+    "target": "Amount",
+    "date": "By",
+    "dateHint": "Optional.",
+    "trackWith": "Saved so far",
+    "byHand": "I keep it up to date myself",
+    "balanceOf": "The balance of {{account}}",
+    "savedSoFar": "Saved so far (amount)",
+    "deleteConfirm": "Delete the goal “{{name}}”?"
   }
 }

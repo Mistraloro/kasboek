@@ -13,7 +13,8 @@
     "assistant": "Assistent",
     "toggleAssistant": "Assistent tonen of verbergen",
     "lock": "Vergrendelen",
-    "recurring": "Vaste kosten"
+    "recurring": "Vaste kosten",
+    "goals": "Doelen"
   },
   "overview": {
     "title": "Overzicht",
@@ -886,5 +887,29 @@
     "budgetNear": "{{name}}: {{pct}}% van het budget gebruikt ({{spent}} van {{budget}}).",
     "budgetOver": "{{name}}: over het budget ({{spent}} van {{budget}}).",
     "balance": "{{name}} kan voor {{date}} onder nul gaan: {{lowest}} na {{due}} aan vaste kosten die nog komen."
+  },
+  "goals": {
+    "title": "Spaardoelen",
+    "subtitle": "Spaar voor iets, en zie wat je elke maand opzij moet zetten.",
+    "add": "Nieuw doel",
+    "edit": "Doel aanpassen",
+    "emptyTitle": "Nog geen doelen",
+    "emptyBody": "Een reis, een auto, een buffer: kies een bedrag en een datum, en Kasboek toont wat je elke maand opzij moet zetten.",
+    "saved": "{{saved}} gespaard ({{pct}}%)",
+    "reached": "Gehaald!",
+    "overdue": "De datum ({{date}}) is voorbij; nog {{left}} te gaan.",
+    "perMonth": "Zet {{amount}} per maand opzij om het tegen {{date}} te halen.",
+    "left": "Nog {{left}} te gaan.",
+    "tracks": "volgt {{account}}",
+    "name": "Waarvoor",
+    "namePlaceholder": "Reis",
+    "target": "Bedrag",
+    "date": "Tegen",
+    "dateHint": "Optioneel.",
+    "trackWith": "Al gespaard",
+    "byHand": "Ik houd het zelf bij",
+    "balanceOf": "Het saldo van {{account}}",
+    "savedSoFar": "Al gespaard (bedrag)",
+    "deleteConfirm": "Het doel “{{name}}” verwijderen?"
   }
 }

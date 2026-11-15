@@ -13,7 +13,8 @@
     "assistant": "Assistant",
     "toggleAssistant": "Afficher ou masquer l’assistant",
     "lock": "Verrouiller",
-    "recurring": "Frais fixes"
+    "recurring": "Frais fixes",
+    "goals": "Objectifs"
   },
   "overview": {
     "title": "Aperçu",
@@ -886,5 +887,29 @@
     "budgetNear": "{{name}} : {{pct}} % du budget utilisé ({{spent}} sur {{budget}}).",
     "budgetOver": "{{name}} : budget dépassé ({{spent}} sur {{budget}}).",
     "balance": "{{name}} pourrait passer sous zéro avant le {{date}} : {{lowest}} après {{due}} de frais fixes à venir."
+  },
+  "goals": {
+    "title": "Objectifs d’épargne",
+    "subtitle": "Épargnez pour quelque chose, et voyez combien mettre de côté chaque mois.",
+    "add": "Nouvel objectif",
+    "edit": "Modifier l’objectif",
+    "emptyTitle": "Pas encore d’objectifs",
+    "emptyBody": "Un voyage, une voiture, une réserve : choisissez un montant et une date, et Kasboek montre combien mettre de côté chaque mois.",
+    "saved": "{{saved}} épargnés ({{pct}} %)",
+    "reached": "Atteint !",
+    "overdue": "La date ({{date}}) est passée ; encore {{left}}.",
+    "perMonth": "Mettez {{amount}} de côté par mois pour l’atteindre d’ici le {{date}}.",
+    "left": "Encore {{left}}.",
+    "tracks": "suit {{account}}",
+    "name": "Pour quoi",
+    "namePlaceholder": "Vacances",
+    "target": "Montant",
+    "date": "D’ici le",
+    "dateHint": "Facultatif.",
+    "trackWith": "Déjà épargné",
+    "byHand": "Je le tiens à jour moi-même",
+    "balanceOf": "Le solde de {{account}}",
+    "savedSoFar": "Déjà épargné (montant)",
+    "deleteConfirm": "Supprimer l’objectif « {{name}} » ?"
   }
 }

@@ -160,3 +160,20 @@ describe('warnings (#32)', () => {
     expect(bal).toMatchObject({ kind: 'balance', until: '2026-11-25', balanceCents: 50000, dueCents: 90000, lowestCents: -40000 })
   })
 })
+
+describe('savings goals (#33)', () => {
+  it('tracks an account or an amount by hand, and says what to put aside per month', async () => {
+    const { createGoal, listGoals, updateGoal } = await import('@core/goals')
+    const { d, acc } = db()
+    const savings = acc('Savings')
+    tx(d, savings, '2026-10-01', 50000)
+    createGoal(d, { name: 'Holiday', targetCents: 200000, targetDate: '2027-05-15', accountId: savings })
+    createGoal(d, { name: 'Buffer', targetCents: 100000, savedCents: 100000 })
+    const [holiday, buffer] = listGoals(d, '2026-11-15')
+    expect(holiday).toMatchObject({ name: 'Holiday', currentCents: 50000, remainingCents: 150000, perMonthCents: 25000, accountName: 'Savings' })
+    expect(buffer).toMatchObject({ reached: true, perMonthCents: null })
+    updateGoal(d, { id: holiday!.id, accountId: null, savedCents: 10000 })
+    expect(listGoals(d, '2026-11-15')[0]).toMatchObject({ currentCents: 10000, accountId: null })
+    expect(listGoals(d, '2027-06-01')[0]).toMatchObject({ overdue: true, perMonthCents: null })
+  })
+})

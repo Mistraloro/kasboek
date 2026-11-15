@@ -137,5 +137,10 @@
   },
   "splits": {
     "add": "Agregar una parte"
+  },
+  "goals": {
+    "emptyBody": "Un viaje, un coche, un colchón: elige un monto y una fecha, y Kasboek muestra cuánto apartar cada mes.",
+    "target": "Monto",
+    "savedSoFar": "Ahorrado hasta ahora (monto)"
   }
 }

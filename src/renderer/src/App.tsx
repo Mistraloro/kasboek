@@ -1,4 +1,4 @@
-import { ArrowLeftRight, CalendarRange, FileUp, LayoutDashboard, Lock as LockIcon, PanelRight, Repeat, Settings as SettingsIcon, Target, TrendingUp } from 'lucide-react'
+import { ArrowLeftRight, CalendarRange, FileUp, LayoutDashboard, Lock as LockIcon, PanelRight, PiggyBank, Repeat, Settings as SettingsIcon, Target, TrendingUp } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AssistantPanel } from './components/AssistantPanel'
@@ -18,6 +18,7 @@ import { Overview } from './pages/Overview'
 import { SettingsPage } from './pages/Settings'
 import { NetWorthPage } from './pages/NetWorth'
 import { RecurringPage } from './pages/Recurring'
+import { GoalsPage } from './pages/Goals'
 import { YearPage } from './pages/Year'
 import { Transactions, type TxFilter } from './pages/Transactions'
 
@@ -28,6 +29,7 @@ const NAV: { page: Page; icon: ReactNode }[] = [
   { page: 'transactions', icon: <ArrowLeftRight size={17} /> },
   { page: 'budgets', icon: <Target size={17} /> },
   { page: 'recurring', icon: <Repeat size={17} /> },
+  { page: 'goals', icon: <PiggyBank size={17} /> },
   { page: 'year', icon: <CalendarRange size={17} /> },
   { page: 'networth', icon: <TrendingUp size={17} /> },
   { page: 'import', icon: <FileUp size={17} /> }
@@ -156,6 +158,7 @@ function Shell() {
               {page === 'year' && <YearPage key={navKey} />}
               {page === 'networth' && <NetWorthPage key={navKey} />}
               {page === 'recurring' && <RecurringPage key={navKey} />}
+              {page === 'goals' && <GoalsPage key={navKey} />}
               {page === 'import' && <ImportPage go={setPage} />}
               {page === 'settings' && <SettingsPage />}
             </div>

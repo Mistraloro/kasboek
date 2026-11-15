@@ -27,6 +27,7 @@ ES419=[
  (r'un USB','una memoria USB'),(r'entra en reposo','entra en suspensión'),(r'^Nómina$','Sueldo'),
 ]
 PTBR=[
+ (r'^Poupe para algo e veja quanto pôr de lado por mês\.$','Economize para algo e veja quanto reservar por mês.'),(r'^Ponha (\{\{amount\}\}) de lado',r'Reserve \1'),(r'pôr de lado','reservar'),(r'Eu atualizo-o','Eu mesmo atualizo'),(r'\bpoupados\b','economizados'),(r'Poupado até agora','Economizado até agora'),(r'Objetivos de poupança','Metas de economia'),
  (r'^Revê (.*) comigo \(usa ',r'Revise \1 comigo (use '),(r'Termina com uma',r'Termine com uma'),(r'Sê breve\.',r'Seja breve.'),
  (r'Subscrições','Assinaturas'),(r'subscrições','assinaturas'),(r'\brenda\b','aluguel'),
  (r'^A rever ','Revisando '),(r' revisto: ',' revisado: '),(r'está a rever','está revisando'),

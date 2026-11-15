@@ -13,7 +13,8 @@
     "assistant": "Assistente",
     "toggleAssistant": "Mostrar ou ocultar o assistente",
     "lock": "Bloquear",
-    "recurring": "Custos fixos"
+    "recurring": "Custos fixos",
+    "goals": "Objetivos"
   },
   "overview": {
     "title": "Resumo",
@@ -886,5 +887,29 @@
     "budgetNear": "{{name}}: {{pct}}% do orçamento usado ({{spent}} de {{budget}}).",
     "budgetOver": "{{name}}: orçamento ultrapassado ({{spent}} de {{budget}}).",
     "balance": "{{name}} pode ficar negativo antes de {{date}}: {{lowest}} depois de {{due}} de custos fixos por pagar."
+  },
+  "goals": {
+    "title": "Objetivos de poupança",
+    "subtitle": "Poupe para algo e veja quanto pôr de lado por mês.",
+    "add": "Novo objetivo",
+    "edit": "Editar objetivo",
+    "emptyTitle": "Ainda sem objetivos",
+    "emptyBody": "Umas férias, um carro, uma reserva: escolha um montante e uma data, e o Kasboek mostra quanto pôr de lado por mês.",
+    "saved": "{{saved}} poupados ({{pct}}%)",
+    "reached": "Atingido!",
+    "overdue": "A data ({{date}}) já passou; faltam {{left}}.",
+    "perMonth": "Ponha {{amount}} de lado por mês para o atingir até {{date}}.",
+    "left": "Faltam {{left}}.",
+    "tracks": "segue {{account}}",
+    "name": "Para quê",
+    "namePlaceholder": "Férias",
+    "target": "Montante",
+    "date": "Até",
+    "dateHint": "Opcional.",
+    "trackWith": "Poupado até agora",
+    "byHand": "Eu atualizo-o",
+    "balanceOf": "O saldo de {{account}}",
+    "savedSoFar": "Poupado até agora (montante)",
+    "deleteConfirm": "Eliminar o objetivo «{{name}}»?"
   }
 }
