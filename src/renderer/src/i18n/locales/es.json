@@ -12,7 +12,8 @@
     "settings": "Ajustes",
     "assistant": "Asistente",
     "toggleAssistant": "Mostrar u ocultar el asistente",
-    "lock": "Bloquear"
+    "lock": "Bloquear",
+    "recurring": "Gastos fijos"
   },
   "overview": {
     "title": "Resumen",
@@ -853,5 +854,31 @@
     "left": "Quedan {{amount}} por repartir",
     "remove": "Quitar el reparto",
     "save": "Guardar el reparto"
+  },
+  "recurring": {
+    "title": "Gastos fijos",
+    "subtitle": "Suscripciones, alquiler, seguros e ingresos que se repiten, encontrados en tus movimientos.",
+    "perMonth": "Gastos fijos al mes",
+    "due": "Pendiente este mes",
+    "incomePerMonth": "Ingresos fijos al mes",
+    "costs": "Gastos",
+    "income": "Ingresos",
+    "frequency": {
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "quarterly": "Cada 3 meses",
+      "yearly": "Anual"
+    },
+    "status": {
+      "paid": "Pagado",
+      "due": "Pendiente",
+      "late": "Atrasado",
+      "later": "Más adelante"
+    },
+    "last": "Último {{date}}",
+    "next": "Próximo {{date}}",
+    "changed": "Cambió de {{from}} a {{to}}",
+    "emptyTitle": "Aún nada que se repita",
+    "emptyBody": "Tras unos meses de movimientos, Kasboek encuentra aquí tus suscripciones y otros gastos fijos."
   }
 }

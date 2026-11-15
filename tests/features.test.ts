@@ -81,3 +81,33 @@ describe('refunds and splits (#29)', () => {
     expect(Object.fromEntries(monthSummary(d, '2026-10').byCategory.map((c) => [c.name, c.cents]))).toMatchObject({ Groceries: 10000 })
   })
 })
+
+describe('subscriptions and fixed costs (#30)', () => {
+  it('finds what comes back, what is due, price changes and late payments', async () => {
+    const { findRecurring } = await import('@core/recurring')
+    const { d, acc } = db()
+    const a = acc('Current')
+    const months = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']
+    months.forEach((m, i) => tx(d, a, `${m}-05`, i === 5 ? -1599 : -1399, { counterpartyName: 'Netflix' }))
+    months.forEach((m) => tx(d, a, `${m}-01`, -95000, { counterpartyName: 'Landlord' }))
+    months.forEach((m) => tx(d, a, `${m}-25`, 250000, { counterpartyName: 'Employer' }))
+    // Energy: monthly until August, then nothing.
+    ;['2026-05', '2026-06', '2026-07', '2026-08'].forEach((m) => tx(d, a, `${m}-15`, -12000, { counterpartyName: 'Engie' }))
+    tx(d, a, '2025-11-02', -45000, { counterpartyName: 'Insurer' })
+    tx(d, a, '2026-11-02', -46000, { counterpartyName: 'Insurer' })
+    // Not regular.
+    tx(d, a, '2026-06-03', -2000, { counterpartyName: 'Bakery' })
+    tx(d, a, '2026-09-20', -3500, { counterpartyName: 'Bakery' })
+    const r = findRecurring(d, '2026-11-10')
+    const by = Object.fromEntries(r.items.map((i) => [i.name, i]))
+    expect(Object.keys(by).sort()).toEqual(['Employer', 'Engie', 'Insurer', 'Landlord', 'Netflix'])
+    // Five days past its date: still within the grace days, so due rather than late.
+    expect(by['Netflix']).toMatchObject({ frequency: 'monthly', nextDate: '2026-11-05', status: 'due', priceChangeCents: -200, typicalCents: -1599 })
+    expect(by['Landlord']).toMatchObject({ status: 'late' })
+    expect(by['Employer']).toMatchObject({ direction: 'in', nextDate: '2026-11-25', status: 'due' })
+    expect(by['Insurer']).toMatchObject({ frequency: 'yearly', status: 'paid', monthlyCents: -3833 })
+    expect(r.dueThisMonthCents).toBe(1599 + 95000 + 12000)
+    expect(by['Engie']!.status).toBe('late')
+    expect(r.monthlyOutCents).toBe(95000 + 1599 + 12000 + 3833)
+  })
+})

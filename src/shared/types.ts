@@ -274,6 +274,39 @@ export interface Transaction {
   splitCount: number
 }
 
+/** A payment (or income) that comes back at a steady rhythm. */
+export interface RecurringItem {
+  key: string
+  name: string
+  direction: 'in' | 'out'
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+  /** The usual amount (negative = money out). */
+  typicalCents: number
+  /** That amount per month (a yearly one divided by 12). */
+  monthlyCents: number
+  lastCents: number
+  lastDate: string
+  nextDate: string
+  count: number
+  /** paid: already this month; due: still expected this month; late: expected and not seen; later: next month or after. */
+  status: 'paid' | 'due' | 'late' | 'later'
+  /** The last amount minus the one before, when it changed. */
+  priceChangeCents: number | null
+  categoryId: number | null
+  categoryName: string | null
+  accountName: string
+  transactionIds: number[]
+}
+
+export interface RecurringSummary {
+  items: RecurringItem[]
+  /** Fixed costs and fixed income per month. */
+  monthlyOutCents: number
+  monthlyInCents: number
+  /** Fixed costs still expected this month (due or late). */
+  dueThisMonthCents: number
+}
+
 /** One part of a split transaction. */
 export interface SplitLine {
   categoryId: number | null

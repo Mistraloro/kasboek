@@ -12,7 +12,8 @@
     "settings": "Réglages",
     "assistant": "Assistant",
     "toggleAssistant": "Afficher ou masquer l’assistant",
-    "lock": "Verrouiller"
+    "lock": "Verrouiller",
+    "recurring": "Frais fixes"
   },
   "overview": {
     "title": "Aperçu",
@@ -853,5 +854,31 @@
     "left": "Encore {{amount}} à répartir",
     "remove": "Supprimer la répartition",
     "save": "Enregistrer la répartition"
+  },
+  "recurring": {
+    "title": "Frais fixes",
+    "subtitle": "Abonnements, loyer, assurances et revenus qui reviennent, trouvés dans vos opérations.",
+    "perMonth": "Frais fixes par mois",
+    "due": "Encore à payer ce mois-ci",
+    "incomePerMonth": "Revenus fixes par mois",
+    "costs": "Frais",
+    "income": "Revenus",
+    "frequency": {
+      "weekly": "Chaque semaine",
+      "monthly": "Chaque mois",
+      "quarterly": "Tous les 3 mois",
+      "yearly": "Chaque année"
+    },
+    "status": {
+      "paid": "Payé",
+      "due": "Attendu",
+      "late": "En retard",
+      "later": "Plus tard"
+    },
+    "last": "Dernier {{date}}",
+    "next": "Prochain {{date}}",
+    "changed": "Passé de {{from}} à {{to}}",
+    "emptyTitle": "Rien qui revient pour l’instant",
+    "emptyBody": "Après quelques mois d’opérations, Kasboek trouve ici vos abonnements et autres frais fixes."
   }
 }

@@ -12,7 +12,8 @@
     "settings": "Einstellungen",
     "assistant": "Assistent",
     "toggleAssistant": "Assistent ein- oder ausblenden",
-    "lock": "Sperren"
+    "lock": "Sperren",
+    "recurring": "Fixkosten"
   },
   "overview": {
     "title": "Übersicht",
@@ -853,5 +854,31 @@
     "left": "Noch {{amount}} aufzuteilen",
     "remove": "Aufteilung entfernen",
     "save": "Aufteilung speichern"
+  },
+  "recurring": {
+    "title": "Fixkosten",
+    "subtitle": "Abos, Miete, Versicherungen und Einnahmen, die wiederkommen, aus deinen Buchungen gefunden.",
+    "perMonth": "Fixkosten pro Monat",
+    "due": "Diesen Monat noch fällig",
+    "incomePerMonth": "Feste Einnahmen pro Monat",
+    "costs": "Kosten",
+    "income": "Einnahmen",
+    "frequency": {
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "quarterly": "Alle 3 Monate",
+      "yearly": "Jährlich"
+    },
+    "status": {
+      "paid": "Bezahlt",
+      "due": "Fällig",
+      "late": "Verspätet",
+      "later": "Später"
+    },
+    "last": "Zuletzt {{date}}",
+    "next": "Nächste {{date}}",
+    "changed": "Geändert von {{from}} auf {{to}}",
+    "emptyTitle": "Noch nichts, das wiederkommt",
+    "emptyBody": "Nach ein paar Monaten Buchungen findet Kasboek hier deine Abos und anderen Fixkosten."
   }
 }

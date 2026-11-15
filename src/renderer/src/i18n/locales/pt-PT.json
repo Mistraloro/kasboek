@@ -12,7 +12,8 @@
     "settings": "Definições",
     "assistant": "Assistente",
     "toggleAssistant": "Mostrar ou ocultar o assistente",
-    "lock": "Bloquear"
+    "lock": "Bloquear",
+    "recurring": "Custos fixos"
   },
   "overview": {
     "title": "Resumo",
@@ -853,5 +854,31 @@
     "left": "Faltam {{amount}} por dividir",
     "remove": "Remover a divisão",
     "save": "Guardar a divisão"
+  },
+  "recurring": {
+    "title": "Custos fixos",
+    "subtitle": "Subscrições, renda, seguros e receitas que se repetem, encontrados nos seus movimentos.",
+    "perMonth": "Custos fixos por mês",
+    "due": "Ainda por pagar este mês",
+    "incomePerMonth": "Receitas fixas por mês",
+    "costs": "Custos",
+    "income": "Receitas",
+    "frequency": {
+      "weekly": "Semanal",
+      "monthly": "Mensal",
+      "quarterly": "A cada 3 meses",
+      "yearly": "Anual"
+    },
+    "status": {
+      "paid": "Pago",
+      "due": "Previsto",
+      "late": "Atrasado",
+      "later": "Mais tarde"
+    },
+    "last": "Último {{date}}",
+    "next": "Próximo {{date}}",
+    "changed": "Mudou de {{from}} para {{to}}",
+    "emptyTitle": "Ainda nada que se repita",
+    "emptyBody": "Após alguns meses de movimentos, o Kasboek encontra aqui as suas subscrições e outros custos fixos."
   }
 }

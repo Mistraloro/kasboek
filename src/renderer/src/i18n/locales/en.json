@@ -12,7 +12,8 @@
     "settings": "Settings",
     "assistant": "Assistant",
     "toggleAssistant": "Show or hide the assistant",
-    "lock": "Lock"
+    "lock": "Lock",
+    "recurring": "Fixed costs"
   },
   "overview": {
     "title": "Overview",
@@ -853,5 +854,31 @@
     "left": "{{amount}} still to divide",
     "remove": "Remove split",
     "save": "Save split"
+  },
+  "recurring": {
+    "title": "Fixed costs",
+    "subtitle": "Subscriptions, rent, insurance and income that come back, found from your transactions.",
+    "perMonth": "Fixed costs per month",
+    "due": "Still due this month",
+    "incomePerMonth": "Fixed income per month",
+    "costs": "Costs",
+    "income": "Income",
+    "frequency": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Every 3 months",
+      "yearly": "Yearly"
+    },
+    "status": {
+      "paid": "Paid",
+      "due": "Due",
+      "late": "Late",
+      "later": "Later"
+    },
+    "last": "Last {{date}}",
+    "next": "Next {{date}}",
+    "changed": "Changed from {{from}} to {{to}}",
+    "emptyTitle": "Nothing that comes back yet",
+    "emptyBody": "After a few months of transactions, Kasboek finds your subscriptions and other fixed costs here."
   }
 }

@@ -235,5 +235,9 @@
   },
   "splits": {
     "save": "Salvar a divisão"
+  },
+  "recurring": {
+    "subtitle": "Assinaturas, aluguel, seguros e receitas que se repetem, encontrados nos seus movimentos.",
+    "emptyBody": "Após alguns meses de movimentos, o Kasboek encontra aqui as suas assinaturas e outros custos fixos."
   }
 }

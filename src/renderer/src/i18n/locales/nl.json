@@ -12,7 +12,8 @@
     "settings": "Instellingen",
     "assistant": "Assistent",
     "toggleAssistant": "Assistent tonen of verbergen",
-    "lock": "Vergrendelen"
+    "lock": "Vergrendelen",
+    "recurring": "Vaste kosten"
   },
   "overview": {
     "title": "Overzicht",
@@ -853,5 +854,31 @@
     "left": "Nog {{amount}} te verdelen",
     "remove": "Verdeling weghalen",
     "save": "Verdeling bewaren"
+  },
+  "recurring": {
+    "title": "Vaste kosten",
+    "subtitle": "Abonnementen, huur, verzekeringen en inkomsten die terugkomen, gevonden in je verrichtingen.",
+    "perMonth": "Vaste kosten per maand",
+    "due": "Nog te betalen deze maand",
+    "incomePerMonth": "Vaste inkomsten per maand",
+    "costs": "Kosten",
+    "income": "Inkomsten",
+    "frequency": {
+      "weekly": "Wekelijks",
+      "monthly": "Maandelijks",
+      "quarterly": "Elke 3 maanden",
+      "yearly": "Jaarlijks"
+    },
+    "status": {
+      "paid": "Betaald",
+      "due": "Verwacht",
+      "late": "Te laat",
+      "later": "Later"
+    },
+    "last": "Laatst {{date}}",
+    "next": "Volgende {{date}}",
+    "changed": "Gewijzigd van {{from}} naar {{to}}",
+    "emptyTitle": "Nog niets dat terugkomt",
+    "emptyBody": "Na een paar maanden verrichtingen vindt Kasboek hier je abonnementen en andere vaste kosten."
   }
 }

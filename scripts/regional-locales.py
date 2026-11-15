@@ -27,6 +27,7 @@ ES419=[
  (r'un USB','una memoria USB'),(r'entra en reposo','entra en suspensión'),(r'^Nómina$','Sueldo'),
 ]
 PTBR=[
+ (r'Subscrições','Assinaturas'),(r'subscrições','assinaturas'),(r'\brenda\b','aluguel'),
  (r'^A rever ','Revisando '),(r' revisto: ',' revisado: '),(r'está a rever','está revisando'),
  (r'Também pode adicioná-lo','Você também pode adicioná-lo'),(r'repara quando','percebe quando'),
  (r'palavras-passe','senhas'),(r'[Pp]alavra-passe',lambda m:'Senha' if m.group(0)[0]=='P' else 'senha'),
