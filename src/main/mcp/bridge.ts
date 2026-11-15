@@ -22,6 +22,12 @@ let failedAt = 0
 export function mcpBridgeError(): string | null {
   return lastError
 }
+
+/** When a Claude app last used Kasboek over MCP (ms), for the tray menu. */
+let lastUsed = 0
+export function mcpBridgeState(): { running: boolean; lastUsed: number } {
+  return { running: !!server, lastUsed }
+}
 let token = ''
 const pending = new Map<string, (ok: boolean) => void>()
 
@@ -58,6 +64,7 @@ function askPerson(op: string, summary: string): Promise<boolean> {
 }
 
 async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
+  lastUsed = Date.now()
   const given = Buffer.from(String(req.token ?? ''))
   const expected = Buffer.from(token)
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { id: req.id, ok: false, error: 'Not authorised.' }

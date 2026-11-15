@@ -22,6 +22,8 @@ export function ClaudeSection() {
   const [busy, setBusy] = useState(false)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
+  // Changed elsewhere (e.g. "Stop Claude connection" in the tray menu).
+  useEffect(() => window.kasboek.onEvent((e) => e.type === 'settings.changed' && void settings.reload()), [settings.reload]) // eslint-disable-line react-hooks/exhaustive-deps
   const s = settings.data
   const preset = PROVIDERS[s?.aiProvider ?? 'anthropic']
   const native = preset.id === 'anthropic'

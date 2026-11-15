@@ -4,6 +4,7 @@ import icon from '../../resources/icon.png?asset'
 import { dispatch, onAppReady, registerIpc } from './ipc'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
+import { createTray, destroyTray, refreshTray } from './tray'
 import { closeSplash, showSplash, splashMinimumElapsed, splashProgress } from './splash'
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
@@ -129,7 +130,11 @@ void app.whenReady().then(async () => {
   startSyncScheduler()
   startAutoLock()
   // Keep the MCP bridge in step with the lock state and the setting.
-  setInterval(() => syncMcpBridge(dispatch), 2000)
+  createTray()
+  setInterval(() => {
+    syncMcpBridge(dispatch)
+    refreshTray()
+  }, 2000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -144,6 +149,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  destroyTray()
   stopMcpBridge()
   lock('user', true)
 })

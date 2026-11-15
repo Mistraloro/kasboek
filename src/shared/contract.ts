@@ -501,6 +501,7 @@ export type AppEvent =
   | { type: 'auth.refresh' }
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
+  | { type: 'settings.changed' }
   | { type: 'import.checkProgress'; sessionId: string; groupsDone: number; groupsTotal: number; partsTotal: number }
   | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string } | null }
   | { type: 'sync.updated'; status: SyncStatus }
