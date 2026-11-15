@@ -440,8 +440,10 @@ function TransfersModal({ open, onClose, onPaired }: { open: boolean; onClose: (
                   onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(key(p)); else n.delete(key(p)); return n })}
                 />
                 <span className="num w-24 text-muted">{formatDate(p.date, fmt)}</span>
-                <span className="min-w-0 flex-1 truncate">{p.fromAccount} → {p.toAccount}</span>
-                <span className="text-xs text-muted">{t(p.confidence === 'iban' ? 'transfers.sure' : 'transfers.maybe')}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{p.fromAccount} → {p.toAccount}</span>
+                  <span className="block text-xs text-muted">{t(p.confidence === 'iban' ? 'transfers.sure' : 'transfers.maybe')}</span>
+                </span>
                 <span className="num w-24 text-right font-medium">{money(p.amountCents, p.currency)}</span>
               </label>
             </li>
@@ -493,7 +495,9 @@ function SplitEditor({ tx, categories, onSaved }: { tx: Transaction; categories:
       ))}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <button type="button" className="font-medium text-accent hover:underline" onClick={() => setParts([...parts, { categoryId: null, amount: left ? centsToInput(left, fmt.formats) : '' }])}>{t('splits.add')}</button>
-        <span className={cx('num ml-auto', left === 0 ? 'text-muted' : 'text-warning')}>{left === 0 ? t('splits.matches') : t('splits.left', { amount: money(left, tx.currency) })}</span>
+        {cents.every((c) => c !== null) && (
+          <span className={cx('num ml-auto', left === 0 ? 'text-muted' : 'text-warning')}>{left === 0 ? t('splits.matches') : t('splits.left', { amount: money(left, tx.currency) })}</span>
+        )}
       </div>
       <div className="mt-3 flex justify-end gap-2">
         {tx.splitCount > 0 && <Button size="sm" variant="ghost" onClick={() => save([])}>{t('splits.remove')}</Button>}
