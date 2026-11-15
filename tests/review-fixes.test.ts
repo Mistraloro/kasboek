@@ -277,7 +277,12 @@ describe('assistant plumbing', () => {
     const b = batches(groups, 80)
     expect(b.map((x) => [x.from, x.groups.length, x.first])).toEqual([[0, 80, true], [80, 80, false], [160, 10, false]])
     const plan = (n: number) => ({ mapping: null, fixes: [{ index: n, action: 'skip', bookingDate: null, amountCents: null, description: null, reason: 'x' }], groups: [{ group: n, categoryId: 1, name: null, description: null }], rules: [], notes: ['ok'] }) as never
-    const merged = mergePlans([{ batch: { first: false }, plan: plan(80) }, { batch: { first: true }, plan: plan(0) }])
+    const merged = mergePlans([
+      { batch: { first: false, from: 80, groups: b[1]!.groups }, plan: plan(80) },
+      { batch: { first: true, from: 0, groups: b[0]!.groups }, plan: plan(0) },
+      // A part that numbered its groups from 0 again: ignored, not applied to the wrong groups.
+      { batch: { first: false, from: 160, groups: b[2]!.groups }, plan: plan(3) }
+    ])
     expect(merged.fixes.map((f) => f.index)).toEqual([0])
     expect(merged.groups.map((g) => g.group)).toEqual([80, 0])
     expect(merged.notes).toEqual(['ok'])

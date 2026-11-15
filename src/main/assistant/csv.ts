@@ -434,13 +434,15 @@ export function batches(groups: RowGroup[], size = BATCH_GROUPS): Omit<Batch, 'o
 }
 
 /** Puts the parts' answers together: columns and row fixes come only from the first part. */
-export function mergePlans(parts: { batch: Pick<Batch, 'first'>; plan: Plan }[]): Plan {
+export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { groups: unknown[] }; plan: Plan }[]): Plan {
   const first = parts.find((p) => p.batch.first)?.plan
+  // Only answers about the part's own groups count (a model may renumber them from 0).
+  const own = <T extends { group: number }>(p: (typeof parts)[number], list: T[]): T[] => list.filter((g) => g.group >= p.batch.from && g.group < p.batch.from + p.batch.groups.length)
   return {
     mapping: first?.mapping ?? null,
     fixes: first?.fixes ?? [],
-    groups: parts.flatMap((p) => p.plan.groups),
-    rules: parts.flatMap((p) => p.plan.rules),
+    groups: parts.flatMap((p) => own(p, p.plan.groups)),
+    rules: parts.flatMap((p) => own(p, p.plan.rules)),
     notes: [...new Set(parts.flatMap((p) => p.plan.notes))].slice(0, 6)
   }
 }

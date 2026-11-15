@@ -405,7 +405,9 @@ export async function json(
   }
   let text = ''
   let finish: string | null | undefined = null
-  if (stream) {
+  // Some servers ignore "stream" and answer with plain JSON: read whichever came back.
+  const streamed = stream && !(open.res.headers.get('content-type') ?? '').includes('application/json')
+  if (streamed) {
     for await (const raw of events(open, opts.signal ?? new AbortController().signal)) {
       const chunk = raw as Chunk
       if (chunk.error) throw new ProviderError(500, chunk.error.message ?? 'stream error')
