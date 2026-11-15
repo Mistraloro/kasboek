@@ -1,7 +1,7 @@
 name: Build installers
 
 # Builds 64-bit installers on real machines for each OS:
-#   Windows: .msi and .exe (x64 + ARM64)   macOS: universal .dmg   Linux: AppImage + .deb (x64 + ARM64)
+#   Windows: .msi (x64 + ARM64)   macOS: .dmg (Apple Silicon + Intel)   Linux: AppImage + .deb (x64 + ARM64)
 # Run by hand: a test build (Actions artifacts, kept 90 days), or tick "Publish as a release".
 # Push a tag like v0.9.0, or run with "Publish as a release": a permanent GitHub Release for the
 # version in package.json, with every installer attached.
@@ -74,7 +74,6 @@ jobs:
           name: kasboek-${{ runner.os }}
           path: |
             release/*/*.msi
-            release/*/*.exe
             release/*/*.dmg
             release/*/*.AppImage
             release/*/*.deb

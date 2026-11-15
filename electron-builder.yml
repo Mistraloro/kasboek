@@ -12,6 +12,8 @@ files:
   - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
   - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/linuxmusl-*'
 # Chromium's own interface texts: only the languages Kasboek has.
+# Smaller installers, slower builds.
+compression: maximum
 electronLanguages: [en-US, nl, fr, de, es, es-419, pt-PT, pt-BR]
 # better-sqlite3-multiple-ciphers ships prebuilt Node-API binaries for every platform, so nothing
 # is compiled and installers can be built on any OS.
@@ -44,11 +46,9 @@ win:
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux}*'
     - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
-  # 64-bit only. MSI for managed/standard installs, NSIS .exe as a friendly per-user installer.
+  # 64-bit only, one installer type: MSI (per-user, shortcut choices in build/msi-project.cjs).
   target:
     - target: msi
-      arch: [x64, arm64]
-    - target: nsis
       arch: [x64, arm64]
   artifactName: Kasboek-${version}-win-${arch}.${ext}
 # Optional shortcuts and Kasboek artwork in the MSI (see build/msi-project.cjs).
@@ -60,26 +60,9 @@ msi:
   createStartMenuShortcut: true
   shortcutName: Kasboek
   upgradeCode: 7f3c2a1e-4b5d-4c8e-9a6f-2d1b0e9c8a74
-nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
-  shortcutName: Kasboek
-  # Keep user data on uninstall: it holds the encrypted database.
-  deleteAppDataOnUninstall: false
-  # Shortcut choice page and Kasboek artwork (see build/installer.nsh).
-  include: build/installer.nsh
-  installerSidebar: build/installer/nsis-sidebar.bmp
-  uninstallerSidebar: build/installer/nsis-sidebar.bmp
-  installerHeader: build/installer/nsis-header.bmp
 
 mac:
   icon: build/icon.icns
-  # One app for Intel and Apple Silicon. The database's per-arch binaries are loaded by arch at
-  # runtime, so they are kept as-is instead of being merged.
-  x64ArchFiles: '**/better-sqlite3-multiple-ciphers/prebuilds/darwin-*.node'
   # Platform files replace nothing but must list the app again: with only exclusions, electron-builder
   # falls back to packing the whole project folder (sources, tests, tools).
   files:
@@ -92,9 +75,10 @@ mac:
   category: public.app-category.finance
   hardenedRuntime: true
   target:
+    # One per chip, half the size of a universal app.
     - target: dmg
-      arch: [universal]
-  artifactName: Kasboek-${version}-mac.${ext}
+      arch: [arm64, x64]
+  artifactName: Kasboek-${version}-mac-${arch}.${ext}
 
 linux:
   icon: build/icons

@@ -31,14 +31,16 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - Net worth ranges longer than your history are disabled, with an explanation.
 - "Today" follows your own clock, not UTC; a new account and its balance are saved together; many smaller fixes from an outside review.
 - The installer no longer contains the source code.
+- Smaller downloads: about a quarter smaller, one Windows installer type (.msi), and a separate macOS download for Apple Silicon and for Intel.
 
 ## Download
 
 | System | File |
 |---|---|
-| Windows (most PCs) | `Kasboek-…-win-x64.msi` or `Kasboek-…-win-x64.exe` |
-| Windows on ARM (Snapdragon) | `Kasboek-…-win-arm64.msi` or `…-win-arm64.exe` |
-| macOS (Intel and Apple Silicon) | `Kasboek-…-mac.dmg` |
+| Windows (most PCs) | `Kasboek-…-win-x64.msi` |
+| Windows on ARM (Snapdragon) | `Kasboek-…-win-arm64.msi` |
+| macOS with Apple Silicon (M1 and later) | `Kasboek-…-mac-arm64.dmg` |
+| macOS with an Intel chip | `Kasboek-…-mac-x64.dmg` |
 | Linux | `.AppImage` (any distribution) or `.deb` (Debian/Ubuntu), x64 or arm64 |
 
 All builds are 64-bit. Installing over an earlier version keeps your data. An export made on one system imports on any other with your login.

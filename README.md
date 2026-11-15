@@ -55,8 +55,8 @@ npm run dev        # start the app with hot reload
 
 | OS | Files | Architectures |
 |---|---|---|
-| Windows | `.msi` and `.exe` installer | x64, ARM64 |
-| macOS | `.dmg` (one universal app) | Intel + Apple Silicon |
+| Windows | `.msi` installer | x64, ARM64 |
+| macOS | `.dmg`, one per chip | Apple Silicon (arm64), Intel (x64) |
 | Linux | `.AppImage` and `.deb` | x64, ARM64 |
 
 **Download**: the repository's **Releases** page has every installer for each version.
@@ -67,8 +67,8 @@ real machine of that OS and attaches the files to a new Release. Running the wor
 without ticking “Publish as a release” makes a test build whose files stay under the run's Artifacts for 90 days.
 
 Locally, each OS builds its own installers: `npm run dist:win`, `npm run dist:mac`,
-`npm run dist:linux`. (The Windows `.exe` and the Linux packages can also be built on Linux, with
-Wine for the `.exe`.)
+`npm run dist:linux`. (The Linux packages can also be built on other systems; the `.msi` needs
+Windows.)
 
 **Signing.** Without certificates, Windows SmartScreen shows “Windows protected your PC” on first
 install (More info → Run anyway), and macOS shows “cannot verify the developer” (right-click the

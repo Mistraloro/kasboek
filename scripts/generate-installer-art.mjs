@@ -1,8 +1,6 @@
 // Installer artwork from assets/brand (replaces the default WiX/NSIS images):
 //   build/installer/msi-banner.bmp   493×58   top banner of the MSI wizard pages
 //   build/installer/msi-dialog.bmp   493×312  welcome / finish page background (left 164 px is the panel)
-//   build/installer/nsis-sidebar.bmp 164×314  welcome / finish page of the .exe installer
-//   build/installer/nsis-header.bmp  150×57   header of the .exe installer pages
 // Run: npm run icons (also writes the app icons)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import sharp from 'sharp'
@@ -68,6 +66,4 @@ out(
   ])
 )
 // NSIS welcome/finish sidebar and page header.
-out('nsis-sidebar.bmp', await canvas(164, 314, INK, [{ svg: strokes(164, 314), left: 0, top: 0 }, { size: 96, left: 34, top: 60 }]))
-out('nsis-header.bmp', await canvas(150, 57, '#FFFFFF', [{ size: 43, left: 150 - 43 - 7, top: 7 }]))
 console.log('Installer artwork written to build/installer/')
