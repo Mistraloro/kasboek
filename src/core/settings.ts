@@ -1,3 +1,4 @@
+import { DEFAULT_PERMISSIONS } from '@shared/permissions'
 import type { Settings } from '@shared/types'
 import type { Db } from './database'
 
@@ -21,7 +22,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiCsvModel: '',
   savedSearches: [],
   aiReasoning: 'default',
-  aiCsvReasoning: 'default'
+  aiCsvReasoning: 'default',
+  permissions: DEFAULT_PERMISSIONS
 }
 
 export function getSettings(db: Db): Settings {

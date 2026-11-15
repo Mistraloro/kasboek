@@ -2,6 +2,7 @@ import type { ProviderId } from './ai-providers'
 import type { FormatPrefs } from './format'
 import type { LanguageCode } from './languages'
 import type { Effort, ReasoningLevel } from './reasoning'
+import type { PermissionSettings } from './permissions'
 export type Theme = 'system' | 'light' | 'dark'
 export type CategoryKind = 'expense' | 'income' | 'transfer'
 export type Actor = 'user' | 'assistant' | 'system'
@@ -159,6 +160,8 @@ export interface Settings {
   /** Other providers: how much the model reasons, in the chat and in CSV checks. */
   aiReasoning: ReasoningLevel
   aiCsvReasoning: ReasoningLevel
+  /** What the assistant may change without asking. */
+  permissions: PermissionSettings
 }
 
 export const ASSISTANT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'] as const
@@ -192,7 +195,7 @@ export type ChatMessage =
       /** A CSV check from the import screen, shown here while it runs and with its result. */
       check?: { fileName: string; groupsDone: number; groupsTotal: number; done: boolean; categorised?: number; renamed?: number; rules?: number; existing?: number }
     }
-  | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' }
+  | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' | 'auto' }
 
 /** A change to the preferences; `formats` may hold only the parts that change. */
 export type PrefsPatch = Partial<Omit<Prefs, 'formats'>> & { formats?: Partial<FormatPrefs> }

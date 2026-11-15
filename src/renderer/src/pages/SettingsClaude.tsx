@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
 import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
+import { BULK_LIMIT, PERMISSION_KINDS, PERMISSION_MODES, presetRules, type PermissionMode, type PermissionRule, type PermissionSettings } from '@shared/permissions'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import { useAssistant } from '../components/AssistantPanel'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
@@ -252,5 +253,52 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
         </>
       )}
     </>
+  )
+}
+
+/** What the assistant may change without asking: a mode, or a choice per kind of change. */
+export function PermissionsSection() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const settings = useOp('settings.get')
+  const p = settings.data?.permissions
+  if (!p) return null
+  const save = (next: PermissionSettings): void => void call('assistant.configure', { permissions: next }).then(() => settings.reload(), (e) => toast(errText(e), 'error'))
+  const rules = p.mode === 'custom' ? { ...presetRules('ask'), ...p.rules } : presetRules(p.mode)
+  return (
+    <Card>
+      <CardHeader title={t('permissions.title')} description={t('permissions.hint')} />
+      <Row label={t('permissions.mode')} hint={t(`permissions.modeHint.${p.mode}`, { limit: BULK_LIMIT })}>
+        <Select
+          className="w-64!"
+          aria-label={t('permissions.mode')}
+          value={p.mode}
+          // Switching to "custom" starts from what the current mode allows.
+          onChange={(e) => {
+            const mode = e.target.value as PermissionMode
+            save({ ...p, mode, rules: mode === 'custom' ? rules : p.rules })
+          }}
+        >
+          {PERMISSION_MODES.map((m) => <option key={m} value={m}>{t(`permissions.modes.${m}`)}</option>)}
+        </Select>
+      </Row>
+      {PERMISSION_KINDS.map((k) => (
+        <Row key={k.id} label={t(`permissions.kind.${k.id}`)} hint={t(`permissions.kindHint.${k.id}`)}>
+          <Select
+            className="w-48!"
+            aria-label={t(`permissions.kind.${k.id}`)}
+            value={rules[k.id]}
+            disabled={p.mode !== 'custom'}
+            onChange={(e) => save({ ...p, mode: 'custom', rules: { ...rules, [k.id]: e.target.value as PermissionRule } })}
+          >
+            <option value="ask">{t('permissions.ask')}</option>
+            <option value="allow">{t('permissions.allow')}</option>
+          </Select>
+        </Row>
+      ))}
+      <Row label={t('permissions.mcp')} hint={t('permissions.mcpHint')}>
+        <Switch label={t('permissions.mcp')} checked={p.mcpAlwaysAsk} onChange={(v) => save({ ...p, mcpAlwaysAsk: v })} />
+      </Row>
+    </Card>
   )
 }

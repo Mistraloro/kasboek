@@ -334,7 +334,8 @@
     "reasoningOption": "Nadenken: {{level}}",
     "reasoningLabel": "Nadenken",
     "reasoningHint": "Hoeveel het model nadenkt voor het antwoordt: minder is sneller en goedkoper, meer helpt bij moeilijke vragen. Niet elk model heeft deze instelling; weigert een model ze, dan vraagt Kasboek het zonder.",
-    "reasoningUnsupported": "Dit model neemt geen instelling voor nadenken aan en gebruikt zijn eigen."
+    "reasoningUnsupported": "Dit model neemt geen instelling voor nadenken aan en gebruikt zijn eigen.",
+    "autoDone": "Gedaan zonder te vragen:"
   },
   "settings": {
     "title": "Instellingen",
@@ -969,5 +970,44 @@
     "previousYear": "Vorig jaar",
     "nextYear": "Volgend jaar",
     "thisMonth": "Deze maand"
+  },
+  "permissions": {
+    "title": "Wat de assistent zelf mag doen",
+    "hint": "Wijzigingen van de assistent wachten op je akkoord, tenzij je dat soort wijziging hier toestaat. Wat zonder vragen gebeurt, staat in de chat.",
+    "mode": "Modus",
+    "modes": {
+      "ask": "Altijd vragen",
+      "smart": "Vragen bij belangrijke wijzigingen",
+      "trust": "Zelf beslissen",
+      "custom": "Per soort kiezen"
+    },
+    "modeHint": {
+      "ask": "Elke wijziging wacht op je akkoord.",
+      "smart": "Categoriseren, namen, verdelen, overboekingen, regels, categorieën, budgetten en doelen gebeuren vanzelf; saldi, regels verwijderen, nieuwe rekeningen en imports vragen eerst. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd.",
+      "trust": "Elke wijziging gebeurt vanzelf, ook grote. Alleen als je de resultaten achteraf nakijkt.",
+      "custom": "Kies hieronder per soort wijziging. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd."
+    },
+    "ask": "Eerst vragen",
+    "allow": "Toegestaan",
+    "kind": {
+      "categorise": "Categorieën en namen van verrichtingen",
+      "rules": "Regels maken en aanpassen",
+      "organise": "Categorieën, budgetten en doelen",
+      "balances": "Saldi, waarden en koersen",
+      "deleteRules": "Regels verwijderen",
+      "accounts": "Rekeningen toevoegen",
+      "import": "Een CSV importeren"
+    },
+    "kindHint": {
+      "categorise": "Categorieën, leesbare namen en notities zetten, betalingen verdelen, overboekingen koppelen.",
+      "rules": "Een regel sorteert ook bestaande verrichtingen zonder categorie.",
+      "organise": "Een categorie toevoegen, een budget instellen, een spaardoel maken.",
+      "balances": "Een banksaldo, een beleggingswaarde of een wisselkoers invullen.",
+      "deleteRules": "Verrichtingen houden hun categorie.",
+      "accounts": "Een nieuwe rekening in Kasboek.",
+      "import": "De klare rijen van de open import bewaren."
+    },
+    "mcp": "Claude Desktop en Claude Code vragen altijd",
+    "mcpHint": "Wijzigingen die Claude-apps via MCP vragen, wachten op je akkoord in Kasboek, wat de modus hierboven ook is. Zet dit uit om de modus ook voor hen te laten beslissen."
   }
 }

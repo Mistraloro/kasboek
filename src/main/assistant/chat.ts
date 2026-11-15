@@ -16,6 +16,7 @@ import { PROVIDERS } from '@shared/ai-providers'
 import { assistantTools, compactResult, describeChange, opForTool, precheck } from './tools'
 import { localToday } from '@shared/month'
 import { reasoningParams } from '@shared/reasoning'
+import { needsApproval } from '@shared/permissions'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 let run: Run | null = null
@@ -34,7 +35,7 @@ How the data works:
 - Money is in integer cents. Negative = money out, positive = money in. Months are YYYY-MM, dates YYYY-MM-DD.
 - Each account and transaction has its own currency. Totals, budgets and summaries are in the main currency (settings_get → currency), converted at the exchange rate of each transaction's date. Amounts in a currency without any rate are left out of totals (summary "unconverted"); fx_status shows the rates, fx_setRate adds one.
 - Look things up with the tools; never guess or invent amounts, dates or names. If something isn't in the data, say so.
-- Tools that change data (budgets, categories, rules, categorising, committing an import) pause for the person to approve in the app. Just call them; don't ask for permission in text first. If they decline, accept it.
+- Tools that change data (budgets, categories, rules, categorising, committing an import) pause for the person to approve in the app, unless their permission settings let you make that kind of change yourself. Just call them; don't ask for permission in text first. If they decline, accept it. Mention briefly what you changed.
 - For CSV imports: use import_current and import_raw to understand the open file, fix the mapping with import_remap, fix or skip individual rows and set categories with import_updateRows (add a short note per change), and only commit with import_commit when the person asks you to import.
 - Money moved between the person's own accounts: transfers_find, then transfers_pair (they then count as neither income nor spending). Fixed costs and subscriptions: recurring_list. Warnings (budgets nearly spent, a balance heading below zero): alerts_list. A review of a month: summary_review. Savings goals: goals_list. A receipt over several categories: transactions_split. A refund or a share paid back belongs in the spending category it refunds (it lowers that spending).
 - To categorise many transactions: first look at the uncategorised ones and the categories. For a shop or counterparty that comes back, create a rule (rules_create) instead of listing ids. Categorise what is left in batches of at most 200 ids per call. Keep each reply and your reasoning short, so nothing gets cut off.
@@ -222,6 +223,14 @@ export function send(text: string): AssistantStatus {
         const def = opForTool(name)
         const id = randomUUID()
         const summary = def ? describeChange(db(), def.op, (input ?? {}) as Record<string, unknown>) : name
+        // Allowed by the person's permissions: done without asking, and shown as such.
+        if (def && !needsApproval(getSettings(db()).permissions, def.op, input, 'chat')) {
+          display.push({ id, role: 'confirm', op: def.op, summary, state: 'auto' })
+          current = { id: randomUUID(), role: 'assistant', text: '', tools: [] }
+          display.push(current)
+          publish(true)
+          return Promise.resolve(true)
+        }
         display.push({ id, role: 'confirm', op: def?.op ?? name, summary, state: 'pending' })
         // Text after the card goes into a new bubble.
         current = { id: randomUUID(), role: 'assistant', text: '', tools: [] }

@@ -334,7 +334,8 @@
     "reasoningOption": "Nachdenken: {{level}}",
     "reasoningLabel": "Nachdenken",
     "reasoningHint": "Wie viel das Modell vor der Antwort nachdenkt: weniger ist schneller und günstiger, mehr hilft bei schwierigen Fragen. Nicht jedes Modell hat diese Einstellung; lehnt ein Modell sie ab, fragt Kasboek ohne.",
-    "reasoningUnsupported": "Dieses Modell nimmt keine Einstellung fürs Nachdenken an und nutzt seine eigene."
+    "reasoningUnsupported": "Dieses Modell nimmt keine Einstellung fürs Nachdenken an und nutzt seine eigene.",
+    "autoDone": "Ohne Nachfrage erledigt:"
   },
   "settings": {
     "title": "Einstellungen",
@@ -969,5 +970,44 @@
     "previousYear": "Vorheriges Jahr",
     "nextYear": "Nächstes Jahr",
     "thisMonth": "Dieser Monat"
+  },
+  "permissions": {
+    "title": "Was der Assistent selbst tun darf",
+    "hint": "Änderungen des Assistenten warten auf dein OK, außer du erlaubst diese Art von Änderung hier. Was ohne Nachfrage passiert, steht im Chat.",
+    "mode": "Modus",
+    "modes": {
+      "ask": "Immer fragen",
+      "smart": "Bei wichtigen Änderungen fragen",
+      "trust": "Selbst entscheiden",
+      "custom": "Pro Art wählen"
+    },
+    "modeHint": {
+      "ask": "Jede Änderung wartet auf dein OK.",
+      "smart": "Einordnen, Namen, Aufteilungen, Umbuchungen, Regeln, Kategorien, Budgets und Ziele passieren von selbst; Kontostände, Regeln löschen, neue Konten und Importe fragen. Änderungen an mehr als {{limit}} Buchungen fragen immer.",
+      "trust": "Jede Änderung passiert von selbst, auch große. Nur wenn du die Ergebnisse danach prüfst.",
+      "custom": "Wähle unten für jede Art von Änderung. Änderungen an mehr als {{limit}} Buchungen fragen immer."
+    },
+    "ask": "Erst fragen",
+    "allow": "Erlaubt",
+    "kind": {
+      "categorise": "Kategorien und Namen von Buchungen",
+      "rules": "Regeln erstellen und ändern",
+      "organise": "Kategorien, Budgets und Ziele",
+      "balances": "Kontostände, Werte und Kurse",
+      "deleteRules": "Regeln löschen",
+      "accounts": "Konten hinzufügen",
+      "import": "Eine CSV importieren"
+    },
+    "kindHint": {
+      "categorise": "Kategorien, lesbare Namen und Notizen setzen, Zahlungen aufteilen, Umbuchungen verknüpfen.",
+      "rules": "Eine Regel ordnet auch bestehende Buchungen ohne Kategorie ein.",
+      "organise": "Eine Kategorie hinzufügen, ein Budget setzen, ein Sparziel anlegen.",
+      "balances": "Einen Kontostand, einen Anlagewert oder einen Wechselkurs erfassen.",
+      "deleteRules": "Buchungen behalten ihre Kategorie.",
+      "accounts": "Ein neues Konto in Kasboek.",
+      "import": "Die fertigen Zeilen des offenen Imports speichern."
+    },
+    "mcp": "Claude Desktop und Claude Code fragen immer",
+    "mcpHint": "Änderungen, die Claude-Apps über MCP anfragen, warten in Kasboek auf dein OK, egal welcher Modus oben gilt. Schalte das aus, damit der Modus auch für sie entscheidet."
   }
 }

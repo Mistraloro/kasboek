@@ -334,7 +334,8 @@
     "reasoningOption": "Réflexion : {{level}}",
     "reasoningLabel": "Réflexion",
     "reasoningHint": "Combien le modèle réfléchit avant de répondre : moins est plus rapide et moins cher, plus aide pour les questions difficiles. Tous les modèles n’ont pas ce réglage ; si un modèle le refuse, Kasboek demande sans.",
-    "reasoningUnsupported": "Ce modèle n’accepte pas de réglage de réflexion et utilise le sien."
+    "reasoningUnsupported": "Ce modèle n’accepte pas de réglage de réflexion et utilise le sien.",
+    "autoDone": "Fait sans demander :"
   },
   "settings": {
     "title": "Réglages",
@@ -969,5 +970,44 @@
     "previousYear": "Année précédente",
     "nextYear": "Année suivante",
     "thisMonth": "Ce mois-ci"
+  },
+  "permissions": {
+    "title": "Ce que l’assistant peut faire seul",
+    "hint": "Les changements de l’assistant attendent votre accord, sauf si vous autorisez ce type de changement ici. Ce qui est fait sans demander apparaît dans le chat.",
+    "mode": "Mode",
+    "modes": {
+      "ask": "Toujours demander",
+      "smart": "Demander pour les changements importants",
+      "trust": "Décider seul",
+      "custom": "Choisir par type"
+    },
+    "modeHint": {
+      "ask": "Chaque changement attend votre accord.",
+      "smart": "Classer, noms, répartitions, virements, règles, catégories, budgets et objectifs se font seuls ; soldes, suppression de règles, nouveaux comptes et imports demandent. Les changements sur plus de {{limit}} opérations demandent toujours.",
+      "trust": "Chaque changement se fait seul, même les gros. Seulement si vous vérifiez les résultats ensuite.",
+      "custom": "Choisissez ci-dessous pour chaque type de changement. Les changements sur plus de {{limit}} opérations demandent toujours."
+    },
+    "ask": "Demander d’abord",
+    "allow": "Autorisé",
+    "kind": {
+      "categorise": "Catégories et noms des opérations",
+      "rules": "Créer et modifier des règles",
+      "organise": "Catégories, budgets et objectifs",
+      "balances": "Soldes, valeurs et taux",
+      "deleteRules": "Supprimer des règles",
+      "accounts": "Ajouter des comptes",
+      "import": "Importer un CSV"
+    },
+    "kindHint": {
+      "categorise": "Définir catégories, noms lisibles et notes, répartir des paiements, associer des virements.",
+      "rules": "Une règle classe aussi les opérations existantes sans catégorie.",
+      "organise": "Ajouter une catégorie, fixer un budget, créer un objectif d’épargne.",
+      "balances": "Indiquer un solde bancaire, une valeur de placement ou un taux de change.",
+      "deleteRules": "Les opérations gardent leur catégorie.",
+      "accounts": "Un nouveau compte dans Kasboek.",
+      "import": "Enregistrer les lignes prêtes de l’import ouvert."
+    },
+    "mcp": "Claude Desktop et Claude Code demandent toujours",
+    "mcpHint": "Les changements demandés par les apps Claude via MCP attendent votre accord dans Kasboek, quel que soit le mode ci-dessus. Désactivez pour laisser le mode décider pour elles aussi."
   }
 }

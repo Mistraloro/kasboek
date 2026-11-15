@@ -267,5 +267,10 @@
     "col": {
       "amount": "Valor"
     }
+  },
+  "permissions": {
+    "kindHint": {
+      "import": "Salvar as linhas prontas da importação aberta."
+    }
   }
 }

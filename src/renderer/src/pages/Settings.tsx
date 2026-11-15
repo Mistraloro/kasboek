@@ -13,7 +13,7 @@ import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS,
 import { useSettings } from '../lib/settings'
 import { ImportFlow } from './auth/ImportFlow'
 import { CurrencySelect } from '../components/CurrencySelect'
-import { ClaudeSection } from './SettingsClaude'
+import { ClaudeSection, PermissionsSection } from './SettingsClaude'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
 import { parseAmount } from '@shared/amount'
@@ -39,6 +39,7 @@ export function SettingsPage() {
       <div className="flex flex-col gap-6">
         <SecuritySection />
         <ClaudeSection />
+        <PermissionsSection />
         <SyncSection />
         <TransferSection />
         <BackupSection />

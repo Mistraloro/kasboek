@@ -121,6 +121,16 @@ function Bubble({ m }: { m: ChatMessage }) {
   const { t } = useTranslation()
   const toast = useToast()
   if (m.role === 'user') return <div className="selectable ml-8 self-end rounded-2xl rounded-br-md bg-surface-2 px-3.5 py-2 text-[13px] whitespace-pre-wrap">{m.text}</div>
+  // Made without asking, as the person's permissions allow.
+  if (m.role === 'confirm' && m.state === 'auto')
+    return (
+      <p className="flex items-start gap-1.5 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-xs text-muted">
+        <Check size={13} className="mt-0.5 shrink-0 text-accent" />
+        <span>
+          <span className="font-medium text-text">{t('assistant.autoDone')}</span> {m.summary}
+        </span>
+      </p>
+    )
   if (m.role === 'confirm')
     return (
       <div className="rounded-xl border border-border bg-surface p-3 text-[13px]">

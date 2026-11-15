@@ -147,5 +147,13 @@
     "col": {
       "amount": "Monto"
     }
+  },
+  "permissions": {
+    "kind": {
+      "accounts": "Agregar cuentas"
+    },
+    "kindHint": {
+      "organise": "Agregar una categoría, fijar un presupuesto, crear una meta de ahorro."
+    }
   }
 }

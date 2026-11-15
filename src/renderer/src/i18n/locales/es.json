@@ -334,7 +334,8 @@
     "reasoningOption": "Razonamiento: {{level}}",
     "reasoningLabel": "Razonamiento",
     "reasoningHint": "Cuánto piensa el modelo antes de responder: menos es más rápido y barato, más ayuda con preguntas difíciles. No todos los modelos tienen este ajuste; si un modelo lo rechaza, Kasboek pregunta sin él.",
-    "reasoningUnsupported": "Este modelo no acepta un ajuste de razonamiento y usa el suyo."
+    "reasoningUnsupported": "Este modelo no acepta un ajuste de razonamiento y usa el suyo.",
+    "autoDone": "Hecho sin preguntar:"
   },
   "settings": {
     "title": "Ajustes",
@@ -969,5 +970,44 @@
     "previousYear": "Año anterior",
     "nextYear": "Año siguiente",
     "thisMonth": "Este mes"
+  },
+  "permissions": {
+    "title": "Lo que el asistente puede hacer solo",
+    "hint": "Los cambios del asistente esperan tu aprobación, salvo que permitas ese tipo de cambio aquí. Lo que se hace sin preguntar aparece en el chat.",
+    "mode": "Modo",
+    "modes": {
+      "ask": "Preguntar siempre",
+      "smart": "Preguntar en cambios importantes",
+      "trust": "Decidir solo",
+      "custom": "Elegir por tipo"
+    },
+    "modeHint": {
+      "ask": "Cada cambio espera tu aprobación.",
+      "smart": "Clasificar, nombres, repartos, traspasos, reglas, categorías, presupuestos y metas se hacen solos; saldos, borrar reglas, cuentas nuevas e importaciones preguntan. Los cambios en más de {{limit}} movimientos siempre preguntan.",
+      "trust": "Cada cambio se hace solo, también los grandes. Solo si revisas los resultados después.",
+      "custom": "Elige abajo para cada tipo de cambio. Los cambios en más de {{limit}} movimientos siempre preguntan."
+    },
+    "ask": "Preguntar antes",
+    "allow": "Permitido",
+    "kind": {
+      "categorise": "Categorías y nombres de movimientos",
+      "rules": "Crear y cambiar reglas",
+      "organise": "Categorías, presupuestos y metas",
+      "balances": "Saldos, valores y tipos de cambio",
+      "deleteRules": "Borrar reglas",
+      "accounts": "Añadir cuentas",
+      "import": "Importar un CSV"
+    },
+    "kindHint": {
+      "categorise": "Poner categorías, nombres legibles y notas, repartir pagos, emparejar traspasos.",
+      "rules": "Una regla también clasifica movimientos existentes sin categoría.",
+      "organise": "Añadir una categoría, fijar un presupuesto, crear una meta de ahorro.",
+      "balances": "Registrar un saldo bancario, un valor de inversión o un tipo de cambio.",
+      "deleteRules": "Los movimientos conservan su categoría.",
+      "accounts": "Una cuenta nueva en Kasboek.",
+      "import": "Guardar las filas listas de la importación abierta."
+    },
+    "mcp": "Claude Desktop y Claude Code siempre preguntan",
+    "mcpHint": "Los cambios que piden las apps de Claude por MCP esperan tu aprobación en Kasboek, sea cual sea el modo de arriba. Desactívalo para que el modo decida también por ellas."
   }
 }

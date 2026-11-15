@@ -14,6 +14,7 @@ import { CURRENCIES } from './currency'
 import { LANGUAGE_CODES, type LanguageCode } from './languages'
 import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
 import { EFFORTS, REASONING_LEVELS } from './reasoning'
+import { PERMISSION_KINDS, PERMISSION_MODES, type PermissionKind } from './permissions'
 
 const currency = z
   .string()
@@ -142,6 +143,13 @@ export const contract = {
         csvEffort: z.enum(EFFORTS),
         aiReasoning: z.enum(REASONING_LEVELS),
         aiCsvReasoning: z.enum(REASONING_LEVELS),
+        permissions: z
+          .object({
+            mode: z.enum(PERMISSION_MODES),
+            rules: z.partialRecord(z.enum(PERMISSION_KINDS.map((k) => k.id) as [PermissionKind, ...PermissionKind[]]), z.enum(['ask', 'allow'])),
+            mcpAlwaysAsk: z.boolean()
+          })
+          .strict(),
         mcpEnabled: z.boolean(),
         aiProvider: z.enum(PROVIDER_IDS),
         aiBaseUrl: z

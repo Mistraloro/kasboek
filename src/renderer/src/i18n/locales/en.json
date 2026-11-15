@@ -334,7 +334,8 @@
     "reasoningOption": "Reasoning: {{level}}",
     "reasoningLabel": "Reasoning",
     "reasoningHint": "How much the model thinks before answering: less is faster and cheaper, more helps with harder questions. Not every model has this setting; if a model refuses it, Kasboek asks without it.",
-    "reasoningUnsupported": "This model doesn't take a reasoning setting and uses its own."
+    "reasoningUnsupported": "This model doesn't take a reasoning setting and uses its own.",
+    "autoDone": "Done without asking:"
   },
   "settings": {
     "title": "Settings",
@@ -969,5 +970,44 @@
     "previousYear": "Previous year",
     "nextYear": "Next year",
     "thisMonth": "This month"
+  },
+  "permissions": {
+    "title": "What the assistant may do by itself",
+    "hint": "Changes the assistant makes wait for your OK, unless you allow that kind of change here. Changes made without asking show in the chat.",
+    "mode": "Mode",
+    "modes": {
+      "ask": "Always ask",
+      "smart": "Ask for important changes",
+      "trust": "Decide by itself",
+      "custom": "Choose per kind"
+    },
+    "modeHint": {
+      "ask": "Every change waits for your OK.",
+      "smart": "Categorising, names, splits, transfers, rules, categories, budgets and goals happen by themselves; balances, deleting rules, new accounts and imports ask. Changes to more than {{limit}} transactions always ask.",
+      "trust": "Every change happens by itself, large ones too. Only when you check the results afterwards.",
+      "custom": "Choose below for each kind of change. Changes to more than {{limit}} transactions always ask."
+    },
+    "ask": "Ask first",
+    "allow": "Allowed",
+    "kind": {
+      "categorise": "Categories and names of transactions",
+      "rules": "Creating and changing rules",
+      "organise": "Categories, budgets and goals",
+      "balances": "Balances, values and rates",
+      "deleteRules": "Deleting rules",
+      "accounts": "Adding accounts",
+      "import": "Importing a CSV"
+    },
+    "kindHint": {
+      "categorise": "Setting categories, readable names and notes, splitting payments, pairing transfers.",
+      "rules": "A rule also sorts existing uncategorised transactions.",
+      "organise": "Adding a category, setting a budget, creating a savings goal.",
+      "balances": "Recording a bank balance, an investment value or an exchange rate.",
+      "deleteRules": "Transactions keep their category.",
+      "accounts": "A new account in Kasboek.",
+      "import": "Saving the ready rows of the open import."
+    },
+    "mcp": "Claude Desktop and Claude Code always ask",
+    "mcpHint": "Changes asked for by Claude apps over MCP wait for your OK in Kasboek, whatever the mode above. Switch this off to let the mode decide for them too."
   }
 }

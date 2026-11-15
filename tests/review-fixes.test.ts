@@ -422,3 +422,35 @@ describe('reasoning settings', () => {
     expect(reasoningIgnored(p, 'magistral-x')).toBe(true)
   })
 })
+
+describe('permissions', () => {
+  it('asks or not by mode, kind, size and source', async () => {
+    const { needsApproval, DEFAULT_PERMISSIONS } = await import('@shared/permissions')
+    const ids = (n: number) => ({ ids: Array.from({ length: n }, (_, i) => i + 1), categoryId: 1 })
+    // The default asks for everything.
+    expect(needsApproval(DEFAULT_PERMISSIONS, 'transactions.categorize', ids(3), 'chat')).toBe(true)
+    const smart = { mode: 'smart' as const, rules: {}, mcpAlwaysAsk: true }
+    expect(needsApproval(smart, 'transactions.categorize', ids(3), 'chat')).toBe(false)
+    expect(needsApproval(smart, 'rules.create', { field: 'any', pattern: 'x' }, 'chat')).toBe(false)
+    expect(needsApproval(smart, 'import.commit', {}, 'chat')).toBe(true)
+    expect(needsApproval(smart, 'rules.delete', { id: 1 }, 'chat')).toBe(true)
+    // Large changes ask, except in "trust".
+    expect(needsApproval(smart, 'transactions.categorize', ids(101), 'chat')).toBe(true)
+    expect(needsApproval({ ...smart, mode: 'trust' }, 'transactions.categorize', ids(500), 'chat')).toBe(false)
+    // Claude apps over MCP ask unless switched off.
+    expect(needsApproval(smart, 'transactions.categorize', ids(3), 'mcp')).toBe(true)
+    expect(needsApproval({ ...smart, mcpAlwaysAsk: false }, 'transactions.categorize', ids(3), 'mcp')).toBe(false)
+    // Custom: per kind; unknown operations always ask.
+    const custom = { mode: 'custom' as const, rules: { import: 'allow' as const }, mcpAlwaysAsk: false }
+    expect(needsApproval(custom, 'import.commit', {}, 'chat')).toBe(false)
+    expect(needsApproval(custom, 'budgets.set', {}, 'chat')).toBe(true)
+    expect(needsApproval({ ...custom, mode: 'trust' }, 'something.new', {}, 'chat')).toBe(true)
+  })
+
+  it('covers every change the assistant can make', async () => {
+    const { kindOf } = await import('@shared/permissions')
+    const { coreOps } = await import('@core/ops')
+    const mutating = Object.entries(coreOps).filter(([, d]) => d?.assistant && d.mutates).map(([op]) => op)
+    expect(mutating.filter((op) => !kindOf(op))).toEqual([])
+  })
+})

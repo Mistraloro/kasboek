@@ -7,6 +7,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, type Server, type Socket } from 'node:net'
 import { getSettings } from '@core/settings'
+import { needsApproval } from '@shared/permissions'
 import type { OpName, OpResult } from '@shared/contract'
 import { assistantTools, compactResult, describeChange, opForTool, precheck } from '../assistant/tools'
 import { broadcast, db, isUnlocked } from '../session'
@@ -75,7 +76,8 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   if (!def) return { id: req.id, ok: false, error: `Unknown tool ${String(req.name)}.` }
   const invalid = precheck(def.name, req.input)
   if (invalid) return { id: req.id, ok: false, error: invalid }
-  if (def.mutates) {
+  // Changes wait for the person unless their permissions let Claude apps make them too.
+  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp')) {
     const approved = await askPerson(def.op, describeChange(db(), def.op, (req.input ?? {}) as Record<string, unknown>))
     if (!approved) return { id: req.id, ok: false, error: 'The person declined this change in Kasboek. Do not retry it unless they ask.' }
   }
