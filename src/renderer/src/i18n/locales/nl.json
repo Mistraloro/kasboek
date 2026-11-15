@@ -35,11 +35,12 @@
     "ofBudget": "van {{budget}} gebudgetteerd",
     "uncategorized_one": "{{count}} verrichting deze maand heeft nog geen categorie.",
     "uncategorized_other": "{{count}} verrichtingen deze maand hebben nog geen categorie.",
-    "review": "Nakijken",
+    "review": "Bespreken met {{ai}}",
     "nothingYet": "Nog niets uitgegeven",
     "accounts": "Rekeningen",
     "trend": "Laatste 6 maanden",
-    "trendHint": "Inkomsten en uitgaven, zonder overschrijvingen tussen je eigen rekeningen."
+    "trendHint": "Inkomsten en uitgaven, zonder overschrijvingen tussen je eigen rekeningen.",
+    "reviewPrompt": "Bespreek {{month}} voor me (gebruik summary_review voor {{iso}}). Hoe verhouden inkomsten en uitgaven zich tot eerdere maanden, welke categorieën veranderden het meest, welke budgetten gingen erover, en welke betalingen vallen op? Sluit af met een of twee praktische tips. Houd het kort."
   },
   "transactions": {
     "title": "Verrichtingen",

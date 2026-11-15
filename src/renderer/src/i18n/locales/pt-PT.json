@@ -35,11 +35,12 @@
     "ofBudget": "de {{budget}} orçamentados",
     "uncategorized_one": "{{count}} movimento deste mês ainda não tem categoria.",
     "uncategorized_other": "{{count}} movimentos deste mês ainda não têm categoria.",
-    "review": "Rever",
+    "review": "Rever com {{ai}}",
     "nothingYet": "Ainda sem despesas",
     "accounts": "Contas",
     "trend": "Últimos 6 meses",
-    "trendHint": "Receitas e despesas, sem as transferências entre as suas próprias contas."
+    "trendHint": "Receitas e despesas, sem as transferências entre as suas próprias contas.",
+    "reviewPrompt": "Revê {{month}} comigo (usa summary_review para {{iso}}). Como se comparam receitas e despesas com os meses anteriores, que categorias mudaram mais, que orçamentos foram ultrapassados e que pagamentos se destacam? Termina com uma ou duas dicas práticas. Sê breve."
   },
   "transactions": {
     "title": "Movimentos",

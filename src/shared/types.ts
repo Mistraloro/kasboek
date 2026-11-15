@@ -274,6 +274,22 @@ export interface Transaction {
   splitCount: number
 }
 
+/** Facts for a monthly review (the assistant writes it from these). */
+export interface MonthReview {
+  month: string
+  incomeCents: number
+  spendingCents: number
+  /** Averages of the three months before. */
+  averageIncomeCents: number
+  averageSpendingCents: number
+  uncategorised: number
+  /** Spending per category against the three months before, biggest change first. */
+  categories: { categoryId: number | null; name: string; cents: number; averageCents: number; changeCents: number }[]
+  overBudget: { categoryId: number; name: string; budgetCents: number; spentCents: number }[]
+  /** Payments far above what the payee usually costs ("higher"), or a large first payment ("new"). */
+  unusual: { id: number; date: string; name: string; cents: number; usualCents: number | null; category: string | null; reason: 'higher' | 'new' }[]
+}
+
 /** A payment (or income) that comes back at a steady rhythm. */
 export interface RecurringItem {
   key: string

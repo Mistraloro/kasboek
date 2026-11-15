@@ -35,11 +35,12 @@
     "ofBudget": "von {{budget}} budgetiert",
     "uncategorized_one": "{{count}} Buchung in diesem Monat hat noch keine Kategorie.",
     "uncategorized_other": "{{count}} Buchungen in diesem Monat haben noch keine Kategorie.",
-    "review": "Prüfen",
+    "review": "Mit {{ai}} besprechen",
     "nothingYet": "Noch nichts ausgegeben",
     "accounts": "Konten",
     "trend": "Letzte 6 Monate",
-    "trendHint": "Einnahmen und Ausgaben, ohne Umbuchungen zwischen deinen eigenen Konten."
+    "trendHint": "Einnahmen und Ausgaben, ohne Umbuchungen zwischen deinen eigenen Konten.",
+    "reviewPrompt": "Bespreche {{month}} mit mir (nutze summary_review für {{iso}}). Wie verhalten sich Einnahmen und Ausgaben zu den Vormonaten, welche Kategorien haben sich am meisten verändert, welche Budgets wurden überschritten, und welche Zahlungen fallen auf? Schließe mit ein oder zwei praktischen Tipps. Halte es kurz."
   },
   "transactions": {
     "title": "Buchungen",

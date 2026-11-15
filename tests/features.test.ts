@@ -111,3 +111,26 @@ describe('subscriptions and fixed costs (#30)', () => {
     expect(r.monthlyOutCents).toBe(95000 + 1599 + 12000 + 3833)
   })
 })
+
+describe('monthly review (#31)', () => {
+  it('compares with the three months before, lists budgets over and payments that stand out', async () => {
+    const { monthReview } = await import('@core/review')
+    const { setBudget } = await import('@core/finance')
+    const { d, acc } = db()
+    const a = acc('Current')
+    const groceries = cat(d, 'Groceries')
+    for (const m of ['2026-07', '2026-08', '2026-09']) {
+      tx(d, a, `${m}-03`, -30000, { categoryId: groceries, counterpartyName: 'Delhaize' })
+      tx(d, a, `${m}-10`, -1500, { counterpartyName: 'Garage' })
+    }
+    tx(d, a, '2026-10-03', -45000, { categoryId: groceries, counterpartyName: 'Delhaize' })
+    tx(d, a, '2026-10-10', -9000, { counterpartyName: 'Garage' }) // far above the usual 15.00
+    tx(d, a, '2026-10-20', -60000, { counterpartyName: 'New laptop shop' }) // a large first payment
+    setBudget(d, { categoryId: groceries, month: '2026-10', amountCents: 40000 })
+    const r = monthReview(d, '2026-10')
+    expect(r.averageSpendingCents).toBe(31500)
+    expect(r.categories.find((c) => c.name === 'Groceries')).toMatchObject({ cents: 45000, averageCents: 30000, changeCents: 15000 })
+    expect(r.overBudget).toEqual([{ categoryId: groceries, name: 'Groceries', budgetCents: 40000, spentCents: 45000 }])
+    expect(r.unusual.map((u) => [u.name, u.reason])).toEqual([['New laptop shop', 'new'], ['Garage', 'higher']])
+  })
+})

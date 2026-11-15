@@ -11,6 +11,7 @@ import * as wealth from './wealth'
 import { listBankBalances, setBankBalance } from './balance'
 import { findTransfers, pairTransfers, unpairTransfer } from './transfers'
 import { findRecurring } from './recurring'
+import { monthReview } from './review'
 
 export function fxStatus(db: Db): FxStatus {
   const s = getSettings(db)
@@ -227,6 +228,7 @@ export const coreOps: OpTable = {
   'transactions.categorize': { mutates: true, assistant: true, handler: ({ db }, i) => fin.categorizeTransactions(db, i.ids, i.categoryId) },
   'transactions.delete': { mutates: true, assistant: false, handler: ({ db }, i) => fin.deleteTransactions(db, i.ids) },
 
+  'summary.review': { mutates: false, assistant: true, handler: ({ db }, { month }) => monthReview(db, month) },
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },
   'transfers.find': { mutates: false, assistant: true, handler: ({ db }) => findTransfers(db) },
   'transfers.pair': { mutates: true, assistant: true, handler: ({ db }, { pairs }) => pairTransfers(db, pairs) },

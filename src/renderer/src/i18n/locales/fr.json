@@ -35,11 +35,12 @@
     "ofBudget": "sur {{budget}} budgétés",
     "uncategorized_one": "{{count}} opération de ce mois n’a pas encore de catégorie.",
     "uncategorized_other": "{{count}} opérations de ce mois n’ont pas encore de catégorie.",
-    "review": "Vérifier",
+    "review": "Faire le point avec {{ai}}",
     "nothingYet": "Rien dépensé pour l’instant",
     "accounts": "Comptes",
     "trend": "6 derniers mois",
-    "trendHint": "Revenus et dépenses, sans les virements entre vos propres comptes."
+    "trendHint": "Revenus et dépenses, sans les virements entre vos propres comptes.",
+    "reviewPrompt": "Fais le point sur {{month}} (utilise summary_review pour {{iso}}). Comment les revenus et les dépenses se comparent-ils aux mois précédents, quelles catégories ont le plus changé, quels budgets ont été dépassés, et quels paiements sortent du lot ? Termine par un ou deux conseils pratiques. Reste bref."
   },
   "transactions": {
     "title": "Opérations",

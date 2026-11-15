@@ -77,6 +77,12 @@ function Shell() {
   }
   const setPage = (p: Page): void => go(p)
   const [assistantOpen, setAssistantOpen] = useState(true)
+  // Pages can ask for the assistant panel (e.g. "Review this month").
+  useEffect(() => {
+    const open = (): void => setAssistantOpen(true)
+    window.addEventListener('kasboek:open-assistant', open)
+    return () => window.removeEventListener('kasboek:open-assistant', open)
+  }, [])
   const isMac = info.platform === 'darwin'
 
   useEffect(

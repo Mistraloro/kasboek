@@ -7,7 +7,8 @@
     "stepBackupBody": "Criptografadas, diárias, para a pasta ou unidade que escolher.",
     "stepImport": "Importe um arquivo CSV",
     "stepImportBody": "O Kasboek o lê e mostra cada linha antes de salvar o que quer que seja.",
-    "review": "Revisar"
+    "review": "Revisar com {{ai}}",
+    "reviewPrompt": "Revise {{month}} comigo (use summary_review para {{iso}}). Como se comparam receitas e despesas com os meses anteriores, que categorias mudaram mais, que orçamentos foram ultrapassados e que pagamentos se destacam? Termine com uma ou duas dicas práticas. Seja breve."
   },
   "transactions": {
     "emptyBody": "Importe um arquivo CSV do seu banco para começar.",

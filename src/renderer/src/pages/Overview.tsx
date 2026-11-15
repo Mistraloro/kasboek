@@ -1,11 +1,14 @@
-import { Check, PieChart, Tags } from 'lucide-react'
+import { Check, PieChart, Sparkles, Tags } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { monthOf } from '@shared/month'
 import type { Page } from '../App'
 import { CategoryBars, MonthBars } from '../components/charts'
 import { Button, Card, CardHeader, EmptyState, MonthNav, PageHeader, cx } from '../components/ui'
-import { useOp } from '../lib/api'
+import { call, useOp } from '../lib/api'
+import { useAssistant } from '../components/AssistantPanel'
+import { useToast } from '../components/Toast'
+import { errText } from './auth/parts'
 import { monthLabel, monthShort } from '../lib/format'
 import { useSettings } from '../lib/settings'
 
@@ -18,6 +21,8 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
   const summary = useOp('summary.month', { month })
   const backup = useOp('backup.status')
   const accounts = useOp('accounts.list')
+  const assistant = useAssistant()
+  const toast = useToast()
   const s = summary.data
   const hasTx = (accounts.data ?? []).some((a) => a.transactionCount > 0)
 
@@ -30,7 +35,28 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
 
   return (
     <>
-      <PageHeader title={t('overview.title')} action={<MonthNav month={month} label={monthLabel(toDate(month), fmt)} onChange={setMonth} />} />
+      <PageHeader
+        title={t('overview.title')}
+        action={
+          <div className="flex items-center gap-2">
+            {assistant?.configured && hasTx && (
+              <Button
+                size="sm"
+                icon={<Sparkles size={14} />}
+                disabled={assistant.busy}
+                onClick={() => {
+                  // Opens the assistant panel and asks for a review of the month shown.
+                  window.dispatchEvent(new Event('kasboek:open-assistant'))
+                  void call('assistant.send', { text: t('overview.reviewPrompt', { month: monthLabel(toDate(month), fmt), iso: month }) }).catch((e) => toast(errText(e), 'error'))
+                }}
+              >
+                {t('overview.review', { ai: assistant.providerName })}
+              </Button>
+            )}
+            <MonthNav month={month} label={monthLabel(toDate(month), fmt)} onChange={setMonth} />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-3 gap-4">
         <Stat label={t('overview.income')} value={money(s?.incomeCents ?? 0)} />

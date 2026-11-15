@@ -27,6 +27,7 @@ ES419=[
  (r'un USB','una memoria USB'),(r'entra en reposo','entra en suspensión'),(r'^Nómina$','Sueldo'),
 ]
 PTBR=[
+ (r'^Revê (.*) comigo \(usa ',r'Revise \1 comigo (use '),(r'Termina com uma',r'Termine com uma'),(r'Sê breve\.',r'Seja breve.'),
  (r'Subscrições','Assinaturas'),(r'subscrições','assinaturas'),(r'\brenda\b','aluguel'),
  (r'^A rever ','Revisando '),(r' revisto: ',' revisado: '),(r'está a rever','está revisando'),
  (r'Também pode adicioná-lo','Você também pode adicioná-lo'),(r'repara quando','percebe quando'),

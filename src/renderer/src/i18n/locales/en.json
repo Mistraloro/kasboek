@@ -35,11 +35,12 @@
     "ofBudget": "of {{budget}} budgeted",
     "uncategorized_one": "{{count}} transaction this month has no category yet.",
     "uncategorized_other": "{{count}} transactions this month have no category yet.",
-    "review": "Review",
+    "review": "Review with {{ai}}",
     "nothingYet": "Nothing spent yet",
     "accounts": "Accounts",
     "trend": "Last 6 months",
-    "trendHint": "Income and spending, transfers between your own accounts left out."
+    "trendHint": "Income and spending, transfers between your own accounts left out.",
+    "reviewPrompt": "Review {{month}} for me (use summary_review for {{iso}}). How did income and spending compare with earlier months, which categories changed most, which budgets went over, and which payments stand out? End with one or two practical tips. Keep it short."
   },
   "transactions": {
     "title": "Transactions",
