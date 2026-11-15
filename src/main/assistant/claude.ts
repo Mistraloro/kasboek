@@ -4,7 +4,8 @@ import { app } from 'electron'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
-import type { AssistantModel, Effort } from '@shared/types'
+import { claudeEffort, type Effort } from '@shared/reasoning'
+import type { AssistantModel } from '@shared/types'
 
 export const API_KEY = 'anthropicApiKey'
 
@@ -18,14 +19,24 @@ export function client(db: Db): Anthropic {
 }
 
 /**
- * Request options per model. Opus 5.5, Sonnet 5.5 and Fable 5.2 get server-side fallbacks, so a
- * safety-classifier decline is retried on a suitable model in the same call. Haiku has none.
+ * Request options per model and thinking level. Opus 5.5, Sonnet 5.5 and Fable 5.2 get server-side
+ * fallbacks, so a safety-classifier decline is retried on a suitable model in the same call. Haiku
+ * has none. Thinking is adaptive with a readable summary (shown in the panel); "off" stops it where
+ * the model allows (Sonnet 5.5: between tool calls only; Haiku 5.5: disabled), at a low effort.
  */
-export function modelParams(model: AssistantModel, effort: Effort) {
+export function modelParams(model: AssistantModel, level: Effort) {
   const fallback = model !== 'claude-haiku-5-5'
+  const effort = claudeEffort(model, level)
+  const off = effort === 'off'
+  const thinking = off
+    ? model === 'claude-sonnet-5-5'
+      ? ({ type: 'between_tools' } as unknown as Anthropic.Beta.BetaThinkingConfigParam)
+      : ({ type: 'disabled' } as const)
+    : ({ type: 'adaptive', display: 'summarized' } as const)
   return {
     model,
-    output_config: { effort },
+    output_config: { effort: (off ? 'low' : effort) as 'low' | 'medium' | 'high' },
+    thinking,
     ...(fallback ? { betas: ['server-side-fallback-2026-07-01'] as Anthropic.Beta.AnthropicBeta[], fallbacks: 'default' as const } : {})
   }
 }

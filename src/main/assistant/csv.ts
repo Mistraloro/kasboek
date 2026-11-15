@@ -18,6 +18,7 @@ import * as openai from './openai'
 import { activeProvider, requireConfigured } from './provider'
 import { app } from 'electron'
 import { LANGUAGES } from '@shared/languages'
+import { reasoningParams } from '@shared/reasoning'
 import { getPrefs } from '../prefs'
 import { checkActivity } from './chat'
 import { broadcast } from '../session'
@@ -545,7 +546,7 @@ async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, co
   const name = provider.preset.assistantName
   if (provider.preset.id !== 'anthropic') {
     try {
-      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal, onThinking })
+      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal, onThinking, reasoning: reasoningParams(provider.preset.id, getSettings(db).aiCsvReasoning) })
     } catch (err) {
       if (signal.aborted) throw err
       throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
@@ -560,8 +561,6 @@ async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, co
         ...params,
         max_tokens: 32000,
         output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
-        // A readable summary of the reasoning, shown in the assistant panel.
-        thinking: { type: 'adaptive', display: 'summarized' },
         system: INSTRUCTIONS,
         messages: [{ role: 'user', content: context }]
       },

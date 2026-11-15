@@ -13,6 +13,7 @@ import { checkPassword } from './password'
 import { CURRENCIES } from './currency'
 import { LANGUAGE_CODES, type LanguageCode } from './languages'
 import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
+import { EFFORTS, REASONING_LEVELS } from './reasoning'
 
 const currency = z
   .string()
@@ -136,9 +137,11 @@ export const contract = {
     input: z
       .object({
         chatModel: z.enum(ASSISTANT_MODELS),
-        chatEffort: z.enum(['low', 'medium', 'high']),
+        chatEffort: z.enum(EFFORTS),
         csvModel: z.enum(ASSISTANT_MODELS),
-        csvEffort: z.enum(['low', 'medium', 'high']),
+        csvEffort: z.enum(EFFORTS),
+        aiReasoning: z.enum(REASONING_LEVELS),
+        aiCsvReasoning: z.enum(REASONING_LEVELS),
         mcpEnabled: z.boolean(),
         aiProvider: z.enum(PROVIDER_IDS),
         aiBaseUrl: z

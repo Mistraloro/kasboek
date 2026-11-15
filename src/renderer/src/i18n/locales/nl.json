@@ -323,7 +323,18 @@
     "checkRunning": "{{file}} nakijken…",
     "checkRunningGroups": "{{file}} nakijken: {{done}} van {{total}} groepen…",
     "checkFailed": "Het nakijken van {{file}} is niet afgerond.",
-    "checkDone": "{{file}} nagekeken: {{categorised}} gecategoriseerd, {{renamed}} hernoemd, {{rules}} regels en {{existing}} oudere groepen voorgesteld. Zie het importscherm."
+    "checkDone": "{{file}} nagekeken: {{categorised}} gecategoriseerd, {{renamed}} hernoemd, {{rules}} regels en {{existing}} oudere groepen voorgesteld. Zie het importscherm.",
+    "reasoning": {
+      "default": "standaard van het model",
+      "off": "uit",
+      "low": "laag",
+      "medium": "gemiddeld",
+      "high": "hoog"
+    },
+    "reasoningOption": "Nadenken: {{level}}",
+    "reasoningLabel": "Nadenken",
+    "reasoningHint": "Hoeveel het model nadenkt voor het antwoordt: minder is sneller en goedkoper, meer helpt bij moeilijke vragen. Niet elk model heeft deze instelling; weigert een model ze, dan vraagt Kasboek het zonder.",
+    "reasoningUnsupported": "Dit model neemt geen instelling voor nadenken aan en gebruikt zijn eigen."
   },
   "settings": {
     "title": "Instellingen",
@@ -585,7 +596,10 @@
     "effort": {
       "low": "Laag",
       "medium": "Gemiddeld",
-      "high": "Hoog"
+      "high": "Hoog",
+      "off": "Denken uit",
+      "xhigh": "Extra hoog",
+      "max": "Maximaal"
     },
     "privacy": "Aangeraden: Sonnet 5.5 (gemiddeld) voor de chat, Opus 5.5 (gemiddeld) om CSV's na te kijken. Meer inspanning is grondiger maar trager en duurder. Wordt een vraag geweigerd door de veiligheidscontroles van Anthropic, dan wordt ze automatisch opnieuw geprobeerd op een ander model (niet voor Haiku)."
   },

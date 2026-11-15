@@ -19,7 +19,9 @@ export const DEFAULT_SETTINGS: Settings = {
   aiBaseUrl: null,
   aiChatModel: '',
   aiCsvModel: '',
-  savedSearches: []
+  savedSearches: [],
+  aiReasoning: 'default',
+  aiCsvReasoning: 'default'
 }
 
 export function getSettings(db: Db): Settings {

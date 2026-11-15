@@ -1,6 +1,7 @@
 import type { ProviderId } from './ai-providers'
 import type { FormatPrefs } from './format'
 import type { LanguageCode } from './languages'
+import type { Effort, ReasoningLevel } from './reasoning'
 export type Theme = 'system' | 'light' | 'dark'
 export type CategoryKind = 'expense' | 'income' | 'transfer'
 export type Actor = 'user' | 'assistant' | 'system'
@@ -155,11 +156,14 @@ export interface Settings {
   aiCsvModel: string
   /** Saved searches on the Transactions page (this computer only). */
   savedSearches: SavedSearch[]
+  /** Other providers: how much the model reasons, in the chat and in CSV checks. */
+  aiReasoning: ReasoningLevel
+  aiCsvReasoning: ReasoningLevel
 }
 
 export const ASSISTANT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'] as const
 export type AssistantModel = (typeof ASSISTANT_MODELS)[number]
-export type Effort = 'low' | 'medium' | 'high'
+export type { Effort } from './reasoning'
 
 export interface AssistantStatus {
   configured: boolean
@@ -171,6 +175,8 @@ export interface AssistantStatus {
   company: string | null
   busy: boolean
   messages: ChatMessage[]
+  /** The chat model refused the reasoning setting, so it is sent without it. */
+  reasoningUnsupported?: boolean
 }
 
 export type ChatMessage =

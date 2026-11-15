@@ -1,6 +1,7 @@
 import { ArrowUp, Check, ChevronRight, FileCheck2, RotateCcw, Sparkles, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
 import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatMessage, type Effort, type Settings } from '@shared/types'
 import { PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import type { Page } from '../App'
@@ -44,13 +45,12 @@ function Rich({ text }: { text: string }) {
   )
 }
 
-const EFFORTS: Effort[] = ['low', 'medium', 'high']
 
 /**
  * The chat's model (and, for Claude, its effort), right under the message box. The same settings
  * as Settings → Assistant → Chat; the CSV check keeps its own.
  */
-function ModelPicker({ provider, disabled }: { provider: ProviderId; disabled: boolean }) {
+function ModelPicker({ provider, disabled, unsupported }: { provider: ProviderId; disabled: boolean; unsupported?: boolean }) {
   const { t } = useTranslation()
   const toast = useToast()
   const [s, setS] = useState<Settings | null>(null)
@@ -76,7 +76,7 @@ function ModelPicker({ provider, disabled }: { provider: ProviderId; disabled: b
           {ASSISTANT_MODELS.map((m) => <option key={m} value={m}>{t(`claude.model.${m}`)}</option>)}
         </select>
         <select className={cx(small, 'shrink-0')} disabled={disabled} aria-label={t('claude.effortLabel')} value={s.chatEffort} onChange={(e) => configure({ chatEffort: e.target.value as Effort })}>
-          {EFFORTS.map((x) => <option key={x} value={x}>{t('assistant.effortOption', { level: t(`claude.effort.${x}`) })}</option>)}
+          {claudeEfforts(s.chatModel).map((x) => <option key={x} value={x}>{x === 'off' ? t('claude.effort.off') : t('assistant.effortOption', { level: t(`claude.effort.${x}`) })}</option>)}
         </select>
       </div>
     )
@@ -86,6 +86,16 @@ function ModelPicker({ provider, disabled }: { provider: ProviderId; disabled: b
     <div className="mt-1.5 flex min-w-0 items-center gap-1">
       <select className={cx(small, 'min-w-0 max-w-full truncate')} disabled={disabled} aria-label={t('assistant.model')} value={s.aiChatModel} onChange={(e) => configure({ aiChatModel: e.target.value })}>
         {options.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <select
+        className={cx(small, 'shrink-0', unsupported && 'line-through')}
+        disabled={disabled}
+        aria-label={t('assistant.reasoningLabel')}
+        title={unsupported ? t('assistant.reasoningUnsupported') : t('assistant.reasoningHint')}
+        value={s.aiReasoning}
+        onChange={(e) => configure({ aiReasoning: e.target.value as ReasoningLevel })}
+      >
+        {REASONING_LEVELS.map((x) => <option key={x} value={x}>{t('assistant.reasoningOption', { level: t(`assistant.reasoning.${x}`) })}</option>)}
       </select>
     </div>
   )
@@ -223,7 +233,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
                 <button type="submit" aria-label={t('assistant.send')} disabled={!text.trim()} className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg disabled:opacity-40"><ArrowUp size={15} /></button>
               )}
             </div>
-            <ModelPicker provider={status.provider} disabled={status.busy} />
+            <ModelPicker provider={status.provider} disabled={status.busy} unsupported={status.reasoningUnsupported} />
           </form>
         </>
       )}

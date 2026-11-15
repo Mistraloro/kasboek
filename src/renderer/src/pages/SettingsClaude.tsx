@@ -2,6 +2,7 @@ import { Copy, KeyRound, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
+import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import { useAssistant } from '../components/AssistantPanel'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
@@ -10,7 +11,6 @@ import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
 import { Row } from './Settings'
 
-const EFFORTS: Effort[] = ['low', 'medium', 'high']
 
 export function ClaudeSection() {
   const { t } = useTranslation()
@@ -33,9 +33,15 @@ export function ClaudeSection() {
       {ASSISTANT_MODELS.map((m) => <option key={m} value={m}>{t(`claude.model.${m}`)}</option>)}
     </Select>
   )
-  const effortSelect = (value: Effort, onChange: (e: Effort) => void, label: string) => (
-    <Select className="w-32" aria-label={label} value={value} onChange={(e) => onChange(e.target.value as Effort)}>
-      {EFFORTS.map((x) => <option key={x} value={x}>{t(`claude.effort.${x}`)}</option>)}
+  // The levels this model has: "off" only where the model can stop thinking.
+  const effortSelect = (model: AssistantModel, value: Effort, onChange: (e: Effort) => void, label: string) => (
+    <Select className="w-40" aria-label={label} value={value} onChange={(e) => onChange(e.target.value as Effort)}>
+      {claudeEfforts(model).map((x) => <option key={x} value={x}>{t(`claude.effort.${x}`)}</option>)}
+    </Select>
+  )
+  const reasoningSelect = (value: ReasoningLevel, onChange: (r: ReasoningLevel) => void, label: string) => (
+    <Select className="w-40" aria-label={label} value={value} onChange={(e) => onChange(e.target.value as ReasoningLevel)}>
+      {REASONING_LEVELS.map((x) => <option key={x} value={x}>{t(`assistant.reasoning.${x}`)}</option>)}
     </Select>
   )
   const loadModels = (): void => {
@@ -79,11 +85,11 @@ export function ClaudeSection() {
         <>
           <Row label={t('claude.chat')} hint={t('claude.chatHint')}>
             {modelSelect(s.chatModel, (chatModel) => configure({ chatModel }), t('claude.chat'))}
-            {effortSelect(s.chatEffort, (chatEffort) => configure({ chatEffort }), t('claude.effortLabel'))}
+            {effortSelect(s.chatModel, s.chatEffort, (chatEffort) => configure({ chatEffort }), t('claude.effortLabel'))}
           </Row>
           <Row label={t('claude.csv')} hint={t('claude.csvHint')}>
             {modelSelect(s.csvModel, (csvModel) => configure({ csvModel }), t('claude.csv'))}
-            {effortSelect(s.csvEffort, (csvEffort) => configure({ csvEffort }), t('claude.effortLabel'))}
+            {effortSelect(s.csvModel, s.csvEffort, (csvEffort) => configure({ csvEffort }), t('claude.effortLabel'))}
           </Row>
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('claude.privacy')}</div>
         </>
@@ -93,10 +99,13 @@ export function ClaudeSection() {
           <datalist id="ai-models">{suggestions.map((m) => <option key={m} value={m} />)}</datalist>
           <Row label={t('claude.chat')} hint={t('ai.chatModelHint')}>
             {modelInput(s.aiChatModel, 'aiChatModel', t('claude.chat'), preset.suggestedModels[0])}
+            {reasoningSelect(s.aiReasoning, (aiReasoning) => configure({ aiReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           <Row label={t('claude.csv')} hint={t('ai.csvModelHint')}>
             {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
+            {reasoningSelect(s.aiCsvReasoning, (aiCsvReasoning) => configure({ aiCsvReasoning }), t('assistant.reasoningLabel'))}
           </Row>
+          <div className="border-b border-border px-5 py-3 text-xs text-muted">{t('assistant.reasoningHint')}</div>
           <Row label={t('ai.models')} hint={t('ai.modelsHint', { name: preset.id === 'custom' ? t('ai.theServer') : preset.name })}>
             <Button size="sm" disabled={loadingModels} onClick={loadModels}>{loadingModels ? t('ai.loadingModels') : t('ai.loadModels')}</Button>
           </Row>

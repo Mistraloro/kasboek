@@ -385,3 +385,40 @@ describe('review 14, low items', () => {
     expect(listRules(d).map((r) => r.id)).toEqual([ids[0], ids[1], ids[3], ids[2]])
   })
 })
+
+describe('reasoning settings', () => {
+  it('offers each Claude model its own levels and builds the request', async () => {
+    const { claudeEfforts, claudeEffort, reasoningParams } = await import('@shared/reasoning')
+    const { modelParams } = await import('../src/main/assistant/claude')
+    expect(claudeEfforts('claude-opus-5-5')).not.toContain('off')
+    expect(claudeEfforts('claude-sonnet-5-5')).toContain('off')
+    expect(claudeEffort('claude-opus-5-5', 'off')).toBe('low')
+    expect(modelParams('claude-sonnet-5-5', 'off')).toMatchObject({ thinking: { type: 'between_tools' }, output_config: { effort: 'low' } })
+    expect(modelParams('claude-haiku-5-5', 'off')).toMatchObject({ thinking: { type: 'disabled' } })
+    expect(modelParams('claude-opus-5-5', 'max')).toMatchObject({ thinking: { type: 'adaptive', display: 'summarized' }, output_config: { effort: 'max' } })
+    expect(reasoningParams('mistral', 'default')).toEqual({})
+    expect(reasoningParams('groq', 'off')).toEqual({ reasoning_effort: 'none' })
+    expect(reasoningParams('deepseek', 'off')).toEqual({ thinking: { type: 'disabled' } })
+    expect(reasoningParams('openrouter', 'medium')).toEqual({ reasoning: { effort: 'medium' } })
+  })
+
+  it('asks again without the reasoning setting when a model refuses it, and remembers', async () => {
+    const electron = await import('electron')
+    const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
+    const { json, reasoningIgnored } = await import('../src/main/assistant/openai')
+    const { PROVIDERS } = await import('@shared/ai-providers')
+    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'magistral-x', csvModel: 'magistral-x' }
+    fetch.mockReset()
+    const sent: Record<string, unknown>[] = []
+    fetch.mockImplementation(async (_u: string, init: { body: string }) => {
+      const b = JSON.parse(init.body)
+      sent.push(b)
+      if ('reasoning_effort' in b) return new Response('{"message":"Extra inputs are not permitted: reasoning_effort"}', { status: 422 })
+      return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: '{}' } }] }), { status: 200 })
+    })
+    await json(p, { system: 's', user: 'u', schema: {}, maxTokens: 1000, reasoning: { reasoning_effort: 'low' } })
+    expect(sent.map((b) => 'reasoning_effort' in b)).toEqual([true, false])
+    expect((sent[1]!['response_format'] as { type: string }).type).toBe('json_schema')
+    expect(reasoningIgnored(p, 'magistral-x')).toBe(true)
+  })
+})

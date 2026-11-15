@@ -323,7 +323,18 @@
     "checkRunning": "A rever {{file}}…",
     "checkRunningGroups": "A rever {{file}}: {{done}} de {{total}} grupos…",
     "checkFailed": "A revisão de {{file}} não terminou.",
-    "checkDone": "{{file}} revisto: {{categorised}} classificados, {{renamed}} renomeados, {{rules}} regras e {{existing}} grupos anteriores sugeridos. Veja o ecrã de importação."
+    "checkDone": "{{file}} revisto: {{categorised}} classificados, {{renamed}} renomeados, {{rules}} regras e {{existing}} grupos anteriores sugeridos. Veja o ecrã de importação.",
+    "reasoning": {
+      "default": "o do modelo",
+      "off": "desligado",
+      "low": "baixo",
+      "medium": "médio",
+      "high": "alto"
+    },
+    "reasoningOption": "Raciocínio: {{level}}",
+    "reasoningLabel": "Raciocínio",
+    "reasoningHint": "Quanto o modelo pensa antes de responder: menos é mais rápido e barato, mais ajuda com perguntas difíceis. Nem todos os modelos têm esta definição; se um modelo a recusar, o Kasboek pergunta sem ela.",
+    "reasoningUnsupported": "Este modelo não aceita uma definição de raciocínio e usa a sua."
   },
   "settings": {
     "title": "Definições",
@@ -585,7 +596,10 @@
     "effort": {
       "low": "Baixo",
       "medium": "Médio",
-      "high": "Alto"
+      "high": "Alto",
+      "off": "Sem raciocínio",
+      "xhigh": "Muito alto",
+      "max": "Máximo"
     },
     "privacy": "Recomendado: Sonnet 5.5 (médio) para a conversa, Opus 5.5 (médio) para rever CSV. Mais esforço é mais minucioso, mas mais lento e mais caro. Se os controlos de segurança da Anthropic recusarem um pedido, ele é repetido automaticamente com um modelo alternativo (não disponível para Haiku)."
   },

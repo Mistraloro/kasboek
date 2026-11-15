@@ -323,7 +323,18 @@
     "checkRunning": "Checking {{file}}…",
     "checkRunningGroups": "Checking {{file}}: {{done}} of {{total}} groups…",
     "checkFailed": "The check of {{file}} didn’t finish.",
-    "checkDone": "Checked {{file}}: {{categorised}} categorised, {{renamed}} renamed, {{rules}} rules and {{existing}} older groups suggested. See the import screen."
+    "checkDone": "Checked {{file}}: {{categorised}} categorised, {{renamed}} renamed, {{rules}} rules and {{existing}} older groups suggested. See the import screen.",
+    "reasoning": {
+      "default": "model default",
+      "off": "off",
+      "low": "low",
+      "medium": "medium",
+      "high": "high"
+    },
+    "reasoningOption": "Reasoning: {{level}}",
+    "reasoningLabel": "Reasoning",
+    "reasoningHint": "How much the model thinks before answering: less is faster and cheaper, more helps with harder questions. Not every model has this setting; if a model refuses it, Kasboek asks without it.",
+    "reasoningUnsupported": "This model doesn't take a reasoning setting and uses its own."
   },
   "settings": {
     "title": "Settings",
@@ -585,7 +596,10 @@
     "effort": {
       "low": "Low",
       "medium": "Medium",
-      "high": "High"
+      "high": "High",
+      "off": "Thinking off",
+      "xhigh": "Extra high",
+      "max": "Maximum"
     },
     "privacy": "Recommended: Sonnet 5.5 (medium) for chat, Opus 5.5 (medium) for CSV checks. Higher effort is more thorough but slower and costs more. If a request is declined by Anthropic’s safety checks, it’s retried automatically on a fallback model (not available for Haiku)."
   },

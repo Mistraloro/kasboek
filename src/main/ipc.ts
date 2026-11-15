@@ -22,6 +22,7 @@ import { checkKey } from './assistant/claude'
 import { activeProvider, keyName } from './assistant/provider'
 import { checkProviderKey, listProviderModels } from './assistant/models'
 import { PROVIDERS } from '@shared/ai-providers'
+import { claudeEffort } from '@shared/reasoning'
 import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
@@ -257,6 +258,13 @@ const desktopOps: OpTable = {
         const preset = PROVIDERS[patch.aiProvider]
         patch = { aiChatModel: preset.suggestedModels[0] ?? '', aiCsvModel: '', aiBaseUrl: null, ...patch }
       }
+      // A model that can't stop thinking gets the lowest level instead of "off".
+      const model = patch.chatModel ?? before.chatModel
+      const effort = patch.chatEffort ?? before.chatEffort
+      if (claudeEffort(model, effort) !== effort) patch = { ...patch, chatEffort: claudeEffort(model, effort) }
+      const csvModel = patch.csvModel ?? before.csvModel
+      const csvEffort = patch.csvEffort ?? before.csvEffort
+      if (claudeEffort(csvModel, csvEffort) !== csvEffort) patch = { ...patch, csvEffort: claudeEffort(csvModel, csvEffort) }
       const next = updateSettings(db, patch)
       // The conversation is tied to one provider's message format.
       if (next.aiProvider !== before.aiProvider) resetChat()

@@ -15,6 +15,7 @@ import { activeProvider, isConfigured, requireConfigured } from './provider'
 import { PROVIDERS } from '@shared/ai-providers'
 import { assistantTools, compactResult, describeChange, opForTool, precheck } from './tools'
 import { localToday } from '@shared/month'
+import { reasoningParams } from '@shared/reasoning'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 let run: Run | null = null
@@ -52,7 +53,14 @@ function status(): AssistantStatus {
   } catch {
     // Locked.
   }
-  return { configured, keyHint, provider: preset.id, providerName: preset.assistantName, company: preset.company, busy: !!busy, messages: display }
+  let reasoningUnsupported = false
+  try {
+    const p = activeProvider(db())
+    reasoningUnsupported = p.preset.id !== 'anthropic' && openai.reasoningIgnored(p, p.chatModel)
+  } catch {
+    // Locked.
+  }
+  return { configured, keyHint, provider: preset.id, providerName: preset.assistantName, company: preset.company, busy: !!busy, messages: display, reasoningUnsupported }
 }
 
 let timer: NodeJS.Timeout | null = null
@@ -182,14 +190,12 @@ export function send(text: string): AssistantStatus {
     history,
     {
       call: async (messages, onText, signal, onThinking) => {
-        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 32000 }, onText, signal, onThinking)
+        if (!anthropic) return openai.chat(provider, { system, messages, tools, maxTokens: 32000, reasoning: reasoningParams(provider.preset.id, settings.aiReasoning) }, onText, signal, onThinking)
         const stream = anthropic.beta.messages.stream(
           {
             ...modelParams(settings.chatModel, settings.chatEffort),
             max_tokens: 32000,
             system,
-            // A readable summary of Claude's reasoning, shown in the panel (the default is empty).
-            thinking: { type: 'adaptive', display: 'summarized' },
             cache_control: { type: 'ephemeral' },
             tools,
             messages

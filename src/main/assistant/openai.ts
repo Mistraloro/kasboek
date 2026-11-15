@@ -220,6 +220,34 @@ function post(p: ActiveProvider, path: string, body: unknown, signal?: AbortSign
   return request(p, path, { method: 'POST', body }, signal, stream ? { timeoutMs: CHAT_TIMEOUT_MS, idleMs: IDLE_MS } : { timeoutMs: CHAT_TIMEOUT_MS })
 }
 
+/** Models (by address and name) that refused the reasoning fields: sent without them from then on. */
+const noReasoning = new Set<string>()
+export const reasoningIgnored = (p: ActiveProvider, model: string): boolean => noReasoning.has(`${p.baseUrl}|${model}`)
+
+/**
+ * Posts with two retries for a refused request: a too-high output limit is lowered to a common
+ * one, and reasoning fields a model doesn't take are left out (and remembered for that model).
+ */
+async function withFallbacks(p: ActiveProvider, model: string, body: Record<string, unknown>, reasoning: Record<string, unknown>, signal: AbortSignal | undefined, stream: boolean): Promise<Open> {
+  const key = `${p.baseUrl}|${model}`
+  let extra = Object.keys(reasoning).length && !noReasoning.has(key) ? reasoning : {}
+  let maxTokens = body['max_tokens'] as number
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await post(p, '/chat/completions', { ...body, ...extra, max_tokens: maxTokens }, signal, stream)
+    } catch (err) {
+      const refused = err instanceof ProviderError && (err.status === 400 || err.status === 422) && !signal?.aborted
+      if (!refused || attempt >= 2) throw err
+      if (/token/i.test(err.message) && maxTokens > 8192) maxTokens = 8192
+      // Only when the refusal is about the reasoning fields (or unknown fields), not the schema.
+      else if (Object.keys(extra).length && !/schema|response_format/i.test(err.message) && /reason|think|effort|extra|unrecogni|unknown|not (permitted|supported|allowed)|unsupported|invalid/i.test(err.message)) {
+        noReasoning.add(key)
+        extra = {}
+      } else throw err
+    }
+  }
+}
+
 /** Reads a server-sent-events stream of `data: {json}` lines. */
 async function* events(open: Open, signal: AbortSignal): AsyncGenerator<unknown> {
   const res = open.res
@@ -310,21 +338,14 @@ function plainSchema(schema: unknown): unknown {
 /** One streamed chat call with tools; returns the result in Anthropic's message shape for the loop. */
 export async function chat(
   p: ActiveProvider,
-  opts: { system: string; messages: MessageParam[]; tools: { name: string; description: string; input_schema: unknown }[]; maxTokens: number },
+  opts: { system: string; messages: MessageParam[]; tools: { name: string; description: string; input_schema: unknown }[]; maxTokens: number; reasoning?: Record<string, unknown> },
   onText: (t: string) => void,
   signal: AbortSignal,
   onThinking?: (t: string) => void
 ): Promise<Message> {
   const tools: OaTool[] = opts.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: plainSchema(t.input_schema) } }))
   const body = { model: p.chatModel, messages: toOpenAi(opts.system, opts.messages, { toolNames: p.preset.id === 'mistral' }), tools, stream: true, max_tokens: opts.maxTokens }
-  let res: Open
-  try {
-    res = await post(p, '/chat/completions', body, signal, true)
-  } catch (err) {
-    // Some models allow fewer output tokens than asked for: try again with a common limit.
-    if (!(err instanceof ProviderError) || (err.status !== 400 && err.status !== 422) || signal.aborted || !/token/i.test(err.message) || opts.maxTokens <= 8192) throw err
-    res = await post(p, '/chat/completions', { ...body, max_tokens: 8192 }, signal, true)
-  }
+  const res = await withFallbacks(p, p.chatModel, body, opts.reasoning ?? {}, signal, true)
   let text = ''
   let finish: string | null = null
   const calls: { id: string; name: string; args: string }[] = []
@@ -375,7 +396,17 @@ export async function chat(
  */
 export async function json(
   p: ActiveProvider,
-  opts: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number; signal?: AbortSignal; /** Streams the model's reasoning, where it shares it. */ onThinking?: (t: string) => void }
+  opts: {
+    system: string
+    user: string
+    schema: Record<string, unknown>
+    maxTokens: number
+    signal?: AbortSignal
+    /** Streams the model's reasoning, where it shares it. */
+    onThinking?: (t: string) => void
+    /** Fields that set how much the model reasons (see reasoningParams). */
+    reasoning?: Record<string, unknown>
+  }
 ): Promise<string> {
   const stream = !!opts.onThinking
   const strict = { response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }, messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }] }
@@ -390,17 +421,14 @@ export async function json(
   // A strict schema where the provider supports it, else plain JSON mode. A too-high output limit
   // is lowered first (keeping the schema); only a refused schema drops it.
   let strictMode = true
-  let maxTokens = opts.maxTokens
   let open: Open
   for (;;) {
     try {
-      open = await post(p, '/chat/completions', { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: maxTokens, ...(stream ? { stream: true } : {}) }, opts.signal, stream)
+      open = await withFallbacks(p, p.csvModel, { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: opts.maxTokens, ...(stream ? { stream: true } : {}) }, opts.reasoning ?? {}, opts.signal, stream)
       break
     } catch (err) {
-      if (!rejected(err)) throw err
-      if (/token/i.test(err.message) && maxTokens > 8192) maxTokens = 8192
-      else if (strictMode) strictMode = false
-      else throw err
+      if (!rejected(err) || !strictMode) throw err
+      strictMode = false
     }
   }
   let text = ''

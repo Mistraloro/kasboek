@@ -323,7 +323,18 @@
     "checkRunning": "Vérification de {{file}}…",
     "checkRunningGroups": "Vérification de {{file}} : {{done}} groupes sur {{total}}…",
     "checkFailed": "La vérification de {{file}} n’a pas abouti.",
-    "checkDone": "{{file}} vérifié : {{categorised}} classées, {{renamed}} renommées, {{rules}} règles et {{existing}} groupes plus anciens proposés. Voir l’écran d’import."
+    "checkDone": "{{file}} vérifié : {{categorised}} classées, {{renamed}} renommées, {{rules}} règles et {{existing}} groupes plus anciens proposés. Voir l’écran d’import.",
+    "reasoning": {
+      "default": "par défaut du modèle",
+      "off": "désactivée",
+      "low": "faible",
+      "medium": "moyenne",
+      "high": "élevée"
+    },
+    "reasoningOption": "Réflexion : {{level}}",
+    "reasoningLabel": "Réflexion",
+    "reasoningHint": "Combien le modèle réfléchit avant de répondre : moins est plus rapide et moins cher, plus aide pour les questions difficiles. Tous les modèles n’ont pas ce réglage ; si un modèle le refuse, Kasboek demande sans.",
+    "reasoningUnsupported": "Ce modèle n’accepte pas de réglage de réflexion et utilise le sien."
   },
   "settings": {
     "title": "Réglages",
@@ -585,7 +596,10 @@
     "effort": {
       "low": "Faible",
       "medium": "Moyen",
-      "high": "Élevé"
+      "high": "Élevé",
+      "off": "Réflexion désactivée",
+      "xhigh": "Très élevé",
+      "max": "Maximum"
     },
     "privacy": "Recommandé : Sonnet 5.5 (moyen) pour la discussion, Opus 5.5 (moyen) pour vérifier les CSV. Plus d’effort est plus approfondi mais plus lent et plus cher. Si une demande est refusée par les contrôles de sécurité d’Anthropic, elle est réessayée automatiquement sur un modèle de secours (pas pour Haiku)."
   },

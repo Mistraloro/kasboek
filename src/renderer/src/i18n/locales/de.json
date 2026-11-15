@@ -323,7 +323,18 @@
     "checkRunning": "{{file}} wird geprüft…",
     "checkRunningGroups": "{{file}} wird geprüft: {{done}} von {{total}} Gruppen…",
     "checkFailed": "Die Prüfung von {{file}} wurde nicht abgeschlossen.",
-    "checkDone": "{{file}} geprüft: {{categorised}} eingeordnet, {{renamed}} umbenannt, {{rules}} Regeln und {{existing}} ältere Gruppen vorgeschlagen. Siehe Importseite."
+    "checkDone": "{{file}} geprüft: {{categorised}} eingeordnet, {{renamed}} umbenannt, {{rules}} Regeln und {{existing}} ältere Gruppen vorgeschlagen. Siehe Importseite.",
+    "reasoning": {
+      "default": "Standard des Modells",
+      "off": "aus",
+      "low": "niedrig",
+      "medium": "mittel",
+      "high": "hoch"
+    },
+    "reasoningOption": "Nachdenken: {{level}}",
+    "reasoningLabel": "Nachdenken",
+    "reasoningHint": "Wie viel das Modell vor der Antwort nachdenkt: weniger ist schneller und günstiger, mehr hilft bei schwierigen Fragen. Nicht jedes Modell hat diese Einstellung; lehnt ein Modell sie ab, fragt Kasboek ohne.",
+    "reasoningUnsupported": "Dieses Modell nimmt keine Einstellung fürs Nachdenken an und nutzt seine eigene."
   },
   "settings": {
     "title": "Einstellungen",
@@ -585,7 +596,10 @@
     "effort": {
       "low": "Niedrig",
       "medium": "Mittel",
-      "high": "Hoch"
+      "high": "Hoch",
+      "off": "Denken aus",
+      "xhigh": "Sehr hoch",
+      "max": "Maximal"
     },
     "privacy": "Empfohlen: Sonnet 5.5 (mittel) für den Chat, Opus 5.5 (mittel) für CSV-Prüfungen. Mehr Aufwand ist gründlicher, aber langsamer und teurer. Lehnen die Sicherheitsprüfungen von Anthropic eine Anfrage ab, wird sie automatisch mit einem Ersatzmodell wiederholt (nicht für Haiku)."
   },
