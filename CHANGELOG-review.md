@@ -1,200 +1,112 @@
-# Kasboek: changes since build 12 (a299a7d), for review
+# Kasboek: changes since build 14 (824f4f3), for review
 
-**What this covers:**
-- **Range:** branch `ccr-0f0084e8-2jcj1g`, commits `02cd432` to `824f4f3`. That is 45 files, about 2,750 lines added and 310 removed.
-- **Build:** CI run 14 (`824f4f3`) is green on Windows, macOS and Linux.
-- **Tests:** 87 vitest tests pass, plus the Go helper tests. Typecheck, lint and the i18n check are clean.
+**What this covers**
+- **Range:** branch `ccr-0f0084e8-2jcj1g`, commits `cf32f63` to `8679bc2`. That is 67 files, about 4,440 lines added and 380 removed.
+- **Version:** still `0.10.0`. It is raised to 0.11.0 when the next installer is built (`CLAUDE.md`).
+- **Not built yet:** nothing has been built since build 14.
 
-**Testing done:**
-- **Not tested** against the real Mistral or Anthropic APIs. The CSV Check was tested end to end in the Electron app with a fake OpenAI-compatible server, on a 752-row Hello bank! export.
+**Checks run**
+- 112 vitest tests pass; typecheck, lint and the i18n check are clean.
+- Electron end-to-end flows were run with a fake OpenAI-compatible server and a real 752-row Hello bank! export:
+  - a Check in 3 parts, with one part timing out;
+  - reasoning streamed into the assistant panel;
+  - switching tabs while a check runs;
+  - the tray menu;
+  - the PDF/CSV export;
+  - the net worth ranges and the month picker.
+- Nothing was run against the live Mistral or Anthropic APIs.
 
-**Context the reviewer needs:**
-- **Stack:** Electron + TypeScript.
-- **Layout:**
-  - `src/core`: logic, with no Electron;
-  - `src/main`: the Electron main process (assistant, MCP bridge, IPC);
-  - `src/renderer`: the React UI;
-  - `src/shared`: the contract (zod), types and formats;
-  - `tools/kasboek-mcp`: the Go MCP helper.
-- **Rule:** every change that writes data goes through an op in `src/core/ops.ts` and `src/main/ipc.ts`. Assistant and MCP changes wait for the person to approve them.
-- **Earlier decisions to respect:**
-  - Bank-text clean-up is done by the AI, not by per-bank code.
-  - Main-process logs stay in English only.
-  - No Excel importer.
+**Layout and rules for the reviewer**
+- **Layout:** `src/core` holds the logic (no Electron), `src/main` the main process, `src/renderer` the React UI, `src/shared` the contract, types and formats.
+- **Writes:** every change goes through an op (`src/core/ops.ts`, `src/main/ipc.ts`). Assistant and MCP changes wait for approval.
+- **Decisions to keep:**
+  - the AI tidies the bank text (there is no per-bank cleaner);
+  - logs are in English;
+  - there is no Excel importer.
+
+**Migrations**
+- **Version:** schema 7 at build 14, now 10.
+- **Upgrade test:** `tests/upgrade.test.ts` upgrades a schema-7 database.
+- **The migrations:**
+  - **8:** placeholder references become NULL (with the fingerprint recomputed), and short `contains` rules become `word` rules.
+  - **9:** `transactions.bank_counterparty` and `bank_description` are added. The rules table is rebuilt to allow `field = 'iban'`, keeping ids and uids, and its sync triggers are made again.
+  - **10:** adds `transactions.transfer_pair`, the tables `transaction_splits` and `goals` (both synced), and the view `tx_lines`.
 
 ---
 
-## 1. Assistant prompts and replies
+## 1. Fixes from the build 14 review (items 1–22)
 
-**`02cd432`: example prompts**
-- The Keytrade/CSV example was removed: it named one bank, and the chat can't take files.
-- New examples in all 8 locales, and in `scripts/regional-locales.py`.
+| # | What changed | Where |
+|---|---|---|
+| 1 | Placeholder references (`2026-`, empty, `-`, `0`, a year alone) count as none. A new row with a real reference also matches an earlier pending row through its fingerprint without the reference (path 2b). A possible duplicate is only excluded on a conflicting reference when the existing reference is a real one. A migration cleans the stored rows. | `realReference` in `csv/normalize.ts`; `buildRows` in `import.ts`; migration 8 |
+| 2 | Check runs in parts of 80 groups, 3 at a time. Group numbers in the context are global. Only part 1 carries the column check and the flagged rows. Each part has its own 4-minute limit (`KASBOEK_CHECK_LIMIT_MS` shortens it, dev builds only). Parts that finish are kept, with a note naming the failed ones. Progress arrives as `import.checkProgress` events. | `batches`, `mergePlans`, `pool`, `runParts` in `main/assistant/csv.ts` |
+| 3 | "Apply selected" categorises only transactions still without a category, and reports how many it skipped. | `categorizeTransactions(…, { onlyUncategorised })`, `applyCheckProposals` |
+| 4 | Option (a): the bank's own text is stored next to the readable text. Rules, `previewRule`, `applyRule`, `checkRules` and `similarity()` read both (`RuleText`, `RULE_COLUMNS`, `ruleText()`). New rule field `iban` matches the counterparty IBAN exactly, after normalising. **Also new:** `learnedNames()`. An import row whose bank text was tidied earlier gets that readable name and description. Without this, a rule made on a readable name would never fire on the next raw import. | `finance.ts`, `import.ts`, migration 9 |
+| 5 | `groupKey` adds the normalised communication for transfers (rows with a counterparty IBAN), except structured communications (`+++…+++`). | `assist-plan.ts` |
+| 6 | `accounts.create` and the first bank balance are saved in one database transaction. | `ops.ts` |
+| 7 | `localToday()` replaces the `toISOString().slice(0,10)` "today" defaults. | `shared/month.ts` |
+| 8 | `balances.set` is refused for investment accounts, and `valuations.set` for bank accounts. A new investment account gets a valuation at creation. | `balance.ts`, `ops.ts` |
+| 9 | The approval text for `import.commit` names the rows, total, dates, account and the closing balance it records (`commitSummary`). A refused balance is logged and returned as `balanceNote`. | `import.ts`, `tools.ts` |
+| 10, 11 | `settleTurn()` handles a turn that stops or fails: an unanswered tool call is dropped; when tools already ran, the turn is closed with an assistant note; when nothing ran, the turn is taken back. Two user messages never follow each other. | `main/assistant/chat.ts` |
+| 12 | `request()` returns `Open {res, touch, close, timedOut}`. The time limit covers getting an answer; streams then use a 90-second silence limit (`IDLE_MS`), with a `ProviderError` saying "no answer for …". `readJson` covers reading non-streamed answers. | `openai.ts` |
+| 13 | The body of a failed answer is cancelled before retrying. When `Retry-After` is over 20 s there is no retry (`retryDelay` returns null). | `openai.ts` |
+| 14 | `json()` retry order: on an error mentioning tokens it retries the strict schema at 8192 tokens; only after that does it fall back to `json_object`. | `openai.ts` |
+| 15 | A second Check keeps the first check's snapshot and merges the part indices. The summary shows what "Apply selected" already saved (`CheckSummary.applied`). | `csv.ts`, `import.ts`, `Import.tsx` |
+| 16 | Short `contains` rules become `word` rules. | migration 8 |
+| 17 | `maskIban` also finds IBANs stuck to other text (`(?<![A-Z])`). It checks the country length and the mod-97 checksum. | `csv.ts` |
+| 18 | `reorderRules` writes only the priorities that changed. | `finance.ts` |
+| 19 | Locking, or switching MCP off, broadcasts `mcp.expired` for each waiting approval. | `bridge.ts` |
+| 20 | Settings shows the build commit next to the version (`__BUILD_COMMIT__`, from `GITHUB_SHA` or `git rev-parse`). The version rule is in `CLAUDE.md`. | `electron.vite.config.ts`, `ipc.ts` |
+| 21 | The package check is now `scripts/check-package.sh`. It was run locally: it passes on a clean package and fails on one with a planted `src/foo.ts`. | `.github/workflows/build.yml` |
+| 22 | The release notes say to update every synced computer. | `.github/release-notes.md` |
 
-**`a1d28ae`: replies that hit the length limit**
-- `src/main/assistant/chat.ts`: OpenAI-compatible providers get `maxTokens` 32000 instead of 8192.
-- `openai.chat`: on a 400/422 that mentions tokens, it retries once with 8192.
-- `src/core/assistant-loop.ts`: on `max_tokens`, the loop no longer ends the turn.
-  - A partial tool call is dropped, and any text written so far is kept.
-  - A "continue in smaller steps" note is appended by `nudge()`. It is merged into the last user message when that one ends with tool results, so roles keep alternating.
-  - This happens at most twice (`MAX_CONTINUES = 2`).
-- **System prompt:** prefer `rules_create` for repeating payees; at most 200 ids per call; keep reasoning short.
-- **Tests:** `tests/assistant-loop.test.ts`.
+## 2. Improvements the user asked for
 
-## 2. CSV Check (`e097198`, `9d81625`)
+- **The open import survives switching tabs**
+  - The import screen loads `import.current` and `import.assistStatus` when it opens.
+  - A check's result arrives as an `import.checkDone` event, not as the result of the invoke.
+  - Closing the import cancels its check.
+- **Check reasoning in the assistant panel**
+  - `checkActivity()` in `chat.ts` adds a display-only message with `check: {fileName, groupsDone, …}`, one reasoning section per part, and the notes at the end. The chat history the model sees is unchanged.
+  - `openai.json()` streams when `onThinking` is given, and still reads plain-JSON answers.
+  - The Claude path uses `thinking: {type: 'adaptive', display: 'summarized'}`.
+  - The notes are written in `noteLanguage`, the app's language.
+- **Tray icon** (`src/main/tray.ts`)
+  - It shows whether the connection is on, and when a Claude app last used it.
+  - The menu has "Stop/Allow Claude connection" (sets `mcpEnabled` and broadcasts `settings.changed`), "Open Kasboek" and "Quit Kasboek", in a small table of 7 languages.
+  - In dev builds, `__kasboekTray` lets tests read and click the menu.
 
-### 2.1 Names and descriptions
-- **Plan per group:** `{group, categoryId, name, description}` (see `src/core/assist-plan.ts`). `applyPlan` in `src/main/assistant/csv.ts` writes `counterpartyName` and `description` overrides on every ready row of the group.
-- **Duplicate detection stays on the raw text:**
-  - `src/core/import.ts` `buildRows` computes the fingerprint from the raw bank text (`c.*`, with merged date and amount).
-  - `commit` passes that fingerprint to `insertTransaction` (`NewTx.fingerprint`).
-  - So a cleaned-up name still matches on re-import.
-- **Rules:** they match the cleaned text or the raw text.
+## 3. New features
 
-### 2.2 Already-imported rows and older transactions
-- **Why Check seemed to do nothing:** re-importing a known file made every row `duplicate`, and Check skipped those silently.
-- **Grouping:** `rowGroups(rows, existing)` now groups the import's ready rows together with the account's uncategorised transactions already in the database (`existingUncategorised`, at most 5000).
-- **Context sent to the model:** the group line format is `group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text`.
-- **Categories for older transactions:** for the database rows, `applyPlan` builds `existing` proposals only. Nothing is written until the person accepts (see 2.5).
-- **Nothing to check:** if there are no groups, no problems and no possible duplicates, Check throws `assistant.nothing_to_check`.
+| Feature | Core | UI | Assistant |
+|---|---|---|---|
+| **Transfers between own accounts** | `transfers.ts`: `findTransfers` matches the same amount in another account within 3 days. It is sure when the counterparty IBAN is the other account's number. `pairTransfers` sets a shared `transfer_pair` key and a transfer category. `commit` pairs the sure ones at once (`transfersPaired`, `transfersSuggested`). | Transactions → Transfers window; a ⇄ badge; "Separate" in the transaction window | `transfers_find`, `transfers_pair` (approval) |
+| **Refunds** | `INCOME_SQL` and `SPENDING_SQL`: money in within a spending category lowers spending, and money out of an income category lowers income. Used by the month, year and years totals. | A hint in the transaction window | n/a |
+| **Split transactions** | The `transaction_splits` table. `setSplits` checks that the parts add up to the transaction. Summaries and budgets read the view `tx_lines`. | Split editor in the transaction window | `transactions_split` (approval) |
+| **Fixed costs** | `recurring.ts`: same payee, a weekly, monthly, quarterly or yearly rhythm (±20%), a steady amount, 14 months of history. Status paid, due or late (7 grace days), price changes, monthly totals. | The "Fixed costs" page | `recurring_list` |
+| **Monthly review** | `review.ts` `monthReview`: each category against the 3 months before, budgets over, and unusual payments (over 2.5× the payee's usual amount, or a large first payment). | A "Review with …" button on the Overview | `summary_review` |
+| **Warnings** | `alerts.ts`: budgets at 80% or more, and current accounts with a known balance that would go below zero before the next income, counting the fixed costs due until then. | Overview banners; system notifications in `main/notify.ts`, once per key per run, every 10 minutes | `alerts_list` |
+| **Savings goals** | `goals.ts` (synced table): follows an account's balance (converted to the main currency) or an amount kept by hand. Gives the amount per month to the target date. | The "Goals" page | `goals_list`, `goals_create` (approval) |
+| **Bulk editing and saved searches** | `renameTransactions`; `searches.save` and `searches.delete` in `settings.savedSearches`, stored in the encrypted database and not synced | Rename, and "Pair as transfer" for 2 selected rows; a saved-search picker | `transactions_rename` (approval) |
+| **Export** | `transactionsCsv`: one line per transaction or split part, ISO dates, the person's decimal mark, `;` between fields when that mark is a comma, and a BOM. `main/export.ts` holds the save dialog and the PDF printing: a hidden window on its own session, with JavaScript off and only `data:` URLs allowed. | Year page: "Export CSV" and "Report (PDF)" (HTML built by the UI in its language). Transactions: export of the current filter | n/a |
+| **Net worth ranges** | `NetWorth.firstMonth` | Ranges longer than the history are disabled with a tip, the choice falls back, and the chart says where the history starts | n/a |
+| **Month picker** | n/a | `MonthNav` (Overview, Budgets): click the month for a year-and-month grid and "This month" | n/a |
 
-### 2.3 Suggested rules (`checkRules` in `csv.ts`)
-- **Plan field:** `rules: {group, field, match, pattern, categoryId}[]`. `parsePlan` defaults `match` to `contains` and accepts plans without `rules`.
-- **A rule is dropped, with a reason in `summary.dropped`, if:**
-  - the pattern is under 4 characters;
-  - it doesn't match every row and every existing transaction of its group. Group membership is taken from the groups as sent, by row index, because names may have changed since;
-  - it matches more than 5 other groups ("too general"; in testing this caught "BANKREFERENTIE");
-  - it would catch rows or uncategorised transactions of other groups whose planned category differs (null counts as different);
-  - categorised transactions in another category outnumber `max(1, agreeing / 5)`.
-- **Also skipped silently:** duplicates of existing rules.
+## 4. Smaller changes
+- Searching transactions also looks at the bank's own text.
+- The assistant system prompt says when to use the new tools.
+- `installSyncSchema` skips tables that later migrations create. `createSyncTriggers` was split out so a rebuilt or new table can get its triggers.
+- The tests for this build are:
+  - `tests/review-fixes.test.ts` (extended);
+  - `tests/features.test.ts` (new);
+  - `tests/upgrade.test.ts` (new);
+  - `tests/balance.test.ts` and `tests/sync.test.ts` (extended).
 
-### 2.4 Duplicate detection (`buildRows` in `import.ts`)
-1. **Bank reference:** a reference that is unique within the file and already exists for the account means `duplicate`. A reference repeated in the file (a statement number) is ignored.
-2. **Exact fingerprint:** the n-th copy is a duplicate only if the account already has n of them.
-3. **New status `possible_duplicate`:**
-   - Conditions: same amount, booking date within ±3 days, token-overlap similarity of at least 0.6 (`similarity()`), a different fingerprint, and no conflicting bank reference.
-   - Not imported unless the person includes it.
-   - The row gets `match` (the existing transaction) and the issue `possible_duplicate`.
-- **Matching once:** each existing transaction is matched by at most one row (the `claimed` set).
-- **Stats:** `possibleDuplicates`, `fileFrom` and `fileTo` were added.
-- **Indexes:** migration 6 adds `idx_tx_bank_reference` and `idx_tx_account_amount`.
-
-### 2.5 Check state, undo and apply
-- **Session state:** `CheckState` holds a snapshot of the overrides and mapping from before the check, plus the row indices each part changed (`categories`, `names`, `fixes`) and the transaction ids per proposal.
-- **`import.checkUndo {part}`:** restores only that part's fields (`PART_FIELDS`). `all` restores the whole snapshot.
-- **`import.checkApply {rules[], existing[]}`:** in one database transaction, it categorises the ticked existing groups, then creates the ticked rules with `applyToExisting` (an existing duplicate rule is ignored). This is the person's approval, given by clicking in the UI; the assistant can't call it (`assistant: false`).
-- **UI:** `CheckSummaryCard` in `src/renderer/src/pages/Import.tsx`.
-  - It lists what Check did, with an Undo per part.
-  - It shows checklists for existing categorisations and rules, an "Apply selected" button, and the dropped suggestions.
-- **Fully imported file (E1):** a banner, Discard as the main button, the Check button relabelled "Categorise with …", and the period and amount line hidden.
-
-### 2.6 Context and privacy
-- **IBANs:** masked to `CC…1234` in raw cells, group texts and matches (`maskIban`). The account's own IBAN is no longer sent.
-- **Flagged rows:** up to 150, spread over the whole file (`spread`). Exact duplicates are no longer sent.
-- **CSV `json()` call:** asks for 32000 output tokens. The order is strict `json_schema`, then `json_object`, then 8192 tokens if the error mentions tokens.
-
-## 3. Rules engine (`src/core/finance.ts`, migration 6)
-- **New columns:** `rules.match` (`contains | word | starts`) and `rules.priority`. Both are in the sync spec (`sync-schema.ts`).
-- **Matching:**
-  - `textMatches` folds case and accents.
-  - `word` mode uses a Unicode letter/number boundary regex, cached.
-  - A `contains` pattern under 4 characters is stored as `word` (`effectiveMatch`).
-- **Order:** `priority DESC`, then counterparty rules first, then longer patterns, then id.
-- **New functions:** `previewRule`, `updateRule`, `reorderRules`.
-- **Speed:** `insertTransaction(db, t, rules?)`, so a commit reads the rules once.
-- **New ops:**
-  - `rules.preview` (assistant: yes);
-  - `rules.update` (assistant: yes, approval needed);
-  - `rules.reorder` (UI only);
-  - `rules.delete` is now open to the assistant, with approval.
-- **New op `transactions.edit`:** for the assistant, with approval. It changes only category, notes, description and counterparty.
-- **UI (`Budgets.tsx` RulesModal):** a match selector, a live preview, and up/down ordering.
-
-## 4. Assistant tools and the MCP bridge
-- **`compactResult(op, data, input)`:**
-  - `fitJson` always returns valid JSON. Lists keep as many whole items as fit in 60k characters (binary search) and add `truncated`, `shown`, `of` and `nextOffset`.
-  - Items of `transactions.list` are slimmed (`slimItem`).
-  - Import previews include the `check` summary.
-- **Approval texts (`describeChange`):**
-  - `transactions.categorize` now shows the count, total, date range and top payees;
-  - new texts for `transactions.edit`, `rules.update`, `rules.delete` and `balances.set`;
-  - `rules.create` shows how many transactions it reaches.
-- **Bridge (`src/main/mcp/bridge.ts`):**
-  - every request gets a reply, also when `handle` throws;
-  - no writing to a socket that is already closed;
-  - approvals wait 10 minutes and then broadcast `mcp.expired`;
-  - listen errors are kept (`mcpBridgeError`), retried every 30 seconds, and shown in Settings → Assistant (`McpSetupStatus.bridgeError`).
-- **Pipe name (`channel.ts`):** random on each start and published in the discovery file. The Go helper already reads the path from that file.
-- **UI (`McpRequests.tsx`):** an expired state, a count of waiting requests, and "Approve all N" for queued requests of the same op.
-
-## 5. OpenAI-compatible providers (`src/main/assistant/openai.ts`)
-- **`request()`:**
-  - a timeout (10 minutes for chat and json, 30 seconds for `/models`) combined with the caller's signal;
-  - two retries on network errors and on 429/500/502/503/504, before any of the body is read;
-  - honours `Retry-After` (up to 20 seconds), else waits 1 s, then 3 s.
-- **`toOpenAi`:** inserts an assistant `'…'` message between a `tool` message and a following `user` message (Mistral rejects user after tool).
-- **`chat.ts`:** a turn that stops after tool results gets an assistant message, "(Stopped before finishing.)".
-- **`chatModels`:**
-  - drops entries with `deprecation`, and entries whose `capabilities` lack `completion_chat` or `function_calling`;
-  - entries with the same set of names count as one model, and the `-latest` alias is preferred.
-- **`ipc.ts` `assistant.setKey`:** the key is checked against the address of its own provider. The stored `aiBaseUrl` counts only when that provider is the active one.
-- **Settings:** the CSV model field placeholder says "Same as the chat model (…)".
-
-## 6. Bank balance (`2c48f3f`)
-- **Problem:** the opening balance was always 0 (no UI asked for it), so balances were wrong after an import.
-- **Storage:** checkpoints are rows in the existing `valuations` table, meaning the balance at the end of that day. They already sync.
-- **`src/core/balance.ts`:**
-  - `balanceOn(date)`:
-    - from the latest checkpoint on or before the date, plus the transactions since;
-    - else back from the first checkpoint after it;
-    - else the opening balance plus all transactions.
-  - `currentBalance`: the last checkpoint plus everything after it.
-  - `setBankBalance`: refuses future dates. Before saving, it computes what Kasboek expected from the other checkpoints, and returns `expectedCents` and `differenceCents`. The difference is null for investment accounts, where changes are gains.
-  - `listBankBalances`: newest first, each balance compared with the one before it.
-  - Transactions in another currency are converted with `fx()` at their booking date.
-- **Integration:**
-  - `finance.accountBalances` uses `currentBalance` for accounts that have checkpoints;
-  - `wealth.valueOn` works back from the first checkpoint for non-investment accounts;
-  - `accounts.list` adds `lastBankBalance {date, balanceCents, differenceCents}`;
-  - `accounts.create` accepts `bankBalance {date, cents}`;
-  - new ops `balances.list` and `balances.set` (assistant, with approval).
-- **CSV:**
-  - new mapping column `balance`, with synonyms such as saldo, solde, balance and kontostand;
-  - `CleanRow.balanceCents`;
-  - `fileBalance()` takes the balance after the last transaction of the last day, for files in either date order;
-  - `commit` records it (note "From the CSV"; investment accounts skipped).
-  - `commit` now returns `ImportCommitResult {lastDate, balanceOnLastDate, bankBalance, askBalance}`.
-  - The assistant's mapping schema has `balance`. `parsePlan` fills missing column keys with null.
-- **UI (`src/renderer/src/components/BankBalance.tsx`):**
-  - `BankBalanceModal`, opened from Settings → Accounts and the Net worth page for non-investment accounts;
-  - `ImportBalanceCheck` in the banner after an import. It asks when the account has no checkpoint; otherwise it shows Kasboek's balance and a "Compare" link;
-  - a balance field in the new-account form;
-  - a warning in the account row when the latest checkpoint doesn't match.
-
-## 7. Packaging and CI
-- **`electron-builder.yml`:** each platform's `files` used to contain only an exclusion. electron-builder then fell back to `**/*`, so the app package held `src/`, `tests/`, `tools/`, `scripts/` and old `release/` builds. The platform sections now list `out/**`, `resources/**` and `package.json` again.
-- **`.github/workflows/build.yml`:** a new step lists `app.asar` and fails if it holds sources, tests, tools, scripts, releases or `.ts` files outside node_modules. In `824f4f3`, `|| true` was added after the grep, because with pipefail a grep that found nothing failed the step.
-
-## 8. Translations
-- **New keys** in en, nl, fr, de, es and pt-PT for `mcp.*`, `budgets.match*` and `budgets.reach*`, `import.check.*`, `import.status.possible_duplicate`, and `balance.*`.
-- **es-419 and pt-BR** are regenerated by `scripts/regional-locales.py`, which has new rules for "añadirlo" and "também pode".
-- **Check:** `scripts/check-i18n.mjs` reports no problems.
-
-## 9. Tests added
-- **`tests/review-fixes.test.ts`:**
-  - rule matching, ordering, preview and update;
-  - duplicates by reference, possible duplicates, identical coffees, and a repeated statement number;
-  - Check undo and apply, groups with existing transactions, plan parsing;
-  - `fitJson`, the `toOpenAi` role order, `chatModels`, retry on 503, `maskIban`.
-- **`tests/balance.test.ts`:**
-  - balances before and after a checkpoint, and with older history imported later;
-  - the mismatch and its fix; a future date; investments;
-  - net worth history; `fileBalance` order; CSV balance on import; `askBalance`.
-
-## 10. Known limits and what to look at
-- **Duplicate rows on screen:** they show their own category, not the category of the matching existing transaction.
-- **Old imports keep long bank texts:** Check renames only rows it imports. Undoing the import and importing again fixes that.
-- **Not built (decided):** a separate `raw_description` column and a deterministic per-bank cleaner.
-- **Worth a closer look:**
-  - the thresholds in `checkRules`;
-  - the speed of `buildRows` on large imports: it runs up to 3 prepared queries per row on every preview;
-  - `balances.set` and the existing `valuations.set` now share one table, with different meanings depending on the account kind.
+## 5. Known limits and what to look at
+- **`learnedNames`:** a tidied name is reused for every row with the same bank text, keyed by `groupKey`. The latest one wins. Check that this can't spread a wrong name.
+- **`findTransfers`:** a match on amount only can pair two unrelated payments of the same amount. Those pairs are only suggested, never made automatically.
+- **Thresholds:** in `recurring.ts` (rhythm ±20%, 70% steady gaps, 60% alike amounts) and in `review.ts` (2.5×, at least €20). These are first guesses.
+- **Notifications:** they run every 10 minutes and once per app run. The Linux and macOS notification permissions were not tested.
+- **Approvals:** "Approve all N" covers queued MCP requests of the same op. Also review the tray's "Stop Claude connection" (`setMcp`).
+- **Sync between versions:** saved searches are per computer, on purpose. A computer still on 0.10 ignores the new columns and tables it receives.
+- **Speed:** with 30,000 transactions and a 752-row import, lists and summaries take 25–85 ms, analyze about 100 ms, a preview after an edit about 80 ms, a commit about 270 ms, and `monthReview` about 300 ms.

@@ -1,20 +1,31 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.10
+## What’s new in 0.11
 
-- **Sync between computers** through a cloud folder you already use (OneDrive, Google Drive, Dropbox, iCloud Drive). Only encrypted files go into the folder; changes merge per field, and clashes are shown, not lost.
-- **Net worth and investments**: account types, recorded values for portfolios and loans, gain against what you paid in, and net worth over time.
-- **Year view**: twelve months per category side by side, and every year compared.
-- **Accounts in other currencies**, converted at the rate of each transaction’s date (ECB reference rates or your own).
-- **Your number and date formats**, each part chosen separately, independent of language.
-- **Languages**: English, Nederlands, Français, Deutsch, Español (España and Latinoamérica), Português (Portugal and Brasil).
-- **Choose your AI**: Claude, or Mistral, Groq, DeepSeek, Gemini, OpenRouter, Together, Fireworks, a local model with Ollama or LM Studio, or any OpenAI-compatible server.
-- **Check a CSV with your AI**: it categorises the rows, makes names and descriptions readable, and suggests rules so the next import sorts itself. It also offers to categorise older transactions that have none. You see what it did, can undo each part, and nothing outside the import changes until you accept.
-- **Better duplicate detection**: the bank's own reference is recognised even when the text changes, and rows that look like a transaction already in Kasboek (same amount, a few days apart) are marked "Maybe imported" for you to decide.
-- **Bank balance**: enter the balance your bank shows (when adding an account, after an import, or any time in Settings → Accounts) and Kasboek counts the account balance from it, also when you import older history later. A balance column in the CSV is read automatically. When a newer balance doesn't match, Kasboek shows the difference, so a missing or doubled transaction stands out.
-- **Rules** can match anywhere, as a whole word or at the start, show what they would catch before you add them, and can be put in order.
-- **Claude Desktop and Claude Code** connect with one click (MCP), now also on Windows. Approval cards show which transactions a change touches, and waiting requests can be approved together.
-- Stronger passwords, 2FA remembered for 30 days on a computer, automatic backups after important changes, a launch screen, and installers that let you choose your shortcuts.
+**New**
+- **Fixed costs**: subscriptions, rent, insurance and salary found from your transactions, with what is still due this month, price changes and late payments.
+- **Savings goals**: an amount by a date, following an account or kept by hand, with what to put aside per month.
+- **Transfers between your own accounts** are paired (automatically when the account number matches) and count as neither income nor spending.
+- **Split a payment** over several categories; **refunds** and shares paid back lower spending instead of counting as income.
+- **Warnings** on the Overview (and as notifications): a budget at 80% or 100%, or a balance heading below zero before payday.
+- **Monthly review** by the AI, from a button on the Overview.
+- **Bank balance**: enter what your bank shows, and Kasboek counts from there and shows any difference later.
+- **Export**: transactions as CSV, and a year report as PDF.
+- **Transactions**: rename or pair a selection, and saved searches. **Month picker**: click the month to jump to any month and year.
+- **Tray icon**: whether Claude apps are connected, with "Stop Claude connection" and Quit.
+
+**CSV import and Check**
+- Pending payments (Hello bank! “2026-”) are no longer imported twice once booked.
+- Duplicates are also found by bank reference, and rows the bank reworded are marked "Maybe imported".
+- Check runs in parts with progress, shows its reasoning in the assistant panel, suggests safe rules, also sorts older uncategorised transactions (only when you accept), keeps a transfer's own message, and can be undone part by part.
+- The bank's own text is kept next to the tidied one, so rules keep working, and names you tidied are used again next time.
+- The open import and a running check stay when you switch tabs.
+
+**Fixes**
+- Mistral: no more "answer was cut off", time limits and retries, and the chat no longer stops working after Stop.
+- Net worth ranges longer than your history are disabled, with an explanation.
+- "Today" follows your own clock, not UTC; a new account and its balance are saved together; many smaller fixes from an outside review.
+- The installer no longer contains the source code.
 
 ## Download
 
@@ -36,6 +47,5 @@ These builds are not yet signed with a certificate:
 ## Good to know
 
 - **Syncing between computers? Update all of them.** A computer on an older version ignores the newer rule settings (whole-word matching, order) it receives.
-
 - Windows Hello and Touch ID were only tested in simulation; please report anything odd.
 - If you used 0.9 with a short password, Kasboek asks for a stronger one at the next unlock.

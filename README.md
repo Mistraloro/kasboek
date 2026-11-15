@@ -7,19 +7,28 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
 
 ## What it does
 
-- **Budget**: accounts, transactions (search, filter, edit, bulk categorise), categories, rules
-  ("Delhaize → Groceries"), monthly budgets, and an overview with income, spending, budget left
-  and a 6-month chart; a year view per category; net worth over time with investments and loans.
+- **Budget**: accounts, transactions (search, filter, edit, bulk categorise or rename, saved
+  searches, split one payment over categories), categories, rules ("Delhaize → Groceries", on text,
+  whole words or the counterparty's IBAN), monthly budgets, and an overview with income, spending,
+  budget left, warnings and a 6-month chart; a year view per category; net worth over time with
+  investments and loans; savings goals; fixed costs and subscriptions found from your transactions.
+  Refunds lower spending; transfers between your own accounts are paired and left out.
   Dark and light mode, eight languages, number and date formats chosen part by part.
+- **Bank balance**: enter what your bank shows (or let a CSV balance column do it); the balance is
+  counted from there, and a later balance that doesn't match shows the difference.
 - **Currencies**: each account in its own currency; totals in a main currency at the rate of each
   transaction's date (ECB reference rates, downloaded on request, or your own).
 - **CSV import**: drop a bank export. Kasboek recognises Argenta, Hello bank! and Keytrade Bank
-  (and most other layouts), flags duplicates and unreadable rows, applies your rules, and shows
-  everything before saving. Undo per import.
+  (and most other layouts), flags duplicates (also by bank reference, and "maybe imported" when the
+  bank changed the text), applies your rules and the names you tidied before, and shows everything
+  before saving. Undo per import. Export to CSV, and a year report as PDF.
 - **Assistant**: ask questions about your money or let the assistant make changes, which you
-  approve one by one. "Check with …" fixes messy CSV files before import. Claude, Mistral, Groq,
+  approve one by one. "Check with …" categorises a CSV, makes names readable, suggests rules and
+  sorts older uncategorised transactions, showing its reasoning in the assistant panel; a monthly
+  review on the Overview. Claude, Mistral, Groq,
   DeepSeek, Gemini, OpenRouter, Together, Fireworks, Ollama, LM Studio or any OpenAI-compatible server.
-- **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (Settings → Assistant).
+- **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (Settings → Assistant);
+  a tray icon shows the connection and can stop it.
 - **Sync**: keep several computers in step through a cloud folder you already use; only encrypted
   files go there, and changes merge per field.
 - **Same everywhere**: Windows, macOS and Linux use the same encrypted database and the same export
