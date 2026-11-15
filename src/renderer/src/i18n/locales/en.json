@@ -117,12 +117,14 @@
     "field": {
       "counterparty": "Counterparty",
       "description": "Description",
-      "any": "Counterparty or description"
+      "any": "Counterparty or description",
+      "iban": "Account number (IBAN)"
     },
     "match": {
       "contains": "contains",
       "word": "contains the word",
-      "starts": "starts with"
+      "starts": "starts with",
+      "is": "is"
     },
     "matchOption": {
       "contains": "Anywhere in the text",
@@ -137,7 +139,8 @@
     "reach_other": "Matches {{count}} transactions, {{uncategorised}} of them without a category.",
     "reachOther_one": "{{count}} is already in another category and stays there.",
     "reachOther_other": "{{count}} are already in another category and stay there.",
-    "reachWord": "Short texts only match as a whole word."
+    "reachWord": "Short texts only match as a whole word.",
+    "ibanHint": "The counterparty’s account number, exactly. Good for transfers to your own accounts."
   },
   "import": {
     "title": "Import",
@@ -257,7 +260,9 @@
       "apply": "Apply selected",
       "applied": "Created {{rules}} rule(s) and categorised {{count}} transaction(s).",
       "dropped_one": "{{count}} suggestion left out",
-      "dropped_other": "{{count}} suggestions left out"
+      "dropped_other": "{{count}} suggestions left out",
+      "skippedSince_one": "{{count}} already had a category by then and was left alone.",
+      "skippedSince_other": "{{count}} already had a category by then and were left alone."
     },
     "checkingGroups": "{{ai}} is checking: {{done}} of {{total}} groups…"
   },

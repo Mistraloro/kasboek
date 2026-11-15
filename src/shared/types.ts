@@ -265,7 +265,8 @@ export interface TransactionPage {
   outCents: number
 }
 
-export type RuleField = 'counterparty' | 'description' | 'any'
+/** iban: the counterparty's account number (exact), e.g. to tell transfers to your own accounts apart. */
+export type RuleField = 'counterparty' | 'description' | 'any' | 'iban'
 /** contains: anywhere in the text; word: as a whole word; starts: at the start of the text. */
 export type RuleMatch = 'contains' | 'word' | 'starts'
 

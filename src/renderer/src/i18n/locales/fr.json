@@ -117,12 +117,14 @@
     "field": {
       "counterparty": "Contrepartie",
       "description": "Description",
-      "any": "Contrepartie ou description"
+      "any": "Contrepartie ou description",
+      "iban": "Numéro de compte (IBAN)"
     },
     "match": {
       "contains": "contient",
       "word": "contient le mot",
-      "starts": "commence par"
+      "starts": "commence par",
+      "is": "est"
     },
     "matchOption": {
       "contains": "N’importe où dans le texte",
@@ -137,7 +139,8 @@
     "reach_other": "Correspond à {{count}} transactions, dont {{uncategorised}} sans catégorie.",
     "reachOther_one": "{{count}} est déjà dans une autre catégorie et y reste.",
     "reachOther_other": "{{count}} sont déjà dans une autre catégorie et y restent.",
-    "reachWord": "Les textes courts ne correspondent qu’en mot entier."
+    "reachWord": "Les textes courts ne correspondent qu’en mot entier.",
+    "ibanHint": "Le numéro de compte de la contrepartie, exactement. Pratique pour les virements vers vos propres comptes."
   },
   "import": {
     "title": "Importer",
@@ -257,7 +260,9 @@
       "apply": "Appliquer la sélection",
       "applied": "{{rules}} règle(s) créée(s) et {{count}} transaction(s) classée(s).",
       "dropped_one": "{{count}} suggestion écartée",
-      "dropped_other": "{{count}} suggestions écartées"
+      "dropped_other": "{{count}} suggestions écartées",
+      "skippedSince_one": "{{count}} avait déjà une catégorie entre-temps et n’a pas été modifiée.",
+      "skippedSince_other": "{{count}} avaient déjà une catégorie entre-temps et n’ont pas été modifiées."
     },
     "checkingGroups": "{{ai}} vérifie : {{done}} groupes sur {{total}}…"
   },

@@ -117,12 +117,14 @@
     "field": {
       "counterparty": "Contraparte",
       "description": "Concepto",
-      "any": "Contraparte o concepto"
+      "any": "Contraparte o concepto",
+      "iban": "Número de cuenta (IBAN)"
     },
     "match": {
       "contains": "contiene",
       "word": "contiene la palabra",
-      "starts": "empieza por"
+      "starts": "empieza por",
+      "is": "es"
     },
     "matchOption": {
       "contains": "En cualquier parte del texto",
@@ -137,7 +139,8 @@
     "reach_other": "Coincide con {{count}} movimientos, {{uncategorised}} sin categoría.",
     "reachOther_one": "{{count}} ya está en otra categoría y se queda allí.",
     "reachOther_other": "{{count}} ya están en otra categoría y se quedan allí.",
-    "reachWord": "Los textos cortos solo coinciden como palabra completa."
+    "reachWord": "Los textos cortos solo coinciden como palabra completa.",
+    "ibanHint": "El número de cuenta de la contraparte, exacto. Útil para transferencias a tus propias cuentas."
   },
   "import": {
     "title": "Importar",
@@ -257,7 +260,9 @@
       "apply": "Aplicar lo seleccionado",
       "applied": "Se crearon {{rules}} regla(s) y se clasificaron {{count}} movimiento(s).",
       "dropped_one": "{{count}} sugerencia descartada",
-      "dropped_other": "{{count}} sugerencias descartadas"
+      "dropped_other": "{{count}} sugerencias descartadas",
+      "skippedSince_one": "{{count}} ya tenía categoría para entonces y no se tocó.",
+      "skippedSince_other": "{{count}} ya tenían categoría para entonces y no se tocaron."
     },
     "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…"
   },

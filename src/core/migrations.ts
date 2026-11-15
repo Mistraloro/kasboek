@@ -1,5 +1,5 @@
 import type { Db } from './database'
-import { installSyncSchema } from './sync-schema'
+import { SPEC, createSyncTriggers, installSyncSchema } from './sync-schema'
 import { realReference } from './csv/normalize'
 import { fingerprint } from './fingerprint'
 
@@ -218,6 +218,36 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
     }
     // Rules made before whole-word matching existed: short texts match only as a whole word too.
     db.exec(`UPDATE rules SET match = 'word' WHERE match = 'contains' AND length(trim(pattern)) < 4`)
+  },
+  (db) => {
+    // The bank's own text next to the readable one (which Check may tidy), so rules and duplicate
+    // checks keep seeing what the next CSV will say. Existing rows: the text they have now.
+    db.exec(`
+      ALTER TABLE transactions ADD COLUMN bank_counterparty TEXT;
+      ALTER TABLE transactions ADD COLUMN bank_description TEXT;
+      UPDATE transactions SET bank_counterparty = counterparty_name, bank_description = description;
+    `)
+    // Rules on the counterparty's account number (field "iban"): rebuilt, as SQLite can't change a
+    // CHECK constraint. Ids and sync ids stay the same; the sync triggers are made again.
+    db.exec(`
+      CREATE TABLE rules_new (
+        id INTEGER PRIMARY KEY,
+        field TEXT NOT NULL CHECK (field IN ('counterparty', 'description', 'any', 'iban')),
+        pattern TEXT NOT NULL,
+        category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT ${now},
+        match TEXT NOT NULL DEFAULT 'contains' CHECK (match IN ('contains', 'word', 'starts')),
+        priority INTEGER NOT NULL DEFAULT 0,
+        uid TEXT
+      );
+      INSERT INTO rules_new (id, field, pattern, category_id, created_at, match, priority, uid)
+        SELECT id, field, pattern, category_id, created_at, match, priority, uid FROM rules;
+      DROP TABLE rules;
+      ALTER TABLE rules_new RENAME TO rules;
+      CREATE UNIQUE INDEX idx_rules_unique ON rules(field, pattern COLLATE NOCASE);
+      CREATE UNIQUE INDEX idx_rules_uid ON rules(uid);
+    `)
+    createSyncTriggers(db, SPEC.get('rules')!)
   }
 ]
 

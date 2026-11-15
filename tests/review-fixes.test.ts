@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { openDatabase } from '@core/database'
 import { analyze, applyCheckProposals, commit, getCheck, remap, setCheck, snapshot, undoCheck, updateRows } from '@core/import'
 import { createRule, insertTransaction, listRules, matchRule, previewRule, reorderRules, textMatches, updateRule } from '@core/finance'
-import { parsePlan, rowGroups } from '@core/assist-plan'
+import { groupKey, parsePlan, rowGroups } from '@core/assist-plan'
 import { realReference } from '@core/csv/normalize'
 import { MIGRATIONS } from '@core/migrations'
 
@@ -112,11 +112,47 @@ describe('pending payments (review 14 #1)', () => {
     const { d, acc } = db()
     d.prepare("INSERT INTO transactions (account_id, booking_date, amount_cents, currency, description, bank_reference, fingerprint) VALUES (?, '2026-11-14', -7115, 'EUR', 'x', '2026-', 'old')").run(acc)
     d.prepare("INSERT INTO rules (field, pattern, match, category_id) VALUES ('any', 'FOD', 'contains', ?)").run(cat(d, 'Groceries'))
-    MIGRATIONS.at(-1)!(d)
+    MIGRATIONS.at(-2)!(d)
     const t = d.prepare('SELECT bank_reference, fingerprint FROM transactions').get() as { bank_reference: string | null; fingerprint: string }
     expect(t.bank_reference).toBeNull()
     expect(t.fingerprint).not.toBe('old')
     expect(listRules(d)[0]!.match).toBe('word')
+  })
+})
+
+describe('the bank’s own text (review 14 #4, #5)', () => {
+  it('keeps the bank text, learns readable names, and rules on either keep working', () => {
+    const { d, acc } = db()
+    const groceries = cat(d, 'Groceries')
+    const p = open(d, acc, ['2026-10-01;CRF MKT BRUGGE 8200;Betaling;-10,00;'])
+    updateRows(d, p.sessionId, [{ index: 0, counterpartyName: 'Carrefour', description: 'Kaartbetaling' }])
+    commit(d, p.sessionId, false)
+    expect(d.prepare('SELECT counterparty_name, bank_counterparty, bank_description FROM transactions').get()).toEqual({ counterparty_name: 'Carrefour', bank_counterparty: 'CRF MKT BRUGGE 8200', bank_description: 'Betaling' })
+    // A rule on the readable name, and its preview, see the stored transaction.
+    expect(previewRule(d, { field: 'counterparty', pattern: 'Carrefour' }).matches).toBe(1)
+    expect(previewRule(d, { field: 'counterparty', pattern: 'CRF MKT' }).matches).toBe(1)
+    createRule(d, { field: 'counterparty', pattern: 'Carrefour', categoryId: groceries, applyToExisting: true })
+    // The next raw import gets the learned name, so the rule fires without a check.
+    const next = open(d, acc, ['2026-11-01;CRF MKT BRUGGE 8200;Betaling;-23,00;'])
+    expect(next.rows[0]).toMatchObject({ counterpartyName: 'Carrefour', description: 'Kaartbetaling', categoryId: groceries, categorySource: 'rule' })
+  })
+
+  it('matches a rule on the counterparty account number', () => {
+    const { d, acc } = db()
+    const savings = cat(d, 'Savings')
+    insertTransaction(d, { accountId: acc, bookingDate: '2026-10-01', amountCents: -5000, description: 'To savings', counterpartyName: 'Tim De Vos', counterpartyIban: 'BE68539007547034' })
+    insertTransaction(d, { accountId: acc, bookingDate: '2026-10-02', amountCents: -2000, description: 'Revolut', counterpartyName: 'Tim De Vos', counterpartyIban: 'LT123250000000000001' })
+    const r = createRule(d, { field: 'iban', pattern: 'be68 5390 0754 7034', categoryId: savings, applyToExisting: true })
+    expect(r.rule.pattern).toBe('BE68539007547034')
+    expect(r.applied).toBe(1)
+  })
+
+  it('splits transfers from one person by what each was for, not bills', () => {
+    const row = (communication: string | null, iban: string | null = 'BE00111') => ({ counterpartyName: 'Jan Peeters', description: 'Overschrijving', amountCents: 500, communication, counterpartyIban: iban })
+    expect(groupKey(row('Bijdrage Netflix'))).not.toBe(groupKey(row('Verkoop pc')))
+    expect(groupKey(row('Bijdrage Netflix november'))).not.toBe(groupKey(row('Bijdrage Netflix')))
+    expect(groupKey(row('+++090/9337/55493+++'))).toBe(groupKey(row(null)))
+    expect(groupKey(row('Bijdrage Netflix', null))).toBe(groupKey(row(null, null)))
   })
 })
 
@@ -148,9 +184,16 @@ describe('check results', () => {
     let q = undoCheck(d, p.sessionId, 'names')
     expect(q.rows[0]).toMatchObject({ counterpartyName: 'COLRUYT BRUGGE', categoryId: groceries })
     expect(q.check?.renamed).toBe(0)
+    // Meanwhile one older transaction got a category by hand: Apply leaves it alone.
+    const other = insertTransaction(d, { accountId: acc, bookingDate: '2026-09-02', amountCents: -700, description: 'COLRUYT 456', counterpartyName: null })
+    const household = cat(d, 'Shopping')
+    d.prepare('UPDATE transactions SET category_id = ? WHERE id = ?').run(household, other)
+    getCheck(p.sessionId)!.existingIds.set(1, [old, other])
     const applied = applyCheckProposals(d, p.sessionId, { rules: [1], existing: [1] })
     expect(applied.rules).toBe(1)
+    expect(applied.skipped).toBe(1)
     expect((d.prepare('SELECT category_id FROM transactions WHERE id = ?').get(old) as { category_id: number }).category_id).toBe(groceries)
+    expect((d.prepare('SELECT category_id FROM transactions WHERE id = ?').get(other) as { category_id: number }).category_id).toBe(household)
     expect(getCheck(p.sessionId)?.summary.rules).toEqual([])
     q = undoCheck(d, p.sessionId, 'all')
     expect(q.check).toBeNull()

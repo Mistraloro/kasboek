@@ -66,15 +66,19 @@ type Row = ImportPreview['rows'][number]
  * description when there is none) once numbers, dates and references are taken out, and the same
  * direction. "Bancontact DELHAIZE LEUVEN 03/10 12:34" and "… 17/10 18:02" become one group.
  */
-export function groupKey(r: { counterpartyName: string | null; description: string; amountCents: number | null }): string {
-  const text = (r.counterpartyName?.trim() || r.description || '')
-    .toLowerCase()
-    .replace(/[0-9][0-9/.:,\-]*/g, ' ')
-    .replace(/[^\p{L}\s&]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 60)
-  return `${(r.amountCents ?? 0) < 0 ? 'out' : 'in'}:${text}`
+export function groupKey(r: { counterpartyName: string | null; description: string; amountCents: number | null; communication?: string | null; counterpartyIban?: string | null }): string {
+  const norm = (s: string): string =>
+    s
+      .toLowerCase()
+      .replace(/[0-9][0-9/.:,\-]*/g, ' ')
+      .replace(/[^\p{L}\s&]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  const text = norm(r.counterpartyName?.trim() || r.description || '').slice(0, 60)
+  // Transfers between people: the message says what each one was for ("Netflix share", "PC sale"),
+  // so each message is its own group. Structured communications (bills) are left out.
+  const message = r.counterpartyIban && r.communication && !/^\+{3}|^\*{3}|^\d{3}\/\d{4}\/\d{5}$/.test(r.communication.trim()) ? norm(r.communication).slice(0, 40) : ''
+  return `${(r.amountCents ?? 0) < 0 ? 'out' : 'in'}:${text}${message ? `|${message}` : ''}`
 }
 
 /** A transaction already in Kasboek without a category, grouped with the import's rows. */
@@ -84,6 +88,10 @@ export interface ExistingTx {
   amountCents: number
   counterpartyName: string | null
   description: string
+  bankCounterparty?: string | null
+  bankDescription?: string | null
+  counterpartyIban?: string | null
+  communication?: string | null
 }
 
 export interface RowGroup {
@@ -114,7 +122,7 @@ export function rowGroups(rows: Row[], existing: ExistingTx[] = []): RowGroup[] 
     group(groupKey(r), amount, { counterpartyName: r.counterpartyName, description: r.description, communication: r.communication, amountCents: amount, categoryId: r.categoryId }).rows.push(r)
   }
   for (const t of existing) {
-    group(groupKey(t), t.amountCents, { counterpartyName: t.counterpartyName, description: t.description, communication: null, amountCents: t.amountCents, categoryId: null }).existing.push(t)
+    group(groupKey(t), t.amountCents, { counterpartyName: t.counterpartyName, description: t.description, communication: t.communication ?? null, amountCents: t.amountCents, categoryId: null }).existing.push(t)
   }
   return [...map.values()].sort((a, b) => b.rows.length + b.existing.length - (a.rows.length + a.existing.length))
 }

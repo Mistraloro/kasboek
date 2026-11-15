@@ -340,10 +340,10 @@ export const contract = {
   'rules.list': { description: 'List categorisation rules ("text in counterparty/description → category").', input: empty, output: out<Rule[]>() },
   'rules.create': {
     description:
-      'Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.',
+      'Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. field iban: pattern is the counterparty’s account number, matched exactly (good for transfers to the person’s own accounts). New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.',
     input: z
       .object({
-        field: z.enum(['counterparty', 'description', 'any']),
+        field: z.enum(['counterparty', 'description', 'any', 'iban']),
         pattern: z.string().trim().min(2).max(100),
         match: z.enum(['contains', 'word', 'starts']).default('contains'),
         categoryId: id,
@@ -356,7 +356,7 @@ export const contract = {
     description: 'Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples.',
     input: z
       .object({
-        field: z.enum(['counterparty', 'description', 'any']),
+        field: z.enum(['counterparty', 'description', 'any', 'iban']),
         pattern: z.string().trim().min(1).max(100),
         match: z.enum(['contains', 'word', 'starts']).default('contains'),
         categoryId: id.nullable().default(null)
@@ -369,7 +369,7 @@ export const contract = {
     input: z
       .object({
         id,
-        field: z.enum(['counterparty', 'description', 'any']).optional(),
+        field: z.enum(['counterparty', 'description', 'any', 'iban']).optional(),
         pattern: z.string().trim().min(2).max(100).optional(),
         match: z.enum(['contains', 'word', 'starts']).optional(),
         categoryId: id.optional(),
@@ -445,7 +445,7 @@ export const contract = {
   },
   'import.checkApply': {
     input: z.object({ sessionId: z.string().uuid(), rules: z.array(z.number().int()).max(1000), existing: z.array(z.number().int()).max(1000) }).strict(),
-    output: out<{ preview: ImportPreview; rules: number; categorised: number }>()
+    output: out<{ preview: ImportPreview; rules: number; categorised: number; skipped: number }>()
   },
   'import.checkUndo': { input: z.object({ sessionId: z.string().uuid(), part: z.enum(['categories', 'names', 'fixes', 'all']) }).strict(), output: out<ImportPreview>() },
   'import.discard': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },

@@ -7,6 +7,7 @@ import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPr
 import type { Db } from './database'
 import { AppError } from './errors'
 import { categorizeTransactions, createRule, insertTransaction, listRules, matchRule } from './finance'
+import { groupKey } from './assist-plan'
 import { balanceOn, setBankBalance } from './balance'
 import { fingerprint } from './fingerprint'
 import { autoMap, detectLayout, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
@@ -36,6 +37,8 @@ interface Session {
   overrides: Map<number, RowOverride>
   notes: string[]
   check: CheckState | null
+  /** Readable names learned from earlier imports, by the bank's own text (read once per import). */
+  learned?: Map<string, { name: string | null; description: string }>
 }
 
 /** What the last Check changed (so each part can be undone) and what it proposes outside the import. */
@@ -159,16 +162,23 @@ export function getCheck(id: string): CheckState | null {
  * Applies the Check proposals the person ticked: categorises transactions already in Kasboek and
  * creates rules (which also categorise uncategorised transactions and this import's rows).
  */
-export function applyCheckProposals(db: Db, id: string, pick: { rules: number[]; existing: number[] }): { preview: ImportPreview; rules: number; categorised: number } {
+export function applyCheckProposals(db: Db, id: string, pick: { rules: number[]; existing: number[] }): { preview: ImportPreview; rules: number; categorised: number; skipped: number } {
   const s = session(id)
   const c = s.check
   if (!c) throw new AppError('import.no_check', 'There is nothing to apply: check the file first.')
   let rules = 0
   let categorised = 0
+  let skipped = 0
   db.transaction(() => {
     for (const p of c.summary.existing.filter((e) => pick.existing.includes(e.id))) {
       const ids = c.existingIds.get(p.id) ?? []
-      if (ids.length) categorised += categorizeTransactions(db, ids, p.categoryId).updated
+      // Only those still without a category: one set since the check (by hand, a rule or the
+      // assistant) is left as it is.
+      if (ids.length) {
+        const n = categorizeTransactions(db, ids, p.categoryId, { onlyUncategorised: true }).updated
+        categorised += n
+        skipped += ids.length - n
+      }
     }
     for (const r of c.summary.rules.filter((x) => pick.rules.includes(x.id))) {
       try {
@@ -181,7 +191,7 @@ export function applyCheckProposals(db: Db, id: string, pick: { rules: number[];
     }
   })()
   c.summary = { ...c.summary, rules: c.summary.rules.filter((x) => !pick.rules.includes(x.id)), existing: c.summary.existing.filter((x) => !pick.existing.includes(x.id)) }
-  return { preview: preview(db, id), rules, categorised }
+  return { preview: preview(db, id), rules, categorised, skipped }
 }
 
 /** Undoes one part of the last check (or all of it), putting back what the rows had before. */
@@ -246,8 +256,32 @@ interface Existing {
   booking_date: string
   counterparty_name: string | null
   description: string
+  bank_counterparty: string | null
+  bank_description: string | null
   bank_reference: string | null
   fingerprint: string | null
+}
+
+/**
+ * Names and descriptions tidied in earlier imports, keyed by the bank's own text: a new row with
+ * the same bank text gets the same readable text, so rules made on readable names keep working.
+ */
+function learnedNames(db: Db): Map<string, { name: string | null; description: string }> {
+  const rows = db
+    .prepare(
+      `SELECT counterparty_name, description, bank_counterparty, bank_description, counterparty_iban, communication, amount_cents FROM transactions
+       WHERE bank_description IS NOT NULL AND (coalesce(counterparty_name, '') <> coalesce(bank_counterparty, '') OR description <> bank_description)
+       ORDER BY booking_date, id`
+    )
+    .all() as { counterparty_name: string | null; description: string; bank_counterparty: string | null; bank_description: string; counterparty_iban: string | null; communication: string | null; amount_cents: number }[]
+  const map = new Map<string, { name: string | null; description: string }>()
+  // The latest one wins, so a name corrected later is the one used.
+  for (const r of rows)
+    map.set(groupKey({ counterpartyName: r.bank_counterparty, description: r.bank_description, amountCents: r.amount_cents, communication: r.communication, counterpartyIban: r.counterparty_iban }), {
+      name: r.counterparty_name,
+      description: r.description
+    })
+  return map
 }
 
 function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: ImportRow; fingerprint: string | null }[] {
@@ -255,7 +289,7 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
   const currency = (db.prepare('SELECT currency FROM accounts WHERE id = ?').get(s.accountId) as { currency: string }).currency
   const clean = normalizeRows(s.rows, s.mapping, currency)
   const rules = listRules(db)
-  const cols = 'id, booking_date, counterparty_name, description, bank_reference, fingerprint'
+  const cols = 'id, booking_date, counterparty_name, description, bank_counterparty, bank_description, bank_reference, fingerprint'
   const byFingerprint = db.prepare(`SELECT ${cols} FROM transactions WHERE account_id = ? AND fingerprint = ? ORDER BY id`)
   const byReference = db.prepare(`SELECT ${cols} FROM transactions WHERE account_id = ? AND bank_reference = ? ORDER BY id`)
   const nearby = db.prepare(`SELECT ${cols} FROM transactions WHERE account_id = ? AND amount_cents = ? AND booking_date BETWEEN ? AND ? ORDER BY id`)
@@ -266,14 +300,17 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
   const seen = new Map<string, number>()
   // Transactions already matched by an earlier row: each one is matched at most once.
   const claimed = new Set<number>()
+  s.learned ??= learnedNames(db)
+  const learned = s.learned
   const results = clean.map((c) => {
     const o = s.overrides.get(c.index) ?? {}
+    const known = learned.size ? learned.get(groupKey(c)) : undefined
     const merged: CleanRow = {
       ...c,
       bookingDate: o.bookingDate ?? c.bookingDate,
       amountCents: o.amountCents ?? c.amountCents,
-      description: o.description ?? c.description,
-      counterpartyName: o.counterpartyName !== undefined ? o.counterpartyName : c.counterpartyName
+      description: o.description ?? known?.description ?? c.description,
+      counterpartyName: o.counterpartyName !== undefined ? o.counterpartyName : known ? known.name : c.counterpartyName
     }
     // Duplicates are recognised on the bank's own text, so a cleaned-up name or description still
     // matches the same transaction imported earlier (only corrected dates and amounts count).
@@ -316,7 +353,8 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
               e.fingerprint !== fp &&
               // A different reference means a different payment, but only when it is a real one.
               !(ref && realReference(e.bank_reference) && e.bank_reference!.trim() !== ref) &&
-              similarity(text, `${e.counterparty_name ?? ''} ${e.description}`) >= POSSIBLE_SIMILARITY
+              // Compared with the bank's own text, as the new row's text is too.
+              similarity(text, `${e.bank_counterparty ?? e.counterparty_name ?? ''} ${e.bank_description ?? e.description}`) >= POSSIBLE_SIMILARITY
           ) ?? null
         if (match) status = 'possible_duplicate'
       }
@@ -353,8 +391,8 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
 }
 
 /** The rows with the bank's own text next to them (for checking rules against future imports). */
-export function rowsWithBankText(db: Db, id: string): { row: ImportRow; raw: { counterpartyName: string | null; description: string } }[] {
-  return buildRows(db, session(id)).map((b) => ({ row: b.row, raw: { counterpartyName: b.raw.counterpartyName, description: b.raw.description } }))
+export function rowsWithBankText(db: Db, id: string): { row: ImportRow; raw: { counterpartyName: string | null; description: string; counterpartyIban: string | null } }[] {
+  return buildRows(db, session(id)).map((b) => ({ row: b.row, raw: { counterpartyName: b.raw.counterpartyName, description: b.raw.description, counterpartyIban: b.raw.counterpartyIban } }))
 }
 
 export function preview(db: Db, id: string): ImportPreview {
@@ -429,7 +467,7 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
       db.prepare("INSERT INTO import_batches (account_id, file_name, csv_profile, row_count, status, committed_at) VALUES (?, ?, ?, ?, 'committed', strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
         .run(s.accountId, s.fileName, s.layout, ready.length).lastInsertRowid
     )
-    for (const { clean, row, fingerprint: fp } of ready) {
+    for (const { clean, raw, row, fingerprint: fp } of ready) {
       insertTransaction(db, {
         accountId: s.accountId,
         bookingDate: row.bookingDate!,
@@ -443,7 +481,9 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
         categoryId: row.categoryId,
         bankReference: clean.bankReference,
         importBatchId: batchId,
-        fingerprint: fp ?? undefined
+        fingerprint: fp ?? undefined,
+        bankCounterparty: raw.counterpartyName,
+        bankDescription: raw.description || row.description || '(no description)'
       }, rules)
     }
     if (saveProfile) {

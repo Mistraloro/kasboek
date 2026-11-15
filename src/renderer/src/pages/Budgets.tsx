@@ -191,7 +191,7 @@ function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
         {list.map((r, i) => (
           <div key={r.id} className="flex items-center gap-1 border-b border-border py-1.5 text-[13px] last:border-b-0">
             <span className="min-w-0 flex-1 truncate">
-              <span className="text-muted">{t(`budgets.field.${r.field}`)} {t(`budgets.match.${r.match}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
+              <span className="text-muted">{t(`budgets.field.${r.field}`)} {r.field === 'iban' ? t('budgets.match.is') : t(`budgets.match.${r.match}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
             </span>
             <button type="button" aria-label={t('budgets.moveUp')} disabled={i === 0} className="rounded p-1 text-muted hover:text-text disabled:opacity-30" onClick={() => move(i, -1)}>
               <ArrowUp size={14} />
@@ -217,13 +217,17 @@ function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           )
         }}
       >
-        <Field label={t('budgets.whenText')}>{(id) => <Input id={id} value={pattern} onChange={(e) => setPattern(e.target.value)} placeholder="Delhaize" />}</Field>
+        <Field label={t('budgets.whenText')}>{(id) => <Input id={id} value={pattern} onChange={(e) => setPattern(e.target.value)} placeholder={field === 'iban' ? 'BE68 5390 0754 7034' : 'Delhaize'} />}</Field>
         <Field label={t('budgets.appearsIn')}>
-          {(id) => <Select id={id} value={field} onChange={(e) => setField(e.target.value as RuleField)}>{(['counterparty', 'description', 'any'] as const).map((f) => <option key={f} value={f}>{t(`budgets.field.${f}`)}</option>)}</Select>}
+          {(id) => <Select id={id} value={field} onChange={(e) => setField(e.target.value as RuleField)}>{(['counterparty', 'description', 'any', 'iban'] as const).map((f) => <option key={f} value={f}>{t(`budgets.field.${f}`)}</option>)}</Select>}
         </Field>
-        <Field label={t('budgets.howMatch')}>
-          {(id) => <Select id={id} value={match} onChange={(e) => setMatch(e.target.value as RuleMatch)}>{(['contains', 'word', 'starts'] as const).map((m) => <option key={m} value={m}>{t(`budgets.matchOption.${m}`)}</option>)}</Select>}
-        </Field>
+        {field === 'iban' ? (
+          <p className="self-end pb-2 text-xs text-muted">{t('budgets.ibanHint')}</p>
+        ) : (
+          <Field label={t('budgets.howMatch')}>
+            {(id) => <Select id={id} value={match} onChange={(e) => setMatch(e.target.value as RuleMatch)}>{(['contains', 'word', 'starts'] as const).map((m) => <option key={m} value={m}>{t(`budgets.matchOption.${m}`)}</option>)}</Select>}
+          </Field>
+        )}
         <Field label={t('budgets.putIn')}>{() => <CategorySelect label={t('budgets.putIn')} allowNone={false} value={category} categories={cats.data ?? []} onChange={setCategoryId} />}</Field>
         {reach && (
           <p className="col-span-2 text-xs text-muted">

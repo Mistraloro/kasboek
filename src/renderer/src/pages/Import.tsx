@@ -392,7 +392,7 @@ function CheckSummaryCard({ preview, onChange }: { preview: ImportPreview; onCha
     void call('import.checkApply', { sessionId: preview.sessionId, rules: [...rules], existing: [...existing] })
       .then((r) => {
         onChange(r.preview)
-        toast(t('import.check.applied', { rules: r.rules, count: r.categorised }))
+        toast(t('import.check.applied', { rules: r.rules, count: r.categorised }) + (r.skipped ? ` ${t('import.check.skippedSince', { count: r.skipped })}` : ''))
       }, (e) => toast(errText(e), 'error'))
       .finally(() => setBusy(false))
   }

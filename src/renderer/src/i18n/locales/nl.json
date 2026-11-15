@@ -117,12 +117,14 @@
     "field": {
       "counterparty": "Tegenpartij",
       "description": "Omschrijving",
-      "any": "Tegenpartij of omschrijving"
+      "any": "Tegenpartij of omschrijving",
+      "iban": "Rekeningnummer (IBAN)"
     },
     "match": {
       "contains": "bevat",
       "word": "bevat het woord",
-      "starts": "begint met"
+      "starts": "begint met",
+      "is": "is"
     },
     "matchOption": {
       "contains": "Ergens in de tekst",
@@ -137,7 +139,8 @@
     "reach_other": "Past op {{count}} transacties, waarvan {{uncategorised}} zonder categorie.",
     "reachOther_one": "{{count}} staat al in een andere categorie en blijft daar.",
     "reachOther_other": "{{count}} staan al in een andere categorie en blijven daar.",
-    "reachWord": "Korte teksten passen alleen als heel woord."
+    "reachWord": "Korte teksten passen alleen als heel woord.",
+    "ibanHint": "Het rekeningnummer van de tegenpartij, precies. Handig voor overschrijvingen naar je eigen rekeningen."
   },
   "import": {
     "title": "Importeren",
@@ -257,7 +260,9 @@
       "apply": "Selectie toepassen",
       "applied": "{{rules}} regel(s) gemaakt en {{count}} transactie(s) gecategoriseerd.",
       "dropped_one": "{{count}} voorstel weggelaten",
-      "dropped_other": "{{count}} voorstellen weggelaten"
+      "dropped_other": "{{count}} voorstellen weggelaten",
+      "skippedSince_one": "{{count}} had intussen al een categorie en bleef ongemoeid.",
+      "skippedSince_other": "{{count}} hadden intussen al een categorie en bleven ongemoeid."
     },
     "checkingGroups": "{{ai}} kijkt na: {{done}} van {{total}} groepen…"
   },

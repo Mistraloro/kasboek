@@ -117,12 +117,14 @@
     "field": {
       "counterparty": "Gegenpartei",
       "description": "Beschreibung",
-      "any": "Gegenpartei oder Beschreibung"
+      "any": "Gegenpartei oder Beschreibung",
+      "iban": "Kontonummer (IBAN)"
     },
     "match": {
       "contains": "enthält",
       "word": "enthält das Wort",
-      "starts": "beginnt mit"
+      "starts": "beginnt mit",
+      "is": "ist"
     },
     "matchOption": {
       "contains": "Irgendwo im Text",
@@ -137,7 +139,8 @@
     "reach_other": "Passt auf {{count}} Buchungen, davon {{uncategorised}} ohne Kategorie.",
     "reachOther_one": "{{count}} ist schon in einer anderen Kategorie und bleibt dort.",
     "reachOther_other": "{{count}} sind schon in einer anderen Kategorie und bleiben dort.",
-    "reachWord": "Kurze Texte passen nur als ganzes Wort."
+    "reachWord": "Kurze Texte passen nur als ganzes Wort.",
+    "ibanHint": "Die Kontonummer der Gegenseite, genau. Praktisch für Überweisungen auf deine eigenen Konten."
   },
   "import": {
     "title": "Import",
@@ -257,7 +260,9 @@
       "apply": "Auswahl anwenden",
       "applied": "{{rules}} Regel(n) erstellt und {{count}} Buchung(en) eingeordnet.",
       "dropped_one": "{{count}} Vorschlag weggelassen",
-      "dropped_other": "{{count}} Vorschläge weggelassen"
+      "dropped_other": "{{count}} Vorschläge weggelassen",
+      "skippedSince_one": "{{count}} hatte inzwischen schon eine Kategorie und blieb unverändert.",
+      "skippedSince_other": "{{count}} hatten inzwischen schon eine Kategorie und blieben unverändert."
     },
     "checkingGroups": "{{ai}} prüft: {{done}} von {{total}} Gruppen…"
   },

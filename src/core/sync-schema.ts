@@ -30,7 +30,7 @@ export const SYNC_TABLES: TableSpec[] = [
   {
     table: 'transactions',
     uid: RANDOM,
-    cols: ['account_id', 'booking_date', 'value_date', 'amount_cents', 'currency', 'description', 'counterparty_name', 'counterparty_iban', 'communication', 'category_id', 'notes', 'bank_reference', 'fingerprint', 'created_at', 'updated_at'],
+    cols: ['account_id', 'booking_date', 'value_date', 'amount_cents', 'currency', 'description', 'counterparty_name', 'counterparty_iban', 'communication', 'category_id', 'notes', 'bank_reference', 'fingerprint', 'created_at', 'updated_at', 'bank_counterparty', 'bank_description'],
     fks: { account_id: 'accounts', category_id: 'categories' }
   },
   { table: 'budgets', uid: `(SELECT uid FROM categories WHERE id = NEW.category_id) || '/' || NEW.month`, cols: ['category_id', 'month', 'amount_cents'], fks: { category_id: 'categories' } },
@@ -61,26 +61,32 @@ export function installSyncSchema(db: Db): void {
     -- Changes that refer to rows not here yet (arrive in a later file); retried every sync.
     CREATE TABLE sync_pending (id INTEGER PRIMARY KEY, device TEXT NOT NULL, change TEXT NOT NULL);
   `)
-  const on = `(SELECT enabled FROM sync_flags) = 1 AND (SELECT applying FROM sync_flags) = 0`
   for (const s of SYNC_TABLES) {
     const t = s.table
     db.exec(`ALTER TABLE ${t} ADD COLUMN uid TEXT`)
     // Existing rows: fill in uid order of dependencies (budgets need category uids first).
     db.exec(`UPDATE ${t} SET uid = ${s.uid.replaceAll('NEW.', `${t}.`)} WHERE uid IS NULL`)
     db.exec(`CREATE UNIQUE INDEX idx_${t}_uid ON ${t}(uid)`)
-    const w = (r: 'NEW' | 'OLD'): string => (s.when ? ` AND ${s.when(r)}` : '')
-    db.exec(`
-      -- One trigger, so the uid is always set before the change is recorded.
-      CREATE TRIGGER sync_${t}_ins AFTER INSERT ON ${t} BEGIN
-        UPDATE ${t} SET uid = ${s.uid} WHERE rowid = NEW.rowid AND uid IS NULL;
-        INSERT INTO sync_outbox (tbl, uid) SELECT '${t}', uid FROM ${t} WHERE rowid = NEW.rowid AND uid IS NOT NULL AND ${on}${w('NEW')};
-      END;
-      CREATE TRIGGER sync_${t}_upd AFTER UPDATE ON ${t} WHEN ${on}${w('NEW')} AND NEW.uid IS NOT NULL BEGIN
-        INSERT INTO sync_outbox (tbl, uid) VALUES ('${t}', NEW.uid);
-      END;
-      CREATE TRIGGER sync_${t}_del AFTER DELETE ON ${t} WHEN ${on}${w('OLD')} AND OLD.uid IS NOT NULL BEGIN
-        INSERT INTO sync_outbox (tbl, uid) VALUES ('${t}', OLD.uid);
-      END;
-    `)
+    createSyncTriggers(db, s)
   }
+}
+
+/** The triggers that record a synced table's changes (also used when a table is rebuilt). */
+export function createSyncTriggers(db: Db, s: TableSpec): void {
+  const t = s.table
+  const on = `(SELECT enabled FROM sync_flags) = 1 AND (SELECT applying FROM sync_flags) = 0`
+  const w = (r: 'NEW' | 'OLD'): string => (s.when ? ` AND ${s.when(r)}` : '')
+  db.exec(`
+    -- One trigger, so the uid is always set before the change is recorded.
+    CREATE TRIGGER sync_${t}_ins AFTER INSERT ON ${t} BEGIN
+      UPDATE ${t} SET uid = ${s.uid} WHERE rowid = NEW.rowid AND uid IS NULL;
+      INSERT INTO sync_outbox (tbl, uid) SELECT '${t}', uid FROM ${t} WHERE rowid = NEW.rowid AND uid IS NOT NULL AND ${on}${w('NEW')};
+    END;
+    CREATE TRIGGER sync_${t}_upd AFTER UPDATE ON ${t} WHEN ${on}${w('NEW')} AND NEW.uid IS NOT NULL BEGIN
+      INSERT INTO sync_outbox (tbl, uid) VALUES ('${t}', NEW.uid);
+    END;
+    CREATE TRIGGER sync_${t}_del AFTER DELETE ON ${t} WHEN ${on}${w('OLD')} AND OLD.uid IS NOT NULL BEGIN
+      INSERT INTO sync_outbox (tbl, uid) VALUES ('${t}', OLD.uid);
+    END;
+  `)
 }

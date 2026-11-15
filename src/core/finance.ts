@@ -127,6 +127,9 @@ export interface NewTx {
   importBatchId?: number | null
   /** Set by imports: computed from the bank's own text, not the cleaned-up one. */
   fingerprint?: string
+  /** The bank's own text, when the readable one was tidied (defaults to the readable one). */
+  bankCounterparty?: string | null
+  bankDescription?: string
 }
 
 /** `rules` can be passed in when inserting many rows, so they are read once. */
@@ -135,8 +138,8 @@ export function insertTransaction(db: Db, t: NewTx, rules?: Rule[]): number {
   const r = db
     .prepare(
       `INSERT INTO transactions (account_id, booking_date, value_date, amount_cents, currency, description, counterparty_name,
-         counterparty_iban, communication, category_id, notes, import_batch_id, bank_reference, fingerprint)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         counterparty_iban, communication, category_id, notes, import_batch_id, bank_reference, fingerprint, bank_counterparty, bank_description)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       t.accountId,
@@ -152,7 +155,9 @@ export function insertTransaction(db: Db, t: NewTx, rules?: Rule[]): number {
       t.notes ?? null,
       t.importBatchId ?? null,
       t.bankReference ?? null,
-      t.fingerprint ?? fingerprint(t)
+      t.fingerprint ?? fingerprint(t),
+      t.bankCounterparty !== undefined ? t.bankCounterparty : (t.counterpartyName ?? null),
+      t.bankDescription ?? t.description
     )
   return Number(r.lastInsertRowid)
 }
@@ -184,9 +189,10 @@ export function updateTransaction(
   return getTransaction(db, input.id)
 }
 
-export function categorizeTransactions(db: Db, ids: number[], categoryId: number | null): { updated: number } {
+/** `onlyUncategorised`: leaves transactions that got a category meanwhile as they are. */
+export function categorizeTransactions(db: Db, ids: number[], categoryId: number | null, opts: { onlyUncategorised?: boolean } = {}): { updated: number } {
   requireCategory(db, categoryId)
-  const stmt = db.prepare(`UPDATE transactions SET category_id = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`)
+  const stmt = db.prepare(`UPDATE transactions SET category_id = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?${opts.onlyUncategorised ? ' AND category_id IS NULL' : ''}`)
   let updated = 0
   db.transaction(() => ids.forEach((id) => (updated += stmt.run(categoryId, id).changes)))()
   return { updated }
@@ -270,49 +276,74 @@ export function textMatches(text: string, pattern: string, match: RuleMatch): bo
   return t.includes(p)
 }
 
-export function ruleMatches(r: Pick<Rule, 'field' | 'pattern' | 'match'>, t: { counterpartyName?: string | null; description?: string | null }): boolean {
-  if (r.field !== 'description' && textMatches(t.counterpartyName ?? '', r.pattern, r.match)) return true
-  return r.field !== 'counterparty' && textMatches(t.description ?? '', r.pattern, r.match)
+/** What a rule looks at: the readable text and the bank's own text (and the counterparty's IBAN). */
+export interface RuleText {
+  counterpartyName?: string | null
+  description?: string | null
+  bankCounterparty?: string | null
+  bankDescription?: string | null
+  counterpartyIban?: string | null
 }
 
+export const normIban = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, '').toUpperCase()
+
+export function ruleMatches(r: Pick<Rule, 'field' | 'pattern' | 'match'>, t: RuleText): boolean {
+  if (r.field === 'iban') return !!t.counterpartyIban && normIban(t.counterpartyIban) === normIban(r.pattern)
+  const any = (...texts: (string | null | undefined)[]): boolean => texts.some((x) => !!x && textMatches(x, r.pattern, r.match))
+  if (r.field !== 'description' && any(t.counterpartyName, t.bankCounterparty)) return true
+  return r.field !== 'counterparty' && any(t.description, t.bankDescription)
+}
+
+/** Columns a rule needs, for SQL that reads transactions to match rules against. */
+export const RULE_COLUMNS = 'counterparty_name, description, bank_counterparty, bank_description, counterparty_iban'
+export const ruleText = (r: { counterparty_name: string | null; description: string; bank_counterparty: string | null; bank_description: string | null; counterparty_iban: string | null }): RuleText => ({
+  counterpartyName: r.counterparty_name,
+  description: r.description,
+  bankCounterparty: r.bank_counterparty,
+  bankDescription: r.bank_description,
+  counterpartyIban: r.counterparty_iban
+})
+type RuleRowText = Parameters<typeof ruleText>[0]
+
 /** The first matching rule in rule order (priority, then counterparty rules, then the longest text). */
-export function matchRule(db: Db, t: { counterpartyName?: string | null; description?: string | null }, rules = listRules(db)): Rule | undefined {
+export function matchRule(db: Db, t: RuleText, rules = listRules(db)): Rule | undefined {
   return rules.find((r) => ruleMatches(r, t))
 }
 
 /** A short "contains" text becomes a whole-word rule. */
-function effectiveMatch(pattern: string, match: RuleMatch | undefined): RuleMatch {
+function effectiveMatch(pattern: string, match: RuleMatch | undefined, field?: RuleField): RuleMatch {
   const m = match ?? 'contains'
+  if (field === 'iban') return 'contains'
   return m === 'contains' && pattern.trim().length < SHORT_PATTERN ? 'word' : m
 }
 
 export function previewRule(db: Db, input: { field: RuleField; pattern: string; match?: RuleMatch; categoryId?: number | null }): RulePreview {
-  const match = effectiveMatch(input.pattern, input.match)
+  const match = effectiveMatch(input.pattern, input.match, input.field)
   const rule = { field: input.field, pattern: input.pattern.trim(), match }
-  const rows = db.prepare('SELECT counterparty_name, description, category_id FROM transactions').all() as { counterparty_name: string | null; description: string; category_id: number | null }[]
-  const hits = rows.filter((r) => ruleMatches(rule, { counterpartyName: r.counterparty_name, description: r.description }))
+  const rows = db.prepare(`SELECT ${RULE_COLUMNS}, category_id FROM transactions`).all() as (RuleRowText & { category_id: number | null })[]
+  const hits = rows.filter((r) => ruleMatches(rule, ruleText(r)))
   const examples = [...new Set(hits.map((h) => h.counterparty_name || h.description))].slice(0, 3).map((e) => e.slice(0, 60))
   return {
     matches: hits.length,
     uncategorised: hits.filter((h) => h.category_id === null).length,
     otherCategory: hits.filter((h) => h.category_id !== null && h.category_id !== input.categoryId).length,
-    wholeWord: match !== (input.match ?? 'contains'),
+    wholeWord: input.field !== 'iban' && match !== (input.match ?? 'contains'),
     examples
   }
 }
 
 function applyRule(db: Db, rule: Rule): number {
-  const rows = db.prepare('SELECT id, counterparty_name, description FROM transactions WHERE category_id IS NULL').all() as { id: number; counterparty_name: string | null; description: string }[]
-  const hits = rows.filter((r) => ruleMatches(rule, { counterpartyName: r.counterparty_name, description: r.description })).map((r) => r.id)
+  const rows = db.prepare(`SELECT id, ${RULE_COLUMNS} FROM transactions WHERE category_id IS NULL`).all() as (RuleRowText & { id: number })[]
+  const hits = rows.filter((r) => ruleMatches(rule, ruleText(r))).map((r) => r.id)
   return hits.length ? categorizeTransactions(db, hits, rule.categoryId).updated : 0
 }
 
 export function createRule(db: Db, input: { field: RuleField; pattern: string; match?: RuleMatch; categoryId: number; applyToExisting: boolean }): { rule: Rule; applied: number } {
   requireCategory(db, input.categoryId)
-  const pattern = input.pattern.trim()
+  const pattern = input.field === 'iban' ? normIban(input.pattern) : input.pattern.trim()
   let id: number
   try {
-    id = Number(db.prepare('INSERT INTO rules (field, pattern, match, category_id) VALUES (?, ?, ?, ?)').run(input.field, pattern, effectiveMatch(pattern, input.match), input.categoryId).lastInsertRowid)
+    id = Number(db.prepare('INSERT INTO rules (field, pattern, match, category_id) VALUES (?, ?, ?, ?)').run(input.field, pattern, effectiveMatch(pattern, input.match, input.field), input.categoryId).lastInsertRowid)
   } catch (err) {
     if (err instanceof Error && /UNIQUE/.test(err.message)) throw new AppError('rules.duplicate', 'A rule for this text already exists.')
     throw err
@@ -328,10 +359,11 @@ export function updateRule(
   const old = listRules(db).find((r) => r.id === input.id)
   if (!old) throw new AppError('rules.not_found', 'That rule no longer exists.')
   if (input.categoryId !== undefined) requireCategory(db, input.categoryId)
-  const pattern = input.pattern?.trim() ?? old.pattern
-  const match = effectiveMatch(pattern, input.match ?? old.match)
+  const field = input.field ?? old.field
+  const pattern = input.pattern === undefined ? old.pattern : field === 'iban' ? normIban(input.pattern) : input.pattern.trim()
+  const match = effectiveMatch(pattern, input.match ?? old.match, field)
   try {
-    db.prepare('UPDATE rules SET field = ?, pattern = ?, match = ?, category_id = ? WHERE id = ?').run(input.field ?? old.field, pattern, match, input.categoryId ?? old.categoryId, input.id)
+    db.prepare('UPDATE rules SET field = ?, pattern = ?, match = ?, category_id = ? WHERE id = ?').run(field, pattern, match, input.categoryId ?? old.categoryId, input.id)
   } catch (err) {
     if (err instanceof Error && /UNIQUE/.test(err.message)) throw new AppError('rules.duplicate', 'A rule for this text already exists.')
     throw err

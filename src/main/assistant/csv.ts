@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
-import { listRules, ruleMatches } from '@core/finance'
+import { RULE_COLUMNS, listRules, ruleMatches, ruleText, type RuleText } from '@core/finance'
 import * as imp from '@core/import'
 import { getSettings } from '@core/settings'
 import { mappingSchema } from '@shared/import-mapping'
@@ -49,11 +49,31 @@ function existingUncategorised(db: Db, accountId: number): ExistingTx[] {
   return (
     db
       .prepare(
-        `SELECT id, booking_date, amount_cents, counterparty_name, description FROM transactions
+        `SELECT id, booking_date, amount_cents, counterparty_name, description, bank_counterparty, bank_description, counterparty_iban, communication FROM transactions
          WHERE account_id = ? AND category_id IS NULL ORDER BY booking_date DESC LIMIT 5000`
       )
-      .all(accountId) as { id: number; booking_date: string; amount_cents: number; counterparty_name: string | null; description: string }[]
-  ).map((r) => ({ id: r.id, bookingDate: r.booking_date, amountCents: r.amount_cents, counterpartyName: r.counterparty_name, description: r.description }))
+      .all(accountId) as {
+      id: number
+      booking_date: string
+      amount_cents: number
+      counterparty_name: string | null
+      description: string
+      bank_counterparty: string | null
+      bank_description: string | null
+      counterparty_iban: string | null
+      communication: string | null
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    bookingDate: r.booking_date,
+    amountCents: r.amount_cents,
+    counterpartyName: r.counterparty_name,
+    description: r.description,
+    bankCounterparty: r.bank_counterparty,
+    bankDescription: r.bank_description,
+    counterpartyIban: r.counterparty_iban,
+    communication: r.communication
+  }))
 }
 
 interface Batch {
@@ -251,12 +271,12 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
     if (group) planned.set(group.key, g.categoryId ?? group.example.categoryId)
   }
   for (const g of groups) if (!planned.has(g.key)) planned.set(g.key, g.example.categoryId)
-  const categorised = db.prepare('SELECT counterparty_name, description, category_id FROM transactions WHERE category_id IS NOT NULL').all() as {
-    counterparty_name: string | null
-    description: string
-    category_id: number
-  }[]
-  const uncategorised = db.prepare('SELECT counterparty_name, description FROM transactions WHERE category_id IS NULL').all() as { counterparty_name: string | null; description: string }[]
+  // Matched on the readable and the bank's own text, as rules are.
+  const categorised = (db.prepare(`SELECT ${RULE_COLUMNS}, category_id FROM transactions WHERE category_id IS NOT NULL`).all() as (Parameters<typeof ruleText>[0] & { category_id: number })[]).map((t) => ({
+    text: ruleText(t),
+    category_id: t.category_id
+  }))
+  const uncategorised = (db.prepare(`SELECT ${RULE_COLUMNS} FROM transactions WHERE category_id IS NULL`).all() as Parameters<typeof ruleText>[0][]).map(ruleText)
   const out: ProposedRule[] = []
   const seen = new Set<string>()
   for (const r of plan.rules) {
@@ -272,7 +292,7 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
     const key = `${r.field}|${pattern.toLowerCase()}`
     if (seen.has(key) || existingRules.some((e) => e.field === r.field && e.pattern.toLowerCase() === pattern.toLowerCase())) continue
     seen.add(key)
-    const hit = (t: { counterpartyName: string | null; description: string }): boolean => ruleMatches(rule, t)
+    const hit = (t: RuleText): boolean => ruleMatches(rule, t)
     const rowHit = (x: (typeof rows)[number]): boolean => hit(x.raw) || hit(x.row)
     const own = rows.filter((x) => groupOf.get(x.row.index) === group.key)
     if (own.length + group.existing.length === 0 || !own.every(rowHit) || !group.existing.every((e) => hit(e))) {
@@ -300,8 +320,8 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
       dropped.push(`Rule ${label} left out: the text is too general (it is in ${otherGroups.size} other kinds of payment).`)
       continue
     }
-    const clashBefore = categorised.filter((t) => t.category_id !== r.categoryId && hit({ counterpartyName: t.counterparty_name, description: t.description })).length
-    const agreeBefore = categorised.filter((t) => t.category_id === r.categoryId && hit({ counterpartyName: t.counterparty_name, description: t.description })).length
+    const clashBefore = categorised.filter((t) => t.category_id !== r.categoryId && hit(t.text)).length
+    const agreeBefore = categorised.filter((t) => t.category_id === r.categoryId && hit(t.text)).length
     if (clash || clashBefore > Math.max(1, agreeBefore / 5)) {
       dropped.push(`Rule ${label} → ${cats.get(r.categoryId)} left out: it would also catch ${clash + clashBefore} transaction(s) that belong elsewhere.`)
       continue
@@ -314,7 +334,7 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
       categoryId: r.categoryId,
       categoryName: cats.get(r.categoryId)!,
       rowsHere: rows.filter(rowHit).length,
-      existing: uncategorised.filter((t) => hit({ counterpartyName: t.counterparty_name, description: t.description })).length
+      existing: uncategorised.filter(hit).length
     })
   }
   return out

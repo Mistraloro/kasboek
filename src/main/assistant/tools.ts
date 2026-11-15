@@ -185,11 +185,12 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
   }
 }
 
-const FIELD_TEXT: Record<string, string> = { counterparty: 'counterparty', description: 'description', any: 'counterparty or description' }
+const FIELD_TEXT: Record<string, string> = { counterparty: 'counterparty', description: 'description', any: 'counterparty or description', iban: 'account number' }
 const MATCH_TEXT: Record<string, string> = { contains: 'contains', word: 'contains the word', starts: 'starts with' }
 
 function ruleText(r: Record<string, unknown>): string {
-  return `${FIELD_TEXT[String(r['field'])] ?? String(r['field'])} ${MATCH_TEXT[String(r['match'] ?? 'contains')] ?? 'contains'} “${String(r['pattern'])}”`
+  const how = r['field'] === 'iban' ? 'is' : (MATCH_TEXT[String(r['match'] ?? 'contains')] ?? 'contains')
+  return `${FIELD_TEXT[String(r['field'])] ?? String(r['field'])} ${how} “${String(r['pattern'])}”`
 }
 
 /** ", 14 now" style reach of a rule that is about to be created. */
