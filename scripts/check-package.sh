@@ -5,7 +5,7 @@ set -euo pipefail
 found=0
 while IFS= read -r a; do
   found=1
-  if npx --no-install asar list "$a" | grep -v '/node_modules/' | grep -E '^[/\\](src|tests|tools|scripts|release)([/\\]|$)|\.ts$'; then
+  if npx --no-install asar list "$a" | grep -vE '[/\\]node_modules[/\\]' | grep -E '^[/\\](src|tests|tools|scripts|release)([/\\]|$)|\.ts$'; then
     echo "Unexpected files (above) in $a"
     exit 1
   fi
