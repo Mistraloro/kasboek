@@ -27,6 +27,7 @@ import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
 import { helperPath } from './mcp/channel'
+import { checkForUpdate, downloadUpdate, installUpdate, openReleasePage, updateStatus } from './update'
 import * as mcpSetup from './mcp/setup'
 
 let readyListener: (() => void) | null = null
@@ -70,6 +71,18 @@ const desktopOps: OpTable = {
       dataDir: paths.dataDir,
       mcpCommand: { command: helperPath(), args: ['--data-dir', paths.dataDir] }
     })
+  },
+  'update.status': { mutates: false, assistant: false, handler: () => updateStatus() },
+  'update.check': { mutates: false, assistant: false, handler: () => checkForUpdate() },
+  'update.download': { mutates: false, assistant: false, handler: () => downloadUpdate() },
+  'update.install': { mutates: false, assistant: false, handler: () => installUpdate() },
+  'update.openPage': {
+    mutates: false,
+    assistant: false,
+    handler: () => {
+      openReleasePage()
+      return { ok: true as const }
+    }
   },
   'app.ready': {
     mutates: false,

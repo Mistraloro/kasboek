@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { AssistantPanel } from './components/AssistantPanel'
 import { Mark } from './components/Mark'
 import { McpRequests } from './components/McpRequests'
+import { UpdateButton } from './components/Update'
+import { Welcome } from './pages/Welcome'
 import { ToastProvider, useToast } from './components/Toast'
 import { cx } from './components/ui'
 import { call } from './lib/api'
@@ -57,11 +59,17 @@ function Gate() {
   if (status.state === 'locked') return <Lock />
   return (
     <SettingsProvider>
-      <Shell />
+      <Main />
       <McpRequests />
       {(status.recovered || status.weakPassword) && <RecoveredModal weak={!status.recovered} />}
     </SettingsProvider>
   )
+}
+
+/** The welcome window comes first on a computer that hasn't seen it yet. */
+function Main() {
+  const { prefs } = usePrefs()
+  return prefs.welcomeDone ? <Shell /> : <Welcome />
 }
 
 function Shell() {
@@ -135,6 +143,7 @@ function Shell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className={cx('drag flex h-11 shrink-0 items-center justify-end', isMac ? 'pr-3' : 'pr-[148px]')}>
+          <UpdateButton />
           <button
             type="button"
             onClick={() => setAssistantOpen((v) => !v)}

@@ -160,5 +160,14 @@
     "hint": "Datos y preferencias para conversaciones futuras, como cuándo cobras o en qué categoría va una tienda. Se guardan cifrados solo en esta computadora: no se sincronizan ni se dan a las apps de Claude por MCP. Se envían a {{name}} con cada mensaje para que pueda usarlos.",
     "byYou": "Agregado por ti",
     "add": "Agregar"
+  },
+  "update": {
+    "noFile": "Esta versión no tiene archivo para esta computadora. Descárgalo desde la página de la versión."
+  },
+  "welcome": {
+    "aiBody": "El asistente responde preguntas sobre tu dinero y puede hacer cambios por ti, que esperan tu aprobación. Elige un proveedor de IA, o sáltate este paso y configúralo más tarde en Configuración.",
+    "local": "{{name}} funciona en tu propio computadora y no necesita clave. Ábrelo antes de usar el asistente.",
+    "privacyLocal": "Todo se queda en tu computadora.",
+    "updatesPrivacy": "Kasboek pregunta a GitHub, donde se publica Kasboek, por la última versión. GitHub ve tu dirección IP; no se envía nada sobre tus datos. Puedes cambiarlo en Configuración."
   }
 }

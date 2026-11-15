@@ -288,5 +288,28 @@
     "noNumbers": "Sem números de conta ou cartão, senhas ou outros segredos: o Kasboek recusa números que parecem uma conta ou um cartão.",
     "forgetAllText": "Tudo o que está lembrado ({{count}}) é apagado. Não pode ser desfeito.",
     "refused": "O Kasboek não lembra números de conta ou de cartão. Retire o número."
+  },
+  "update": {
+    "downloadingShort": "Baixando… {{percent}} %",
+    "current": "Você tem a versão {{version}}.",
+    "downloading": "Baixando… {{percent}} % de {{size}}",
+    "readyRestart": "Baixado e verificado. O Kasboek fecha, instala a atualização e volta a abrir. Demora cerca de um minuto.",
+    "ready": {
+      "dmg": "Baixado e verificado. O Kasboek abre a imagem de disco; arraste o Kasboek para Aplicações e substitua a versão antiga.",
+      "deb": "Baixado e verificado. O Kasboek abre o pacote no instalador de software."
+    },
+    "noFile": "Esta versão não tem arquivo para este computador. Baixe-o a partir da página da versão.",
+    "safety": "O Kasboek faz primeiro uma cópia de segurança dos seus dados e verifica o arquivo com a soma de verificação que o GitHub publica.",
+    "download": "Baixar",
+    "downloadSize": "Baixar ({{size}})",
+    "checking": "Procurando…",
+    "upToDate": "Você tem a versão mais recente (verificado {{when}})."
+  },
+  "welcome": {
+    "aiBody": "O assistente responde a perguntas sobre o seu dinheiro e pode fazer alterações por você, que aguardam a sua aprovação. Escolha um fornecedor de IA, ou pule esta etapa e configure-o mais tarde nas Configurações.",
+    "keySaved": "Chave salva ({{hint}}).",
+    "skip": "Pular por enquanto",
+    "updatesBody": "O Kasboek pode avisar você quando sair uma nova versão. Você decide quando a instala.",
+    "updatesPrivacy": "O Kasboek pergunta ao GitHub, onde o Kasboek é publicado, pela versão mais recente. O GitHub vê o seu endereço IP; nada sobre os seus dados é enviado. Você pode alterar isso nas Configurações."
   }
 }

@@ -27,19 +27,39 @@ export function useAssistant(): AssistantStatus | null {
   return status
 }
 
-/** Minimal formatting: **bold**, `code`, line breaks and "- " bullets. No HTML is ever injected. */
-function Rich({ text }: { text: string }) {
+/** Minimal formatting: # headings, **bold**, `code`, line breaks and "- " bullets. No HTML is ever injected. */
+export function Rich({ text }: { text: string }) {
   const inline = (s: string, key: number): ReactNode[] =>
     s.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) =>
       part.startsWith('**') && part.endsWith('**') ? <strong key={`${key}-${i}`}>{part.slice(2, -2)}</strong> : part.startsWith('`') && part.endsWith('`') ? <code key={`${key}-${i}`} className="rounded bg-surface-2 px-1 text-[12px]">{part.slice(1, -1)}</code> : part
     )
+  const bullet = /^\s*[-•*] /
   return (
     <div className="selectable space-y-1.5">
       {text.split(/\n{2,}/).map((para, i) => {
-        const lines = para.split('\n')
-        if (lines.every((l) => /^\s*[-•*] /.test(l)))
-          return <ul key={i} className="list-disc space-y-0.5 pl-4">{lines.map((l, j) => <li key={j}>{inline(l.replace(/^\s*[-•*] /, ''), j)}</li>)}</ul>
-        return <p key={i}>{lines.flatMap((l, j) => (j ? [<br key={`br${j}`} />, ...inline(l, j)] : inline(l, j)))}</p>
+        // Runs of bullet lines become a list; other lines stay text, headings bold.
+        const blocks: { list: boolean; lines: string[] }[] = []
+        for (const l of para.split('\n')) {
+          const list = bullet.test(l)
+          const last = blocks.at(-1)
+          if (last && last.list === list) last.lines.push(l)
+          else blocks.push({ list, lines: [l] })
+        }
+        return (
+          <div key={i} className="space-y-1">
+            {blocks.map((b, j) =>
+              b.list ? (
+                <ul key={j} className="list-disc space-y-0.5 pl-4">{b.lines.map((l, k) => <li key={k}>{inline(l.replace(bullet, ''), k)}</li>)}</ul>
+              ) : (
+                <p key={j}>{b.lines.flatMap((l, k) => {
+                  const h = /^#{1,6} /.test(l)
+                  const parts = h ? [<strong key={`h${k}`}>{l.replace(/^#{1,6} /, '')}</strong>] : inline(l, k)
+                  return k ? [<br key={`br${k}`} />, ...parts] : parts
+                })}</p>
+              )
+            )}
+          </div>
+        )
       })}
     </div>
   )

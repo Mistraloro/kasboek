@@ -61,6 +61,14 @@ npm run dev        # start the app with hot reload
 
 **Download**: the repository's **Releases** page has every installer for each version.
 
+**Updates from the app**: Kasboek asks GitHub for the latest release at start and once a day
+(switch in the welcome window and in Settings; GitHub sees the IP address, nothing else is sent).
+A newer release shows an "Update to …" button at the top. The download is checked against the
+SHA-256 GitHub reports for the file (or the release's `SHA256SUMS.txt`), the data is backed up to
+`safety-backups`, then: Windows runs the MSI silently and reopens Kasboek; an AppImage replaces
+itself; a `.deb` or `.dmg` is opened for you to finish. Only published releases count: test builds
+on the Actions page are not offered.
+
 **Publish a new version**: set `version` in `package.json`, commit, then push a matching tag
 (`git tag v0.9.1 && git push origin v0.9.1`), or run the workflow with “Publish as a release” ticked. The **Build installers** workflow builds every OS on a
 real machine of that OS and attaches the files to a new Release. Running the workflow by hand

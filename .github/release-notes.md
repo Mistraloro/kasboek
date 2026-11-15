@@ -13,6 +13,8 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **Export**: transactions as CSV, and a year report as PDF.
 - **Transactions**: rename or pair a selection, and saved searches. **Month picker**: click the month to jump to any month and year.
 - **Tray icon**: whether Claude apps are connected, with "Stop Claude connection" and Quit.
+- **Updates from inside Kasboek**: an "Update to …" button appears when a new version is out; Kasboek downloads it, checks it, backs up your data and installs it (on a Mac you drag it to Applications). You can switch the check off.
+- **Welcome window** on first start: choose the assistant's AI and whether Kasboek looks for updates.
 
 **Assistant**
 - **Permissions**: choose what the assistant may change by itself and what waits for your OK, like Claude's permission modes. "Always ask" stays the default.

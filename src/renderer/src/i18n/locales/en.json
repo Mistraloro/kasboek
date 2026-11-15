@@ -1033,5 +1033,54 @@
     "forgetAllTitle": "Forget everything?",
     "forgetAllText": "All remembered items ({{count}}) are removed. This can’t be undone.",
     "refused": "Kasboek doesn’t remember account or card numbers. Leave the number out."
+  },
+  "update": {
+    "button": "Update to {{version}}",
+    "downloadingShort": "Downloading… {{percent}}%",
+    "title": "Kasboek {{version}} is available",
+    "current": "You have {{version}}.",
+    "downloading": "Downloading… {{percent}}% of {{size}}",
+    "readyRestart": "Downloaded and checked. Kasboek closes, installs the update and opens again. This takes about a minute.",
+    "ready": {
+      "dmg": "Downloaded and checked. Kasboek opens the disk image; drag Kasboek to Applications and replace the old one.",
+      "deb": "Downloaded and checked. Kasboek opens the package in your software installer."
+    },
+    "installing": "Installing… Kasboek closes and opens again in a moment.",
+    "opened": {
+      "dmg": "Drag Kasboek to Applications and choose Replace. Then quit Kasboek and open it again.",
+      "deb": "Finish the installation in the software installer, then quit Kasboek and open it again."
+    },
+    "noFile": "This release has no file for this computer. Download it from the release page.",
+    "safety": "Kasboek makes a backup of your data first, and checks the file against the checksum GitHub publishes for it.",
+    "releasePage": "Release page",
+    "later": "Later",
+    "download": "Download",
+    "downloadSize": "Download ({{size}})",
+    "installRestart": "Install and restart",
+    "openInstaller": "Open the installer",
+    "auto": "Check for updates automatically",
+    "autoHint": "At start and once a day, Kasboek asks GitHub whether there is a newer version. Nothing about your data is sent.",
+    "devOnly": "Updates are only checked in installed versions.",
+    "checking": "Checking…",
+    "upToDate": "You have the latest version (checked {{when}}).",
+    "availableHint": "Version {{version}} is available: use the button at the top.",
+    "checkNow": "Check now"
+  },
+  "welcome": {
+    "aiTitle": "Set up the assistant",
+    "aiBody": "The assistant answers questions about your money and can make changes for you, which wait for your OK. Choose an AI provider, or skip this and set it up later in Settings.",
+    "provider": "AI provider",
+    "keySaved": "Key saved ({{hint}}).",
+    "local": "{{name}} runs on your own computer and needs no key. Start it before you use the assistant.",
+    "privacy": "When you use the assistant, your messages and the data it looks up go to {{company}}. Nothing is sent until you ask something.",
+    "privacyLocal": "Everything stays on your computer.",
+    "skip": "Skip for now",
+    "next": "Next",
+    "updatesTitle": "Updates",
+    "updatesBody": "Kasboek can tell you when a new version is out. You decide when to install it.",
+    "updatesSwitch": "Check for updates automatically",
+    "updatesHint": "At start and once a day.",
+    "updatesPrivacy": "Kasboek asks GitHub, where Kasboek is published, for the latest version. GitHub sees your IP address; nothing about your data is sent. You can change this in Settings.",
+    "finish": "Start using Kasboek"
   }
 }

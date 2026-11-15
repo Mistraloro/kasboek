@@ -23,7 +23,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, Memory, MemoryState, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -60,12 +60,22 @@ export const contract = {
           })
           .partial()
           .strict(),
-        autoLockMinutes: z.number().int().min(0).max(240)
+        autoLockMinutes: z.number().int().min(0).max(240),
+        updateCheck: z.boolean(),
+        welcomeDone: z.boolean()
       })
       .partial()
       .strict(),
     output: out<Prefs>()
   },
+
+  /* ----- Updates (new releases on GitHub) ----- */
+  'update.status': { input: empty, output: out<UpdateStatus>() },
+  'update.check': { input: empty, output: out<UpdateStatus>() },
+  'update.download': { input: empty, output: out<UpdateStatus>() },
+  /** Backs up, then installs (Windows, AppImage: Kasboek closes and opens again) or opens the file. */
+  'update.install': { input: empty, output: out<UpdateStatus>() },
+  'update.openPage': { input: empty, output: out<{ ok: true }>() },
 
   /* ----- Login ----- */
   'auth.status': { input: empty, output: out<AuthStatus>() },
@@ -614,6 +624,7 @@ export type AppEvent =
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
   | { type: 'settings.changed' }
+  | { type: 'update.changed'; status: UpdateStatus }
   | { type: 'import.checkProgress'; sessionId: string; groupsDone: number; groupsTotal: number; partsTotal: number }
   | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string } | null }
   | { type: 'sync.updated'; status: SyncStatus }

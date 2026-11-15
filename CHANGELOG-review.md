@@ -139,3 +139,25 @@
 - `looksSensitive` can refuse an uppercase phrase that looks like an IBAN, and it can't catch a password written in words; the system prompt also tells the model not to save those.
 - Memory items are sent with every chat message while memory is on; the Settings text says so.
 - `between_tools` for Sonnet 5.5 is cast in `claude.ts` because the SDK types may not list it yet.
+
+## 7. Updates from the app and the welcome window
+
+### Updates (`src/main/update.ts`, `src/core/update.ts`)
+- **Check:** `GET https://api.github.com/repos/Mistraloro/kasboek/releases/latest` with a generic user agent, 15 s after start and then hourly when the last check is over a day old, only while `prefs.updateCheck` is on (default on). Drafts and pre-releases are ignored; `newer()` compares the numeric parts.
+- **Which file:** `installKind()` (Windows → msi, macOS → dmg, Linux → AppImage when `APPIMAGE` is set, else deb) and `pickAsset()` by the build's file names and the processor.
+- **Integrity:** downloads only from `https://github.com/Mistraloro/kasboek/releases/download/`. The SHA-256 comes from the asset's `digest` in GitHub's API, else from a `SHA256SUMS.txt` asset (now written by the release job); without either, nothing is installed. The file streams to `<userData>/updates/<name>.partial` and is renamed only when the hash matches.
+- **Install:** a backup first (`safety-backups/before-update-….kasboek`, when unlocked), and a `pending.json` note.
+  - Windows: `install.cmd` waits for this process to exit, runs `msiexec /i … /qn /norestart /l*v install.log`, then starts `process.execPath` again.
+  - AppImage: copies next to the current file, `chmod 755`, renames over it, starts it.
+  - deb/dmg: `shell.openPath`; the person finishes.
+  - On the next start, if the version is still older than the note, the update window says it didn't install; otherwise `updates/` is removed.
+- **Development runs:** nothing is checked unless `KASBOEK_UPDATE_API` points at a stand-in server (ignored in packaged builds).
+- **UI:** `components/Update.tsx` (top-bar button only while a newer release waits; window with the notes from the first heading to "Download", progress, install), Settings row (switch, "Check now", last result).
+
+### Welcome window (`pages/Welcome.tsx`)
+- Shown after unlocking on a computer where `prefs.welcomeDone` is false (new data, a join, or the first start after this update).
+- Step 1: AI provider (all presets but "custom") and key, or skip. Step 2: the update switch, on by default. "Start using Kasboek" stores both.
+
+### To look at
+- The Windows path (silent MSI and restart) was not run here; only the AppImage path, the deb/dmg path and the "didn't install" note were run end to end. If `kasboek-mcp.exe` is in use by a Claude app during the MSI upgrade, Windows may hold that file until a restart.
+- Without code signing, the update is only as trustworthy as the GitHub account that publishes releases.

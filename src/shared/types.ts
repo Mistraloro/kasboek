@@ -227,6 +227,32 @@ export interface Prefs {
   formats: FormatPrefs
   /** Lock after this many minutes without keyboard or mouse use. 0 = never. */
   autoLockMinutes: number
+  /** Look for a new Kasboek release on GitHub at start and once a day. */
+  updateCheck: boolean
+  /** The welcome window (assistant and update choice) was finished on this computer. */
+  welcomeDone: boolean
+}
+
+/** How the update for this computer is installed. */
+export type UpdateKind = 'msi' | 'appimage' | 'deb' | 'dmg'
+
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'installing' | 'opened' | 'error'
+  /** This version and the newest release. */
+  current: string
+  latest: string | null
+  /** The release's notes (Markdown) and its page on GitHub. */
+  notes: string | null
+  pageUrl: string | null
+  /** How it installs here; null when the release has no file for this computer. */
+  kind: UpdateKind | null
+  sizeBytes: number | null
+  /** Download progress, 0–1. */
+  progress: number
+  error: string | null
+  lastCheckedAt: string | null
+  /** False in development runs, where nothing is checked. */
+  supported: boolean
 }
 
 export type AuthMode = 'password' | 'device'

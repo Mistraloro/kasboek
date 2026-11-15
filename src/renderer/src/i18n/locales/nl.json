@@ -1033,5 +1033,54 @@
     "forgetAllTitle": "Alles vergeten?",
     "forgetAllText": "Alles wat onthouden is ({{count}}) wordt verwijderd. Dit kan niet ongedaan worden.",
     "refused": "Kasboek onthoudt geen rekening- of kaartnummers. Laat het nummer weg."
+  },
+  "update": {
+    "button": "Bijwerken naar {{version}}",
+    "downloadingShort": "Downloaden… {{percent}}%",
+    "title": "Kasboek {{version}} is beschikbaar",
+    "current": "Je hebt {{version}}.",
+    "downloading": "Downloaden… {{percent}}% van {{size}}",
+    "readyRestart": "Gedownload en gecontroleerd. Kasboek sluit, installeert de update en opent opnieuw. Dat duurt ongeveer een minuut.",
+    "ready": {
+      "dmg": "Gedownload en gecontroleerd. Kasboek opent de schijfkopie; sleep Kasboek naar Apps en vervang de oude.",
+      "deb": "Gedownload en gecontroleerd. Kasboek opent het pakket in je software-installatie."
+    },
+    "installing": "Installeren… Kasboek sluit zo en opent dan opnieuw.",
+    "opened": {
+      "dmg": "Sleep Kasboek naar Apps en kies Vervang. Sluit Kasboek daarna af en open het opnieuw.",
+      "deb": "Rond de installatie af in de software-installatie, sluit Kasboek daarna af en open het opnieuw."
+    },
+    "noFile": "Deze release heeft geen bestand voor deze computer. Download het via de releasepagina.",
+    "safety": "Kasboek maakt eerst een back-up van je gegevens en controleert het bestand met de controlesom die GitHub ervoor publiceert.",
+    "releasePage": "Releasepagina",
+    "later": "Later",
+    "download": "Downloaden",
+    "downloadSize": "Downloaden ({{size}})",
+    "installRestart": "Installeren en herstarten",
+    "openInstaller": "Installatie openen",
+    "auto": "Automatisch naar updates zoeken",
+    "autoHint": "Bij het starten en één keer per dag vraagt Kasboek aan GitHub of er een nieuwere versie is. Er wordt niets over je gegevens verstuurd.",
+    "devOnly": "Updates worden alleen gezocht in geïnstalleerde versies.",
+    "checking": "Zoeken…",
+    "upToDate": "Je hebt de nieuwste versie (gecontroleerd {{when}}).",
+    "availableHint": "Versie {{version}} is beschikbaar: gebruik de knop bovenaan.",
+    "checkNow": "Nu zoeken"
+  },
+  "welcome": {
+    "aiTitle": "De assistent instellen",
+    "aiBody": "De assistent beantwoordt vragen over je geld en kan wijzigingen voor je maken, die op je akkoord wachten. Kies een AI-aanbieder, of sla dit over en stel het later in bij Instellingen.",
+    "provider": "AI-aanbieder",
+    "keySaved": "Sleutel bewaard ({{hint}}).",
+    "local": "{{name}} draait op je eigen computer en heeft geen sleutel nodig. Start het voor je de assistent gebruikt.",
+    "privacy": "Als je de assistent gebruikt, gaan je berichten en de gegevens die hij opzoekt naar {{company}}. Er wordt niets verstuurd tot je iets vraagt.",
+    "privacyLocal": "Alles blijft op je computer.",
+    "skip": "Nu overslaan",
+    "next": "Volgende",
+    "updatesTitle": "Updates",
+    "updatesBody": "Kasboek kan je laten weten wanneer er een nieuwe versie is. Jij beslist wanneer je ze installeert.",
+    "updatesSwitch": "Automatisch naar updates zoeken",
+    "updatesHint": "Bij het starten en één keer per dag.",
+    "updatesPrivacy": "Kasboek vraagt de nieuwste versie op bij GitHub, waar Kasboek gepubliceerd wordt. GitHub ziet je IP-adres; er wordt niets over je gegevens verstuurd. Je kunt dit wijzigen bij Instellingen.",
+    "finish": "Kasboek gebruiken"
   }
 }

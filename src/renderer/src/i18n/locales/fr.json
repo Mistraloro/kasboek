@@ -1033,5 +1033,54 @@
     "forgetAllTitle": "Tout oublier ?",
     "forgetAllText": "Tout ce qui est retenu ({{count}}) est supprimé. C’est définitif.",
     "refused": "Kasboek ne retient pas les numéros de compte ou de carte. Retirez le numéro."
+  },
+  "update": {
+    "button": "Mettre à jour vers {{version}}",
+    "downloadingShort": "Téléchargement… {{percent}} %",
+    "title": "Kasboek {{version}} est disponible",
+    "current": "Vous avez la version {{version}}.",
+    "downloading": "Téléchargement… {{percent}} % de {{size}}",
+    "readyRestart": "Téléchargé et vérifié. Kasboek se ferme, installe la mise à jour et se rouvre. Cela prend environ une minute.",
+    "ready": {
+      "dmg": "Téléchargé et vérifié. Kasboek ouvre l’image disque ; faites glisser Kasboek dans Applications et remplacez l’ancienne version.",
+      "deb": "Téléchargé et vérifié. Kasboek ouvre le paquet dans votre installateur de logiciels."
+    },
+    "installing": "Installation… Kasboek se ferme et se rouvre dans un instant.",
+    "opened": {
+      "dmg": "Faites glisser Kasboek dans Applications et choisissez Remplacer. Puis quittez Kasboek et rouvrez-le.",
+      "deb": "Terminez l’installation dans l’installateur de logiciels, puis quittez Kasboek et rouvrez-le."
+    },
+    "noFile": "Cette version n’a pas de fichier pour cet ordinateur. Téléchargez-le depuis la page de la version.",
+    "safety": "Kasboek sauvegarde d’abord vos données et vérifie le fichier avec la somme de contrôle que GitHub publie.",
+    "releasePage": "Page de la version",
+    "later": "Plus tard",
+    "download": "Télécharger",
+    "downloadSize": "Télécharger ({{size}})",
+    "installRestart": "Installer et redémarrer",
+    "openInstaller": "Ouvrir l’installateur",
+    "auto": "Rechercher les mises à jour automatiquement",
+    "autoHint": "Au démarrage et une fois par jour, Kasboek demande à GitHub s’il existe une version plus récente. Rien sur vos données n’est envoyé.",
+    "devOnly": "Les mises à jour ne sont recherchées que dans les versions installées.",
+    "checking": "Recherche…",
+    "upToDate": "Vous avez la dernière version (vérifié {{when}}).",
+    "availableHint": "La version {{version}} est disponible : utilisez le bouton en haut.",
+    "checkNow": "Rechercher"
+  },
+  "welcome": {
+    "aiTitle": "Configurer l’assistant",
+    "aiBody": "L’assistant répond à vos questions sur votre argent et peut faire des modifications pour vous, qui attendent votre accord. Choisissez un fournisseur d’IA, ou passez cette étape et configurez-le plus tard dans les Réglages.",
+    "provider": "Fournisseur d’IA",
+    "keySaved": "Clé enregistrée ({{hint}}).",
+    "local": "{{name}} tourne sur votre propre ordinateur et n’a pas besoin de clé. Lancez-le avant d’utiliser l’assistant.",
+    "privacy": "Quand vous utilisez l’assistant, vos messages et les données qu’il consulte sont envoyés à {{company}}. Rien n’est envoyé avant que vous ne posiez une question.",
+    "privacyLocal": "Tout reste sur votre ordinateur.",
+    "skip": "Passer pour l’instant",
+    "next": "Suivant",
+    "updatesTitle": "Mises à jour",
+    "updatesBody": "Kasboek peut vous prévenir quand une nouvelle version sort. Vous décidez quand l’installer.",
+    "updatesSwitch": "Rechercher les mises à jour automatiquement",
+    "updatesHint": "Au démarrage et une fois par jour.",
+    "updatesPrivacy": "Kasboek demande la dernière version à GitHub, où Kasboek est publié. GitHub voit votre adresse IP ; rien sur vos données n’est envoyé. Vous pouvez changer cela dans les Réglages.",
+    "finish": "Commencer avec Kasboek"
   }
 }
