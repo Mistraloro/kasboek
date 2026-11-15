@@ -5,6 +5,7 @@ import { dispatch, onAppReady, registerIpc } from './ipc'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
 import { createTray, destroyTray, refreshTray } from './tray'
+import { startAlertChecks } from './notify'
 import { closeSplash, showSplash, splashMinimumElapsed, splashProgress } from './splash'
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
@@ -129,6 +130,7 @@ void app.whenReady().then(async () => {
   startBackupScheduler()
   startSyncScheduler()
   startAutoLock()
+  startAlertChecks()
   // Keep the MCP bridge in step with the lock state and the setting.
   createTray()
   setInterval(() => {

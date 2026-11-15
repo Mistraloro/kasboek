@@ -881,5 +881,10 @@
     "changed": "Gewijzigd van {{from}} naar {{to}}",
     "emptyTitle": "Nog niets dat terugkomt",
     "emptyBody": "Na een paar maanden verrichtingen vindt Kasboek hier je abonnementen en andere vaste kosten."
+  },
+  "alerts": {
+    "budgetNear": "{{name}}: {{pct}}% van het budget gebruikt ({{spent}} van {{budget}}).",
+    "budgetOver": "{{name}}: over het budget ({{spent}} van {{budget}}).",
+    "balance": "{{name}} kan voor {{date}} onder nul gaan: {{lowest}} na {{due}} aan vaste kosten die nog komen."
   }
 }

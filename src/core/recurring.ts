@@ -45,6 +45,7 @@ interface Row {
   counterparty_iban: string | null
   category_id: number | null
   category_name: string | null
+  account_id: number
   account_name: string
 }
 
@@ -53,7 +54,7 @@ export function findRecurring(db: Db, today = localToday()): RecurringSummary {
   const rows = db
     .prepare(
       `SELECT t.id, t.booking_date, t.amount_cents, t.counterparty_name, t.description, t.bank_counterparty, t.bank_description, t.counterparty_iban,
-              t.category_id, c.name AS category_name, a.name AS account_name
+              t.category_id, c.name AS category_name, t.account_id, a.name AS account_name
        FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id
        WHERE t.booking_date >= ? AND t.booking_date <= ? AND t.transfer_pair IS NULL AND (c.kind IS NULL OR c.kind <> 'transfer')
        ORDER BY t.booking_date, t.id`
@@ -108,6 +109,7 @@ export function findRecurring(db: Db, today = localToday()): RecurringSummary {
       priceChangeCents: change,
       categoryId: last.category_id,
       categoryName: last.category_name,
+      accountId: last.account_id,
       accountName: last.account_name,
       transactionIds: list.map((r) => r.id)
     })

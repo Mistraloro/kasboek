@@ -881,5 +881,10 @@
     "changed": "Cambió de {{from}} a {{to}}",
     "emptyTitle": "Aún nada que se repita",
     "emptyBody": "Tras unos meses de movimientos, Kasboek encuentra aquí tus suscripciones y otros gastos fijos."
+  },
+  "alerts": {
+    "budgetNear": "{{name}}: {{pct}} % del presupuesto usado ({{spent}} de {{budget}}).",
+    "budgetOver": "{{name}}: presupuesto superado ({{spent}} de {{budget}}).",
+    "balance": "{{name}} podría quedar en negativo antes del {{date}}: {{lowest}} tras {{due}} de gastos fijos pendientes."
   }
 }

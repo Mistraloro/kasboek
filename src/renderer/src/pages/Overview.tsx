@@ -1,4 +1,4 @@
-import { Check, PieChart, Sparkles, Tags } from 'lucide-react'
+import { AlertTriangle, Check, PieChart, Sparkles, Tags } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { monthOf } from '@shared/month'
@@ -9,7 +9,7 @@ import { call, useOp } from '../lib/api'
 import { useAssistant } from '../components/AssistantPanel'
 import { useToast } from '../components/Toast'
 import { errText } from './auth/parts'
-import { monthLabel, monthShort } from '../lib/format'
+import { formatDate, monthLabel, monthShort } from '../lib/format'
 import { useSettings } from '../lib/settings'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
@@ -22,6 +22,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
   const backup = useOp('backup.status')
   const accounts = useOp('accounts.list')
   const assistant = useAssistant()
+  const alerts = useOp('alerts.list')
   const toast = useToast()
   const s = summary.data
   const hasTx = (accounts.data ?? []).some((a) => a.transactionCount > 0)
@@ -58,6 +59,28 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
         }
       />
 
+      {(alerts.data ?? []).length > 0 && (
+        <div className="mb-4 flex flex-col gap-2">
+          {(alerts.data ?? []).map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              onClick={() => go(a.kind === 'budget' ? 'budgets' : 'recurring')}
+              className={cx(
+                'flex items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-[13px]',
+                a.kind === 'budget' && a.level === 'near' ? 'border-border bg-surface' : 'border-negative/30 bg-negative/5'
+              )}
+            >
+              <AlertTriangle size={15} className={a.kind === 'budget' && a.level === 'near' ? 'text-warning' : 'text-negative'} />
+              <span className="flex-1">
+                {a.kind === 'budget'
+                  ? t(a.level === 'over' ? 'alerts.budgetOver' : 'alerts.budgetNear', { name: a.name, spent: money(a.spentCents), budget: money(a.budgetCents), pct: Math.round((a.spentCents / a.budgetCents) * 100) })
+                  : t('alerts.balance', { name: a.name, date: formatDate(a.until, fmt), lowest: money(a.lowestCents, a.currency), due: money(a.dueCents, a.currency) })}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-4">
         <Stat label={t('overview.income')} value={money(s?.incomeCents ?? 0)} />
         <Stat label={t('overview.spending')} value={money(s?.spendingCents ?? 0)} />

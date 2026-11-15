@@ -881,5 +881,10 @@
     "changed": "Changed from {{from}} to {{to}}",
     "emptyTitle": "Nothing that comes back yet",
     "emptyBody": "After a few months of transactions, Kasboek finds your subscriptions and other fixed costs here."
+  },
+  "alerts": {
+    "budgetNear": "{{name}}: {{pct}}% of the budget used ({{spent}} of {{budget}}).",
+    "budgetOver": "{{name}}: over budget ({{spent}} of {{budget}}).",
+    "balance": "{{name}} may go below zero before {{date}}: {{lowest}} after {{due}} of fixed costs still due."
   }
 }

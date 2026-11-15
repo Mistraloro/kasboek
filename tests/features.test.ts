@@ -134,3 +134,29 @@ describe('monthly review (#31)', () => {
     expect(r.unusual.map((u) => [u.name, u.reason])).toEqual([['New laptop shop', 'new'], ['Garage', 'higher']])
   })
 })
+
+describe('warnings (#32)', () => {
+  it('warns about budgets at 80% and 100%, and a balance going below zero before payday', async () => {
+    const { listAlerts } = await import('@core/alerts')
+    const { setBudget } = await import('@core/finance')
+    const { setBankBalance } = await import('@core/balance')
+    const { d, acc } = db()
+    const a = acc('Current')
+    d.prepare("UPDATE accounts SET kind = 'current'").run()
+    setBudget(d, { categoryId: cat(d, 'Groceries'), month: '2026-11', amountCents: 10000 })
+    setBudget(d, { categoryId: cat(d, 'Eating out'), month: '2026-11', amountCents: 5000 })
+    tx(d, a, '2026-11-03', -8500, { categoryId: cat(d, 'Groceries') })
+    tx(d, a, '2026-11-04', -6000, { categoryId: cat(d, 'Eating out') })
+    // Salary on the 25th; rent on the 20th.
+    for (const m of ['2026-07', '2026-08', '2026-09', '2026-10']) {
+      tx(d, a, `${m}-25`, 200000, { counterpartyName: 'Employer' })
+      tx(d, a, `${m}-20`, -90000, { counterpartyName: 'Landlord' })
+    }
+    setBankBalance(d, { accountId: a, date: '2026-11-10', balanceCents: 50000 }, '2026-11-10')
+    const alerts = listAlerts(d, '2026-11-10')
+    const budget = Object.fromEntries(alerts.flatMap((x) => (x.kind === 'budget' ? [[x.name, x.level]] : [])))
+    expect(budget).toEqual({ Groceries: 'near', 'Eating out': 'over' })
+    const bal = alerts.find((x) => x.kind === 'balance')
+    expect(bal).toMatchObject({ kind: 'balance', until: '2026-11-25', balanceCents: 50000, dueCents: 90000, lowestCents: -40000 })
+  })
+})

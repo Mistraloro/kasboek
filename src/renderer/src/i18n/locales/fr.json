@@ -881,5 +881,10 @@
     "changed": "Passé de {{from}} à {{to}}",
     "emptyTitle": "Rien qui revient pour l’instant",
     "emptyBody": "Après quelques mois d’opérations, Kasboek trouve ici vos abonnements et autres frais fixes."
+  },
+  "alerts": {
+    "budgetNear": "{{name}} : {{pct}} % du budget utilisé ({{spent}} sur {{budget}}).",
+    "budgetOver": "{{name}} : budget dépassé ({{spent}} sur {{budget}}).",
+    "balance": "{{name}} pourrait passer sous zéro avant le {{date}} : {{lowest}} après {{due}} de frais fixes à venir."
   }
 }

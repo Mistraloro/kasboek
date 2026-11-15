@@ -881,5 +881,10 @@
     "changed": "Geändert von {{from}} auf {{to}}",
     "emptyTitle": "Noch nichts, das wiederkommt",
     "emptyBody": "Nach ein paar Monaten Buchungen findet Kasboek hier deine Abos und anderen Fixkosten."
+  },
+  "alerts": {
+    "budgetNear": "{{name}}: {{pct}} % des Budgets verbraucht ({{spent}} von {{budget}}).",
+    "budgetOver": "{{name}}: Budget überschritten ({{spent}} von {{budget}}).",
+    "balance": "{{name}} könnte vor dem {{date}} ins Minus gehen: {{lowest}} nach {{due}} noch fälligen Fixkosten."
   }
 }

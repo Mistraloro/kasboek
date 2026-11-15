@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -352,6 +352,11 @@ export const contract = {
   },
   'transactions.delete': { input: z.object({ ids: z.array(id).min(1).max(5000) }).strict(), output: out<{ deleted: number }>() },
 
+  'alerts.list': {
+    description: 'Warnings now: budgets at 80% or more this month, and current accounts whose balance would go below zero before the next income (counting fixed costs still due).',
+    input: empty,
+    output: out<Alert[]>()
+  },
   'summary.review': {
     description: 'Facts for a review of one month (YYYY-MM): income and spending against the average of the three months before, each spending category against its average (biggest change first), budgets that went over, and payments that stand out (far above what that payee usually costs, or a large first payment). All in cents of the main currency.',
     input: z.object({ month }).strict(),

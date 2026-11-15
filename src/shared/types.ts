@@ -310,9 +310,15 @@ export interface RecurringItem {
   priceChangeCents: number | null
   categoryId: number | null
   categoryName: string | null
+  accountId: number
   accountName: string
   transactionIds: number[]
 }
+
+/** Something to warn about: a budget nearly or fully spent, or a balance heading below zero. */
+export type Alert =
+  | { kind: 'budget'; key: string; categoryId: number; name: string; budgetCents: number; spentCents: number; level: 'near' | 'over' }
+  | { kind: 'balance'; key: string; accountId: number; name: string; currency: string; balanceCents: number; lowestCents: number; until: string; dueCents: number }
 
 export interface RecurringSummary {
   items: RecurringItem[]
