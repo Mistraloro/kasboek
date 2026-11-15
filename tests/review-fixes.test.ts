@@ -7,6 +7,8 @@ import { openDatabase } from '@core/database'
 import { analyze, applyCheckProposals, commit, getCheck, remap, setCheck, snapshot, undoCheck, updateRows } from '@core/import'
 import { createRule, insertTransaction, listRules, matchRule, previewRule, reorderRules, textMatches, updateRule } from '@core/finance'
 import { parsePlan, rowGroups } from '@core/assist-plan'
+import { realReference } from '@core/csv/normalize'
+import { MIGRATIONS } from '@core/migrations'
 
 vi.mock('electron', () => ({ net: { fetch: vi.fn() }, app: { getPath: () => tmpdir(), isPackaged: false } }))
 
@@ -88,6 +90,33 @@ describe('duplicates', () => {
     commit(d, open(d, acc, ['2026-10-01;A;First;-1,00;STMT7']).sessionId, false)
     const p = open(d, acc, ['2026-10-05;B;Second;-5,00;STMT7', '2026-10-06;C;Third;-6,00;STMT7'])
     expect(p.rows.map((r) => r.status)).toEqual(['ready', 'ready'])
+  })
+})
+
+describe('pending payments (review 14 #1)', () => {
+  it('treats a placeholder reference as none', () => {
+    for (const p of ['2026-', '2026', '', '-', '0', '000', ' 2026/ ']) expect(realReference(p)).toBeNull()
+    for (const r of ['2026-00751', 'REF123', '20260001']) expect(realReference(r)).toBe(r)
+  })
+
+  it('recognises a pending row once the bank has given it a number', () => {
+    const { d, acc } = db()
+    commit(d, open(d, acc, ['2026-11-14;Shop;Betaling Shop Brugge;-71,15;2026-', '2026-11-14;Bar;Betaling Bar Gent;-1,20;2026-']).sessionId, false)
+    expect((d.prepare('SELECT count(*) AS n FROM transactions WHERE bank_reference IS NULL').get() as { n: number }).n).toBe(2)
+    // Same text: an exact duplicate. Slightly different text: a possible duplicate. Never ready.
+    const p = open(d, acc, ['2026-11-14;Shop;Betaling Shop Brugge;-71,15;2026-00751', '2026-11-15;Bar;Betaling Bar Gent 14/11;-1,20;2026-00752'])
+    expect(p.rows.map((r) => r.status)).toEqual(['duplicate', 'possible_duplicate'])
+  })
+
+  it('clears placeholder references already stored, and makes short rules whole-word', () => {
+    const { d, acc } = db()
+    d.prepare("INSERT INTO transactions (account_id, booking_date, amount_cents, currency, description, bank_reference, fingerprint) VALUES (?, '2026-11-14', -7115, 'EUR', 'x', '2026-', 'old')").run(acc)
+    d.prepare("INSERT INTO rules (field, pattern, match, category_id) VALUES ('any', 'FOD', 'contains', ?)").run(cat(d, 'Groceries'))
+    MIGRATIONS.at(-1)!(d)
+    const t = d.prepare('SELECT bank_reference, fingerprint FROM transactions').get() as { bank_reference: string | null; fingerprint: string }
+    expect(t.bank_reference).toBeNull()
+    expect(t.fingerprint).not.toBe('old')
+    expect(listRules(d)[0]!.match).toBe('word')
   })
 })
 
@@ -196,6 +225,18 @@ describe('assistant plumbing', () => {
     const models = await listModels({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm' })
     expect(models).toEqual(['m1'])
     expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('checks big files in parts; columns and fixes come only from the first part', async () => {
+    const { batches, mergePlans } = await import('../src/main/assistant/csv')
+    const groups = Array.from({ length: 170 }, (_, i) => ({ key: String(i) }) as never)
+    const b = batches(groups, 80)
+    expect(b.map((x) => [x.from, x.groups.length, x.first])).toEqual([[0, 80, true], [80, 80, false], [160, 10, false]])
+    const plan = (n: number) => ({ mapping: null, fixes: [{ index: n, action: 'skip', bookingDate: null, amountCents: null, description: null, reason: 'x' }], groups: [{ group: n, categoryId: 1, name: null, description: null }], rules: [], notes: ['ok'] }) as never
+    const merged = mergePlans([{ batch: { first: false }, plan: plan(80) }, { batch: { first: true }, plan: plan(0) }])
+    expect(merged.fixes.map((f) => f.index)).toEqual([0])
+    expect(merged.groups.map((g) => g.group)).toEqual([80, 0])
+    expect(merged.notes).toEqual(['ok'])
   })
 
   it('masks account numbers before a check is sent', async () => {

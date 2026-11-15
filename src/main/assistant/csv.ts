@@ -16,6 +16,8 @@ import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type
 import { client, explainError, modelParams } from './claude'
 import * as openai from './openai'
 import { activeProvider, requireConfigured } from './provider'
+import { app } from 'electron'
+import { broadcast } from '../session'
 
 
 
@@ -54,7 +56,18 @@ function existingUncategorised(db: Db, accountId: number): ExistingTx[] {
   ).map((r) => ({ id: r.id, bookingDate: r.booking_date, amountCents: r.amount_cents, counterpartyName: r.counterparty_name, description: r.description }))
 }
 
-function buildContext(db: Db, preview: ImportPreview, groups: RowGroup[]): string {
+interface Batch {
+  /** Index of the first group of this batch among all groups. */
+  from: number
+  groups: RowGroup[]
+  /** The first batch also checks the columns, flagged rows and possible duplicates. */
+  first: boolean
+  n: number
+  of: number
+}
+
+function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
+  const groups = batch.groups
   const raw = imp.rawWindow(preview.sessionId, 0, 25)
   const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(maskIban)
   // Exact duplicates are already in Kasboek: not sent again.
@@ -69,12 +82,19 @@ function buildContext(db: Db, preview: ImportPreview, groups: RowGroup[]): strin
   const lines = groups.map((g, i) => {
     const cat = g.example.categoryId === null ? 'uncategorised' : (catName.get(g.example.categoryId) ?? 'categorised')
     const comm = g.example.communication ? ` | communication: ${maskIban(g.example.communication.slice(0, 120))}` : ''
-    return `${i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${maskIban(g.example.counterpartyName ?? '')} | ${maskIban(g.example.description.slice(0, 400))}${comm}`
+    return `${batch.from + i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${maskIban(g.example.counterpartyName ?? '')} | ${maskIban(g.example.description.slice(0, 400))}${comm}`
   })
   const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${c.name} (${c.kind})`)
   const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId)
   return JSON.stringify(
     {
+      ...(batch.of > 1
+        ? {
+            batch: batch.first
+              ? `Part ${batch.n} of ${batch.of}: check the columns and flagged rows, and the groups below. The other groups are checked separately.`
+              : `Part ${batch.n} of ${batch.of}: only the groups below. Return mapping null and no fixes; the columns and flagged rows are checked in part 1.`
+          }
+        : {}),
       account,
       fileName: preview.fileName,
       recognisedLayout: preview.layout,
@@ -83,8 +103,8 @@ function buildContext(db: Db, preview: ImportPreview, groups: RowGroup[]): strin
       stats: preview.stats,
       linesAboveHeader: raw.preamble.map((r) => r.map(maskIban)),
       header: raw.header.map((h, i) => `${i}: ${h}`),
-      firstRows: raw.rows.map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })),
-      flaggedRows: flagged,
+      firstRows: batch.first ? raw.rows.map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })) : raw.rows.slice(0, 5).map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })),
+      flaggedRows: batch.first ? flagged : [],
       groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
       rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`)
@@ -300,8 +320,13 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
   return out
 }
 
-/** A check that runs too long is stopped, so the import screen never waits forever. */
+/** Each part of a check that runs too long is stopped, so the import screen never waits forever. */
 const TIME_LIMIT_MS = 4 * 60_000
+/** Dev builds only: a shorter limit, to test what happens when a part runs out of time. */
+const limitMs = (): number => (!app.isPackaged && Number(process.env['KASBOEK_CHECK_LIMIT_MS'])) || TIME_LIMIT_MS
+/** Groups per model call, and calls at the same time: a big file is checked in parts. */
+const BATCH_GROUPS = 80
+const PARALLEL = 3
 const running = new Map<string, AbortController>()
 
 /** Stops a running check for this import (the "Stop" button). */
@@ -313,19 +338,51 @@ export async function assistImport(db: Db, sessionId: string): Promise<ImportPre
   running.get(sessionId)?.abort('cancelled')
   const controller = new AbortController()
   running.set(sessionId, controller)
-  const timer = setTimeout(() => controller.abort('timeout'), TIME_LIMIT_MS)
   try {
     return await check(db, sessionId, controller.signal)
   } catch (err) {
-    if (!controller.signal.aborted) throw err
-    const name = activeProvider(db).preset.assistantName
-    if (controller.signal.reason === 'timeout')
-      throw new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
-    throw new AppError('assistant.cancelled', 'Check stopped.')
+    if (controller.signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
+    throw err
   } finally {
-    clearTimeout(timer)
     if (running.get(sessionId) === controller) running.delete(sessionId)
   }
+}
+
+/** Splits the groups into parts; the first part also carries the columns and flagged rows. */
+export function batches(groups: RowGroup[], size = BATCH_GROUPS): Omit<Batch, 'of'>[] {
+  const out: Omit<Batch, 'of'>[] = []
+  for (let from = 0; from < Math.max(groups.length, 1); from += size) out.push({ from, groups: groups.slice(from, from + size), first: from === 0, n: out.length + 1 })
+  return out
+}
+
+/** Puts the parts' answers together: columns and row fixes come only from the first part. */
+export function mergePlans(parts: { batch: Pick<Batch, 'first'>; plan: Plan }[]): Plan {
+  const first = parts.find((p) => p.batch.first)?.plan
+  return {
+    mapping: first?.mapping ?? null,
+    fixes: first?.fixes ?? [],
+    groups: parts.flatMap((p) => p.plan.groups),
+    rules: parts.flatMap((p) => p.plan.rules),
+    notes: [...new Set(parts.flatMap((p) => p.plan.notes))].slice(0, 6)
+  }
+}
+
+/** Runs `work` over the items with at most `limit` at a time; failures are returned, not thrown. */
+async function pool<T, R>(items: T[], limit: number, work: (item: T) => Promise<R>): Promise<({ ok: true; value: R } | { ok: false; error: unknown })[]> {
+  const results: ({ ok: true; value: R } | { ok: false; error: unknown })[] = new Array(items.length)
+  let next = 0
+  const lane = async (): Promise<void> => {
+    while (next < items.length) {
+      const i = next++
+      try {
+        results[i] = { ok: true, value: await work(items[i]!) }
+      } catch (error) {
+        results[i] = { ok: false, error }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
+  return results
 }
 
 async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<ImportPreview> {
@@ -335,39 +392,77 @@ async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<Im
     const name = activeProvider(db).preset.assistantName
     throw new AppError('assistant.nothing_to_check', `There is nothing for ${name} to check: every row is already in Kasboek and no transactions of this account are uncategorised.`)
   }
-  const settings = getSettings(db)
   const provider = activeProvider(db)
   requireConfigured(provider)
   const name = provider.preset.assistantName
-  let text = ''
+  const parts = batches(groups).map((b, _i, all) => ({ ...b, of: all.length }))
+  let done = 0
+  const progress = (): void => broadcast({ type: 'import.checkProgress', sessionId, groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
+  progress()
+  const results = await pool(parts, PARALLEL, async (batch) => {
+    const timeout = new AbortController()
+    const timer = setTimeout(() => timeout.abort('timeout'), limitMs())
+    try {
+      const text = await callModel(db, provider, buildContext(db, preview, batch), AbortSignal.any([signal, timeout.signal]))
+      const plan = parsePlan(text, name)
+      done += batch.groups.length
+      progress()
+      return { batch, plan }
+    } catch (err) {
+      if (signal.aborted) throw err
+      if (timeout.signal.aborted)
+        throw new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
+      throw err
+    } finally {
+      clearTimeout(timer)
+    }
+  })
+  if (signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
+  const finished = results.flatMap((r) => (r.ok ? [r.value] : []))
+  const failed = parts.filter((_, i) => !results[i]!.ok)
+  if (!finished.length) {
+    const first = results.find((r) => !r.ok) as { ok: false; error: unknown }
+    throw first.error
+  }
+  const plan = mergePlans(finished)
+  // Parts that failed are left out; what the others found is kept.
+  const lost = failed.map((b) => (b.first ? `part ${b.n} (with the column check)` : `part ${b.n}`))
+  if (lost.length) plan.notes.unshift(`${lost.length} of ${parts.length} parts couldn’t be checked (${lost.join(', ')}); run Check again to try them.`)
+  return applyPlan(db, preview, groups, plan, name)
+}
+
+/** One model call that returns the plan as JSON text. */
+async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, context: string, signal: AbortSignal): Promise<string> {
+  const name = provider.preset.assistantName
   if (provider.preset.id !== 'anthropic') {
     try {
-      text = await openai.json(provider, { system: INSTRUCTIONS, user: buildContext(db, preview, groups), schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal })
+      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal })
     } catch (err) {
       if (signal.aborted) throw err
       throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
     }
-    return applyPlan(db, preview, groups, parsePlan(text, name), name)
   }
+  const settings = getSettings(db)
   const params = modelParams(settings.csvModel, settings.csvEffort)
+  let text = ''
   try {
-    const stream = client(db).beta.messages.stream({
-      ...params,
-      max_tokens: 32000,
-      output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
-      system: INSTRUCTIONS,
-      messages: [{ role: 'user', content: buildContext(db, preview, groups) }]
-    }, { signal })
+    const stream = client(db).beta.messages.stream(
+      {
+        ...params,
+        max_tokens: 32000,
+        output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
+        system: INSTRUCTIONS,
+        messages: [{ role: 'user', content: context }]
+      },
+      { signal }
+    )
     const message = await stream.finalMessage()
     if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
-    if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
+    if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')
     for (const b of message.content) if (b.type === 'text') text += b.text
   } catch (err) {
     if (signal.aborted) throw err
     throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
   }
-  return applyPlan(db, preview, groups, parsePlan(text, name), name)
+  return text
 }
-
-
-

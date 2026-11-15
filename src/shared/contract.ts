@@ -497,6 +497,7 @@ export type AppEvent =
   | { type: 'auth.refresh' }
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
+  | { type: 'import.checkProgress'; sessionId: string; groupsDone: number; groupsTotal: number; partsTotal: number }
   | { type: 'sync.updated'; status: SyncStatus }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
   | { type: 'mcp.request'; id: string; op: string; summary: string }

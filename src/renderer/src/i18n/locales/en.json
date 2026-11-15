@@ -229,7 +229,7 @@
     "layoutRecognised": "Layout recognised",
     "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network.",
     "stopCheck": "Stop",
-    "checkSlowHint": "Large files can take a few minutes. It stops by itself after 4 minutes.",
+    "checkSlowHint": "Large files are checked in parts, a few at a time. Each part stops by itself after 4 minutes.",
     "discard": "Discard",
     "allKnown": "Everything in this file is already in Kasboek ({{from}} – {{to}}).",
     "allKnownHint": "{{name}} can still sort the transactions of this account that have no category yet.",
@@ -258,7 +258,8 @@
       "applied": "Created {{rules}} rule(s) and categorised {{count}} transaction(s).",
       "dropped_one": "{{count}} suggestion left out",
       "dropped_other": "{{count}} suggestions left out"
-    }
+    },
+    "checkingGroups": "{{ai}} is checking: {{done}} of {{total}} groups…"
   },
   "assistant": {
     "title": "{{ai}}",

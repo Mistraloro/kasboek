@@ -229,7 +229,7 @@
     "layoutRecognised": "Indeling herkend",
     "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk.",
     "stopCheck": "Stoppen",
-    "checkSlowHint": "Grote bestanden kunnen enkele minuten duren. Na 4 minuten stopt het vanzelf.",
+    "checkSlowHint": "Grote bestanden worden in delen nagekeken, een paar tegelijk. Elk deel stopt vanzelf na 4 minuten.",
     "discard": "Weggooien",
     "allKnown": "Alles in dit bestand staat al in Kasboek ({{from}} – {{to}}).",
     "allKnownHint": "{{name}} kan nog de transacties van deze rekening zonder categorie sorteren.",
@@ -258,7 +258,8 @@
       "applied": "{{rules}} regel(s) gemaakt en {{count}} transactie(s) gecategoriseerd.",
       "dropped_one": "{{count}} voorstel weggelaten",
       "dropped_other": "{{count}} voorstellen weggelaten"
-    }
+    },
+    "checkingGroups": "{{ai}} kijkt na: {{done}} van {{total}} groepen…"
   },
   "assistant": {
     "title": "{{ai}}",

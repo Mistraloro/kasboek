@@ -10,7 +10,7 @@ import { categorizeTransactions, createRule, insertTransaction, listRules, match
 import { balanceOn, setBankBalance } from './balance'
 import { fingerprint } from './fingerprint'
 import { autoMap, detectLayout, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
-import { normalizeRows, type CleanRow } from './csv/normalize'
+import { normalizeRows, realReference, type CleanRow } from './csv/normalize'
 import { decode, detectDelimiter, parseCsv } from './csv/read'
 
 export interface RowOverride {
@@ -297,6 +297,12 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
         const same = byFingerprint.all(s.accountId, fp) as Existing[]
         if (same.length >= nth) match = same.find((e) => !claimed.has(e.id)) ?? same[nth - 1] ?? null
       }
+      // 2b. Imported earlier while still pending, before the bank gave it a reference: the same
+      // transaction without the reference.
+      if (!match && ref) {
+        const pendingFp = fingerprint({ accountId: s.accountId, bookingDate: merged.bookingDate, amountCents: merged.amountCents, counterpartyName: c.counterpartyName, description: c.description, bankReference: null })
+        match = (byFingerprint.all(s.accountId, pendingFp) as Existing[]).find((e) => !claimed.has(e.id) && !e.bank_reference) ?? null
+      }
       if (match) status = 'duplicate'
       else {
         // 3. Possibly the same: same amount a few days apart with similar text (the bank reworded
@@ -308,7 +314,8 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
             (e) =>
               !claimed.has(e.id) &&
               e.fingerprint !== fp &&
-              !(ref && e.bank_reference && e.bank_reference.trim() !== ref) &&
+              // A different reference means a different payment, but only when it is a real one.
+              !(ref && realReference(e.bank_reference) && e.bank_reference!.trim() !== ref) &&
               similarity(text, `${e.counterparty_name ?? ''} ${e.description}`) >= POSSIBLE_SIMILARITY
           ) ?? null
         if (match) status = 'possible_duplicate'

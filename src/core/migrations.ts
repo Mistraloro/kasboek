@@ -1,5 +1,7 @@
 import type { Db } from './database'
 import { installSyncSchema } from './sync-schema'
+import { realReference } from './csv/normalize'
+import { fingerprint } from './fingerprint'
 
 const now = `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`
 
@@ -196,6 +198,26 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
       CREATE INDEX idx_tx_bank_reference ON transactions(account_id, bank_reference) WHERE bank_reference IS NOT NULL;
       CREATE INDEX idx_tx_account_amount ON transactions(account_id, amount_cents, booking_date);
     `)
+  },
+  (db) => {
+    // Pending payments were stored with a placeholder reference ("2026-"): no reference after all,
+    // so they match once the bank has booked them. Their fingerprint is made again without it.
+    const rows = db.prepare('SELECT id, account_id, booking_date, amount_cents, counterparty_name, description, bank_reference FROM transactions WHERE bank_reference IS NOT NULL').all() as {
+      id: number
+      account_id: number
+      booking_date: string
+      amount_cents: number
+      counterparty_name: string | null
+      description: string
+      bank_reference: string
+    }[]
+    const fix = db.prepare('UPDATE transactions SET bank_reference = NULL, fingerprint = ? WHERE id = ?')
+    for (const r of rows) {
+      if (realReference(r.bank_reference) !== null) continue
+      fix.run(fingerprint({ accountId: r.account_id, bookingDate: r.booking_date, amountCents: r.amount_cents, counterpartyName: r.counterparty_name, description: r.description, bankReference: null }), r.id)
+    }
+    // Rules made before whole-word matching existed: short texts match only as a whole word too.
+    db.exec(`UPDATE rules SET match = 'word' WHERE match = 'contains' AND length(trim(pattern)) < 4`)
   }
 ]
 

@@ -164,8 +164,17 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
   const categories = useOp('categories.list')
   // Seconds since the check started, so a slow answer visibly isn't stuck.
   const [elapsed, setElapsed] = useState(0)
+  const [progress, setProgress] = useState<{ done: number; total: number; parts: number } | null>(null)
+  useEffect(
+    () =>
+      window.kasboek.onEvent((e) => {
+        if (e.type === 'import.checkProgress' && e.sessionId === preview.sessionId) setProgress({ done: e.groupsDone, total: e.groupsTotal, parts: e.partsTotal })
+      }),
+    [preview.sessionId]
+  )
   useEffect(() => {
     if (!assisting) return
+    setProgress(null)
     setElapsed(0)
     const started = Date.now()
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
@@ -232,7 +241,9 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
             {onAssist ? (
               assisting ? (
                 <>
-                  <span className="text-xs text-muted" title={t('import.checkSlowHint')}>{t('import.checking')} <span className="num">{clock(elapsed)}</span></span>
+                  <span className="text-xs text-muted" title={t('import.checkSlowHint')}>
+                    {progress && progress.parts > 1 ? t('import.checkingGroups', { done: progress.done, total: progress.total }) : t('import.checking')} <span className="num">{clock(elapsed)}</span>
+                  </span>
                   <Button size="sm" icon={<Square size={12} />} onClick={() => void call('import.assistCancel', { sessionId: preview.sessionId })}>{t('import.stopCheck')}</Button>
                 </>
               ) : (

@@ -229,7 +229,7 @@
     "layoutRecognised": "Mise en page reconnue",
     "checkPrivacyLocal": "Envoie les lignes de ce fichier à {{ai}} sur cet ordinateur ou ce réseau.",
     "stopCheck": "Arrêter",
-    "checkSlowHint": "Les gros fichiers peuvent prendre quelques minutes. La vérification s’arrête d’elle-même après 4 minutes.",
+    "checkSlowHint": "Les gros fichiers sont vérifiés par parties, quelques-unes à la fois. Chaque partie s’arrête d’elle-même après 4 minutes.",
     "discard": "Abandonner",
     "allKnown": "Tout ce fichier est déjà dans Kasboek ({{from}} – {{to}}).",
     "allKnownHint": "{{name}} peut encore classer les transactions de ce compte qui n’ont pas de catégorie.",
@@ -258,7 +258,8 @@
       "applied": "{{rules}} règle(s) créée(s) et {{count}} transaction(s) classée(s).",
       "dropped_one": "{{count}} suggestion écartée",
       "dropped_other": "{{count}} suggestions écartées"
-    }
+    },
+    "checkingGroups": "{{ai}} vérifie : {{done}} groupes sur {{total}}…"
   },
   "assistant": {
     "title": "{{ai}}",

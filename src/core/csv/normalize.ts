@@ -55,6 +55,18 @@ export function structuredCommunication(text: string): string | null {
 
 const clean = (s: string | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim()
 
+/**
+ * A bank reference only when it identifies the transaction. Banks put a placeholder on payments that
+ * are still pending (Hello bank!: "2026-", the number follows once booked); that counts as none.
+ */
+export function realReference(text: string | null | undefined): string | null {
+  const s = (text ?? '').trim()
+  if (!s || /^[-0\s./]*$/.test(s)) return null
+  // Only a year, with or without a separator: the number is still to come.
+  if (/^(19|20)\d{2}[-/.]?$/.test(s)) return null
+  return s
+}
+
 export function normalizeRows(rawRows: string[][], mapping: CsvMapping, accountCurrency = 'EUR'): CleanRow[] {
   const c = mapping.columns
   const data = rawRows.slice(mapping.headerRow + 1)
@@ -100,7 +112,7 @@ export function normalizeRows(rawRows: string[][], mapping: CsvMapping, accountC
       counterpartyName: get(c.counterpartyName) || null,
       counterpartyIban: /^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/.test(ibanRaw) ? ibanRaw : ibanRaw || null,
       communication,
-      bankReference: get(c.bankReference) || null,
+      bankReference: realReference(get(c.bankReference)),
       balanceCents: c.balance !== undefined && get(c.balance) ? parseAmount(get(c.balance), mapping.decimal) : null,
       issues,
       raw

@@ -229,7 +229,7 @@
     "layoutRecognised": "Formato reconhecido",
     "checkPrivacyLocal": "Envia as linhas deste ficheiro para {{ai}} neste computador ou nesta rede.",
     "stopCheck": "Parar",
-    "checkSlowHint": "Ficheiros grandes podem demorar alguns minutos. Para sozinho ao fim de 4 minutos.",
+    "checkSlowHint": "Os ficheiros grandes são revistos por partes, algumas de cada vez. Cada parte para sozinha ao fim de 4 minutos.",
     "discard": "Descartar",
     "allKnown": "Tudo neste ficheiro já está no Kasboek ({{from}} – {{to}}).",
     "allKnownHint": "O {{name}} ainda pode classificar os movimentos desta conta que não têm categoria.",
@@ -258,7 +258,8 @@
       "applied": "Criada(s) {{rules}} regra(s) e classificado(s) {{count}} movimento(s).",
       "dropped_one": "{{count}} sugestão deixada de fora",
       "dropped_other": "{{count}} sugestões deixadas de fora"
-    }
+    },
+    "checkingGroups": "{{ai}} está a rever: {{done}} de {{total}} grupos…"
   },
   "assistant": {
     "title": "{{ai}}",
