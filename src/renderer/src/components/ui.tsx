@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
-import { useEffect, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const cx = (...c: (string | false | null | undefined)[]): string => c.filter(Boolean).join(' ')
 
@@ -209,16 +210,93 @@ export function Modal({ open, title, onClose, children, dismissible = true }: { 
 export { cx }
 
 export function MonthNav({ month, label, onChange }: { month: string; label: string; onChange: (m: string) => void }) {
+  const { t, i18n } = useTranslation()
   const [y, m] = month.split('-').map(Number) as [number, number]
+  const [open, setOpen] = useState(false)
+  const [year, setYear] = useState(y)
+  const box = useRef<HTMLDivElement>(null)
   const shift = (n: number): void => {
     const d = new Date(y, m - 1 + n, 1)
     onChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
+  // Closes on a click outside or Escape.
+  useEffect(() => {
+    if (!open) return
+    const outside = (e: MouseEvent): void => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
+    }
+    const key = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', outside)
+    document.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('mousedown', outside)
+      document.removeEventListener('keydown', key)
+    }
+  }, [open])
+  const names = Array.from({ length: 12 }, (_, i) => new Intl.DateTimeFormat(i18n.language, { month: 'short' }).format(new Date(2026, i, 1)))
+  const now = new Date()
   return (
-    <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5">
-      <button type="button" aria-label="Previous month" onClick={() => shift(-1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">‹</button>
-      <span className="min-w-36 text-center text-[13px] font-medium capitalize">{label}</span>
-      <button type="button" aria-label="Next month" onClick={() => shift(1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">›</button>
+    <div ref={box} className="relative inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5">
+      <button type="button" aria-label={t('monthNav.previous')} onClick={() => shift(-1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">‹</button>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        title={t('monthNav.pick')}
+        onClick={() => {
+          setYear(y)
+          setOpen(!open)
+        }}
+        className="h-8 min-w-36 rounded-md px-2 text-center text-[13px] font-medium capitalize hover:bg-surface-2"
+      >
+        {label}
+      </button>
+      <button type="button" aria-label={t('monthNav.next')} onClick={() => shift(1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">›</button>
+      {open && (
+        <div role="dialog" aria-label={t('monthNav.pick')} className="absolute top-full right-0 z-30 mt-1 w-64 rounded-xl border border-border bg-surface p-3 shadow-lg">
+          <div className="mb-2 flex items-center justify-between">
+            <button type="button" aria-label={t('monthNav.previousYear')} onClick={() => setYear(year - 1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">‹</button>
+            <span className="num text-[13px] font-semibold">{year}</span>
+            <button type="button" aria-label={t('monthNav.nextYear')} onClick={() => setYear(year + 1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">›</button>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {names.map((name, i) => {
+              const selected = year === y && i + 1 === m
+              const current = year === now.getFullYear() && i === now.getMonth()
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => {
+                    onChange(`${year}-${String(i + 1).padStart(2, '0')}`)
+                    setOpen(false)
+                  }}
+                  className={cx(
+                    'h-9 rounded-md text-[13px] capitalize transition-colors',
+                    selected ? 'bg-accent font-medium text-accent-fg' : 'hover:bg-surface-2',
+                    !selected && current && 'font-semibold text-accent'
+                  )}
+                >
+                  {name.replace('.', '')}
+                </button>
+              )
+            })}
+          </div>
+          <button
+            type="button"
+            className="mt-2 w-full rounded-md py-1.5 text-xs font-medium text-accent hover:bg-surface-2"
+            onClick={() => {
+              onChange(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+              setOpen(false)
+            }}
+          >
+            {t('monthNav.thisMonth')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

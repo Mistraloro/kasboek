@@ -947,5 +947,13 @@
       "currency": "Munt",
       "notes": "Notities"
     }
+  },
+  "monthNav": {
+    "previous": "Vorige maand",
+    "next": "Volgende maand",
+    "pick": "Kies een maand",
+    "previousYear": "Vorig jaar",
+    "nextYear": "Volgend jaar",
+    "thisMonth": "Deze maand"
   }
 }

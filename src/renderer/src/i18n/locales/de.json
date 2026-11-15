@@ -947,5 +947,13 @@
       "currency": "Währung",
       "notes": "Notizen"
     }
+  },
+  "monthNav": {
+    "previous": "Vorheriger Monat",
+    "next": "Nächster Monat",
+    "pick": "Monat wählen",
+    "previousYear": "Vorheriges Jahr",
+    "nextYear": "Nächstes Jahr",
+    "thisMonth": "Dieser Monat"
   }
 }

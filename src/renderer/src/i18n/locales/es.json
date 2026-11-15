@@ -947,5 +947,13 @@
       "currency": "Moneda",
       "notes": "Notas"
     }
+  },
+  "monthNav": {
+    "previous": "Mes anterior",
+    "next": "Mes siguiente",
+    "pick": "Elegir un mes",
+    "previousYear": "Año anterior",
+    "nextYear": "Año siguiente",
+    "thisMonth": "Este mes"
   }
 }

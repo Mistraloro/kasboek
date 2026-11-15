@@ -947,5 +947,13 @@
       "currency": "Devise",
       "notes": "Notes"
     }
+  },
+  "monthNav": {
+    "previous": "Mois précédent",
+    "next": "Mois suivant",
+    "pick": "Choisir un mois",
+    "previousYear": "Année précédente",
+    "nextYear": "Année suivante",
+    "thisMonth": "Ce mois-ci"
   }
 }

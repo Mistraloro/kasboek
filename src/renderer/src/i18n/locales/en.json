@@ -947,5 +947,13 @@
       "currency": "Currency",
       "notes": "Notes"
     }
+  },
+  "monthNav": {
+    "previous": "Previous month",
+    "next": "Next month",
+    "pick": "Choose a month",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "thisMonth": "This month"
   }
 }
