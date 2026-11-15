@@ -921,5 +921,29 @@
     "save": "Suche speichern",
     "delete": "Diese gespeicherte Suche löschen",
     "namePrompt": "Name für diese Suche:"
+  },
+  "export": {
+    "csv": "Als CSV exportieren",
+    "csvHint": "Diese Buchungen als CSV-Datei speichern (für eine Tabelle oder deine Steuerberatung)",
+    "pdf": "Bericht (PDF)",
+    "saved_one": "{{count}} Zeile gespeichert.",
+    "saved_other": "{{count}} Zeilen gespeichert.",
+    "pdfSaved": "Bericht gespeichert.",
+    "reportTitle": "Kasboek — {{year}}",
+    "reportSub": "Einnahmen und Ausgaben pro Monat und Kategorie, ohne Umbuchungen zwischen eigenen Konten.",
+    "net": "Saldo",
+    "perMonth": "Pro Monat",
+    "col": {
+      "date": "Datum",
+      "account": "Konto",
+      "counterparty": "Gegenseite",
+      "iban": "Konto der Gegenseite",
+      "description": "Beschreibung",
+      "communication": "Verwendungszweck",
+      "category": "Kategorie",
+      "amount": "Betrag",
+      "currency": "Währung",
+      "notes": "Notizen"
+    }
   }
 }

@@ -258,5 +258,14 @@
     "label": "Pesquisas salvas",
     "save": "Salvar pesquisa",
     "delete": "Excluir esta pesquisa salva"
+  },
+  "export": {
+    "csvHint": "Salvar estes movimentos como arquivo CSV (para uma folha de cálculo ou o seu contabilista)",
+    "saved_one": "{{count}} linha salva.",
+    "saved_other": "{{count}} linhas salvas.",
+    "pdfSaved": "Relatório salvo.",
+    "col": {
+      "amount": "Valor"
+    }
   }
 }

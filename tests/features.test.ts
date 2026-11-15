@@ -195,3 +195,22 @@ describe('bulk editing and saved searches (#34)', () => {
     expect(del({ db: d }, { name: 'Big' }).map((x) => x.name)).toEqual(['Groceries Oct'])
   })
 })
+
+describe('export (#35)', () => {
+  it('writes a CSV per line or split part, quoting where needed', async () => {
+    const { transactionsCsv, setSplits } = await import('@core/finance')
+    const { d, acc } = db()
+    const a = acc('Current')
+    const r = tx(d, a, '2026-10-05', -12345, { counterpartyName: 'Shop; Brugge', description: 'Receipt "big"', categoryId: cat(d, 'Groceries') })
+    setSplits(d, r, [{ categoryId: cat(d, 'Groceries'), amountCents: -10000 }, { categoryId: cat(d, 'Shopping'), amountCents: -2345, note: 'towels' }])
+    tx(d, a, '2026-11-01', 250000, { counterpartyName: 'Employer', categoryId: cat(d, 'Salary') })
+    const labels = ['Date', 'Account', 'Counterparty', 'IBAN', 'Description', 'Message', 'Category', 'Amount', 'Currency', 'Notes']
+    const out = transactionsCsv(d, { from: '2026-10-01', to: '2026-10-31' }, { decimal: ',', labels })
+    expect(out.rows).toBe(2)
+    const lines = out.csv.replace(/^﻿/, '').trim().split('\r\n')
+    expect(lines[0]).toBe(labels.join(';'))
+    expect(lines[1]).toBe('2026-10-05;Current;"Shop; Brugge";;"Receipt ""big""";;Groceries;-100,00;EUR;')
+    expect(lines[2]).toBe('2026-10-05;Current;"Shop; Brugge";;"Receipt ""big""";;Shopping;-23,45;EUR;towels')
+    expect(transactionsCsv(d, {}, { decimal: '.', labels }).csv).toContain('2026-11-01,Current,Employer,,tx 2026-11-01 250000,,Salary,2500.00,EUR,')
+  })
+})

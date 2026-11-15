@@ -159,6 +159,19 @@ export const contract = {
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },
   'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'export.csv': {
+    input: z
+      .object({
+        filter: z
+          .object({ accountId: id.optional(), categoryId: z.union([id, z.literal('none')]).optional(), month: month.optional(), from: date.optional(), to: date.optional(), search: z.string().max(100).optional(), direction: z.enum(['in', 'out']).optional() })
+          .strict(),
+        labels: z.array(z.string().max(60)).length(10),
+        defaultName: z.string().max(120)
+      })
+      .strict(),
+    output: out<{ file: string | null; rows: number }>()
+  },
+  'export.pdf': { input: z.object({ html: z.string().max(2_000_000), defaultName: z.string().max(120) }).strict(), output: out<{ file: string | null }>() },
   'import.assistStatus': {
     input: z.object({ sessionId: z.string().uuid() }).strict(),
     output: out<{ running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()

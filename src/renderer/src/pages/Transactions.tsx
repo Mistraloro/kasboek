@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Bookmark, PenLine, Plus, Search, Trash2, Wand2 } from 'lucide-react'
+import { ArrowLeftRight, Bookmark, Download, PenLine, Plus, Search, Trash2, Wand2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
@@ -9,6 +9,7 @@ import type { Page } from '../App'
 import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
+import { exportTransactions } from '../lib/export'
 import { formatDate, monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
@@ -134,6 +135,16 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
               <option value="">{t('searches.label')}</option>
               {saved.map((x) => <option key={x.name} value={x.name}>{x.name}</option>)}
             </Select>
+          )}
+          {(page.data?.total ?? 0) > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label={t('export.csv')}
+              title={t('export.csvHint')}
+              icon={<Download size={14} />}
+              onClick={() => void exportTransactions(t, activeFilter, `Kasboek ${current?.name ?? localToday()}`).then((r) => r.file && toast(t('export.saved', { count: r.rows })), (e) => toast(errText(e), 'error'))}
+            />
           )}
           {current ? (
             <Button size="sm" variant="ghost" aria-label={t('searches.delete')} title={t('searches.delete')} icon={<Trash2 size={14} />} onClick={() => void call('searches.delete', { name: current.name }).then(() => settingsOp.reload())} />

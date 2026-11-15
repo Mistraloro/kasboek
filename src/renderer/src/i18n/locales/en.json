@@ -921,5 +921,29 @@
     "save": "Save search",
     "delete": "Delete this saved search",
     "namePrompt": "Name for this search:"
+  },
+  "export": {
+    "csv": "Export CSV",
+    "csvHint": "Save these transactions as a CSV file (for a spreadsheet or your accountant)",
+    "pdf": "Report (PDF)",
+    "saved_one": "{{count}} line saved.",
+    "saved_other": "{{count}} lines saved.",
+    "pdfSaved": "Report saved.",
+    "reportTitle": "Kasboek — {{year}}",
+    "reportSub": "Income and spending per month and per category, transfers between own accounts left out.",
+    "net": "Net",
+    "perMonth": "Per month",
+    "col": {
+      "date": "Date",
+      "account": "Account",
+      "counterparty": "Counterparty",
+      "iban": "Counterparty account",
+      "description": "Description",
+      "communication": "Message",
+      "category": "Category",
+      "amount": "Amount",
+      "currency": "Currency",
+      "notes": "Notes"
+    }
   }
 }

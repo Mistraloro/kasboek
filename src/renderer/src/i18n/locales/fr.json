@@ -921,5 +921,29 @@
     "save": "Enregistrer la recherche",
     "delete": "Supprimer cette recherche enregistrée",
     "namePrompt": "Nom de cette recherche :"
+  },
+  "export": {
+    "csv": "Exporter en CSV",
+    "csvHint": "Enregistrer ces opérations en fichier CSV (pour un tableur ou votre comptable)",
+    "pdf": "Rapport (PDF)",
+    "saved_one": "{{count}} ligne enregistrée.",
+    "saved_other": "{{count}} lignes enregistrées.",
+    "pdfSaved": "Rapport enregistré.",
+    "reportTitle": "Kasboek — {{year}}",
+    "reportSub": "Revenus et dépenses par mois et par catégorie, sans les virements entre vos comptes.",
+    "net": "Solde",
+    "perMonth": "Par mois",
+    "col": {
+      "date": "Date",
+      "account": "Compte",
+      "counterparty": "Contrepartie",
+      "iban": "Compte de la contrepartie",
+      "description": "Description",
+      "communication": "Communication",
+      "category": "Catégorie",
+      "amount": "Montant",
+      "currency": "Devise",
+      "notes": "Notes"
+    }
   }
 }

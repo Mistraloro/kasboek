@@ -921,5 +921,29 @@
     "save": "Guardar búsqueda",
     "delete": "Eliminar esta búsqueda guardada",
     "namePrompt": "Nombre para esta búsqueda:"
+  },
+  "export": {
+    "csv": "Exportar CSV",
+    "csvHint": "Guardar estos movimientos como archivo CSV (para una hoja de cálculo o tu gestor)",
+    "pdf": "Informe (PDF)",
+    "saved_one": "{{count}} línea guardada.",
+    "saved_other": "{{count}} líneas guardadas.",
+    "pdfSaved": "Informe guardado.",
+    "reportTitle": "Kasboek — {{year}}",
+    "reportSub": "Ingresos y gastos por mes y por categoría, sin los traspasos entre tus cuentas.",
+    "net": "Saldo",
+    "perMonth": "Por mes",
+    "col": {
+      "date": "Fecha",
+      "account": "Cuenta",
+      "counterparty": "Contraparte",
+      "iban": "Cuenta de la contraparte",
+      "description": "Descripción",
+      "communication": "Concepto",
+      "category": "Categoría",
+      "amount": "Importe",
+      "currency": "Moneda",
+      "notes": "Notas"
+    }
   }
 }

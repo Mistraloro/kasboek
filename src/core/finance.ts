@@ -80,7 +80,8 @@ export interface TxFilter {
   offset: number
 }
 
-export function listTransactions(db: Db, f: TxFilter): TransactionPage {
+/** The WHERE part for a transactions filter (also used by the CSV export). */
+function txWhere(f: Omit<TxFilter, 'limit' | 'offset'>): { w: string; args: (string | number)[] } {
   const where: string[] = []
   const args: (string | number)[] = []
   if (f.accountId) where.push('t.account_id = ?') && args.push(f.accountId)
@@ -97,10 +98,17 @@ export function listTransactions(db: Db, f: TxFilter): TransactionPage {
   if (f.direction === 'out') where.push('t.amount_cents < 0')
   if (f.search?.trim()) {
     const q = `%${f.search.trim().replace(/[%_\\]/g, (m) => '\\' + m)}%`
-    where.push(`(t.description LIKE ? ESCAPE '\\' OR t.counterparty_name LIKE ? ESCAPE '\\' OR t.communication LIKE ? ESCAPE '\\' OR t.notes LIKE ? ESCAPE '\\')`)
-    args.push(q, q, q, q)
+    // The readable text and the bank's own.
+    where.push(
+      `(t.description LIKE ? ESCAPE '\\' OR t.counterparty_name LIKE ? ESCAPE '\\' OR t.communication LIKE ? ESCAPE '\\' OR t.notes LIKE ? ESCAPE '\\' OR t.bank_counterparty LIKE ? ESCAPE '\\' OR t.bank_description LIKE ? ESCAPE '\\')`
+    )
+    args.push(q, q, q, q, q, q)
   }
-  const w = where.length ? `WHERE ${where.join(' AND ')}` : ''
+  return { w: where.length ? `WHERE ${where.join(' AND ')}` : '', args }
+}
+
+export function listTransactions(db: Db, f: TxFilter): TransactionPage {
+  const { w, args } = txWhere(f)
   const items = (db.prepare(`${TX_SELECT} ${w} ORDER BY t.booking_date DESC, t.id DESC LIMIT ? OFFSET ?`).all(...args, f.limit, f.offset) as TxRow[]).map(toTx)
   const agg = db
     .prepare(
@@ -573,4 +581,54 @@ export function setSplits(db: Db, txId: number, parts: SplitPart[]): (SplitPart 
     db.prepare("UPDATE transactions SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(txId)
   })()
   return listSplits(db, txId)
+}
+
+/* ---------- Export ---------- */
+
+/**
+ * Transactions as CSV for an accountant or a spreadsheet: one line per transaction, or per part of
+ * a split one. Dates as YYYY-MM-DD; amounts with the person's decimal mark (and ";" between fields
+ * when that mark is a comma, as spreadsheets expect).
+ */
+export function transactionsCsv(db: Db, f: Omit<TxFilter, 'limit' | 'offset'>, opts: { decimal: string; labels: string[] }): { csv: string; rows: number } {
+  const { w, args } = txWhere(f)
+  const rows = db
+    .prepare(
+      `SELECT t.id, t.booking_date, a.name AS account, t.counterparty_name, t.counterparty_iban, t.description, t.communication, t.notes, t.currency,
+              coalesce(s.amount_cents, t.amount_cents) AS amount, coalesce(sc.name, c.name) AS category, s.note AS part_note
+       FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id
+       LEFT JOIN transaction_splits s ON s.tx_id = t.id LEFT JOIN categories sc ON sc.id = s.category_id
+       ${w} ORDER BY t.booking_date, t.id, s.id`
+    )
+    .all(...args) as {
+    booking_date: string
+    account: string
+    counterparty_name: string | null
+    counterparty_iban: string | null
+    description: string
+    communication: string | null
+    notes: string | null
+    currency: string
+    amount: number
+    category: string | null
+    part_note: string | null
+  }[]
+  const sep = opts.decimal === ',' ? ';' : ','
+  const cell = (v: string | null): string => {
+    const x = v ?? ''
+    return /["\n\r]/.test(x) || x.includes(sep) ? `"${x.replace(/"/g, '""')}"` : x
+  }
+  const money = (c: number): string => {
+    const abs = Math.abs(c)
+    return `${c < 0 ? '-' : ''}${Math.floor(abs / 100)}${opts.decimal}${String(abs % 100).padStart(2, '0')}`
+  }
+  const lines = [opts.labels.map(cell).join(sep)]
+  for (const r of rows)
+    lines.push(
+      [r.booking_date, r.account, r.counterparty_name, r.counterparty_iban, r.description, r.communication, r.category, money(r.amount), r.currency, [r.notes, r.part_note].filter(Boolean).join(' · ')]
+        .map((v) => cell(v))
+        .join(sep)
+    )
+  // A byte order mark, so spreadsheet programs read the accents right.
+  return { csv: `\uFEFF${lines.join('\r\n')}\r\n`, rows: rows.length }
 }

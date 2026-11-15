@@ -24,6 +24,7 @@ import { checkProviderKey, listProviderModels } from './assistant/models'
 import { PROVIDERS } from '@shared/ai-providers'
 import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
+import { exportCsv, exportPdf } from './export'
 import { helperPath } from './mcp/channel'
 import * as mcpSetup from './mcp/setup'
 
@@ -290,6 +291,8 @@ const desktopOps: OpTable = {
     }
   },
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'export.csv': { mutates: false, assistant: false, handler: (_c, { filter, labels, defaultName }) => exportCsv(filter, labels, defaultName) },
+  'export.pdf': { mutates: false, assistant: false, handler: (_c, { html, defaultName }) => exportPdf(html, defaultName) },
   'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => assistStatus(sessionId) },
   'import.assistCancel': {
     mutates: false,

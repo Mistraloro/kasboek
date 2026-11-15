@@ -921,5 +921,29 @@
     "save": "Zoekopdracht bewaren",
     "delete": "Deze bewaarde zoekopdracht verwijderen",
     "namePrompt": "Naam voor deze zoekopdracht:"
+  },
+  "export": {
+    "csv": "CSV exporteren",
+    "csvHint": "Deze verrichtingen als CSV-bestand bewaren (voor een rekenblad of je boekhouder)",
+    "pdf": "Rapport (PDF)",
+    "saved_one": "{{count}} regel bewaard.",
+    "saved_other": "{{count}} regels bewaard.",
+    "pdfSaved": "Rapport bewaard.",
+    "reportTitle": "Kasboek — {{year}}",
+    "reportSub": "Inkomsten en uitgaven per maand en per categorie, zonder overboekingen tussen eigen rekeningen.",
+    "net": "Saldo",
+    "perMonth": "Per maand",
+    "col": {
+      "date": "Datum",
+      "account": "Rekening",
+      "counterparty": "Tegenpartij",
+      "iban": "Rekening tegenpartij",
+      "description": "Omschrijving",
+      "communication": "Mededeling",
+      "category": "Categorie",
+      "amount": "Bedrag",
+      "currency": "Munt",
+      "notes": "Notities"
+    }
   }
 }

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MonthBars } from '../components/charts'
-import { Card, CardHeader, PageHeader, cx } from '../components/ui'
-import { useOp } from '../lib/api'
-import { monthShort } from '../lib/format'
+import { Download, FileText } from 'lucide-react'
+import { Button, Card, CardHeader, PageHeader, cx } from '../components/ui'
+import { useToast } from '../components/Toast'
+import { call, useOp } from '../lib/api'
+import { exportTransactions, yearReportHtml } from '../lib/export'
+import { monthLabel, monthShort } from '../lib/format'
+import { errText } from './auth/parts'
 import { useSettings } from '../lib/settings'
 import { Stat } from './Overview'
 
@@ -12,6 +16,7 @@ const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.sli
 export function YearPage() {
   const { t } = useTranslation()
   const { money, fmt } = useSettings()
+  const toast = useToast()
   const [year, setYear] = useState(new Date().getFullYear())
   const data = useOp('summary.year', { year })
   useEffect(() => window.kasboek.onEvent((e) => e.type === 'data.changed' && void data.reload()), []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -49,10 +54,28 @@ export function YearPage() {
         title={t('year.title')}
         subtitle={t('year.subtitle')}
         action={
+          <div className="flex items-center gap-2">
+          {y && (y.incomeCents > 0 || y.spendingCents > 0) && (
+            <>
+              <Button size="sm" icon={<Download size={14} />} onClick={() => void exportTransactions(t, { from: `${year}-01-01`, to: `${year}-12-31` }, `Kasboek ${year}`).then((r) => r.file && toast(t('export.saved', { count: r.rows })), (e) => toast(errText(e), 'error'))}>
+                {t('export.csv')}
+              </Button>
+              <Button
+                size="sm"
+                icon={<FileText size={14} />}
+                onClick={() =>
+                  void call('export.pdf', { html: yearReportHtml(y, t, (c) => money(c), (m) => monthLabel(toDate(m), fmt)), defaultName: `Kasboek ${year}.pdf` }).then((r) => r.file && toast(t('export.pdfSaved')), (e) => toast(errText(e), 'error'))
+                }
+              >
+                {t('export.pdf')}
+              </Button>
+            </>
+          )}
           <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5">
             <button type="button" aria-label={t('year.previous')} onClick={() => setYear(year - 1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">‹</button>
             <span className="num min-w-20 text-center text-[13px] font-medium">{year}</span>
             <button type="button" aria-label={t('year.next')} onClick={() => setYear(year + 1)} className="h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text">›</button>
+          </div>
           </div>
         }
       />
