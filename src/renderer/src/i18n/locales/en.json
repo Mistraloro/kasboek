@@ -265,7 +265,11 @@
       "skippedSince_other": "{{count}} already had a category by then and were left alone.",
       "saved": "Saved: {{rules}} rule(s) and {{count}} categorised transaction(s). Undoing the check doesn’t undo these; change them in Rules or Transactions."
     },
-    "checkingGroups": "{{ai}} is checking: {{done}} of {{total}} groups…"
+    "checkingGroups": "{{ai}} is checking: {{done}} of {{total}} groups…",
+    "transfersPaired_one": "{{count}} transfer between your accounts was paired.",
+    "transfersPaired_other": "{{count}} transfers between your accounts were paired.",
+    "transfersSuggested_one": "{{count}} possible transfer to check under Transactions → Transfers.",
+    "transfersSuggested_other": "{{count}} possible transfers to check under Transactions → Transfers."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -823,5 +827,23 @@
     "newTitle": "Balance at your bank (optional)",
     "newInvestment": "Value (optional)",
     "newHint": "What your bank shows now. Kasboek counts the balance from here, also when you import older transactions later."
+  },
+  "transfers": {
+    "button": "Transfers",
+    "title": "Transfers between your accounts",
+    "hint": "Money out of one of your accounts and the same amount into another within 3 days. Paired, both halves count as a transfer: neither income nor spending.",
+    "none": "No unpaired transfers found.",
+    "sure": "account number matches",
+    "maybe": "same amount",
+    "pair": "Pair {{count}}",
+    "paired_one": "{{count}} transfer paired.",
+    "paired_other": "{{count}} transfers paired.",
+    "pairedHint": "Transfer between your own accounts",
+    "pairedWith": "Transfer with {{account}}",
+    "unpair": "Separate"
+  },
+  "splits": {
+    "badge_one": "split in {{count}}",
+    "badge_other": "split in {{count}}"
   }
 }

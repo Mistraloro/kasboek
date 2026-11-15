@@ -265,7 +265,11 @@
       "skippedSince_other": "{{count}} ya tenían categoría para entonces y no se tocaron.",
       "saved": "Guardado: {{rules}} regla(s) y {{count}} movimiento(s) clasificado(s). Deshacer la revisión no los deshace; cámbialos en Reglas o Movimientos."
     },
-    "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…"
+    "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…",
+    "transfersPaired_one": "Se emparejó {{count}} traspaso entre tus cuentas.",
+    "transfersPaired_other": "Se emparejaron {{count}} traspasos entre tus cuentas.",
+    "transfersSuggested_one": "{{count}} posible traspaso para revisar en Movimientos → Traspasos.",
+    "transfersSuggested_other": "{{count}} posibles traspasos para revisar en Movimientos → Traspasos."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -823,5 +827,23 @@
     "newTitle": "Saldo en tu banco (opcional)",
     "newInvestment": "Valor (opcional)",
     "newHint": "Lo que muestra tu banco ahora. Kasboek calcula el saldo desde aquí, también si más tarde importas movimientos más antiguos."
+  },
+  "transfers": {
+    "button": "Traspasos",
+    "title": "Traspasos entre tus cuentas",
+    "hint": "Dinero que sale de una de tus cuentas y el mismo importe que entra en otra en 3 días. Emparejadas, ambas mitades cuentan como traspaso: ni ingreso ni gasto.",
+    "none": "No hay traspasos sin emparejar.",
+    "sure": "el número de cuenta coincide",
+    "maybe": "mismo importe",
+    "pair": "Emparejar {{count}}",
+    "paired_one": "{{count}} traspaso emparejado.",
+    "paired_other": "{{count}} traspasos emparejados.",
+    "pairedHint": "Traspaso entre tus propias cuentas",
+    "pairedWith": "Traspaso con {{account}}",
+    "unpair": "Separar"
+  },
+  "splits": {
+    "badge_one": "dividido en {{count}}",
+    "badge_other": "dividido en {{count}}"
   }
 }

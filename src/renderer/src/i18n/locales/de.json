@@ -265,7 +265,11 @@
       "skippedSince_other": "{{count}} hatten inzwischen schon eine Kategorie und blieben unverändert.",
       "saved": "Gespeichert: {{rules}} Regel(n) und {{count}} eingeordnete Buchung(en). Die Prüfung rückgängig zu machen ändert diese nicht; ändere sie unter Regeln oder Buchungen."
     },
-    "checkingGroups": "{{ai}} prüft: {{done}} von {{total}} Gruppen…"
+    "checkingGroups": "{{ai}} prüft: {{done}} von {{total}} Gruppen…",
+    "transfersPaired_one": "{{count}} Umbuchung zwischen deinen Konten wurde verknüpft.",
+    "transfersPaired_other": "{{count}} Umbuchungen zwischen deinen Konten wurden verknüpft.",
+    "transfersSuggested_one": "{{count}} mögliche Umbuchung zum Prüfen unter Buchungen → Umbuchungen.",
+    "transfersSuggested_other": "{{count}} mögliche Umbuchungen zum Prüfen unter Buchungen → Umbuchungen."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -823,5 +827,23 @@
     "newTitle": "Kontostand bei der Bank (optional)",
     "newInvestment": "Wert (optional)",
     "newHint": "Was deine Bank jetzt zeigt. Kasboek rechnet den Kontostand von hier aus, auch wenn du später ältere Buchungen importierst."
+  },
+  "transfers": {
+    "button": "Umbuchungen",
+    "title": "Umbuchungen zwischen deinen Konten",
+    "hint": "Geld geht von einem deiner Konten ab und derselbe Betrag innerhalb von 3 Tagen auf einem anderen ein. Verknüpft zählen beide Hälften als Umbuchung: weder Einnahme noch Ausgabe.",
+    "none": "Keine offenen Umbuchungen gefunden.",
+    "sure": "Kontonummer passt",
+    "maybe": "gleicher Betrag",
+    "pair": "{{count}} verknüpfen",
+    "paired_one": "{{count}} Umbuchung verknüpft.",
+    "paired_other": "{{count}} Umbuchungen verknüpft.",
+    "pairedHint": "Umbuchung zwischen deinen eigenen Konten",
+    "pairedWith": "Umbuchung mit {{account}}",
+    "unpair": "Trennen"
+  },
+  "splits": {
+    "badge_one": "in {{count}} geteilt",
+    "badge_other": "in {{count}} geteilt"
   }
 }

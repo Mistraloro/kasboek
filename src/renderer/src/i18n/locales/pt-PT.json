@@ -265,7 +265,11 @@
       "skippedSince_other": "{{count}} já tinham categoria entretanto e ficaram como estavam.",
       "saved": "Guardado: {{rules}} regra(s) e {{count}} movimento(s) classificado(s). Anular a verificação não os anula; altere-os em Regras ou Movimentos."
     },
-    "checkingGroups": "{{ai}} está a rever: {{done}} de {{total}} grupos…"
+    "checkingGroups": "{{ai}} está a rever: {{done}} de {{total}} grupos…",
+    "transfersPaired_one": "Foi emparelhada {{count}} transferência entre as suas contas.",
+    "transfersPaired_other": "Foram emparelhadas {{count}} transferências entre as suas contas.",
+    "transfersSuggested_one": "{{count}} possível transferência para verificar em Movimentos → Transferências.",
+    "transfersSuggested_other": "{{count}} possíveis transferências para verificar em Movimentos → Transferências."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -823,5 +827,23 @@
     "newTitle": "Saldo no seu banco (opcional)",
     "newInvestment": "Valor (opcional)",
     "newHint": "O que o seu banco mostra agora. O Kasboek calcula o saldo a partir daqui, mesmo que importe movimentos mais antigos mais tarde."
+  },
+  "transfers": {
+    "button": "Transferências",
+    "title": "Transferências entre as suas contas",
+    "hint": "Dinheiro que sai de uma das suas contas e o mesmo montante que entra noutra em 3 dias. Emparelhadas, as duas metades contam como transferência: nem receita nem despesa.",
+    "none": "Não há transferências por emparelhar.",
+    "sure": "o número de conta corresponde",
+    "maybe": "mesmo montante",
+    "pair": "Emparelhar {{count}}",
+    "paired_one": "{{count}} transferência emparelhada.",
+    "paired_other": "{{count}} transferências emparelhadas.",
+    "pairedHint": "Transferência entre as suas próprias contas",
+    "pairedWith": "Transferência com {{account}}",
+    "unpair": "Separar"
+  },
+  "splits": {
+    "badge_one": "dividido em {{count}}",
+    "badge_other": "dividido em {{count}}"
   }
 }

@@ -30,12 +30,14 @@ export const SYNC_TABLES: TableSpec[] = [
   {
     table: 'transactions',
     uid: RANDOM,
-    cols: ['account_id', 'booking_date', 'value_date', 'amount_cents', 'currency', 'description', 'counterparty_name', 'counterparty_iban', 'communication', 'category_id', 'notes', 'bank_reference', 'fingerprint', 'created_at', 'updated_at', 'bank_counterparty', 'bank_description'],
+    cols: ['account_id', 'booking_date', 'value_date', 'amount_cents', 'currency', 'description', 'counterparty_name', 'counterparty_iban', 'communication', 'category_id', 'notes', 'bank_reference', 'fingerprint', 'created_at', 'updated_at', 'bank_counterparty', 'bank_description', 'transfer_pair'],
     fks: { account_id: 'accounts', category_id: 'categories' }
   },
+  { table: 'transaction_splits', uid: RANDOM, cols: ['tx_id', 'category_id', 'amount_cents', 'note'], fks: { tx_id: 'transactions', category_id: 'categories' } },
   { table: 'budgets', uid: `(SELECT uid FROM categories WHERE id = NEW.category_id) || '/' || NEW.month`, cols: ['category_id', 'month', 'amount_cents'], fks: { category_id: 'categories' } },
   { table: 'valuations', uid: `(SELECT uid FROM accounts WHERE id = NEW.account_id) || '/' || NEW.date`, cols: ['account_id', 'date', 'value_cents', 'note'], fks: { account_id: 'accounts' } },
   { table: 'fx_rates', uid: `NEW.currency || '/' || NEW.date || '/' || NEW.source`, cols: ['currency', 'date', 'per_eur', 'source'], fks: {}, when: (r) => `${r}.source = 'manual'` },
+  { table: 'goals', uid: RANDOM, cols: ['name', 'target_cents', 'target_date', 'account_id', 'saved_cents', 'archived', 'created_at'], fks: { account_id: 'accounts' } },
   { table: 'csv_profiles', uid: `NEW.header_signature`, cols: ['name', 'bank', 'header_signature', 'mapping_json', 'created_at', 'updated_at'], fks: {} }
 ]
 
@@ -63,6 +65,8 @@ export function installSyncSchema(db: Db): void {
   `)
   for (const s of SYNC_TABLES) {
     const t = s.table
+    // Tables added in later migrations get their uid and triggers there.
+    if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(t)) continue
     db.exec(`ALTER TABLE ${t} ADD COLUMN uid TEXT`)
     // Existing rows: fill in uid order of dependencies (budgets need category uids first).
     db.exec(`UPDATE ${t} SET uid = ${s.uid.replaceAll('NEW.', `${t}.`)} WHERE uid IS NULL`)

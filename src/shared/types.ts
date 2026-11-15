@@ -268,6 +268,24 @@ export interface Transaction {
   categoryName: string | null
   notes: string | null
   importBatchId: number | null
+  /** The other account, when this is one half of a transfer between own accounts. */
+  transferAccount: string | null
+  /** Parts, when the transaction is split over several categories (0 = not split). */
+  splitCount: number
+}
+
+/** Two transactions that look like one transfer between the person's own accounts. */
+export interface TransferPair {
+  outId: number
+  inId: number
+  date: string
+  amountCents: number
+  currency: string
+  fromAccount: string
+  toAccount: string
+  /** iban: the account number on one side is the other account's (sure); amount: same amount a few days apart. */
+  confidence: 'iban' | 'amount'
+  days: number
 }
 
 export interface TransactionPage {
@@ -373,6 +391,9 @@ export interface ImportCommitResult {
   bankBalance: BankBalanceResult | null
   /** Why the file's closing balance wasn't recorded, if it wasn't. */
   balanceNote: string | null
+  /** Transfers to or from another own account: paired at once (account number matches), and possible ones to check. */
+  transfersPaired: number
+  transfersSuggested: number
   /** The account has no recorded bank balance yet: ask for one. */
   askBalance: boolean
 }

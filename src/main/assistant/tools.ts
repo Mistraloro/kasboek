@@ -153,6 +153,10 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
       if (input['notes'] !== undefined) parts.push(input['notes'] ? `note → “${String(input['notes']).slice(0, 80)}”` : 'remove the note')
       return `Change ${what}: ${parts.join(', ') || 'nothing'}`
     }
+    case 'transfers.pair': {
+      const n = (input['pairs'] as unknown[] | undefined)?.length ?? 0
+      return `Pair ${n} transfer${n === 1 ? '' : 's'} between your own accounts (both halves count as neither income nor spending)`
+    }
     case 'rules.create':
       return `Create a rule: ${ruleText(input)} → ${cat(input['categoryId'])}${input['applyToExisting'] === false ? '' : `, and apply it to uncategorised transactions${ruleReach(db, input)}`}`
     case 'rules.update': {

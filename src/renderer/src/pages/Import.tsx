@@ -128,6 +128,11 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
             <div className="mt-1 pl-7">
               <ImportBalanceCheck key={done.batchId} accountId={done.accountId} currency={done.currency} date={done.lastDate} kasboekCents={done.balanceOnLastDate} ask={done.askBalance} fromCsv={done.bankBalance} />
               {done.balanceNote && <p className="mt-1 text-xs text-warning">{done.balanceNote}</p>}
+              {(done.transfersPaired > 0 || done.transfersSuggested > 0) && (
+                <p className="mt-1 text-[13px] text-muted">
+                  {done.transfersPaired > 0 && t('import.transfersPaired', { count: done.transfersPaired })} {done.transfersSuggested > 0 && t('import.transfersSuggested', { count: done.transfersSuggested })}
+                </p>
+              )}
             </div>
           )}
         </div>

@@ -265,7 +265,11 @@
       "skippedSince_other": "{{count}} avaient déjà une catégorie entre-temps et n’ont pas été modifiées.",
       "saved": "Enregistré : {{rules}} règle(s) et {{count}} transaction(s) classée(s). Annuler la vérification ne les annule pas ; modifiez-les dans Règles ou Opérations."
     },
-    "checkingGroups": "{{ai}} vérifie : {{done}} groupes sur {{total}}…"
+    "checkingGroups": "{{ai}} vérifie : {{done}} groupes sur {{total}}…",
+    "transfersPaired_one": "{{count}} virement entre vos comptes a été associé.",
+    "transfersPaired_other": "{{count}} virements entre vos comptes ont été associés.",
+    "transfersSuggested_one": "{{count}} virement possible à vérifier dans Opérations → Virements.",
+    "transfersSuggested_other": "{{count}} virements possibles à vérifier dans Opérations → Virements."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -823,5 +827,23 @@
     "newTitle": "Solde à votre banque (facultatif)",
     "newInvestment": "Valeur (facultatif)",
     "newHint": "Ce que votre banque affiche maintenant. Kasboek calcule le solde à partir de là, même si vous importez plus tard des transactions plus anciennes."
+  },
+  "transfers": {
+    "button": "Virements",
+    "title": "Virements entre vos comptes",
+    "hint": "De l’argent qui sort d’un de vos comptes et le même montant qui entre sur un autre dans les 3 jours. Associées, les deux moitiés comptent comme un virement : ni revenu ni dépense.",
+    "none": "Aucun virement non associé trouvé.",
+    "sure": "numéro de compte correspondant",
+    "maybe": "même montant",
+    "pair": "Associer {{count}}",
+    "paired_one": "{{count}} virement associé.",
+    "paired_other": "{{count}} virements associés.",
+    "pairedHint": "Virement entre vos propres comptes",
+    "pairedWith": "Virement avec {{account}}",
+    "unpair": "Dissocier"
+  },
+  "splits": {
+    "badge_one": "réparti en {{count}}",
+    "badge_other": "réparti en {{count}}"
   }
 }

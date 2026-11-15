@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -341,6 +341,17 @@ export const contract = {
   },
   'transactions.delete': { input: z.object({ ids: z.array(id).min(1).max(5000) }).strict(), output: out<{ deleted: number }>() },
 
+  'transfers.find': {
+    description: 'Transfers between the person’s own accounts that aren’t paired yet: money out of one account and the same amount into another within 3 days. confidence "iban" means the account number matches (sure); "amount" only the amount and date.',
+    input: empty,
+    output: out<TransferPair[]>()
+  },
+  'transfers.pair': {
+    description: 'Pair transfers between own accounts (from transfers_find). Both halves go into a transfer category, so they count as neither income nor spending.',
+    input: z.object({ pairs: z.array(z.object({ outId: id, inId: id }).strict()).min(1).max(2000) }).strict(),
+    output: out<{ paired: number }>()
+  },
+  'transfers.unpair': { input: z.object({ id }).strict(), output: out<{ ok: true }>() },
   'rules.list': { description: 'List categorisation rules ("text in counterparty/description → category").', input: empty, output: out<Rule[]>() },
   'rules.create': {
     description:

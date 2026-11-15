@@ -265,7 +265,11 @@
       "skippedSince_other": "{{count}} hadden intussen al een categorie en bleven ongemoeid.",
       "saved": "Bewaard: {{rules}} regel(s) en {{count}} gecategoriseerde transactie(s). De controle ongedaan maken doet dit niet ongedaan; pas ze aan in Regels of Verrichtingen."
     },
-    "checkingGroups": "{{ai}} kijkt na: {{done}} van {{total}} groepen…"
+    "checkingGroups": "{{ai}} kijkt na: {{done}} van {{total}} groepen…",
+    "transfersPaired_one": "{{count}} overboeking tussen je rekeningen is gekoppeld.",
+    "transfersPaired_other": "{{count}} overboekingen tussen je rekeningen zijn gekoppeld.",
+    "transfersSuggested_one": "{{count}} mogelijke overboeking om na te kijken bij Verrichtingen → Overboekingen.",
+    "transfersSuggested_other": "{{count}} mogelijke overboekingen om na te kijken bij Verrichtingen → Overboekingen."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -823,5 +827,23 @@
     "newTitle": "Saldo bij je bank (optioneel)",
     "newInvestment": "Waarde (optioneel)",
     "newHint": "Wat je bank nu toont. Kasboek telt het saldo vanaf hier, ook als je later oudere transacties importeert."
+  },
+  "transfers": {
+    "button": "Overboekingen",
+    "title": "Overboekingen tussen je rekeningen",
+    "hint": "Geld van een van je rekeningen af en hetzelfde bedrag op een andere binnen 3 dagen. Gekoppeld tellen beide helften als overboeking: geen inkomen en geen uitgave.",
+    "none": "Geen losse overboekingen gevonden.",
+    "sure": "rekeningnummer klopt",
+    "maybe": "zelfde bedrag",
+    "pair": "{{count}} koppelen",
+    "paired_one": "{{count}} overboeking gekoppeld.",
+    "paired_other": "{{count}} overboekingen gekoppeld.",
+    "pairedHint": "Overboeking tussen je eigen rekeningen",
+    "pairedWith": "Overboeking met {{account}}",
+    "unpair": "Loskoppelen"
+  },
+  "splits": {
+    "badge_one": "in {{count}} gesplitst",
+    "badge_other": "in {{count}} gesplitst"
   }
 }

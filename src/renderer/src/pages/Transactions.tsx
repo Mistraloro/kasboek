@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
 import { centsToInput } from '@shared/format'
 import { addMonths, monthOf } from '@shared/month'
-import type { Category, Transaction } from '@shared/types'
+import type { TransferPair, Category, Transaction } from '@shared/types'
 import type { Page } from '../App'
 import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -46,6 +46,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null)
   const [suggest, setSuggest] = useState<{ pattern: string; categoryId: number; categoryName: string } | null>(null)
+  const [transfersOpen, setTransfersOpen] = useState(false)
   const accounts = useOp('accounts.list')
   const categories = useOp('categories.list')
   const page = useOp('transactions.list', { ...filter, limit, offset: 0 })
@@ -77,7 +78,12 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
       <PageHeader
         title={t('transactions.title')}
         subtitle={t('transactions.subtitle')}
-        action={<Button icon={<Plus size={14} />} onClick={() => setEditing('new')} disabled={!accounts.data?.length}>{t('transactions.add')}</Button>}
+        action={
+          <div className="flex gap-2">
+            {(accounts.data ?? []).length > 1 && <Button icon={<ArrowLeftRight size={14} />} onClick={() => setTransfersOpen(true)}>{t('transfers.button')}</Button>}
+            <Button icon={<Plus size={14} />} onClick={() => setEditing('new')} disabled={!accounts.data?.length}>{t('transactions.add')}</Button>
+          </div>
+        }
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative w-64">
@@ -194,6 +200,8 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                   <td className="num px-3 py-2.5 text-[13px] whitespace-nowrap text-muted">{formatDate(tx.bookingDate, fmt)}</td>
                   <td className="max-w-0 px-3 py-2.5">
                     <button type="button" className="block w-full truncate text-left" onClick={() => setEditing(tx)}>
+                      {tx.transferAccount && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted" title={t('transfers.pairedHint')}>⇄ {tx.transferAccount}</span>}
+                      {tx.splitCount > 0 && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{t('splits.badge', { count: tx.splitCount })}</span>}
                       <span className="font-medium">{tx.counterpartyName || tx.description}</span>
                       {tx.counterpartyName && <span className="ml-2 text-[13px] text-muted">{tx.description}</span>}
                     </button>
@@ -217,6 +225,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
         </div>
       )}
 
+      <TransfersModal open={transfersOpen} onClose={() => setTransfersOpen(false)} onPaired={() => void page.reload()} />
       <TxModal
         tx={editing}
         categories={cats}
@@ -275,6 +284,12 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
         <div className="col-span-2"><Field label={t('transactions.notes')}>{(id) => <Input id={id} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}</Field></div>
         {base?.communication && <p className="selectable col-span-2 text-xs text-muted">{t('transactions.communication')}: {base.communication}</p>}
         {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: {base.counterpartyIban}</p>}
+        {base?.transferAccount && (
+          <p className="col-span-2 flex items-center gap-2 text-xs text-muted">
+            ⇄ {t('transfers.pairedWith', { account: base.transferAccount })}
+            <button type="button" className="font-medium text-accent hover:underline" onClick={() => void call('transfers.unpair', { id: base.id }).then(onSaved, (e) => toast(errText(e), 'error'))}>{t('transfers.unpair')}</button>
+          </p>
+        )}
         <div className="col-span-2 flex justify-between gap-2">
           {base ? (
             <Button variant="danger" icon={<Trash2 size={14} />} onClick={() => { if (window.confirm(t('transactions.deleteConfirm', { count: 1 }))) void call('transactions.delete', { ids: [base.id] }).then(onSaved) }}>
@@ -287,6 +302,68 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
           </div>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+/** Transfers between own accounts that aren't paired yet; the sure ones are ticked. */
+function TransfersModal({ open, onClose, onPaired }: { open: boolean; onClose: () => void; onPaired: () => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { money, fmt } = useSettings()
+  const [list, setList] = useState<TransferPair[] | null>(null)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const key = (p: TransferPair): string => `${p.outId}-${p.inId}`
+  useEffect(() => {
+    if (!open) return
+    setList(null)
+    void call('transfers.find').then((l) => {
+      setList(l)
+      setPicked(new Set(l.filter((p) => p.confidence === 'iban').map(key)))
+    })
+  }, [open])
+  const pair = (): void => {
+    const pairs = (list ?? []).filter((p) => picked.has(key(p))).map((p) => ({ outId: p.outId, inId: p.inId }))
+    void call('transfers.pair', { pairs }).then(
+      (r) => {
+        toast(t('transfers.paired', { count: r.paired }))
+        onPaired()
+        onClose()
+      },
+      (e) => toast(errText(e), 'error')
+    )
+  }
+  return (
+    <Modal open={open} title={t('transfers.title')} onClose={onClose}>
+      <p className="mb-3 text-[13px] text-muted">{t('transfers.hint')}</p>
+      {list === null ? (
+        <p className="text-[13px] text-muted">…</p>
+      ) : list.length === 0 ? (
+        <p className="text-[13px] text-muted">{t('transfers.none')}</p>
+      ) : (
+        <ul className="max-h-80 space-y-1 overflow-y-auto">
+          {list.map((p) => (
+            <li key={key(p)}>
+              <label className="flex items-center gap-2 text-[13px]">
+                <input
+                  type="checkbox"
+                  className="accent-[var(--accent)]"
+                  checked={picked.has(key(p))}
+                  onChange={(e) => setPicked((s) => { const n = new Set(s); if (e.target.checked) n.add(key(p)); else n.delete(key(p)); return n })}
+                />
+                <span className="num w-24 text-muted">{formatDate(p.date, fmt)}</span>
+                <span className="min-w-0 flex-1 truncate">{p.fromAccount} → {p.toAccount}</span>
+                <span className="text-xs text-muted">{t(p.confidence === 'iban' ? 'transfers.sure' : 'transfers.maybe')}</span>
+                <span className="num w-24 text-right font-medium">{money(p.amountCents, p.currency)}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button onClick={onClose}>{t('settings.cancel')}</Button>
+        <Button variant="primary" disabled={!picked.size} onClick={pair}>{t('transfers.pair', { count: picked.size })}</Button>
+      </div>
     </Modal>
   )
 }

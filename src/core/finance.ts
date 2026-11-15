@@ -30,6 +30,8 @@ interface TxRow {
   category_name: string | null
   notes: string | null
   import_batch_id: number | null
+  transfer_account: string | null
+  split_count: number
 }
 
 const toTx = (r: TxRow): Transaction => ({
@@ -47,10 +49,14 @@ const toTx = (r: TxRow): Transaction => ({
   categoryId: r.category_id,
   categoryName: r.category_name,
   notes: r.notes,
-  importBatchId: r.import_batch_id
+  importBatchId: r.import_batch_id,
+  transferAccount: r.transfer_account,
+  splitCount: r.split_count
 })
 
-const TX_SELECT = `SELECT t.*, a.name AS account_name, c.name AS category_name
+const TX_SELECT = `SELECT t.*, a.name AS account_name, c.name AS category_name,
+    (SELECT pa.name FROM transactions p JOIN accounts pa ON pa.id = p.account_id WHERE p.transfer_pair = t.transfer_pair AND p.id <> t.id) AS transfer_account,
+    (SELECT count(*) FROM transaction_splits s WHERE s.tx_id = t.id) AS split_count
   FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id`
 
 export interface TxFilter {

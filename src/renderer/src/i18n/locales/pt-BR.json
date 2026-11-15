@@ -228,5 +228,9 @@
     "readFromCsv": "Saldo do arquivo no fim de {{date}}: {{amount}}.",
     "saved": "Saldo bancário de {{date}} salvo.",
     "why": "Assim o Kasboek conhece o saldo desta conta e percebe quando falta um movimento. Você também pode adicioná-lo mais tarde em Configurações → Contas."
+  },
+  "transfers": {
+    "hint": "Dinheiro que sai de uma das suas contas e o mesmo valor que entra em outra em 3 dias. Emparelhadas, as duas metades contam como transferência: nem receita nem despesa.",
+    "maybe": "mesmo valor"
   }
 }

@@ -112,7 +112,7 @@ describe('pending payments (review 14 #1)', () => {
     const { d, acc } = db()
     d.prepare("INSERT INTO transactions (account_id, booking_date, amount_cents, currency, description, bank_reference, fingerprint) VALUES (?, '2026-11-14', -7115, 'EUR', 'x', '2026-', 'old')").run(acc)
     d.prepare("INSERT INTO rules (field, pattern, match, category_id) VALUES ('any', 'FOD', 'contains', ?)").run(cat(d, 'Groceries'))
-    MIGRATIONS.at(-2)!(d)
+    MIGRATIONS[7]!(d) // placeholders and short rules
     const t = d.prepare('SELECT bank_reference, fingerprint FROM transactions').get() as { bank_reference: string | null; fingerprint: string }
     expect(t.bank_reference).toBeNull()
     expect(t.fingerprint).not.toBe('old')

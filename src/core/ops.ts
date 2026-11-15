@@ -9,6 +9,7 @@ import * as imp from './import'
 import * as fx from './fx'
 import * as wealth from './wealth'
 import { listBankBalances, setBankBalance } from './balance'
+import { findTransfers, pairTransfers, unpairTransfer } from './transfers'
 
 export function fxStatus(db: Db): FxStatus {
   const s = getSettings(db)
@@ -223,6 +224,16 @@ export const coreOps: OpTable = {
   'transactions.categorize': { mutates: true, assistant: true, handler: ({ db }, i) => fin.categorizeTransactions(db, i.ids, i.categoryId) },
   'transactions.delete': { mutates: true, assistant: false, handler: ({ db }, i) => fin.deleteTransactions(db, i.ids) },
 
+  'transfers.find': { mutates: false, assistant: true, handler: ({ db }) => findTransfers(db) },
+  'transfers.pair': { mutates: true, assistant: true, handler: ({ db }, { pairs }) => pairTransfers(db, pairs) },
+  'transfers.unpair': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { id }) => {
+      unpairTransfer(db, id)
+      return { ok: true as const }
+    }
+  },
   'rules.list': { mutates: false, assistant: true, handler: ({ db }) => fin.listRules(db) },
   'rules.create': { mutates: true, assistant: true, handler: ({ db }, i) => fin.createRule(db, i) },
   'rules.preview': { mutates: false, assistant: true, handler: ({ db }, i) => fin.previewRule(db, i) },

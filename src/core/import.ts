@@ -8,6 +8,7 @@ import type { Db } from './database'
 import { AppError } from './errors'
 import { categorizeTransactions, createRule, insertTransaction, listRules, matchRule } from './finance'
 import { groupKey } from './assist-plan'
+import { findTransfers, pairTransfers } from './transfers'
 import { balanceOn, setBankBalance } from './balance'
 import { fingerprint } from './fingerprint'
 import { autoMap, detectLayout, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
@@ -500,6 +501,12 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
     }
   })()
   sessions.delete(id)
+  // Transfers to or from another own account that are sure (the account number matches) are
+  // paired at once; others are only suggested.
+  const ids = (db.prepare('SELECT id FROM transactions WHERE import_batch_id = ?').all(batchId) as { id: number }[]).map((r) => r.id)
+  const found = ids.length ? findTransfers(db, { onlyIds: ids }) : []
+  const transfersPaired = pairTransfers(db, found.filter((f) => f.confidence === 'iban')).paired
+  const transfersSuggested = found.filter((f) => f.confidence === 'amount').length
   const dates = built.flatMap((b) => (b.row.bookingDate ? [b.row.bookingDate] : [])).sort()
   const lastDate = dates.at(-1) ?? null
   const kind = (db.prepare('SELECT kind FROM accounts WHERE id = ?').get(s.accountId) as { kind: string }).kind
@@ -525,6 +532,8 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
     balanceOnLastDate: lastDate ? balanceOn(db, s.accountId, lastDate).cents : null,
     bankBalance,
     balanceNote,
+    transfersPaired,
+    transfersSuggested,
     askBalance: kind !== 'investment' && !hasBalance
   }
 }
