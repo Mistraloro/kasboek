@@ -177,3 +177,21 @@ describe('savings goals (#33)', () => {
     expect(listGoals(d, '2027-06-01')[0]).toMatchObject({ overdue: true, perMonthCents: null })
   })
 })
+
+describe('bulk editing and saved searches (#34)', () => {
+  it('renames many at once and keeps searches', async () => {
+    const { coreOps } = await import('@core/ops')
+    const { renameTransactions } = await import('@core/finance')
+    const { d, acc } = db()
+    const a = acc('Current')
+    const ids = [tx(d, a, '2026-10-01', -500, { counterpartyName: 'CRF MKT BRUGGE' }), tx(d, a, '2026-10-02', -700, { counterpartyName: 'CRF MKT BRUGGE' })]
+    expect(renameTransactions(d, ids, ' Carrefour ')).toEqual({ updated: 2 })
+    const rows = d.prepare('SELECT counterparty_name, bank_counterparty FROM transactions').all()
+    expect(rows).toEqual([{ counterparty_name: 'Carrefour', bank_counterparty: 'CRF MKT BRUGGE' }, { counterparty_name: 'Carrefour', bank_counterparty: 'CRF MKT BRUGGE' }])
+    const save = coreOps['searches.save']!.handler as (c: unknown, i: unknown) => { name: string }[]
+    const del = coreOps['searches.delete']!.handler as (c: unknown, i: unknown) => { name: string }[]
+    save({ db: d }, { name: 'Groceries Oct', filter: { month: '2026-10', categoryId: 3 } })
+    expect(save({ db: d }, { name: 'Big', filter: { direction: 'out' } }).map((x) => x.name)).toEqual(['Big', 'Groceries Oct'])
+    expect(del({ db: d }, { name: 'Big' }).map((x) => x.name)).toEqual(['Groceries Oct'])
+  })
+})

@@ -18,7 +18,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiProvider: 'anthropic',
   aiBaseUrl: null,
   aiChatModel: '',
-  aiCsvModel: ''
+  aiCsvModel: '',
+  savedSearches: []
 }
 
 export function getSettings(db: Db): Settings {

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Plus, Search, Trash2, Wand2 } from 'lucide-react'
+import { ArrowLeftRight, Bookmark, PenLine, Plus, Search, Trash2, Wand2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
@@ -62,6 +62,21 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   const items = page.data?.items ?? []
   const allSelected = items.length > 0 && items.every((i) => selected.has(i.id))
 
+  // Exactly two selected, money out of one account and the same amount into another: one transfer.
+  const chosen = items.filter((i) => selected.has(i.id))
+  const pairable = chosen.length === 2 && chosen[0]!.accountId !== chosen[1]!.accountId && chosen[0]!.amountCents === -chosen[1]!.amountCents && !chosen.some((c) => c.transferAccount)
+  const pairSelected = (): void => {
+    const [a, b] = chosen
+    if (!a || !b) return
+    const out = a.amountCents < 0 ? a : b
+    const inn = out === a ? b : a
+    void call('transfers.pair', { pairs: [{ outId: out.id, inId: inn.id }] }).then(() => { setSelected(new Set()); void page.reload() }, (e) => toast(errText(e), 'error'))
+  }
+  const settingsOp = useOp('settings.get')
+  const saved = settingsOp.data?.savedSearches ?? []
+  const activeFilter = Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined && v !== ''))
+  const current = saved.find((x) => JSON.stringify(x.filter) === JSON.stringify(activeFilter))
+
   const categorize = async (ids: number[], categoryId: number | null, tx?: Transaction): Promise<void> => {
     try {
       await call('transactions.categorize', { ids, categoryId })
@@ -103,6 +118,41 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
           <option value="">{t('transactions.allDates')}</option>
           {months.map((m) => <option key={m} value={m}>{monthLabel(new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1), fmt)}</option>)}
         </Select>
+        <span className="ml-auto flex items-center gap-1">
+          {saved.length > 0 && (
+            <Select
+              className="w-44!"
+              aria-label={t('searches.label')}
+              value={current?.name ?? ''}
+              onChange={(e) => {
+                const f = saved.find((x) => x.name === e.target.value)?.filter
+                if (!f) return
+                setFilter(f)
+                setSearchText(f.search ?? '')
+              }}
+            >
+              <option value="">{t('searches.label')}</option>
+              {saved.map((x) => <option key={x.name} value={x.name}>{x.name}</option>)}
+            </Select>
+          )}
+          {current ? (
+            <Button size="sm" variant="ghost" aria-label={t('searches.delete')} title={t('searches.delete')} icon={<Trash2 size={14} />} onClick={() => void call('searches.delete', { name: current.name }).then(() => settingsOp.reload())} />
+          ) : (
+            Object.keys(activeFilter).length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Bookmark size={14} />}
+                onClick={() => {
+                  const name = window.prompt(t('searches.namePrompt'), '')?.trim()
+                  if (name) void call('searches.save', { name, filter: activeFilter }).then(() => settingsOp.reload(), (e) => toast(errText(e), 'error'))
+                }}
+              >
+                {t('searches.save')}
+              </Button>
+            )
+          )}
+        </span>
       </div>
 
       {page.data && page.data.total > 0 && (
@@ -141,6 +191,22 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
           <span className="font-medium">{t('transactions.selected', { count: selected.size })}</span>
           <span className="ml-4 text-muted">{t('transactions.setCategory')}</span>
           <CategorySelect label={t('transactions.setCategory')} className="h-8 w-48" value={null} categories={cats} onChange={(id) => void categorize([...selected], id).then(() => setSelected(new Set()))} />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<PenLine size={14} />}
+            onClick={() => {
+              const name = window.prompt(t('transactions.renamePrompt', { count: selected.size }), '')?.trim()
+              if (name) void call('transactions.rename', { ids: [...selected], counterpartyName: name }).then(() => { setSelected(new Set()); void page.reload() }, (e) => toast(errText(e), 'error'))
+            }}
+          >
+            {t('transactions.rename')}
+          </Button>
+          {pairable && (
+            <Button size="sm" variant="ghost" icon={<ArrowLeftRight size={14} />} onClick={() => pairSelected()}>
+              {t('transfers.pairSelected')}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="danger"

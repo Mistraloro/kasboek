@@ -84,7 +84,10 @@
     "ruleCreate": "Create rule",
     "ruleCreated_one": "Rule created. {{count}} more transaction categorised.",
     "ruleCreated_other": "Rule created. {{count}} more transactions categorised.",
-    "refundHint": "Money back in a spending category (a refund, or someone paying their share) lowers that spending; it doesn’t count as income."
+    "refundHint": "Money back in a spending category (a refund, or someone paying their share) lowers that spending; it doesn’t count as income.",
+    "rename": "Rename",
+    "renamePrompt_one": "New name for {{count}} transaction:",
+    "renamePrompt_other": "New name for {{count}} transactions:"
   },
   "budgets": {
     "title": "Budgets",
@@ -844,7 +847,8 @@
     "paired_other": "{{count}} transfers paired.",
     "pairedHint": "Transfer between your own accounts",
     "pairedWith": "Transfer with {{account}}",
-    "unpair": "Separate"
+    "unpair": "Separate",
+    "pairSelected": "Pair as transfer"
   },
   "splits": {
     "badge_one": "split in {{count}}",
@@ -911,5 +915,11 @@
     "balanceOf": "The balance of {{account}}",
     "savedSoFar": "Saved so far (amount)",
     "deleteConfirm": "Delete the goal “{{name}}”?"
+  },
+  "searches": {
+    "label": "Saved searches",
+    "save": "Save search",
+    "delete": "Delete this saved search",
+    "namePrompt": "Name for this search:"
   }
 }

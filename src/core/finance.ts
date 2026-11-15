@@ -214,6 +214,13 @@ export function categorizeTransactions(db: Db, ids: number[], categoryId: number
   return { updated }
 }
 
+export function renameTransactions(db: Db, ids: number[], counterpartyName: string): { updated: number } {
+  const stmt = db.prepare(`UPDATE transactions SET counterparty_name = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`)
+  let updated = 0
+  db.transaction(() => ids.forEach((id) => (updated += stmt.run(counterpartyName.trim(), id).changes)))()
+  return { updated }
+}
+
 export function deleteTransactions(db: Db, ids: number[]): { deleted: number } {
   const stmt = db.prepare('DELETE FROM transactions WHERE id = ?')
   let deleted = 0

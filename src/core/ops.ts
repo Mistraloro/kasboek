@@ -227,6 +227,21 @@ export const coreOps: OpTable = {
   'transactions.edit': { mutates: true, assistant: true, handler: ({ db }, t) => fin.updateTransaction(db, t) },
   'transactions.splits': { mutates: false, assistant: true, handler: ({ db }, { id }) => fin.listSplits(db, id) },
   'transactions.split': { mutates: true, assistant: true, handler: ({ db }, { id, parts }) => fin.setSplits(db, id, parts) },
+  'transactions.rename': { mutates: true, assistant: true, handler: ({ db }, i) => fin.renameTransactions(db, i.ids, i.counterpartyName) },
+  'searches.save': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { name, filter }) => {
+      // Saving under an existing name replaces it; the newest first.
+      const list = getSettings(db).savedSearches.filter((s) => s.name !== name)
+      return updateSettings(db, { savedSearches: [{ name, filter }, ...list].slice(0, 30) }).savedSearches
+    }
+  },
+  'searches.delete': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { name }) => updateSettings(db, { savedSearches: getSettings(db).savedSearches.filter((s) => s.name !== name) }).savedSearches
+  },
   'transactions.categorize': { mutates: true, assistant: true, handler: ({ db }, i) => fin.categorizeTransactions(db, i.ids, i.categoryId) },
   'transactions.delete': { mutates: true, assistant: false, handler: ({ db }, i) => fin.deleteTransactions(db, i.ids) },
 

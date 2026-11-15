@@ -20,7 +20,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -345,6 +345,23 @@ export const contract = {
       .strict(),
     output: out<SplitLine[]>()
   },
+  'transactions.rename': {
+    description: 'Give several transactions the same readable counterparty name (e.g. all "CRF MKT BRUGGE" rows → "Carrefour"). The bank’s own text is kept.',
+    input: z.object({ ids: z.array(id).min(1).max(5000), counterpartyName: z.string().trim().min(1).max(120) }).strict(),
+    output: out<{ updated: number }>()
+  },
+  'searches.save': {
+    input: z
+      .object({
+        name: z.string().trim().min(1).max(60),
+        filter: z
+          .object({ accountId: id.optional(), categoryId: z.union([id, z.literal('none')]).optional(), month: month.optional(), from: date.optional(), to: date.optional(), search: z.string().max(100).optional(), direction: z.enum(['in', 'out']).optional() })
+          .strict()
+      })
+      .strict(),
+    output: out<SavedSearch[]>()
+  },
+  'searches.delete': { input: z.object({ name: z.string().max(60) }).strict(), output: out<SavedSearch[]>() },
   'transactions.categorize': {
     description: 'Set the category of one or more transactions (categoryId null = uncategorised).',
     input: z.object({ ids: z.array(id).min(1).max(5000), categoryId: id.nullable() }).strict(),

@@ -84,7 +84,10 @@
     "ruleCreate": "Regel maken",
     "ruleCreated_one": "Regel gemaakt. Nog {{count}} verrichting ingedeeld.",
     "ruleCreated_other": "Regel gemaakt. Nog {{count}} verrichtingen ingedeeld.",
-    "refundHint": "Geld terug in een uitgavencategorie (een terugbetaling, of iemand die zijn deel betaalt) verlaagt die uitgave; het telt niet als inkomen."
+    "refundHint": "Geld terug in een uitgavencategorie (een terugbetaling, of iemand die zijn deel betaalt) verlaagt die uitgave; het telt niet als inkomen.",
+    "rename": "Hernoemen",
+    "renamePrompt_one": "Nieuwe naam voor {{count}} verrichting:",
+    "renamePrompt_other": "Nieuwe naam voor {{count}} verrichtingen:"
   },
   "budgets": {
     "title": "Budgetten",
@@ -844,7 +847,8 @@
     "paired_other": "{{count}} overboekingen gekoppeld.",
     "pairedHint": "Overboeking tussen je eigen rekeningen",
     "pairedWith": "Overboeking met {{account}}",
-    "unpair": "Loskoppelen"
+    "unpair": "Loskoppelen",
+    "pairSelected": "Koppelen als overboeking"
   },
   "splits": {
     "badge_one": "in {{count}} gesplitst",
@@ -911,5 +915,11 @@
     "balanceOf": "Het saldo van {{account}}",
     "savedSoFar": "Al gespaard (bedrag)",
     "deleteConfirm": "Het doel “{{name}}” verwijderen?"
+  },
+  "searches": {
+    "label": "Bewaarde zoekopdrachten",
+    "save": "Zoekopdracht bewaren",
+    "delete": "Deze bewaarde zoekopdracht verwijderen",
+    "namePrompt": "Naam voor deze zoekopdracht:"
   }
 }

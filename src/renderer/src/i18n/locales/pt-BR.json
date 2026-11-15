@@ -16,7 +16,8 @@
     "amountHint": "Negativo para dinheiro que sai, ex.: -12,50",
     "delete": "Excluir",
     "deleteConfirm_one": "Excluir este movimento?",
-    "deleteConfirm_other": "Excluir {{count}} movimentos?"
+    "deleteConfirm_other": "Excluir {{count}} movimentos?",
+    "rename": "Renomear"
   },
   "budgets": {
     "invalid": "Digite um valor como 150 ou 150,00.",
@@ -252,5 +253,10 @@
     "byHand": "Eu mesmo atualizo",
     "savedSoFar": "Economizado até agora (valor)",
     "deleteConfirm": "Excluir o objetivo «{{name}}»?"
+  },
+  "searches": {
+    "label": "Pesquisas salvas",
+    "save": "Salvar pesquisa",
+    "delete": "Excluir esta pesquisa salva"
   }
 }

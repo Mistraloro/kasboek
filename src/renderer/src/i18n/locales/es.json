@@ -84,7 +84,10 @@
     "ruleCreate": "Crear regla",
     "ruleCreated_one": "Regla creada. {{count}} movimiento más clasificado.",
     "ruleCreated_other": "Regla creada. {{count}} movimientos más clasificados.",
-    "refundHint": "El dinero que vuelve a una categoría de gasto (un reembolso, o alguien que paga su parte) reduce ese gasto; no cuenta como ingreso."
+    "refundHint": "El dinero que vuelve a una categoría de gasto (un reembolso, o alguien que paga su parte) reduce ese gasto; no cuenta como ingreso.",
+    "rename": "Renombrar",
+    "renamePrompt_one": "Nuevo nombre para {{count}} movimiento:",
+    "renamePrompt_other": "Nuevo nombre para {{count}} movimientos:"
   },
   "budgets": {
     "title": "Presupuestos",
@@ -844,7 +847,8 @@
     "paired_other": "{{count}} traspasos emparejados.",
     "pairedHint": "Traspaso entre tus propias cuentas",
     "pairedWith": "Traspaso con {{account}}",
-    "unpair": "Separar"
+    "unpair": "Separar",
+    "pairSelected": "Emparejar como traspaso"
   },
   "splits": {
     "badge_one": "dividido en {{count}}",
@@ -911,5 +915,11 @@
     "balanceOf": "El saldo de {{account}}",
     "savedSoFar": "Ahorrado hasta ahora (importe)",
     "deleteConfirm": "¿Eliminar la meta «{{name}}»?"
+  },
+  "searches": {
+    "label": "Búsquedas guardadas",
+    "save": "Guardar búsqueda",
+    "delete": "Eliminar esta búsqueda guardada",
+    "namePrompt": "Nombre para esta búsqueda:"
   }
 }

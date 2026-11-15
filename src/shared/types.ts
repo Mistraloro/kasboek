@@ -121,6 +121,12 @@ export interface SyncStatus {
 }
 
 /** Data settings, stored in the encrypted database. */
+/** A named set of Transactions filters. */
+export interface SavedSearch {
+  name: string
+  filter: { accountId?: number; categoryId?: number | 'none'; month?: string; from?: string; to?: string; search?: string; direction?: 'in' | 'out' }
+}
+
 export interface Settings {
   /** Main currency: totals, budgets and net worth are shown in it. */
   currency: string
@@ -145,6 +151,8 @@ export interface Settings {
   /** Model names for OpenAI-compatible providers (Claude uses chatModel/csvModel). */
   aiChatModel: string
   aiCsvModel: string
+  /** Saved searches on the Transactions page (this computer only). */
+  savedSearches: SavedSearch[]
 }
 
 export const ASSISTANT_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'] as const

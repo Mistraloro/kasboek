@@ -84,7 +84,10 @@
     "ruleCreate": "Créer la règle",
     "ruleCreated_one": "Règle créée. {{count}} opération de plus classée.",
     "ruleCreated_other": "Règle créée. {{count}} opérations de plus classées.",
-    "refundHint": "De l’argent qui revient dans une catégorie de dépense (un remboursement, ou quelqu’un qui paie sa part) réduit cette dépense ; il ne compte pas comme revenu."
+    "refundHint": "De l’argent qui revient dans une catégorie de dépense (un remboursement, ou quelqu’un qui paie sa part) réduit cette dépense ; il ne compte pas comme revenu.",
+    "rename": "Renommer",
+    "renamePrompt_one": "Nouveau nom pour {{count}} opération :",
+    "renamePrompt_other": "Nouveau nom pour {{count}} opérations :"
   },
   "budgets": {
     "title": "Budgets",
@@ -844,7 +847,8 @@
     "paired_other": "{{count}} virements associés.",
     "pairedHint": "Virement entre vos propres comptes",
     "pairedWith": "Virement avec {{account}}",
-    "unpair": "Dissocier"
+    "unpair": "Dissocier",
+    "pairSelected": "Associer comme virement"
   },
   "splits": {
     "badge_one": "réparti en {{count}}",
@@ -911,5 +915,11 @@
     "balanceOf": "Le solde de {{account}}",
     "savedSoFar": "Déjà épargné (montant)",
     "deleteConfirm": "Supprimer l’objectif « {{name}} » ?"
+  },
+  "searches": {
+    "label": "Recherches enregistrées",
+    "save": "Enregistrer la recherche",
+    "delete": "Supprimer cette recherche enregistrée",
+    "namePrompt": "Nom de cette recherche :"
   }
 }

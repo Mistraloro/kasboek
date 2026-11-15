@@ -153,6 +153,8 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
       if (input['notes'] !== undefined) parts.push(input['notes'] ? `note → “${String(input['notes']).slice(0, 80)}”` : 'remove the note')
       return `Change ${what}: ${parts.join(', ') || 'nothing'}`
     }
+    case 'transactions.rename':
+      return `Rename ${describeTransactions(db, input['ids'])} to “${String(input['counterpartyName'])}”`
     case 'goals.create':
       return `Create the savings goal “${String(input['name'])}”: ${money(db, Number(input['targetCents']))}${input['targetDate'] ? ` by ${String(input['targetDate'])}` : ''}`
     case 'transactions.split': {

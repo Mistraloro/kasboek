@@ -84,7 +84,10 @@
     "ruleCreate": "Regel erstellen",
     "ruleCreated_one": "Regel erstellt. {{count}} weitere Buchung eingeordnet.",
     "ruleCreated_other": "Regel erstellt. {{count}} weitere Buchungen eingeordnet.",
-    "refundHint": "Geld zurück in einer Ausgabenkategorie (eine Erstattung, oder jemand zahlt seinen Anteil) senkt diese Ausgabe; es zählt nicht als Einnahme."
+    "refundHint": "Geld zurück in einer Ausgabenkategorie (eine Erstattung, oder jemand zahlt seinen Anteil) senkt diese Ausgabe; es zählt nicht als Einnahme.",
+    "rename": "Umbenennen",
+    "renamePrompt_one": "Neuer Name für {{count}} Buchung:",
+    "renamePrompt_other": "Neuer Name für {{count}} Buchungen:"
   },
   "budgets": {
     "title": "Budgets",
@@ -844,7 +847,8 @@
     "paired_other": "{{count}} Umbuchungen verknüpft.",
     "pairedHint": "Umbuchung zwischen deinen eigenen Konten",
     "pairedWith": "Umbuchung mit {{account}}",
-    "unpair": "Trennen"
+    "unpair": "Trennen",
+    "pairSelected": "Als Umbuchung verknüpfen"
   },
   "splits": {
     "badge_one": "in {{count}} geteilt",
@@ -911,5 +915,11 @@
     "balanceOf": "Der Kontostand von {{account}}",
     "savedSoFar": "Bisher gespart (Betrag)",
     "deleteConfirm": "Das Ziel „{{name}}“ löschen?"
+  },
+  "searches": {
+    "label": "Gespeicherte Suchen",
+    "save": "Suche speichern",
+    "delete": "Diese gespeicherte Suche löschen",
+    "namePrompt": "Name für diese Suche:"
   }
 }
