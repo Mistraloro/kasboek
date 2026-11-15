@@ -308,7 +308,11 @@
     "thinkingLive": "Denkt na…",
     "thinkingShown": "Gedachtegang",
     "model": "Model",
-    "effortOption": "Inspanning: {{level}}"
+    "effortOption": "Inspanning: {{level}}",
+    "checkRunning": "{{file}} nakijken…",
+    "checkRunningGroups": "{{file}} nakijken: {{done}} van {{total}} groepen…",
+    "checkFailed": "Het nakijken van {{file}} is niet afgerond.",
+    "checkDone": "{{file}} nagekeken: {{categorised}} gecategoriseerd, {{renamed}} hernoemd, {{rules}} regels en {{existing}} oudere groepen voorgesteld. Zie het importscherm."
   },
   "settings": {
     "title": "Instellingen",

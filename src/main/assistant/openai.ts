@@ -373,7 +373,11 @@ export async function chat(
  * One call that must answer with JSON matching `schema`. Uses a strict JSON schema where the
  * provider supports it, and falls back to plain JSON mode (with the schema in the prompt).
  */
-export async function json(p: ActiveProvider, opts: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number; signal?: AbortSignal }): Promise<string> {
+export async function json(
+  p: ActiveProvider,
+  opts: { system: string; user: string; schema: Record<string, unknown>; maxTokens: number; signal?: AbortSignal; /** Streams the model's reasoning, where it shares it. */ onThinking?: (t: string) => void }
+): Promise<string> {
+  const stream = !!opts.onThinking
   const strict = { response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }, messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }] }
   const loose = {
     response_format: { type: 'json_object' },
@@ -390,7 +394,7 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
   let open: Open
   for (;;) {
     try {
-      open = await post(p, '/chat/completions', { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: maxTokens }, opts.signal)
+      open = await post(p, '/chat/completions', { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: maxTokens, ...(stream ? { stream: true } : {}) }, opts.signal, stream)
       break
     } catch (err) {
       if (!rejected(err)) throw err
@@ -399,10 +403,27 @@ export async function json(p: ActiveProvider, opts: { system: string; user: stri
       else throw err
     }
   }
-  const body = await readJson<{ choices?: { message?: { content?: unknown }; finish_reason?: string }[] }>(open)
-  const choice = body.choices?.[0]
-  if (choice?.finish_reason === 'length') throw new AppError('assistant.too_long', 'This file is too large for one check. Try a shorter export.')
-  const text = contentText(choice?.message?.content)
+  let text = ''
+  let finish: string | null | undefined = null
+  if (stream) {
+    for await (const raw of events(open, opts.signal ?? new AbortController().signal)) {
+      const chunk = raw as Chunk
+      if (chunk.error) throw new ProviderError(500, chunk.error.message ?? 'stream error')
+      const choice = chunk.choices?.[0]
+      if (!choice) continue
+      const d = choice.delta
+      const thought = contentThinking(d?.content) + (typeof d?.reasoning_content === 'string' ? d.reasoning_content : '') + (typeof d?.reasoning === 'string' ? d.reasoning : '')
+      if (thought) opts.onThinking?.(thought)
+      text += contentText(d?.content)
+      if (choice.finish_reason) finish = choice.finish_reason
+    }
+  } else {
+    const body = await readJson<{ choices?: { message?: { content?: unknown }; finish_reason?: string }[] }>(open)
+    const choice = body.choices?.[0]
+    finish = choice?.finish_reason
+    text = contentText(choice?.message?.content)
+  }
+  if (finish === 'length') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')
   // Some models wrap JSON in a code fence.
   return text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')
 }

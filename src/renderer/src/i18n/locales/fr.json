@@ -308,7 +308,11 @@
     "thinkingLive": "Réflexion…",
     "thinkingShown": "Réflexion",
     "model": "Modèle",
-    "effortOption": "Effort : {{level}}"
+    "effortOption": "Effort : {{level}}",
+    "checkRunning": "Vérification de {{file}}…",
+    "checkRunningGroups": "Vérification de {{file}} : {{done}} groupes sur {{total}}…",
+    "checkFailed": "La vérification de {{file}} n’a pas abouti.",
+    "checkDone": "{{file}} vérifié : {{categorised}} classées, {{renamed}} renommées, {{rules}} règles et {{existing}} groupes plus anciens proposés. Voir l’écran d’import."
   },
   "settings": {
     "title": "Réglages",

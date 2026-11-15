@@ -67,6 +67,46 @@ function publish(now = false): void {
   )
 }
 
+/**
+ * A CSV check shown in the chat: its reasoning while it runs (one section per part of the file) and
+ * its notes at the end. Display only: the chat's own conversation with the model isn't changed.
+ */
+export function checkActivity(fileName: string): {
+  thinking(part: number, of: number, text: string): void
+  progress(done: number, total: number): void
+  finish(notes: string[], counts: { categorised: number; renamed: number; rules: number; existing: number }): void
+  fail(message: string): void
+} {
+  const m: Extract<ChatMessage, { role: 'assistant' }> = { id: randomUUID(), role: 'assistant', text: '', tools: [], check: { fileName, groupsDone: 0, groupsTotal: 0, done: false } }
+  display.push(m)
+  publish(true)
+  const parts = new Map<number, string>()
+  let of = 1
+  const compose = (): string => [...parts.entries()].sort((a, b) => a[0] - b[0]).map(([n, t]) => (of > 1 ? `— ${n}/${of} —\n${t.trim()}` : t.trim())).join('\n\n')
+  return {
+    thinking(part, total, text) {
+      of = total
+      parts.set(part, (parts.get(part) ?? '') + text)
+      m.thinking = compose()
+      publish()
+    },
+    progress(done, total) {
+      m.check = { ...m.check!, groupsDone: done, groupsTotal: total }
+      publish()
+    },
+    finish(notes, counts) {
+      m.check = { ...m.check!, done: true, ...counts }
+      m.text = notes.map((n) => `- ${n}`).join('\n')
+      publish(true)
+    },
+    fail(message) {
+      m.check = { ...m.check!, done: true }
+      m.error = message
+      publish(true)
+    }
+  }
+}
+
 export function assistantStatus(): AssistantStatus {
   return status()
 }

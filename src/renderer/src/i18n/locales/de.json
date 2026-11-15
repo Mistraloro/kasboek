@@ -308,7 +308,11 @@
     "thinkingLive": "Denkt nach…",
     "thinkingShown": "Gedankengang",
     "model": "Modell",
-    "effortOption": "Aufwand: {{level}}"
+    "effortOption": "Aufwand: {{level}}",
+    "checkRunning": "{{file}} wird geprüft…",
+    "checkRunningGroups": "{{file}} wird geprüft: {{done}} von {{total}} Gruppen…",
+    "checkFailed": "Die Prüfung von {{file}} wurde nicht abgeschlossen.",
+    "checkDone": "{{file}} geprüft: {{categorised}} eingeordnet, {{renamed}} umbenannt, {{rules}} Regeln und {{existing}} ältere Gruppen vorgeschlagen. Siehe Importseite."
   },
   "settings": {
     "title": "Einstellungen",

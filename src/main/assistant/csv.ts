@@ -17,6 +17,9 @@ import { client, explainError, modelParams } from './claude'
 import * as openai from './openai'
 import { activeProvider, requireConfigured } from './provider'
 import { app } from 'electron'
+import { LANGUAGES } from '@shared/languages'
+import { getPrefs } from '../prefs'
+import { checkActivity } from './chat'
 import { broadcast } from '../session'
 
 
@@ -31,7 +34,7 @@ You get the raw cells, the column mapping the app detected, the rows it couldn't
   - name: who the money went to or came from, short and readable, as people would say it: the shop, company or person (e.g. "Delhaize", "Bakkerij De Roos", "Engie", "Jan Peeters"), found in the counterparty or inside the bank text (card payments often put the shop and its address after the card number). Use normal capitalisation, not all caps. null if the text gives no name.
   - description: a short, readable description without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Kaartbetaling Bancontact, Brugge", "Automatisch sparen", "Overschrijving via Wero"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
 - rules: rules make future imports categorise themselves. Suggest one only for a payee that comes back (a group with 2 or more transactions, or a known shop, employer, utility or subscription). field: where the text is ("counterparty" if the counterparty column holds the name, else "description"). pattern: a distinctive piece of the bank's own text (as written in the counterparty or bank text column, not your readable name), at least 4 characters, that is in every transaction of the group and wouldn't appear in unrelated payments: the shop or company name, not a city, card number, date or generic word like "BETALING". match: "word" for a name that must stand alone, else "contains". categoryId: the category for the group. Don't suggest rules that already exist.
-- notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain English.
+- notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
 Never invent amounts or dates that are not supported by the raw cells.`
 
 /**
@@ -144,6 +147,7 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
               : `Part ${batch.n} of ${batch.of}: only the groups below. Return mapping null and no fixes; the columns and flagged rows are checked in part 1.`
           }
         : {}),
+      noteLanguage: LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English',
       account,
       fileName: preview.fileName,
       recognisedLayout: preview.layout,
@@ -470,9 +474,35 @@ async function check(db: Db, sessionId: string, signal: AbortSignal, state: Assi
   requireConfigured(provider)
   const name = provider.preset.assistantName
   const parts = batches(groups).map((b, _i, all) => ({ ...b, of: all.length }))
+  // Shown in the assistant panel too: the reasoning as it comes, and the notes at the end.
+  const activity = checkActivity(preview.fileName)
+  try {
+    const result = await runParts(db, preview, groups, parts, provider, signal, state, activity)
+    const c = result.check
+    activity.finish(result.notes, { categorised: c?.categorised ?? 0, renamed: c?.renamed ?? 0, rules: c?.rules.length ?? 0, existing: c?.existing.length ?? 0 })
+    return result
+  } catch (err) {
+    activity.fail(signal.aborted ? 'Check stopped.' : err instanceof AppError ? err.message : 'The check failed.')
+    throw err
+  }
+}
+
+async function runParts(
+  db: Db,
+  preview: ImportPreview,
+  groups: RowGroup[],
+  parts: Batch[],
+  provider: ReturnType<typeof activeProvider>,
+  signal: AbortSignal,
+  state: AssistState,
+  activity: ReturnType<typeof checkActivity>
+): Promise<ImportPreview> {
+  const sessionId = preview.sessionId
+  const name = provider.preset.assistantName
   let done = 0
   const progress = (): void => {
     Object.assign(state, { groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
+    activity.progress(done, groups.length)
     broadcast({ type: 'import.checkProgress', sessionId, groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
   }
   progress()
@@ -480,7 +510,7 @@ async function check(db: Db, sessionId: string, signal: AbortSignal, state: Assi
     const timeout = new AbortController()
     const timer = setTimeout(() => timeout.abort('timeout'), limitMs())
     try {
-      const text = await callModel(db, provider, buildContext(db, preview, batch), AbortSignal.any([signal, timeout.signal]))
+      const text = await callModel(db, provider, buildContext(db, preview, batch), AbortSignal.any([signal, timeout.signal]), (t) => activity.thinking(batch.n, batch.of, t))
       const plan = parsePlan(text, name)
       done += batch.groups.length
       progress()
@@ -509,11 +539,11 @@ async function check(db: Db, sessionId: string, signal: AbortSignal, state: Assi
 }
 
 /** One model call that returns the plan as JSON text. */
-async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, context: string, signal: AbortSignal): Promise<string> {
+async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, context: string, signal: AbortSignal, onThinking: (t: string) => void): Promise<string> {
   const name = provider.preset.assistantName
   if (provider.preset.id !== 'anthropic') {
     try {
-      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal })
+      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal, onThinking })
     } catch (err) {
       if (signal.aborted) throw err
       throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
@@ -528,11 +558,14 @@ async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, co
         ...params,
         max_tokens: 32000,
         output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
+        // A readable summary of the reasoning, shown in the assistant panel.
+        thinking: { type: 'adaptive', display: 'summarized' },
         system: INSTRUCTIONS,
         messages: [{ role: 'user', content: context }]
       },
       { signal }
     )
+    stream.on('thinking', (delta) => onThinking(delta))
     const message = await stream.finalMessage()
     if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
     if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')

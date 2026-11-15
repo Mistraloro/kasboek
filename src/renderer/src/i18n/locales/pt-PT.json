@@ -308,7 +308,11 @@
     "thinkingLive": "A pensar…",
     "thinkingShown": "Raciocínio",
     "model": "Modelo",
-    "effortOption": "Esforço: {{level}}"
+    "effortOption": "Esforço: {{level}}",
+    "checkRunning": "A rever {{file}}…",
+    "checkRunningGroups": "A rever {{file}}: {{done}} de {{total}} grupos…",
+    "checkFailed": "A revisão de {{file}} não terminou.",
+    "checkDone": "{{file}} revisto: {{categorised}} classificados, {{renamed}} renomeados, {{rules}} regras e {{existing}} grupos anteriores sugeridos. Veja o ecrã de importação."
   },
   "settings": {
     "title": "Definições",

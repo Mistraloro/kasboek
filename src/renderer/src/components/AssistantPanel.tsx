@@ -1,4 +1,4 @@
-import { ArrowUp, Check, ChevronRight, RotateCcw, Sparkles, Square, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronRight, FileCheck2, RotateCcw, Sparkles, Square, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatMessage, type Effort, type Settings } from '@shared/types'
@@ -126,9 +126,22 @@ function Bubble({ m }: { m: ChatMessage }) {
         )}
       </div>
     )
+  const check = m.check
   return (
     <div className="text-[13px] leading-relaxed">
-      {m.thinking?.trim() && <Thinking text={m.thinking} live={!m.text && !m.error} />}
+      {check && (
+        <p className={cx('mb-1 flex items-center gap-1.5 text-xs text-muted', !check.done && 'animate-pulse')}>
+          <FileCheck2 size={13} />
+          {!check.done
+            ? check.groupsTotal
+              ? t('assistant.checkRunningGroups', { file: check.fileName, done: check.groupsDone, total: check.groupsTotal })
+              : t('assistant.checkRunning', { file: check.fileName })
+            : m.error
+              ? t('assistant.checkFailed', { file: check.fileName })
+              : t('assistant.checkDone', { file: check.fileName, categorised: check.categorised ?? 0, renamed: check.renamed ?? 0, rules: check.rules ?? 0, existing: check.existing ?? 0 })}
+        </p>
+      )}
+      {m.thinking?.trim() && <Thinking text={m.thinking} live={!m.text && !m.error && (!check || !check.done)} />}
       {m.tools.length > 0 && (
         <p className="mb-1 text-xs text-muted">
           {[...new Set(m.tools.map((x) => t(`assistant.tool.${x.name}`, { defaultValue: x.name.replace(/_/g, ' ') })))].join(' · ')}

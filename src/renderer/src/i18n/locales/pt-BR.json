@@ -73,7 +73,10 @@
       "settings_get": "Configurações",
       "import_raw": "Arquivo CSV"
     },
-    "thinkingLive": "Pensando…"
+    "thinkingLive": "Pensando…",
+    "checkRunning": "Revisando {{file}}…",
+    "checkRunningGroups": "Revisando {{file}}: {{done}} de {{total}} grupos…",
+    "checkDone": "{{file}} revisado: {{categorised}} classificados, {{renamed}} renomeados, {{rules}} regras e {{existing}} grupos anteriores sugeridos. Veja a tela de importação."
   },
   "settings": {
     "title": "Configurações",

@@ -165,7 +165,17 @@ export interface AssistantStatus {
 
 export type ChatMessage =
   | { id: string; role: 'user'; text: string }
-  | { id: string; role: 'assistant'; text: string; tools: { name: string; ok: boolean }[]; error?: string; /** The model's reasoning, as far as the provider shares it. */ thinking?: string }
+  | {
+      id: string
+      role: 'assistant'
+      text: string
+      tools: { name: string; ok: boolean }[]
+      error?: string
+      /** The model's reasoning, as far as the provider shares it. */
+      thinking?: string
+      /** A CSV check from the import screen, shown here while it runs and with its result. */
+      check?: { fileName: string; groupsDone: number; groupsTotal: number; done: boolean; categorised?: number; renamed?: number; rules?: number; existing?: number }
+    }
   | { id: string; role: 'confirm'; op: string; summary: string; state: 'pending' | 'approved' | 'declined' }
 
 /** A change to the preferences; `formats` may hold only the parts that change. */

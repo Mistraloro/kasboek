@@ -308,7 +308,11 @@
     "thinkingLive": "Thinking…",
     "thinkingShown": "Thinking",
     "model": "Model",
-    "effortOption": "{{level}} effort"
+    "effortOption": "{{level}} effort",
+    "checkRunning": "Checking {{file}}…",
+    "checkRunningGroups": "Checking {{file}}: {{done}} of {{total}} groups…",
+    "checkFailed": "The check of {{file}} didn’t finish.",
+    "checkDone": "Checked {{file}}: {{categorised}} categorised, {{renamed}} renamed, {{rules}} rules and {{existing}} older groups suggested. See the import screen."
   },
   "settings": {
     "title": "Settings",
