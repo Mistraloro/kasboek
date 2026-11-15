@@ -293,7 +293,7 @@ describe('review 14, medium items', () => {
   it('#6 a refused bank balance leaves no half-made account', async () => {
     const { coreOps } = await import('@core/ops')
     const { d } = db()
-    const create = coreOps['accounts.create'].handler as (c: unknown, i: unknown) => unknown
+    const create = coreOps['accounts.create']!.handler as (c: unknown, i: unknown) => unknown
     expect(() => create({ db: d }, { name: 'New', bank: '', currency: 'EUR', kind: 'current', openingBalanceCents: 0, iban: 'BE68539007547034', bankBalance: { date: '2999-01-01', cents: 100 } })).toThrow(/today or an earlier day/)
     expect((d.prepare("SELECT count(*) AS n FROM accounts WHERE name = 'New'").get() as { n: number }).n).toBe(0)
   })
