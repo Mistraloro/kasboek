@@ -22,7 +22,7 @@ import { checkKey } from './assistant/claude'
 import { activeProvider, keyName } from './assistant/provider'
 import { checkProviderKey, listProviderModels } from './assistant/models'
 import { PROVIDERS } from '@shared/ai-providers'
-import { assistImport, cancelAssist } from './assistant/csv'
+import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
 import { respondMcp } from './mcp/bridge'
 import { helperPath } from './mcp/channel'
 import * as mcpSetup from './mcp/setup'
@@ -290,6 +290,7 @@ const desktopOps: OpTable = {
     }
   },
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => assistStatus(sessionId) },
   'import.assistCancel': {
     mutates: false,
     assistant: false,

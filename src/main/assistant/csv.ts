@@ -381,6 +381,21 @@ const BATCH_GROUPS = 80
 const PARALLEL = 3
 const running = new Map<string, AbortController>()
 
+/** Where a check stands, so the import screen can pick it up again after switching tabs. */
+export interface AssistState {
+  running: boolean
+  startedAt: number
+  groupsDone: number
+  groupsTotal: number
+  partsTotal: number
+  error: string | null
+}
+const states = new Map<string, AssistState>()
+
+export function assistStatus(sessionId: string): AssistState | null {
+  return states.get(sessionId) ?? null
+}
+
 /** Stops a running check for this import (the "Stop" button). */
 export function cancelAssist(sessionId: string): void {
   running.get(sessionId)?.abort('cancelled')
@@ -390,13 +405,20 @@ export async function assistImport(db: Db, sessionId: string): Promise<ImportPre
   running.get(sessionId)?.abort('cancelled')
   const controller = new AbortController()
   running.set(sessionId, controller)
+  const state: AssistState = { running: true, startedAt: Date.now(), groupsDone: 0, groupsTotal: 0, partsTotal: 0, error: null }
+  states.set(sessionId, state)
+  let error: AppError | null = null
   try {
-    return await check(db, sessionId, controller.signal)
+    return await check(db, sessionId, controller.signal, state)
   } catch (err) {
-    if (controller.signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
-    throw err
+    error = controller.signal.aborted ? new AppError('assistant.cancelled', 'Check stopped.') : err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The check failed.')
+    throw error
   } finally {
     if (running.get(sessionId) === controller) running.delete(sessionId)
+    state.running = false
+    state.error = error?.message ?? null
+    // Also reaches an import screen that was opened again while the check ran.
+    broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message } : null })
   }
 }
 
@@ -437,7 +459,7 @@ async function pool<T, R>(items: T[], limit: number, work: (item: T) => Promise<
   return results
 }
 
-async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<ImportPreview> {
+async function check(db: Db, sessionId: string, signal: AbortSignal, state: AssistState): Promise<ImportPreview> {
   const preview = imp.preview(db, sessionId)
   const groups = rowGroups(preview.rows, existingUncategorised(db, preview.accountId)).slice(0, MAX_GROUPS)
   if (!groups.length && !preview.rows.some((r) => r.status === 'problem' || r.status === 'possible_duplicate') && preview.mapping) {
@@ -449,7 +471,10 @@ async function check(db: Db, sessionId: string, signal: AbortSignal): Promise<Im
   const name = provider.preset.assistantName
   const parts = batches(groups).map((b, _i, all) => ({ ...b, of: all.length }))
   let done = 0
-  const progress = (): void => broadcast({ type: 'import.checkProgress', sessionId, groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
+  const progress = (): void => {
+    Object.assign(state, { groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
+    broadcast({ type: 'import.checkProgress', sessionId, groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
+  }
   progress()
   const results = await pool(parts, PARALLEL, async (batch) => {
     const timeout = new AbortController()

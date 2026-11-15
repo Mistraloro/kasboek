@@ -37,14 +37,35 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const account = accountId ?? accounts.data?.find((a) => !a.archived)?.id ?? null
   const assistant = useAssistant()
-  const [assisting, setAssisting] = useState(false)
-  // The chat assistant can change the open import too: refresh when it does.
+  // When the running check started (null: none), so the timer continues after switching tabs.
+  const [assisting, setAssisting] = useState<number | null>(null)
+  const sessionRef = useRef<string | null>(null)
+  sessionRef.current = preview?.sessionId ?? null
+  // Coming back to this tab: the open import (kept in the background) and a check still running.
+  useEffect(() => {
+    void call('import.current').then(async (p) => {
+      if (!p) return
+      setPreview((cur) => cur ?? p)
+      const st = await call('import.assistStatus', { sessionId: p.sessionId })
+      if (st?.running) setAssisting(st.startedAt)
+    })
+  }, [])
   useEffect(
     () =>
       window.kasboek.onEvent((e) => {
+        // The chat assistant can change the open import too: refresh when it does.
         if (e.type === 'import.updated') void call('import.current').then((p) => p && setPreview(p))
+        if (e.type === 'import.checkDone' && e.sessionId === sessionRef.current) {
+          setAssisting(null)
+          if (e.error) {
+            if (e.error.code !== 'assistant.cancelled') toast(e.error.message, 'error')
+          } else {
+            void call('import.preview', { sessionId: e.sessionId }).then(setPreview)
+            toast(t('import.checked'))
+          }
+        }
       }),
-    []
+    [toast, t]
   )
 
   const open = async (file: File): Promise<void> => {
@@ -69,17 +90,20 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
         onAssist={
           assistant?.configured
             ? (p) => {
-                setAssisting(true)
-                void call('import.assist', { sessionId: p.sessionId })
-                  .then((next) => {
-                    setPreview(next)
-                    toast(t('import.checked'))
-                  }, (e) => (e instanceof ApiError && e.code === 'assistant.cancelled' ? undefined : toast(errText(e), 'error')))
-                  .finally(() => setAssisting(false))
+                setAssisting(Date.now())
+                // The result arrives as an event (import.checkDone), also when this tab was left meanwhile.
+                void call('import.assist', { sessionId: p.sessionId }).catch((e) => {
+                  setAssisting(null)
+                  if (!(e instanceof ApiError)) toast(errText(e), 'error')
+                })
               }
             : undefined
         }
-        onCancel={() => void call('import.discard', { sessionId: preview.sessionId }).finally(() => setPreview(null))}
+        onCancel={() => {
+          // Closing the import also stops a check that is still running for it.
+          if (assisting !== null) void call('import.assistCancel', { sessionId: preview.sessionId })
+          void call('import.discard', { sessionId: preview.sessionId }).finally(() => setPreview(null))
+        }}
         onCommitted={(r) => {
           setPreview(null)
           setDone({ ...r, accountId: preview.accountId, currency: preview.currency })
@@ -157,7 +181,7 @@ const clock = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).pad
 
 const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', possible_duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
 
-function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: ImportCommitResult) => void; onAssist?: (p: ImportPreview) => void; assisting: boolean }) {
+function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: ImportCommitResult) => void; onAssist?: (p: ImportPreview) => void; assisting: number | null }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
@@ -174,13 +198,17 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
     [preview.sessionId]
   )
   useEffect(() => {
-    if (!assisting) return
-    setProgress(null)
-    setElapsed(0)
-    const started = Date.now()
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
-    return () => clearInterval(id)
-  }, [assisting])
+    if (assisting === null) return
+    const tick = (): void => setElapsed(Math.floor((Date.now() - assisting) / 1000))
+    tick()
+    // A check picked up again after switching tabs: its progress so far.
+    void call('import.assistStatus', { sessionId: preview.sessionId }).then((st) => st?.running && setProgress({ done: st.groupsDone, total: st.groupsTotal, parts: st.partsTotal }))
+    const id = setInterval(tick, 1000)
+    return () => {
+      clearInterval(id)
+      setProgress(null)
+    }
+  }, [assisting, preview.sessionId])
   const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : preview.stats.possibleDuplicates ? 'possible_duplicate' : 'all')
   const [limit, setLimit] = useState(300)
   const [mappingOpen, setMappingOpen] = useState(!preview.mapping)
@@ -240,7 +268,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           )}
           <span className="ml-auto flex items-center gap-2">
             {onAssist ? (
-              assisting ? (
+              assisting !== null ? (
                 <>
                   <span className="text-xs text-muted" title={t('import.checkSlowHint')}>
                     {progress && progress.parts > 1 ? t('import.checkingGroups', { done: progress.done, total: progress.total }) : t('import.checking')} <span className="num">{clock(elapsed)}</span>

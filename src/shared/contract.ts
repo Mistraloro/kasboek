@@ -159,6 +159,10 @@ export const contract = {
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },
   'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'import.assistStatus': {
+    input: z.object({ sessionId: z.string().uuid() }).strict(),
+    output: out<{ running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()
+  },
   'import.assistCancel': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
   'mcp.setupStatus': { input: empty, output: out<McpSetupStatus>() },
   'mcp.desktopAdd': { input: empty, output: out<{ path: string; backup: string | null }>() },
@@ -498,6 +502,7 @@ export type AppEvent =
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
   | { type: 'import.checkProgress'; sessionId: string; groupsDone: number; groupsTotal: number; partsTotal: number }
+  | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string } | null }
   | { type: 'sync.updated'; status: SyncStatus }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
   | { type: 'mcp.request'; id: string; op: string; summary: string }
