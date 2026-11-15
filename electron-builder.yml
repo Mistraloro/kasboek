@@ -9,6 +9,10 @@ files:
   - resources/**
   - package.json
   - '!**/*.map'
+  - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
+  - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/linuxmusl-*'
+# Chromium's own interface texts: only the languages Kasboek has.
+electronLanguages: [en-US, nl, fr, de, es, es-419, pt-PT, pt-BR]
 # better-sqlite3-multiple-ciphers ships prebuilt Node-API binaries for every platform, so nothing
 # is compiled and installers can be built on any OS.
 npmRebuild: false
@@ -39,6 +43,7 @@ win:
     - package.json
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux}*'
+    - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
   # 64-bit only. MSI for managed/standard installs, NSIS .exe as a friendly per-user installer.
   target:
     - target: msi
@@ -83,6 +88,7 @@ mac:
     - package.json
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,linux}*'
+    - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
   category: public.app-category.finance
   hardenedRuntime: true
   target:
@@ -100,6 +106,8 @@ linux:
     - package.json
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,darwin}*'
+    - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
+    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/linuxmusl-*'
   category: Finance
   synopsis: Simple, local-first budgeting
   maintainer: Kasboek

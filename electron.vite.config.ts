@@ -22,7 +22,11 @@ const alias = {
 export default defineConfig({
   main: {
     resolve: { alias },
-    define: { __BUILD_COMMIT__: JSON.stringify(commit()) }
+    define: { __BUILD_COMMIT__: JSON.stringify(commit()) },
+    // JavaScript libraries are bundled (only what is used ends up in the app); the database library
+    // has native code and stays a dependency. Bundled ones are devDependencies, so the installer
+    // doesn't carry their full packages.
+    build: { externalizeDeps: { exclude: ['@anthropic-ai/sdk', 'zod', 'qrcode', 'hash-wasm'] } }
   },
   preload: {
     resolve: { alias },
