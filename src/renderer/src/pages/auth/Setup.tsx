@@ -33,7 +33,7 @@ function Choice({ icon, title, body, onClick, disabled, note }: { icon: ReactNod
 export function Setup() {
   const { t } = useTranslation()
   const toast = useToast()
-  const { status, refresh, set } = useAuth()
+  const { status, refresh, set, setSetupFlowActive } = useAuth()
   const deviceName = useDeviceName(status.device)
   const fmt = usePrefsFmt()
   const [step, setStep] = useState<Step>('choose')
@@ -52,14 +52,22 @@ export function Setup() {
 
   const create = (input: { mode: 'password'; password: string } | { mode: 'device' }): void => {
     setBusy(true)
+    // Before the call: the main process unlocks and may broadcast before the answer arrives.
+    setSetupFlowActive(true)
     void call('auth.setup', input)
       .then((r) => {
         setRecoveryKey(r.recoveryKey)
         setStep('recovery')
       })
-      .catch((e) => toast(errText(e), 'error'))
+      .catch((e) => {
+        setSetupFlowActive(false)
+        toast(errText(e), 'error')
+      })
       .finally(() => setBusy(false))
   }
+
+  // The flow is over: let the app take over once the status is current.
+  const finish = (): void => void refresh().finally(() => setSetupFlowActive(false))
 
   const back = (
     <button type="button" onClick={() => setStep('choose')} className="mb-3 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text">
@@ -156,7 +164,7 @@ export function Setup() {
 
       {step === 'twofactor' && (
         <AuthCard title={t('auth.totpTitle')} body={t('auth.totpBody')}>
-          <TotpSetup onDone={() => void refresh()} onCancel={() => void refresh()} />
+          <TotpSetup onDone={finish} onCancel={finish} />
           <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
             <ShieldCheck size={13} /> {t('auth.totpLater')}
           </p>

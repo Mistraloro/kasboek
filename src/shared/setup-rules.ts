@@ -9,6 +9,14 @@ export function mayRefreshOnFocus(step: SetupStep): boolean {
   return step === 'choose'
 }
 
+/**
+ * Whether the first-run screen is shown. Once the account is created the main process is already
+ * unlocked, so the screen stays until the flow (recovery key, optional two-factor) has ended.
+ */
+export function showSetup(stateFromMain: 'setup' | 'locked' | 'unlocked', flowActive: boolean): boolean {
+  return flowActive || stateFromMain === 'setup'
+}
+
 /** The last group of a recovery key, which the person types back to show they saved it. */
 export function recoveryKeyTail(recoveryKey: string): string {
   return recoveryKey.split('-').at(-1) ?? ''

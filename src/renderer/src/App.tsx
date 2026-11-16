@@ -25,6 +25,7 @@ import { RecurringPage } from './pages/Recurring'
 import { GoalsPage } from './pages/Goals'
 import { YearPage } from './pages/Year'
 import { Transactions, type TxFilter } from './pages/Transactions'
+import { showSetup } from '@shared/setup-rules'
 
 export type Page = 'overview' | 'transactions' | 'budgets' | 'recurring' | 'goals' | 'year' | 'networth' | 'import' | 'settings'
 
@@ -52,12 +53,12 @@ export function App() {
 }
 
 function Gate() {
-  const { status } = useAuth()
+  const { status, setupFlowActive } = useAuth()
   // First screen is on display: the main process can swap the launch window for this one.
   useEffect(() => {
     void call('app.ready')
   }, [])
-  if (status.state === 'setup') return <Setup />
+  if (showSetup(status.state, setupFlowActive)) return <Setup />
   if (status.state === 'locked') return <Lock />
   return (
     <SettingsProvider>

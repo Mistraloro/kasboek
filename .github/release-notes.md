@@ -1,18 +1,17 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.15 (0.15.1)
+## What’s new in 0.15 (0.15.2)
 
 **New**
-- **Erasing is recoverable.** Erased data, including its safety backups, is kept for 30 days. On the Setup screen you can restore it with the original password or recovery key. If your account is tied to this device, you must first pass Windows Hello or Touch ID before you can erase. A failed erase puts everything back.
-- **Importing a file or restoring a backup starts from safe settings.** AI settings and keys, permissions, MCP, auto-backup, assistant memory and sync are reset (sync is switched off and its local files removed), and Kasboek tells you what was reset. Joining a sync keeps its sync key.
+- **Erasing is recoverable.** Erased data, including its safety backups, is kept for 30 days. On the Setup screen you can restore it with the original password or recovery key. If your account is tied to this device (passwordless mode), Windows Hello or Touch ID is asked before anything is erased. A failed erase puts everything back.
+- **Importing a file or restoring a backup starts from safe settings.** AI settings and keys, permissions, MCP, auto-backup, assistant memory and sync are reset, and Kasboek tells you what was reset. Joining a sync keeps its sync key.
 
 **Fixes and safety**
-- **Windows Hello during first setup:** three causes that could stop the Hello prompt from appearing, or leave the option greyed out, are fixed in the code: a failed helper no longer blocks the prompt, a failed availability check is retried instead of being remembered until restart, and quote characters in the prompt text no longer break it. This is not yet tested on a real Windows PC.
-- **0.15.1:** the Windows Hello prompt is now started in a different way, which removes a likely reason for it never appearing. Each Hello answer (such as “not set up” or “turned off by policy”) now has its own message, and both the check and the prompt record what happened in `startup.log` so a failure can be diagnosed. This is not yet tested on a real Windows PC.
-- **Passwordless mode** is only offered when your computer protects the key itself (its key store). Importing a passwordless export on a computer without that asks you for a new password.
-- **CSV export** neutralises text that a spreadsheet could read as a formula.
-- **Passwords and saving:** re-entering your password for sensitive actions has the same attempt limit as unlocking. A failed account save no longer leaves memory and disk out of step. A join file picked while locked is refused and its temporary file removed.
-- **Updates** only accept plain file names, and checksums are matched by exact file name.
+- **Windows Hello during first setup now works.** The Hello prompt was silently never shown. Each Hello answer (such as “not set up” or “turned off by policy”) now has its own message, and `startup.log` records how Hello went.
+- **Passwordless mode** is only offered when your computer protects the key itself. Importing a passwordless export on a computer without that asks you for a new password.
+- **CSV export** is safe against text that a spreadsheet could read as a formula.
+- **Passwords:** re-entering your password for sensitive actions has the same attempt limit as unlocking.
+- **Updates:** update file names and checksums are checked more strictly.
 - **Stricter check** that only Kasboek's own pages can call the app's backend.
 
 Everything that came in 0.14 (WebDAV sync, the Claude Desktop tray, many more CSV formats, the graphics card setting, the Windows on ARM fix and more) is listed on the 0.14.1 release.

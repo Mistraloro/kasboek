@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mayRefreshOnFocus, recoveryKeyConfirmed, recoveryKeyTail, type SetupStep } from '@shared/setup-rules'
+import { mayRefreshOnFocus, recoveryKeyConfirmed, recoveryKeyTail, showSetup, type SetupStep } from '@shared/setup-rules'
 
 const KEY = 'ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567'
 
@@ -8,6 +8,21 @@ describe('first-run screen', () => {
     expect(mayRefreshOnFocus('choose')).toBe(true)
     const later: SetupStep[] = ['password', 'import', 'recovery', 'twofactor']
     for (const step of later) expect(mayRefreshOnFocus(step)).toBe(false)
+  })
+
+  it('shows the first-run screen while the main process asks for setup', () => {
+    expect(showSetup('setup', false)).toBe(true)
+  })
+
+  it('keeps the first-run screen after the account exists until the flow ends', () => {
+    expect(showSetup('unlocked', true)).toBe(true)
+    expect(showSetup('locked', true)).toBe(true)
+    expect(showSetup('setup', true)).toBe(true)
+  })
+
+  it('leaves normal unlock, the app, and import or restore untouched', () => {
+    expect(showSetup('locked', false)).toBe(false)
+    expect(showSetup('unlocked', false)).toBe(false)
   })
 
   it('takes the last group of the recovery key', () => {

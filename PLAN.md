@@ -291,7 +291,10 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    `msiexec /i <product> ` instead of `/x`), that Repair keeps the data, and that a silent
    uninstall (`msiexec /x ... /qn`, used by updates and IT tools) still works without the dialog
    and keeps the data. Never touch sync and backup folders.
-21. **Fix: the recovery key check is skipped (found testing 0.15.1 on Windows, with Windows Hello).**
+21. ~~**Fix: the recovery key check is skipped (found testing 0.15.1 on Windows, with Windows Hello).**~~
+   **Fixed in 0.15.2.** Cause: a focus listener in the Setup screen refreshed the account status when
+   the window regained focus after the Windows Hello prompt, which swapped the Setup screen for the
+   main app before the recovery key was confirmed. The Setup flow now stays mounted until it ends.
    On the recovery key screen, ticking "I have saved it" jumps straight to the next page. The field
    that asks for the last 4 characters of the key, which proves the key was copied, never appears.
    `RecoveryKeyPanel` in `src/renderer/src/pages/auth/parts.tsx` does show that field and keeps
