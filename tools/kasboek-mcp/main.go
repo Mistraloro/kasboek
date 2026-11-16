@@ -207,6 +207,8 @@ func defaultDataDir() string {
 func main() {
 	dataDir := flag.String("data-dir", "", "Kasboek's data folder (default: the standard location for this OS)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
+	cleanup := flag.Bool("uninstall-cleanup", false, "used by the uninstaller: remove Kasboek from the Claude apps' settings and delete caches")
+	removeData := flag.Bool("remove-data", false, "with --uninstall-cleanup: also delete Kasboek's data folder")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version)
@@ -214,6 +216,10 @@ func main() {
 	}
 	if *dataDir == "" {
 		*dataDir = defaultDataDir()
+	}
+	if *cleanup {
+		uninstallCleanup(*dataDir, *removeData)
+		return
 	}
 	s := &server{bridge: &bridge{dataDir: *dataDir}, out: json.NewEncoder(os.Stdout)}
 	serve(s, os.Stdin)
