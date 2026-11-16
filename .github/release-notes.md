@@ -1,6 +1,6 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.16 (0.16.0)
+## What’s new in 0.16 (0.16.1)
 
 **New**
 - **Keep Kasboek running in the tray when you close the window** is now a setting (Settings → General), off by default. With it off, closing the window quits Kasboek (on a Mac it stays in the Dock until you quit). With it on, closing hides it in the tray. If Claude Desktop starts Kasboek’s connection while Kasboek isn’t running, Kasboek still starts in the tray, locked. Closing its window with the setting off quits it, and Claude Desktop starts it again the next time it needs it.
@@ -31,5 +31,5 @@ These builds are not yet signed with a certificate:
 
 - **Updating from 0.12 or 0.13**: their update window can’t be clicked, so download the installer from this page once. From 0.14 on, the "Update to …" button works.
 - **Windows Hello** has been tested on a real Windows 11 computer. **Touch ID** has only been tested in simulation, not yet on a real Mac; please report anything odd.
-- **Updating from 0.15.x** still uses the old update screen once (terminal windows may flash); the new update window appears from the update after 0.16.0.
-- The **tray option**, the **shortcut behaviour** and the **new update window** are new in this version and have not yet been tested on Windows 11; please report anything odd.
+- **Updating from 0.15.x** still uses the old update screen once (terminal windows may flash); the new update window appears from the update after 0.16.1.
+- The **tray option** and the **shortcut behaviour** have been tried on Windows 11. The **new update window** has not yet been seen in a real update by anyone; please report anything odd.
