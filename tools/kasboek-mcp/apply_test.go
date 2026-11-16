@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,10 +17,15 @@ type fakePlatform struct {
 	events      []string
 	openErr     error
 	image       string
+	imageErr    error
 	exits       bool
-	othersLeft  int // polls that still see another Kasboek process
+	othersLeft  int   // polls that still see another Kasboek process
+	othersErr   error // every look at the running programs fails
+	lockErr     error
 	codes       []int
+	hang        bool // Windows Installer never finishes: it is ended after the timeout
 	msiexecRuns [][]string
+	timeouts    []time.Duration
 	started     [][]string
 }
 
@@ -36,19 +42,40 @@ func (f *fakePlatform) waitExit(procHandle, time.Duration) (bool, error) {
 }
 func (f *fakePlatform) imagePath(procHandle) (string, error) {
 	f.log("image")
-	return f.image, nil
+	return f.image, f.imageErr
 }
 func (f *fakePlatform) othersRunning(string) (bool, error) {
 	f.log("others")
+	if f.othersErr != nil {
+		return false, f.othersErr
+	}
 	if f.othersLeft > 0 {
 		f.othersLeft--
 		return true, nil
 	}
 	return false, nil
 }
-func (f *fakePlatform) runMsiexec(args []string) (int, error) {
+func (f *fakePlatform) lockAndHash(path string) (string, func(), error) {
+	f.log("lock")
+	if f.lockErr != nil {
+		return "", nil, f.lockErr
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return "", nil, err
+	}
+	defer file.Close()
+	sum, err := sha256Hex(file)
+	return sum, func() { f.log("unlock") }, err
+}
+func (f *fakePlatform) runMsiexec(args []string, timeout time.Duration) (int, error) {
 	f.log("msiexec")
 	f.msiexecRuns = append(f.msiexecRuns, args)
+	f.timeouts = append(f.timeouts, timeout)
+	if f.hang {
+		f.log("killed")
+		return 0, errMsiexecTimeout
+	}
 	code := f.codes[0]
 	if len(f.codes) > 1 {
 		f.codes = f.codes[1:]
@@ -68,6 +95,11 @@ func (u *fakeUI) installing()     { u.events = append(u.events, "installing") }
 func (u *fakeUI) starting()       { u.events = append(u.events, "starting") }
 func (u *fakeUI) failed(m string) { u.events = append(u.events, "failed:"+m) }
 func (u *fakeUI) close()          { u.events = append(u.events, "close") }
+
+// runPlan is the update as applyWith does it: Kasboek's process is opened first.
+func runPlan(f *fakePlatform, u ui, pl updatePlan, t timing, passive bool) error {
+	return runUpdate(f, u, pl, t, passive, openKasboek(f, pl.PID))
+}
 
 func testTiming(slept *[]time.Duration) timing {
 	t := realTiming
@@ -91,8 +123,11 @@ func testPlan(t *testing.T) updatePlan {
 	if err := os.WriteFile(exe, nil, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	pl := updatePlan{V: 1, PID: 4242, Exe: exe, Args: []string{"--x"}, MSI: msi, SHA256: hex.EncodeToString(sum[:]), Log: filepath.Join(dir, "install.log"), Result: filepath.Join(dir, "result.json"), ToVersion: "1.2.0"}
-	pl.Texts.Failed, pl.Texts.Cancelled = "failed text", "cancelled text"
+	if err := os.Mkdir(filepath.Join(dir, "resources"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	pl := updatePlan{V: 1, PID: 4242, Exe: exe, Args: []string{}, MSI: msi, SHA256: hex.EncodeToString(sum[:]), Log: filepath.Join(dir, "install.log"), Result: filepath.Join(dir, "result.json"), ToVersion: "1.2.0"}
+	pl.Texts.Failed, pl.Texts.Cancelled, pl.Texts.NotClosed = "failed text", "cancelled text", "not closed text"
 	return pl
 }
 
@@ -113,17 +148,17 @@ func TestUpdateStepsInOrder(t *testing.T) {
 	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{0}}
 	u := &fakeUI{}
 	var slept []time.Duration
-	if err := runUpdate(f, u, pl, testTiming(&slept), true); err != nil {
+	if err := runPlan(f, u, pl, testTiming(&slept), true); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"open", "image", "wait", "close", "others", "msiexec", "start"}
+	want := []string{"open", "image", "wait", "close", "others", "lock", "msiexec", "unlock", "start"}
 	if !reflect.DeepEqual(f.events, want) {
 		t.Fatalf("steps %v, want %v", f.events, want)
 	}
 	if !reflect.DeepEqual(u.events, []string{"waiting", "installing", "starting", "close"}) {
 		t.Fatalf("ui %v", u.events)
 	}
-	if !reflect.DeepEqual(f.started, [][]string{{pl.Exe, "--x"}}) {
+	if !reflect.DeepEqual(f.started, [][]string{{pl.Exe}}) {
 		t.Fatalf("started %v", f.started)
 	}
 	r := readResult(t, pl)
@@ -138,7 +173,7 @@ func TestUpdateStepsInOrder(t *testing.T) {
 func TestReusedProcessIdIsNotWaitedFor(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: `C:\Windows\notepad.exe`, codes: []int{0}}
-	if err := runUpdate(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err != nil {
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err != nil {
 		t.Fatal(err)
 	}
 	for _, e := range f.events {
@@ -151,21 +186,166 @@ func TestReusedProcessIdIsNotWaitedFor(t *testing.T) {
 	}
 }
 
-func TestKasboekNeverClosesMeansNoInstallAndNoRelaunch(t *testing.T) {
+func TestKasboekNeverClosesMeansNoInstallButStillARelaunch(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: false, codes: []int{0}}
 	u := &fakeUI{}
-	if err := runUpdate(f, u, pl, testTiming(new([]time.Duration)), true); err == nil {
+	if err := runPlan(f, u, pl, testTiming(new([]time.Duration)), true); err == nil {
 		t.Fatal("expected an error")
 	}
-	if len(f.msiexecRuns) != 0 || len(f.started) != 0 {
-		t.Fatalf("installed or relaunched: %v %v", f.msiexecRuns, f.started)
+	if len(f.msiexecRuns) != 0 {
+		t.Fatalf("installed: %v", f.msiexecRuns)
 	}
-	if r := readResult(t, pl); r.Outcome != "not_closed" {
+	if !reflect.DeepEqual(f.started, [][]string{{pl.Exe}}) {
+		t.Fatalf("Kasboek was not started: %v", f.started)
+	}
+	if r := readResult(t, pl); r.Outcome != "not_closed" || r.Code != -1 {
 		t.Fatalf("result %+v", r)
 	}
-	if !reflect.DeepEqual(u.events, []string{"waiting", "failed:failed text", "close"}) {
+	if !reflect.DeepEqual(u.events, []string{"waiting", "failed:not closed text", "starting", "close"}) {
 		t.Fatalf("ui %v", u.events)
+	}
+}
+
+func TestSameFileSpelledDifferentlyIsStillWaitedFor(t *testing.T) {
+	pl := testPlan(t)
+	// 8.3 names, a mapped drive or a junction: another spelling of the same Kasboek.exe.
+	for _, image := range []string{`C:\PROGRA~1\KASBOEK\KASBOEK.EXE`, `Z:\Kasboek\Kasboek.exe`, `/mnt/link/kasboek.EXE`} {
+		f := &fakePlatform{image: image, exits: true, codes: []int{0}}
+		if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err != nil {
+			t.Fatal(err)
+		}
+		waited := false
+		for _, e := range f.events {
+			waited = waited || e == "wait"
+		}
+		if !waited {
+			t.Fatalf("%s: did not wait: %v", image, f.events)
+		}
+	}
+}
+
+func TestUnreadableImagePathOfARunningKasboekIsStillWaitedFor(t *testing.T) {
+	pl := testPlan(t)
+	f := &fakePlatform{imageErr: errors.New("access denied"), exits: false, codes: []int{0}}
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err == nil {
+		t.Fatal("expected not_closed")
+	}
+	if len(f.msiexecRuns) != 0 {
+		t.Fatalf("installed while Kasboek may still run: %v", f.events)
+	}
+}
+
+func TestSnapshotThatKeepsFailingIsGivenUpAfterThreeTries(t *testing.T) {
+	pl := testPlan(t)
+	f := &fakePlatform{image: pl.Exe, exits: true, othersErr: errors.New("snapshot"), codes: []int{0}}
+	var slept []time.Duration
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(&slept), true); err != nil {
+		t.Fatal(err)
+	}
+	tries := 0
+	for _, e := range f.events {
+		if e == "others" {
+			tries++
+		}
+	}
+	if tries != 3 || len(slept) != 2 || len(f.msiexecRuns) != 1 {
+		t.Fatalf("tries %d, pauses %v, runs %d", tries, slept, len(f.msiexecRuns))
+	}
+}
+
+func TestMsiexecThatNeverEndsFailsAndRelaunches(t *testing.T) {
+	pl := testPlan(t)
+	f := &fakePlatform{image: pl.Exe, exits: true, hang: true, codes: []int{0}}
+	u := &fakeUI{}
+	if err := runPlan(f, u, pl, realTiming, true); !errors.Is(err, errMsiexecTimeout) {
+		t.Fatalf("error %v", err)
+	}
+	if len(f.timeouts) != 1 || f.timeouts[0] != 15*time.Minute {
+		t.Fatalf("timeouts %v", f.timeouts)
+	}
+	if r := readResult(t, pl); r.Outcome != "failed" || r.Code != -1 {
+		t.Fatalf("result %+v", r)
+	}
+	if len(f.started) != 1 {
+		t.Fatal("Kasboek was not opened again")
+	}
+	if !reflect.DeepEqual(u.events, []string{"waiting", "installing", "failed:failed text", "starting", "close"}) {
+		t.Fatalf("ui %v", u.events)
+	}
+}
+
+func TestChecksummedFileStaysLockedUntilMsiexecReturns(t *testing.T) {
+	pl := testPlan(t)
+	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{1618, 0}}
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err != nil {
+		t.Fatal(err)
+	}
+	var tail []string
+	for _, e := range f.events {
+		if e == "lock" || e == "msiexec" || e == "unlock" || e == "start" {
+			tail = append(tail, e)
+		}
+	}
+	if want := []string{"lock", "msiexec", "msiexec", "unlock", "start"}; !reflect.DeepEqual(tail, want) {
+		t.Fatalf("%v, want %v", tail, want)
+	}
+}
+
+func TestFileThatCannotBeLockedIsNotInstalled(t *testing.T) {
+	pl := testPlan(t)
+	f := &fakePlatform{image: pl.Exe, exits: true, lockErr: errors.New("sharing violation"), codes: []int{0}}
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err == nil {
+		t.Fatal("expected an error")
+	}
+	if len(f.msiexecRuns) != 0 || len(f.started) != 1 {
+		t.Fatalf("ran %v, started %v", f.msiexecRuns, f.started)
+	}
+	if r := readResult(t, pl); r.Outcome != "checksum" {
+		t.Fatalf("result %+v", r)
+	}
+}
+
+func TestStartedFileIsWrittenAfterThePlanIsChecked(t *testing.T) {
+	pl := testPlan(t)
+	dir := filepath.Dir(pl.MSI)
+	file := filepath.Join(dir, "apply.json")
+	started := filepath.Join(dir, "started")
+	write := func(p updatePlan) {
+		raw, _ := json.Marshal(p)
+		if err := os.WriteFile(file, raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	bad := pl
+	bad.Args = []string{"--evil"}
+	write(bad)
+	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{0}}
+	if err := applyWith(file, f, testTiming(new([]time.Duration)), startNoWindow); err == nil {
+		t.Fatal("a bad plan was accepted")
+	}
+	if _, err := os.Stat(started); err == nil {
+		t.Fatal("started was written for a bad plan")
+	}
+	if len(f.events) != 0 {
+		t.Fatalf("a bad plan touched the system: %v", f.events)
+	}
+
+	write(pl)
+	f = &fakePlatform{image: pl.Exe, exits: true, codes: []int{0}}
+	if err := applyWith(file, f, testTiming(new([]time.Duration)), startNoWindow); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(started); err != nil {
+		t.Fatalf("started was not written: %v", err)
+	}
+	if _, err := os.Stat(started + ".tmp"); err == nil {
+		t.Fatal("the temporary file was left behind")
+	}
+	// Kasboek's process is opened before anything else.
+	if len(f.events) == 0 || f.events[0] != "open" {
+		t.Fatalf("events %v", f.events)
 	}
 }
 
@@ -173,14 +353,14 @@ func TestChildProcessesThatStayMeanNotClosed(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: true, othersLeft: 1 << 30, codes: []int{0}}
 	var slept []time.Duration
-	if err := runUpdate(f, &fakeUI{}, pl, testTiming(&slept), true); err == nil {
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(&slept), true); err == nil {
 		t.Fatal("expected an error")
 	}
 	var total time.Duration
 	for _, d := range slept {
 		total += d
 	}
-	if total != 30*time.Second || len(f.msiexecRuns) != 0 || len(f.started) != 0 {
+	if total != 30*time.Second || len(f.msiexecRuns) != 0 || len(f.started) != 1 {
 		t.Fatalf("waited %v, ran %v, started %v", total, f.msiexecRuns, f.started)
 	}
 	if r := readResult(t, pl); r.Outcome != "not_closed" {
@@ -191,7 +371,7 @@ func TestChildProcessesThatStayMeanNotClosed(t *testing.T) {
 func TestChildProcessesThatLeaveAreWaitedFor(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: true, othersLeft: 3, codes: []int{0}}
-	if err := runUpdate(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err != nil {
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.msiexecRuns) != 1 {
@@ -203,7 +383,7 @@ func TestFailedInstallStillRelaunches(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{1603}}
 	u := &fakeUI{}
-	if err := runUpdate(f, u, pl, testTiming(new([]time.Duration)), true); err != nil {
+	if err := runPlan(f, u, pl, testTiming(new([]time.Duration)), true); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.started) != 1 {
@@ -221,7 +401,7 @@ func TestCancelledInstallSaysSo(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{1602}}
 	u := &fakeUI{}
-	if err := runUpdate(f, u, pl, testTiming(new([]time.Duration)), true); err != nil {
+	if err := runPlan(f, u, pl, testTiming(new([]time.Duration)), true); err != nil {
 		t.Fatal(err)
 	}
 	if u.events[2] != "failed:cancelled text" || readResult(t, pl).Outcome != "cancelled" {
@@ -233,7 +413,7 @@ func TestBusyInstallerIsRetriedThreeTimes(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{1618, 1618, 0}}
 	var slept []time.Duration
-	if err := runUpdate(f, &fakeUI{}, pl, testTiming(&slept), true); err != nil {
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(&slept), true); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.msiexecRuns) != 3 || readResult(t, pl).Outcome != "ok" {
@@ -242,7 +422,7 @@ func TestBusyInstallerIsRetriedThreeTimes(t *testing.T) {
 
 	f = &fakePlatform{image: pl.Exe, exits: true, codes: []int{1618}}
 	slept = nil
-	if err := runUpdate(f, &fakeUI{}, pl, testTiming(&slept), true); err != nil {
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(&slept), true); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.msiexecRuns) != 4 {
@@ -266,7 +446,7 @@ func TestChecksumMismatchSkipsInstallButRelaunches(t *testing.T) {
 	pl := testPlan(t)
 	pl.SHA256 = strings.Repeat("0", 64)
 	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{0}}
-	if err := runUpdate(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err == nil {
+	if err := runPlan(f, &fakeUI{}, pl, testTiming(new([]time.Duration)), true); err == nil {
 		t.Fatal("expected an error")
 	}
 	if len(f.msiexecRuns) != 0 || len(f.started) != 1 {
@@ -312,6 +492,17 @@ func TestValidatePlan(t *testing.T) {
 		"not msi":     func(p *updatePlan) { p.MSI = filepath.Join(dir, "x.exe") },
 		"not Kasboek": func(p *updatePlan) { p.Exe = filepath.Join(dir, "other.exe") },
 		"missing exe": func(p *updatePlan) { p.Exe = filepath.Join(dir, "sub", "Kasboek.exe") },
+		"args":        func(p *updatePlan) { p.Args = []string{"--x"} },
+		"dash arg":    func(p *updatePlan) { p.Args = []string{"-x"} },
+		"no resources": func(p *updatePlan) {
+			p.Exe = filepath.Join(dir, "plain", "Kasboek.exe")
+			if err := os.MkdirAll(filepath.Dir(p.Exe), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(p.Exe, nil, 0o700); err != nil {
+				t.Fatal(err)
+			}
+		},
 	}
 	for name, mutate := range bad {
 		p := pl

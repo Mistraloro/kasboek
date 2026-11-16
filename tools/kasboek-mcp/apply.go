@@ -5,8 +5,9 @@ package main
 // against the small platform interface so the order and the failure paths are tested everywhere;
 // apply_windows.go holds the real Windows implementation.
 //
-// Kasboek always opens again, after a successful and after a failed install, except when it never
-// closed: then nothing is installed and nothing is started (a second copy would only hand over).
+// Kasboek always opens again: after a successful install, after a failed one, and when it never
+// closed (then nothing is installed; if an instance really still runs, the new start only hands
+// over to it and shows its window).
 
 import (
 	"crypto/sha256"
@@ -21,6 +22,10 @@ import (
 	"strings"
 	"time"
 )
+
+// startedFile is written next to apply.json once the plan is checked and Kasboek's process is open:
+// Kasboek quits only after it has seen this file (see startUpdateHelper in src/main/update.ts).
+const startedFile = "started"
 
 // updatePlan is apply.json, written by Kasboek (see buildUpdatePlan in src/core/update.ts).
 type updatePlan struct {
@@ -40,6 +45,7 @@ type updatePlan struct {
 		Starting   string `json:"starting"`
 		Failed     string `json:"failed"`
 		Cancelled  string `json:"cancelled"`
+		NotClosed  string `json:"notClosed"`
 	} `json:"texts"`
 }
 
@@ -79,13 +85,34 @@ type platform interface {
 	// waitExit blocks until the process ends (true) or the timeout passes (false). No polling.
 	waitExit(h procHandle, timeout time.Duration) (bool, error)
 	imagePath(h procHandle) (string, error)
-	// othersRunning: is any process running from exactly this program file?
+	// othersRunning: is any process running from this program file (the same file, however the path is spelled)?
 	othersRunning(exePath string) (bool, error)
-	// runMsiexec runs Windows Installer with these arguments and returns its exit code.
-	runMsiexec(args []string) (int, error)
-	// start starts a program and does not wait for it.
+	// lockAndHash reads the file and returns its SHA-256. Until release is called nobody can change
+	// or delete it, so what was checked is what gets installed. release is nil when err is not.
+	lockAndHash(path string) (sum string, release func(), err error)
+	// runMsiexec runs Windows Installer with these arguments and returns its exit code. After the
+	// timeout it ends the program and returns errMsiexecTimeout.
+	runMsiexec(args []string, timeout time.Duration) (int, error)
+	// start starts a program that shows its window, and does not wait for it.
 	start(exe string, args []string) error
 }
+
+var errMsiexecTimeout = errors.New("windows installer did not finish in time")
+
+// kasboekProc is Kasboek's process, opened as early as possible (open is false when it could not
+// be, for instance because it had ended already).
+type kasboekProc struct {
+	h    procHandle
+	open bool
+}
+
+func openKasboek(p platform, pid int) kasboekProc {
+	h, err := p.openProcess(pid)
+	return kasboekProc{h: h, open: err == nil}
+}
+
+// baseName is the last part of a Windows or other path.
+func baseName(path string) string { return path[strings.LastIndexAny(path, `\/`)+1:] }
 
 var hex64 = regexp.MustCompile(`^[0-9a-fA-F]{64}$`)
 
@@ -132,6 +159,15 @@ func validatePlan(p updatePlan, dir string) error {
 	if st, err := os.Stat(p.Exe); err != nil || st.IsDir() {
 		return errors.New("plan: Kasboek not found")
 	}
+	// The installed Kasboek has no start arguments (see writeAppCommand in src/main/app.ts); anything
+	// in the file could only be somebody else's.
+	if len(p.Args) != 0 {
+		return errors.New("plan: Kasboek is started without arguments")
+	}
+	// The installed layout: Kasboek.exe with resources next to it (launch.go relies on it too).
+	if st, err := os.Stat(filepath.Join(filepath.Dir(p.Exe), "resources")); err != nil || !st.IsDir() {
+		return errors.New("plan: not an installed Kasboek")
+	}
 	return nil
 }
 
@@ -168,19 +204,18 @@ type timing struct {
 	othersPoll  time.Duration
 	busyRetries int // another installation running (1618)
 	busyWait    time.Duration
-	sleep       func(time.Duration)
+	// snapshotTries: how many times in a row the list of processes may fail before we stop waiting for it.
+	snapshotTries int
+	// msiexecTimeout: how long one run of Windows Installer may take.
+	msiexecTimeout time.Duration
+	sleep          func(time.Duration)
 }
 
-var realTiming = timing{exitWait: 120 * time.Second, othersWait: 30 * time.Second, othersPoll: 500 * time.Millisecond, busyRetries: 3, busyWait: 10 * time.Second, sleep: time.Sleep}
+var realTiming = timing{exitWait: 120 * time.Second, othersWait: 30 * time.Second, othersPoll: 500 * time.Millisecond, busyRetries: 3, busyWait: 10 * time.Second, snapshotTries: 3, msiexecTimeout: 15 * time.Minute, sleep: time.Sleep}
 
-func fileSHA256(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
+func sha256Hex(r io.Reader) (string, error) {
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := io.Copy(h, r); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -197,24 +232,37 @@ func writeResult(pl updatePlan, code int, outcome string) error {
 }
 
 // waitForKasboek returns true once Kasboek and its helper processes are gone.
-func waitForKasboek(p platform, pl updatePlan, t timing) bool {
-	if h, err := p.openProcess(pl.PID); err == nil {
-		// A different program under this id means Kasboek is already gone and the id was reused.
-		img, ierr := p.imagePath(h)
+func waitForKasboek(p platform, pl updatePlan, t timing, proc kasboekProc) bool {
+	if proc.open {
+		// Only a different program under this id (the id was reused) means Kasboek is gone. Paths
+		// are not compared: 8.3 names, mapped drives and junctions spell one file in several ways,
+		// and not being able to read the path says nothing about whether the process still runs.
+		reused := false
+		if img, err := p.imagePath(proc.h); err == nil && !strings.EqualFold(baseName(img), "Kasboek.exe") {
+			reused = true
+		}
 		exited := true
-		if ierr == nil && samePath(img, pl.Exe) {
+		if !reused {
 			var werr error
-			exited, werr = p.waitExit(h, t.exitWait)
+			exited, werr = p.waitExit(proc.h, t.exitWait)
 			exited = exited && werr == nil
 		}
-		p.closeProcess(h)
+		p.closeProcess(proc.h)
 		if !exited {
 			return false
 		}
 	}
+	failures := 0
 	for waited := time.Duration(0); ; waited += t.othersPoll {
 		running, err := p.othersRunning(pl.Exe)
 		if err == nil && !running {
+			return true
+		}
+		if err == nil {
+			failures = 0
+		} else if failures++; failures >= t.snapshotTries {
+			// Not knowing is not a reason to wait for the full time.
+			logf("cannot list the running programs, not waiting for Kasboek's helper processes: %v", err)
 			return true
 		}
 		if waited >= t.othersWait {
@@ -224,24 +272,32 @@ func waitForKasboek(p platform, pl updatePlan, t timing) bool {
 	}
 }
 
-func runUpdate(p platform, u ui, pl updatePlan, t timing, passive bool) error {
+func runUpdate(p platform, u ui, pl updatePlan, t timing, passive bool, proc kasboekProc) error {
 	defer u.close()
 	u.waiting()
-	if !waitForKasboek(p, pl, t) {
-		u.failed(pl.text(textFailed))
-		return errors.Join(errors.New("kasboek did not close"), writeResult(pl, -1, "not_closed"))
+	if !waitForKasboek(p, pl, t, proc) {
+		// Nothing is installed. Kasboek is started anyway: when the main process ended but a
+		// leftover one kept running, the person would otherwise see no Kasboek at all. If an
+		// instance really runs, the new start hands over to it and shows its window.
+		u.failed(pl.text(textNotClosed))
+		return errors.Join(errors.New("kasboek did not close"), writeResult(pl, -1, "not_closed"), relaunch(p, u, pl))
 	}
-	sum, err := fileSHA256(pl.MSI)
+	sum, release, err := p.lockAndHash(pl.MSI)
 	if err != nil || !strings.EqualFold(sum, pl.SHA256) {
+		if err == nil {
+			release()
+		}
 		u.failed(pl.text(textFailed))
-		return errors.Join(errors.New("update file does not match its checksum"), writeResult(pl, -1, "checksum"), relaunch(p, u, pl))
+		return errors.Join(errors.New("update file does not match its checksum"), err, writeResult(pl, -1, "checksum"), relaunch(p, u, pl))
 	}
+	// The file stays locked until Windows Installer is done: no swap between check and install.
 	u.installing()
-	code, err := p.runMsiexec(msiexecArgs(pl.MSI, pl.Log, passive))
+	code, err := p.runMsiexec(msiexecArgs(pl.MSI, pl.Log, passive), t.msiexecTimeout)
 	for retry := 0; err == nil && code == 1618 && retry < t.busyRetries; retry++ {
 		t.sleep(t.busyWait)
-		code, err = p.runMsiexec(msiexecArgs(pl.MSI, pl.Log, passive))
+		code, err = p.runMsiexec(msiexecArgs(pl.MSI, pl.Log, passive), t.msiexecTimeout)
 	}
+	release()
 	if err != nil {
 		code = -1
 	}
@@ -253,6 +309,33 @@ func runUpdate(p platform, u ui, pl updatePlan, t timing, passive bool) error {
 	}
 	werr := writeResult(pl, code, outcome)
 	return errors.Join(err, werr, relaunch(p, u, pl))
+}
+
+// writeStarted tells Kasboek that this helper has taken over; replaced in one step like the result.
+func writeStarted(planPath string) error {
+	file := filepath.Join(filepath.Dir(planPath), startedFile)
+	tmp := file + ".tmp"
+	if err := os.WriteFile(tmp, []byte(time.Now().UTC().Format(time.RFC3339)), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, file)
+}
+
+// applyWith is the whole update: check the plan, open Kasboek's process right away (so its id
+// can't be taken over while the window starts), tell Kasboek it may quit, then run the steps.
+func applyWith(path string, p platform, t timing, start uiStarter) error {
+	pl, err := loadPlan(path)
+	if err != nil {
+		return err
+	}
+	proc := openKasboek(p, pl.PID)
+	if err := writeStarted(path); err != nil {
+		if proc.open {
+			p.closeProcess(proc.h)
+		}
+		return fmt.Errorf("handshake: %w", err)
+	}
+	return applyPlan(p, pl, t, start, proc)
 }
 
 func relaunch(p platform, u ui, pl updatePlan) error {

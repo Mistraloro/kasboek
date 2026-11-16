@@ -1113,7 +1113,8 @@
       "installing": "Kasboek {{version}} wird installiert…",
       "starting": "Kasboek wird gestartet…",
       "failed": "Das Update konnte nicht installiert werden. Kasboek startet wieder.",
-      "cancelled": "Das Update wurde abgebrochen. Kasboek startet wieder."
+      "cancelled": "Das Update wurde abgebrochen. Kasboek startet wieder.",
+      "notClosed": "Kasboek wurde nicht rechtzeitig geschlossen, daher wurde das Update nicht installiert. Kasboek wird wieder geöffnet."
     },
     "opened": {
       "dmg": "Zieh Kasboek in „Programme“ und wähle „Ersetzen“. Beende Kasboek dann und öffne es wieder.",

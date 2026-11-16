@@ -29,7 +29,10 @@ export function mustShowOnSecondInstance(argv: readonly string[]): boolean {
   return !isBackgroundLaunch(argv)
 }
 
-/** The tray icon exists when the person keeps Kasboek in the tray, or a Claude app started it there. */
-export function trayWanted(o: { keepInTray: boolean; startedInTray: boolean }): boolean {
-  return o.keepInTray || o.startedInTray
+/**
+ * The tray icon exists when the person keeps Kasboek in the tray, or a Claude app started it there;
+ * never while Kasboek is shutting down (a late sync would show a new icon that nothing removes).
+ */
+export function trayWanted(o: { keepInTray: boolean; startedInTray: boolean; shuttingDown?: boolean }): boolean {
+  return !o.shuttingDown && (o.keepInTray || o.startedInTray)
 }

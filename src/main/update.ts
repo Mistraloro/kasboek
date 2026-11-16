@@ -14,7 +14,7 @@ import { basename, dirname, join } from 'node:path'
 import { app, nativeTheme, net, shell } from 'electron'
 import { AppError } from '@core/errors'
 import type { UpdateStatus } from '@shared/types'
-import { buildUpdatePlan, checksumFromSums, failedUpdateMessage, installKind, newer, pickAsset, safeAssetName } from '@core/update'
+import { buildUpdatePlan, checksumFromSums, failedUpdateMessage, installKind, newer, oneAtATime, pickAsset, safeAssetName, updateMayStillBeRunning, waitForHelperStart, type UpdatePlan } from '@core/update'
 import { helperPath } from './mcp/channel'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
@@ -162,37 +162,51 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
  * Windows: starts a copy of the kasboek-mcp helper that waits for Kasboek to close, installs the MSI
  * and opens Kasboek again, showing a progress window in the meantime. It runs from a copy because the MSI replaces the original in resources.
  * No console is wanted, and `detached` on Windows gives the helper none (so windowsHide isn't set).
+ *
+ * Kasboek may only quit when the helper is really running: the helper writes `started` once it has
+ * checked its plan, and this resolves only then. If the helper ends first, or `started` doesn't show
+ * up, this throws and Kasboek stays open (details in helper.log).
  */
 async function startUpdateHelper(msi: string, sha256: string): Promise<void> {
   const source = helperPath()
   if (!existsSync(source)) throw new AppError('update.helper_missing', `The update helper is missing from this installation. Download the new version from ${RELEASES} and install it yourself.`)
   const copy = join(updatesDir(), 'kasboek-update.exe')
   const planFile = join(updatesDir(), 'apply.json')
+  const startedFile = join(updatesDir(), 'started')
   const dark = getPrefs().theme === 'dark' || (getPrefs().theme === 'system' && nativeTheme.shouldUseDarkColors)
-  copyFileSync(source, copy)
-  const plan = buildUpdatePlan({
-    pid: process.pid,
-    exe: process.execPath,
-    args: app.isPackaged ? [] : [app.getAppPath()],
-    msi,
-    sha256,
-    log: join(updatesDir(), 'install.log'),
-    result: join(updatesDir(), 'result.json'),
-    updatesDir: updatesDir(),
-    toVersion: status.latest ?? '',
-    theme: dark ? 'dark' : 'light',
-    texts: updateTexts(getPrefs().language)
-  })
-  rmSync(plan.result, { force: true })
-  writeFileSync(planFile, JSON.stringify(plan))
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(copy, ['--apply-update', planFile], { detached: true, stdio: 'ignore' })
-    child.once('error', reject)
-    child.once('spawn', () => {
-      child.unref()
-      resolve()
+  let plan: UpdatePlan
+  try {
+    plan = buildUpdatePlan({
+      pid: process.pid,
+      exe: process.execPath,
+      args: app.isPackaged ? [] : [app.getAppPath()],
+      msi,
+      sha256,
+      log: join(updatesDir(), 'install.log'),
+      result: join(updatesDir(), 'result.json'),
+      updatesDir: updatesDir(),
+      toVersion: status.latest ?? '',
+      theme: dark ? 'dark' : 'light',
+      texts: updateTexts(getPrefs().language)
     })
-  })
+  } catch (err) {
+    throw new AppError('update.plan', err instanceof Error ? err.message : 'The update plan is not valid.')
+  }
+  if (!existsSync(plan.exe)) throw new AppError('update.plan', 'Kasboek’s program file was not found, so the update was not started. Kasboek was left open.')
+  // Nothing from an earlier attempt may count for this one.
+  for (const f of [startedFile, startedFile + '.tmp', plan.result]) rmSync(f, { force: true })
+  copyFileSync(source, copy)
+  writeFileSync(planFile, JSON.stringify(plan))
+  const child = spawn(copy, ['--apply-update', planFile], { detached: true, stdio: 'ignore' })
+  let gone = false
+  child.once('error', () => (gone = true))
+  child.once('exit', () => (gone = true))
+  const outcome = await waitForHelperStart({ started: () => existsSync(startedFile), exited: () => gone, sleep: (ms) => new Promise((r) => setTimeout(r, ms)), now: Date.now })
+  if (outcome !== 'started') {
+    if (outcome === 'timeout') child.kill()
+    throw new AppError('update.helper_failed', `The update could not be started, so Kasboek stays open and nothing was changed. Details are in ${join(updatesDir(), 'helper.log')}.`)
+  }
+  child.unref()
 }
 
 /** Replaces the running AppImage with the new one and starts it. */
@@ -210,7 +224,7 @@ function installAppImage(downloaded: string): void {
   spawn(current, [], { detached: true, stdio: 'ignore' }).unref()
 }
 
-export async function installUpdate(): Promise<UpdateStatus> {
+async function install(): Promise<UpdateStatus> {
   if (status.state !== 'ready' || !file || !existsSync(file) || !status.kind) throw new AppError('update.not_ready', 'Download the update first.')
   // A copy of the data as it is now, in case the new version needs to be undone.
   if (isUnlocked()) {
@@ -230,6 +244,7 @@ export async function installUpdate(): Promise<UpdateStatus> {
     else installAppImage(file)
   } catch (err) {
     rmSync(pendingFile(), { force: true })
+    rmSync(join(updatesDir(), 'apply.json'), { force: true })
     set({ error: err instanceof AppError ? err.message : 'The update couldn’t be started.' })
     throw err
   }
@@ -239,22 +254,36 @@ export async function installUpdate(): Promise<UpdateStatus> {
   return status
 }
 
+/**
+ * One install at a time: a second click while the first is still making its backup or starting the
+ * helper gets the current status. After a start that closes Kasboek the guard stays on.
+ */
+export const installUpdate = oneAtATime(install, (s) => s.state === 'installing', () => status)
+
 export function openReleasePage(): void {
   const url = status.pageUrl ?? RELEASES
   if (url.startsWith('https://github.com/')) void shell.openExternal(url)
+}
+
+/** Removes the updates folder. The note (`pending.json`) goes last, so an interrupted clean-up is tried again at the next start. */
+function cleanUpdatesDir(): void {
+  for (const name of readdirSync(updatesDir())) if (name !== 'pending.json') rmSync(join(updatesDir(), name), { recursive: true, force: true })
+  rmSync(updatesDir(), { recursive: true, force: true })
 }
 
 /** After an update: clean up, or tell the person it didn't install. */
 function afterRestart(): void {
   if (!existsSync(pendingFile())) return
   try {
-    const { version } = JSON.parse(readFileSync(pendingFile(), 'utf8')) as { version: string }
+    const { version, at } = JSON.parse(readFileSync(pendingFile(), 'utf8')) as { version: string; at?: unknown }
     let result: unknown = null
     try {
       result = JSON.parse(readFileSync(join(updatesDir(), 'result.json'), 'utf8'))
     } catch {
-      // No result: the helper never got as far as writing one.
+      // No result: the helper hasn't finished, or never got as far as writing one.
     }
+    // Started by hand while the installer still works: say nothing and touch nothing, the next start decides.
+    if (updateMayStillBeRunning(version, app.getVersion(), result, at)) return
     const message = failedUpdateMessage(version, app.getVersion(), result)
     if (message) {
       failedInstall = message
@@ -266,7 +295,7 @@ function afterRestart(): void {
     // An unreadable note: just clean up.
   }
   try {
-    rmSync(updatesDir(), { recursive: true, force: true })
+    cleanUpdatesDir()
   } catch {
     // The helper may still hold its program for a moment: the next start cleans up.
   }

@@ -1113,7 +1113,8 @@
       "installing": "Instalando Kasboek {{version}}…",
       "starting": "Iniciando Kasboek…",
       "failed": "No se pudo instalar la actualización. Kasboek se vuelve a iniciar.",
-      "cancelled": "Se canceló la actualización. Kasboek se vuelve a iniciar."
+      "cancelled": "Se canceló la actualización. Kasboek se vuelve a iniciar.",
+      "notClosed": "Kasboek no se cerró a tiempo, así que la actualización no se instaló. Kasboek se vuelve a abrir."
     },
     "opened": {
       "dmg": "Arrastra Kasboek a Aplicaciones y elige Sustituir. Después cierra Kasboek y vuelve a abrirlo.",

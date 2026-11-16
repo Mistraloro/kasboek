@@ -1113,7 +1113,8 @@
       "installing": "Installation de Kasboek {{version}}…",
       "starting": "Démarrage de Kasboek…",
       "failed": "La mise à jour n’a pas pu être installée. Kasboek redémarre.",
-      "cancelled": "La mise à jour a été annulée. Kasboek redémarre."
+      "cancelled": "La mise à jour a été annulée. Kasboek redémarre.",
+      "notClosed": "Kasboek ne s’est pas fermé à temps, la mise à jour n’a donc pas été installée. Kasboek se rouvre."
     },
     "opened": {
       "dmg": "Faites glisser Kasboek dans Applications et choisissez Remplacer. Puis quittez Kasboek et rouvrez-le.",

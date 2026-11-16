@@ -56,7 +56,7 @@ export interface UpdatePlan {
   result: string
   toVersion: string
   theme: 'light' | 'dark'
-  texts: { waiting: string; installing: string; starting: string; failed: string; cancelled: string }
+  texts: { waiting: string; installing: string; starting: string; failed: string; cancelled: string; notClosed: string }
 }
 
 export interface UpdatePlanInput extends Omit<UpdatePlan, 'v'> {
@@ -81,6 +81,9 @@ export function buildUpdatePlan(o: UpdatePlanInput): UpdatePlan {
   if (!safeAssetName(p.basename(o.msi))) throw new Error('The update file has an unsafe name.')
   if (!/^[0-9a-fA-F]{64}$/.test(o.sha256)) throw new Error('The update checksum is not a SHA-256.')
   for (const f of [o.msi, o.log, o.result]) if (!insideFolder(o.updatesDir, f, platform)) throw new Error('An update path is outside the updates folder.')
+  // The helper checks the same again; here a bad plan is caught before Kasboek closes. The installed Kasboek has no start arguments, and a development run (electron.exe) can't be updated.
+  if (win32.basename(o.exe).toLowerCase() !== 'kasboek.exe') throw new Error('Updating works only in the installed Kasboek, not in a development run. Kasboek was left open.')
+  if (o.args.length > 0) throw new Error('The update plan has start arguments, which the installed Kasboek does not use. Kasboek was left open.')
   return { v: 1, pid: o.pid, exe: o.exe, args: o.args, msi: o.msi, sha256: o.sha256.toLowerCase(), log: o.log, result: o.result, toVersion: o.toVersion, theme: o.theme, texts: o.texts }
 }
 
@@ -107,7 +110,7 @@ export function msiOutcomeMessage(o: MsiOutcome, version: string): string {
     case 'blocked':
       return `Windows doesn’t allow this computer to install the update to ${version} (a policy blocks it). Ask whoever manages this computer.`
     case 'not_closed':
-      return `Kasboek didn’t close in time, so the update to ${version} was not installed. ${retry}`
+      return `Kasboek didn’t close in time, so the update to ${version} was not installed and Kasboek was opened again. ${retry}`
     case 'checksum':
       return `The update file for ${version} didn’t match its checksum, so it was not installed. ${retry}`
     case 'reboot':
@@ -124,4 +127,65 @@ export function failedUpdateMessage(pendingVersion: string, current: string, res
   if (!newer(pendingVersion, current)) return null
   const outcome = (result as { outcome?: unknown } | null)?.outcome
   return msiOutcomeMessage(typeof outcome === 'string' && OUTCOMES.includes(outcome) ? (outcome as MsiOutcome) : 'failed', pendingVersion)
+}
+
+/** How long a note about an update that is being installed counts as recent: Windows Installer may still be busy. */
+export const PENDING_GRACE_MS = 5 * 60 * 1000
+
+/**
+ * After a restart: is the update that the note (`pending.json`) talks about probably still being
+ * installed? Yes when it isn't the running version yet, the helper has written no result, and the
+ * note is younger than five minutes (e.g. Kasboek was started by hand after the old process ended
+ * but before the installer finished). Then nothing should be reported or cleaned up: the next start decides.
+ */
+export function updateMayStillBeRunning(pendingVersion: string, current: string, result: unknown, pendingAt: unknown, now = Date.now()): boolean {
+  if (!newer(pendingVersion, current) || (result !== null && result !== undefined)) return false
+  const at = typeof pendingAt === 'string' ? Date.parse(pendingAt) : Number.NaN
+  const age = now - at
+  return Number.isFinite(age) && age >= 0 && age < PENDING_GRACE_MS
+}
+
+/** The update helper writes `started` once its plan is checked; Kasboek only quits after seeing it. */
+export const HELPER_START_LIMIT_MS = 8000
+export const HELPER_START_POLL_MS = 100
+
+export interface HelperProbe {
+  /** The `started` file exists. */
+  started(): boolean
+  /** The helper process has ended (or could not be started). */
+  exited(): boolean
+  sleep(ms: number): Promise<void>
+  now(): number
+}
+
+/** Waits for the helper's `started` file: 'started', or why not ('exited' first, or 'timeout'). `started` wins when both are true. */
+export async function waitForHelperStart(probe: HelperProbe, limitMs = HELPER_START_LIMIT_MS, pollMs = HELPER_START_POLL_MS): Promise<'started' | 'exited' | 'timeout'> {
+  const begin = probe.now()
+  for (;;) {
+    if (probe.started()) return 'started'
+    if (probe.exited()) return 'exited'
+    if (probe.now() - begin >= limitMs) return 'timeout'
+    await probe.sleep(pollMs)
+  }
+}
+
+/**
+ * One run at a time: while `run` is going, another call gets `whenBusy()` instead of starting a
+ * second one. The lock is let go when the run ends, except when `stayLocked(result)` (Kasboek is
+ * about to quit, so nothing else may start).
+ */
+export function oneAtATime<T>(run: () => Promise<T>, stayLocked: (result: T) => boolean, whenBusy: () => T): () => Promise<T> {
+  let running = false
+  return async () => {
+    if (running) return whenBusy()
+    running = true
+    let keep = false
+    try {
+      const result = await run()
+      keep = stayLocked(result)
+      return result
+    } finally {
+      if (!keep) running = false
+    }
+  }
 }

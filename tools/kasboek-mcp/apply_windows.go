@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,15 +23,37 @@ const (
 	maxLongPath             = 32768
 )
 
-var procQueryFullProcessImageName = syscall.NewLazyDLL("kernel32.dll").NewProc("QueryFullProcessImageNameW")
+var (
+	procQueryFullProcessImageName = syscall.NewLazyDLL("kernel32.dll").NewProc("QueryFullProcessImageNameW")
+	procGetSystemDirectory        = syscall.NewLazyDLL("kernel32.dll").NewProc("GetSystemDirectoryW")
+)
 
 type winPlatform struct {
-	// msiexec is Windows Installer's program; tests replace it.
+	// msiexec is Windows Installer's program; tests replace it. Empty when it could not be found.
 	msiexec string
 }
 
+// systemMsiexec is msiexec.exe in Windows' own system folder, as GetSystemDirectoryW reports it:
+// not from an environment variable that the person's account could have changed.
+func systemMsiexec() (string, error) {
+	buf := make([]uint16, syscall.MAX_PATH)
+	n, _, err := procGetSystemDirectory.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if n == 0 || int(n) >= len(buf) {
+		return "", fmt.Errorf("the system folder is not known (%d, %v)", n, err)
+	}
+	dir := syscall.UTF16ToString(buf[:n])
+	if !filepath.IsAbs(dir) {
+		return "", fmt.Errorf("the system folder %q is not an absolute path", dir)
+	}
+	return filepath.Join(dir, "msiexec.exe"), nil
+}
+
 func newWinPlatform() winPlatform {
-	return winPlatform{msiexec: filepath.Join(os.Getenv("SystemRoot"), "System32", "msiexec.exe")}
+	exe, err := systemMsiexec()
+	if err != nil {
+		logf("windows installer not found: %v", err)
+	}
+	return winPlatform{msiexec: exe}
 }
 
 func (winPlatform) openProcess(pid int) (procHandle, error) {
@@ -64,6 +87,57 @@ func (winPlatform) imagePath(h procHandle) (string, error) {
 	return syscall.UTF16ToString(buf[:n]), nil
 }
 
+// fileIdentity is what Windows knows a file by: the volume and the index on it. Two paths with the
+// same identity are the same file (8.3 names, subst and mapped drives, junctions, hard links).
+func fileIdentity(path string) (volume uint32, index uint64, err error) {
+	p, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return 0, 0, err
+	}
+	// No access rights are asked for (only the file's attributes), and everything may be shared,
+	// so this works on a program that is running.
+	h, err := syscall.CreateFile(p, 0, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE, nil, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer syscall.CloseHandle(h)
+	var info syscall.ByHandleFileInformation
+	if err := syscall.GetFileInformationByHandle(h, &info); err != nil {
+		return 0, 0, err
+	}
+	return info.VolumeSerialNumber, uint64(info.FileIndexHigh)<<32 | uint64(info.FileIndexLow), nil
+}
+
+// sameFile compares the files themselves; only when one of them can't be opened does it fall back
+// to comparing the cleaned paths without regard to case.
+func sameFile(a, b string) bool {
+	va, ia, errA := fileIdentity(a)
+	vb, ib, errB := fileIdentity(b)
+	if errA != nil || errB != nil {
+		return samePath(a, b)
+	}
+	return va == vb && ia == ib
+}
+
+// runningImage is the program file of the running process pid, or "" when it can't be opened, has
+// ended already (an ended process stays in the list while someone holds a handle to it) or its
+// path can't be read.
+func (w winPlatform) runningImage(pid uint32) string {
+	h, err := w.openProcess(int(pid))
+	if err != nil {
+		return ""
+	}
+	defer w.closeProcess(h)
+	if ended, werr := w.waitExit(h, 0); werr == nil && ended {
+		return ""
+	}
+	img, err := w.imagePath(h)
+	if err != nil {
+		return ""
+	}
+	return img
+}
+
 func (w winPlatform) othersRunning(exePath string) (bool, error) {
 	snap, err := syscall.CreateToolhelp32Snapshot(th32csSnapProcess, 0)
 	if err != nil {
@@ -77,20 +151,40 @@ func (w winPlatform) othersRunning(exePath string) (bool, error) {
 	}
 	self := uint32(os.Getpid())
 	for {
-		// The name is only a quick filter; the full path decides.
+		// The name is only a quick filter; the file decides.
 		if e.ProcessID != self && strings.EqualFold(syscall.UTF16ToString(e.ExeFile[:]), filepath.Base(exePath)) {
-			if h, err := w.openProcess(int(e.ProcessID)); err == nil {
-				img, ierr := w.imagePath(h)
-				w.closeProcess(h)
-				if ierr == nil && samePath(img, exePath) {
-					return true, nil
-				}
+			if img := w.runningImage(e.ProcessID); img != "" && sameFile(img, exePath) {
+				return true, nil
 			}
 		}
 		if err := syscall.Process32Next(snap, &e); err != nil {
 			return false, nil // no more processes
 		}
 	}
+}
+
+// lockAndHash opens the file for reading and allows others only to read it (FILE_SHARE_READ, not
+// write or delete; Go's os.Open allows writing), hashes it through that handle and keeps the handle
+// until release. Windows Installer's own read-only open of the package still works: a new open
+// succeeds when its access (reading) is among what our handle shares (reading) and our access
+// (reading) is among what its handle shares (reading, which is how installers open a package).
+// If Windows Installer can't open the file in some case, the update fails; the lock is not lifted.
+func (winPlatform) lockAndHash(path string) (string, func(), error) {
+	p, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return "", nil, err
+	}
+	h, err := syscall.CreateFile(p, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		return "", nil, err
+	}
+	f := os.NewFile(uintptr(h), path)
+	sum, err := sha256Hex(f)
+	if err != nil {
+		f.Close()
+		return "", nil, err
+	}
+	return sum, func() { f.Close() }, nil
 }
 
 // cmdLine quotes every argument exactly (paths with spaces and accents), so msiexec reads what we mean.
@@ -103,10 +197,26 @@ func cmdLine(program string, args []string) string {
 }
 
 // runMsiexec: whether Windows Installer shows a dialog is up to its arguments (see msiexecArgs).
-func (w winPlatform) runMsiexec(args []string) (int, error) {
+// Without an absolute path to Windows' own msiexec nothing is run.
+func (w winPlatform) runMsiexec(args []string, timeout time.Duration) (int, error) {
+	if !filepath.IsAbs(w.msiexec) {
+		return 0, errors.New("windows installer was not found")
+	}
 	cmd := exec.Command(w.msiexec)
 	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: cmdLine(w.msiexec, args)}
-	err := cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return 0, err
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	var err error
+	select {
+	case err = <-done:
+	case <-time.After(timeout):
+		_ = cmd.Process.Kill() // TerminateProcess on the program we started
+		<-done
+		return 0, errMsiexecTimeout
+	}
 	var ee *exec.ExitError
 	if errors.As(err, &ee) {
 		return ee.ExitCode(), nil
@@ -114,9 +224,10 @@ func (w winPlatform) runMsiexec(args []string) (int, error) {
 	return 0, err
 }
 
+// start opens Kasboek again with its window visible and independent of this helper.
 func (winPlatform) start(exe string, args []string) error {
 	cmd := exec.Command(exe, args...)
-	detach(cmd)
+	detachVisible(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -125,12 +236,4 @@ func (winPlatform) start(exe string, args []string) error {
 
 func applyUpdate(path string) error {
 	return applyWith(path, newWinPlatform(), realTiming, startWindow)
-}
-
-func applyWith(path string, p platform, t timing, start uiStarter) error {
-	pl, err := loadPlan(path)
-	if err != nil {
-		return err
-	}
-	return applyPlan(p, pl, t, start)
 }

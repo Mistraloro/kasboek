@@ -5,7 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { dispatch, onAppReady, registerIpc } from './ipc'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
-import { destroyTray, hasTray, initTray, refreshTray, syncTray } from './tray'
+import { hasTray, initTray, refreshTray, stopTray, syncTray } from './tray'
 import { quitWhenAllWindowsClosed, shouldHideOnClose } from '@shared/window-policy'
 import { startAlertChecks } from './notify'
 import { startUpdateChecks } from './update'
@@ -115,7 +115,10 @@ export function showMainWindow(): void {
 /** Everything after the launch window: loaded once Electron is ready (see index.ts). */
 export async function startApp({ background }: { background: boolean }): Promise<void> {
   writeAppCommand()
-  app.on('before-quit', () => (quitting = true))
+  app.on('before-quit', () => {
+    quitting = true
+    stopTray()
+  })
   harden()
   watchGraphics()
   splashProgress(0.15, 'Starting…')
@@ -154,7 +157,8 @@ export async function startApp({ background }: { background: boolean }): Promise
   startUpdateChecks()
   // Keep the MCP bridge in step with the lock state and the setting.
   initTray({ startedInTray: background, open: showMainWindow })
-  setInterval(() => {
+  const keepInStep = setInterval(() => {
+    if (quitting) return
     syncMcpBridge(dispatch)
     syncTray()
     refreshTray()
@@ -167,7 +171,8 @@ export async function startApp({ background }: { background: boolean }): Promise
   })
 
   app.on('will-quit', () => {
-    destroyTray()
+    clearInterval(keepInStep)
+    stopTray()
     stopMcpBridge()
     lock('user', true)
   })

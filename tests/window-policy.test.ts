@@ -64,4 +64,9 @@ describe('trayWanted', () => {
     expect(trayWanted({ keepInTray: false, startedInTray: true })).toBe(true)
     expect(trayWanted({ keepInTray: true, startedInTray: true })).toBe(true)
   })
+  it('never shows the icon while Kasboek is shutting down', () => {
+    expect(trayWanted({ keepInTray: true, startedInTray: true, shuttingDown: true })).toBe(false)
+    expect(trayWanted({ keepInTray: true, startedInTray: false, shuttingDown: true })).toBe(false)
+    expect(trayWanted({ keepInTray: true, startedInTray: false, shuttingDown: false })).toBe(true)
+  })
 })

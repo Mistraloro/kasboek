@@ -3,7 +3,7 @@ import { LANGUAGE_CODES } from '@shared/languages'
 import { BY_LANGUAGE, UPDATE_TEXT_KEYS, updateTexts } from '../src/main/update-texts'
 
 describe('texts of the Windows update window', () => {
-  it('has all five texts, filled in, for every language', () => {
+  it('has all six texts, filled in, for every language', () => {
     for (const code of LANGUAGE_CODES) {
       const texts = updateTexts(code)
       expect(Object.keys(texts).sort(), code).toEqual([...UPDATE_TEXT_KEYS].sort())
@@ -15,6 +15,7 @@ describe('texts of the Windows update window', () => {
     expect(updateTexts('nl').starting).toBe('Kasboek wordt gestart…')
     expect(updateTexts('de').waiting).toContain('Kasboek')
     expect(updateTexts('nl').starting).not.toBe(updateTexts('en').starting)
+    expect(updateTexts('nl').notClosed).toContain('niet op tijd')
   })
 
   it('falls back to the base language, then to English', () => {

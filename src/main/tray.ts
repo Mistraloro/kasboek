@@ -32,6 +32,7 @@ let shownKey = ''
 let menu: Menu | null = null
 
 let startedInTray = false
+let shuttingDown = false
 let openWindow: () => void = () => {}
 /** Some Linux desktops have no tray: asking again every few seconds would only repeat the warning. */
 let unavailable = false
@@ -48,9 +49,15 @@ export function hasTray(): boolean {
   return tray !== null
 }
 
+/** Kasboek is quitting: the icon is removed and not shown again. */
+export function stopTray(): void {
+  shuttingDown = true
+  destroyTray()
+}
+
 /** Shows the icon when the person keeps Kasboek in the tray or a Claude app started it there; hides it otherwise. */
 export function syncTray(): void {
-  if (trayWanted({ keepInTray: getPrefs().keepInTray, startedInTray })) createTray()
+  if (trayWanted({ keepInTray: getPrefs().keepInTray, startedInTray, shuttingDown })) createTray()
   else destroyTray()
 }
 

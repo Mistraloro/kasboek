@@ -1113,7 +1113,8 @@
       "installing": "A instalar o Kasboek {{version}}…",
       "starting": "A iniciar o Kasboek…",
       "failed": "Não foi possível instalar a atualização. O Kasboek vai iniciar novamente.",
-      "cancelled": "A atualização foi cancelada. O Kasboek vai iniciar novamente."
+      "cancelled": "A atualização foi cancelada. O Kasboek vai iniciar novamente.",
+      "notClosed": "O Kasboek não fechou a tempo, por isso a atualização não foi instalada. O Kasboek vai abrir novamente."
     },
     "opened": {
       "dmg": "Arraste o Kasboek para Aplicações e escolha Substituir. Depois feche o Kasboek e volte a abri-lo.",

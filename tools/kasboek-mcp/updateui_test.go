@@ -127,6 +127,7 @@ func TestPlanTexts(t *testing.T) {
 		textStarting:   "Starting Kasboek…",
 		textFailed:     "The update could not be installed. Kasboek is starting again.",
 		textCancelled:  "The update was cancelled. Kasboek is starting again.",
+		textNotClosed:  "Kasboek did not close in time, so the update was not installed. Kasboek is opening again.",
 	} {
 		if got := pl.text(k); got != want {
 			t.Errorf("empty plan, %d: %q, want %q", k, got, want)
@@ -156,7 +157,7 @@ func TestWindowThatWorksMeansSilentMsiexec(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{0}}
 	u := &fakeUI{}
-	if err := applyPlan(f, pl, testTiming(new([]time.Duration)), func(updatePlan) (ui, error) { return u, nil }); err != nil {
+	if err := applyPlan(f, pl, testTiming(new([]time.Duration)), func(updatePlan) (ui, error) { return u, nil }, openKasboek(f, pl.PID)); err != nil {
 		t.Fatal(err)
 	}
 	if want := [][]string{{"/i", pl.MSI, "/qn", "/norestart", "/l*v", pl.Log}}; !reflect.DeepEqual(f.msiexecRuns, want) {
@@ -177,7 +178,7 @@ func TestWindowThatFailsToStartMeansWindowsInstallerShowsItsOwn(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			pl := testPlan(t)
 			f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{0}}
-			if err := applyPlan(f, pl, testTiming(new([]time.Duration)), start); err != nil {
+			if err := applyPlan(f, pl, testTiming(new([]time.Duration)), start, openKasboek(f, pl.PID)); err != nil {
 				t.Fatal(err)
 			}
 			if want := [][]string{{"/i", pl.MSI, "/passive", "/norestart", "/l*v", pl.Log}}; !reflect.DeepEqual(f.msiexecRuns, want) {
@@ -194,7 +195,7 @@ func TestPanickingWindowDoesNotStopInstallOrRelaunch(t *testing.T) {
 	for _, code := range []int{0, 1603, 1602} {
 		pl := testPlan(t)
 		f := &fakePlatform{image: pl.Exe, exits: true, codes: []int{code}}
-		if err := applyPlan(f, pl, testTiming(new([]time.Duration)), func(updatePlan) (ui, error) { return panicUI{}, nil }); err != nil {
+		if err := applyPlan(f, pl, testTiming(new([]time.Duration)), func(updatePlan) (ui, error) { return panicUI{}, nil }, openKasboek(f, pl.PID)); err != nil {
 			t.Fatal(err)
 		}
 		if len(f.msiexecRuns) != 1 || len(f.started) != 1 {
@@ -209,7 +210,7 @@ func TestPanickingWindowDoesNotStopInstallOrRelaunch(t *testing.T) {
 func TestPanickingWindowStillAllowsTheChecksumAndNotClosedPaths(t *testing.T) {
 	pl := testPlan(t)
 	f := &fakePlatform{image: pl.Exe, exits: false, codes: []int{0}}
-	if err := applyPlan(f, pl, testTiming(new([]time.Duration)), func(updatePlan) (ui, error) { return panicUI{}, nil }); err == nil {
+	if err := applyPlan(f, pl, testTiming(new([]time.Duration)), func(updatePlan) (ui, error) { return panicUI{}, nil }, openKasboek(f, pl.PID)); err == nil {
 		t.Fatal("expected an error")
 	}
 	if r := readResult(t, pl); r.Outcome != "not_closed" {

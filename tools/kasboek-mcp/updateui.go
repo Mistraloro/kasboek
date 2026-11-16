@@ -7,7 +7,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 )
@@ -131,6 +130,7 @@ const (
 	textStarting
 	textFailed
 	textCancelled
+	textNotClosed
 )
 
 // Used when the plan has no text (an empty one must not leave the window blank).
@@ -140,6 +140,7 @@ var fallbackTexts = map[textKey]string{
 	textStarting:   "Starting Kasboek…",
 	textFailed:     "The update could not be installed. Kasboek is starting again.",
 	textCancelled:  "The update was cancelled. Kasboek is starting again.",
+	textNotClosed:  "Kasboek did not close in time, so the update was not installed. Kasboek is opening again.",
 }
 
 // text is the plan's text for a step, or the English one when the plan has none. {{version}} (or
@@ -157,6 +158,8 @@ func (pl updatePlan) text(k textKey) string {
 		raw = pl.Texts.Failed
 	case textCancelled:
 		raw = pl.Texts.Cancelled
+	case textNotClosed:
+		raw = pl.Texts.NotClosed
 	}
 	if strings.TrimSpace(raw) == "" {
 		raw = fallbackTexts[k]
@@ -171,7 +174,7 @@ type guardedUI struct{ inner ui }
 func guard(name string, f func()) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "kasboek-mcp: update window %s: %v\n", name, r)
+			logf("update window %s: %v", name, r)
 		}
 	}()
 	f()
@@ -201,7 +204,7 @@ func chooseUI(pl updatePlan, start uiStarter) (ui, bool) {
 		u, err = start(pl)
 	}()
 	if err != nil || u == nil {
-		fmt.Fprintln(os.Stderr, "kasboek-mcp: no update window, Windows Installer shows its own:", err)
+		logf("no update window, Windows Installer shows its own: %v", err)
 		return noUI{}, true
 	}
 	return guardedUI{u}, false
@@ -209,9 +212,9 @@ func chooseUI(pl updatePlan, start uiStarter) (ui, bool) {
 
 // applyPlan is the update for a checked plan: with our window and a silent msiexec, or with
 // Windows Installer's own dialog when there is no window.
-func applyPlan(p platform, pl updatePlan, t timing, start uiStarter) error {
+func applyPlan(p platform, pl updatePlan, t timing, start uiStarter, proc kasboekProc) error {
 	u, passive := chooseUI(pl, start)
-	return runUpdate(p, u, pl, t, passive)
+	return runUpdate(p, u, pl, t, passive, proc)
 }
 
 // easeToward moves the bar that is shown a part of the way to where it should be, like the launch
