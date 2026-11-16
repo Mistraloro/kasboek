@@ -76,13 +76,21 @@ describe('checkDateText', () => {
 describe('datePlaceholder and dateExample', () => {
   it('show the chosen pattern and a matching example', () => {
     expect(datePlaceholder(f('DD.MM.YYYY'))).toBe('DD.MM.YYYY')
-    expect(dateExample(f('DD.MM.YYYY'))).toBe('31.12.2026')
-    expect(dateExample(f('MM/DD/YYYY'))).toBe('12/31/2026')
-    expect(dateExample(f('YYYY-MM-DD'))).toBe('2026-12-31')
-    expect(dateExample(f('D MMM YYYY'), 'en')).toBe('31 Dec 2026')
+    const today = new Date(2026, 11, 31, 23, 59)
+    expect(dateExample(f('DD.MM.YYYY'), 'en', today)).toBe('31.12.2026')
+    expect(dateExample(f('MM/DD/YYYY'), 'en', today)).toBe('12/31/2026')
+    expect(dateExample(f('YYYY-MM-DD'), 'en', today)).toBe('2026-12-31')
+    expect(dateExample(f('D MMM YYYY'), 'en', today)).toBe('31 Dec 2026')
+  })
+
+  it('uses the local day and defaults to today', () => {
+    expect(dateExample(f('YYYY-MM-DD'), 'en', new Date(2026, 0, 5, 23, 30))).toBe('2026-01-05')
+    const now = new Date()
+    expect(dateExample(f('YYYY-MM-DD'))).toBe(formatDate(now, f('YYYY-MM-DD')))
   })
 
   it('gives an example that reads back as the same day for every pattern', () => {
-    for (const pattern of DATE_PATTERNS) expect(parseDate(dateExample(f(pattern)), f(pattern)), pattern).toBe('2026-12-31')
+    for (const [today, iso] of [[new Date(2026, 11, 31), '2026-12-31'], [new Date(2026, 0, 5), '2026-01-05']] as const)
+      for (const pattern of DATE_PATTERNS) expect(parseDate(dateExample(f(pattern), 'en', today), f(pattern)), `${pattern} ${iso}`).toBe(iso)
   })
 })

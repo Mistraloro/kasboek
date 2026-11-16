@@ -313,9 +313,9 @@ export function datePlaceholder(f: FormatPrefs): string {
   return f.date
 }
 
-/** An example date written in the chosen format, e.g. "31/12/2026". 31 December reads the same in no other order. */
-export function dateExample(f: FormatPrefs, language = 'en'): string {
-  return formatDate('2026-12-31', f, language)
+/** An example date written in the chosen format: today's local date, e.g. "16/11/2026". */
+export function dateExample(f: FormatPrefs, language = 'en', today: Date = new Date()): string {
+  return formatDate(today, f, language)
 }
 
 export function formatTime(input: string | Date, f: FormatPrefs): string {
