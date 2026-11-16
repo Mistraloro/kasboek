@@ -510,6 +510,7 @@
     "newPassword": "Nieuw wachtwoord",
     "repeatPassword": "Herhaal wachtwoord",
     "currentPassword": "Huidig wachtwoord",
+    "holdToShowPassword": "Houd ingedrukt om het wachtwoord te tonen",
     "password": "Wachtwoord",
     "passwordMismatch": "De wachtwoorden zijn niet gelijk.",
     "passwordChanged": "Wachtwoord gewijzigd.",

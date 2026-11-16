@@ -2,7 +2,7 @@ import { Download, FolderInput, FolderOpen, FolderSync, Monitor, Moon, Plus, Ser
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance, type PickedTransfer, type SyncStatus } from '@shared/types'
-import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch, cx } from '../components/ui'
+import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, PasswordInput, Segmented, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
 import type { LanguageCode } from '@shared/languages'
@@ -173,7 +173,7 @@ function SecuritySection() {
       .finally(() => setBusy(false))
   }
   const currentField = !device && (
-    <Field label={t('auth.currentPassword')}>{(id) => <Input id={id} type="password" autoFocus value={current} onChange={(e) => setCurrent(e.target.value)} />}</Field>
+    <Field label={t('auth.currentPassword')}>{(id) => <PasswordInput id={id} autoFocus value={current} onChange={(e) => setCurrent(e.target.value)} />}</Field>
   )
 
   return (

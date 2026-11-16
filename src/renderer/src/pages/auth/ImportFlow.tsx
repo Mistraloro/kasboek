@@ -2,7 +2,7 @@ import { FileLock2, FolderSync, Server } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthStatus, ImportReset, PickedTransfer } from '@shared/types'
-import { Button, Field, Input } from '../../components/ui'
+import { Button, Field, Input, PasswordInput } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { WebDavModal } from '../../components/WebDav'
 import { ApiError, call } from '../../lib/api'
@@ -157,7 +157,7 @@ export function ImportFlow({
         </Field>
       ) : (
         <>
-          <Field label={t('auth.password')}>{(id) => <Input id={id} type="password" autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
+          <Field label={t('auth.password')}>{(id) => <PasswordInput id={id} autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
           {needsCode && <Field label={t('auth.code')}>{(id) => <CodeInput id={id} value={code} onChange={setCode} />}</Field>}
         </>
       )}

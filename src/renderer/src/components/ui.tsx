@@ -1,7 +1,8 @@
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { Eye, EyeOff, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { useTranslation } from 'react-i18next'
+import { revealedAfter, type RevealEvent } from '@shared/password-reveal'
 
 const cx = (...c: (string | false | null | undefined)[]): string => c.filter(Boolean).join(' ')
 
@@ -81,6 +82,63 @@ const control =
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...rest} className={cx(control, className)} />
+}
+
+/** A password field with an eye button: the text is only visible while the button is held down. */
+export function PasswordInput({ className, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const { t } = useTranslation()
+  const [shown, setShown] = useState(false)
+  const apply = (event: RevealEvent): void => setShown((s) => revealedAfter(s, event))
+
+  useEffect(() => {
+    if (!shown) return
+    const onBlur = (): void => apply({ kind: 'window-blur' })
+    const onVisibility = (): void => apply({ kind: 'visibility', hidden: document.hidden })
+    window.addEventListener('blur', onBlur)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('blur', onBlur)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [shown])
+
+  const label = t('auth.holdToShowPassword')
+  return (
+    <div
+      className="relative"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && shown) apply({ kind: 'keydown', key: e.key })
+      }}
+      onBlur={() => apply({ kind: 'blur' })}
+    >
+      <Input {...rest} type={shown ? 'text' : 'password'} className={cx('pr-10', className)} />
+      <button
+        type="button"
+        tabIndex={0}
+        aria-label={label}
+        title={label}
+        aria-pressed={shown}
+        onMouseDown={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          if (e.button !== 0) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          apply({ kind: 'pointerdown' })
+        }}
+        onPointerUp={() => apply({ kind: 'pointerup' })}
+        onPointerCancel={() => apply({ kind: 'pointercancel' })}
+        onPointerLeave={() => apply({ kind: 'pointerleave' })}
+        onKeyDown={(e) => {
+          if (e.key === ' ' || e.key === 'Enter') e.preventDefault()
+          apply({ kind: 'keydown', key: e.key })
+        }}
+        onKeyUp={(e) => apply({ kind: 'keyup', key: e.key })}
+        className="absolute top-1/2 right-0.5 inline-flex h-8 w-8 -translate-y-1/2 touch-none items-center justify-center rounded-md text-muted transition-colors select-none hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+      >
+        {shown ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+      </button>
+    </div>
+  )
 }
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {

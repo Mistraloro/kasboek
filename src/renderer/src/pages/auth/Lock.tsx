@@ -1,7 +1,7 @@
 import { Lock as LockIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Field, Input } from '../../components/ui'
+import { Button, Field, Input, PasswordInput } from '../../components/ui'
 import { call } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { formatDate } from '../../lib/format'
@@ -70,7 +70,7 @@ export function Lock() {
           >
             {!device && (
               <Field label={t('auth.password')}>
-                {(id) => <Input id={id} type="password" autoFocus autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
+                {(id) => <PasswordInput id={id} autoFocus autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
               </Field>
             )}
             {needCode && (

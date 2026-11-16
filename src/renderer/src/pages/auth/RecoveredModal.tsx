@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Field, Input, Modal } from '../../components/ui'
+import { Button, Field, Modal, PasswordInput } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { call } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
@@ -28,7 +28,7 @@ export function RecoveredModal({ weak = false }: { weak?: boolean }) {
         }}
       >
         <p className="text-[13px] text-muted">{weak ? t('auth.weakBody') : t('auth.recoveredBody')}</p>
-        {weak && <Field label={t('auth.currentPassword')}>{(id) => <Input id={id} type="password" autoFocus value={current} onChange={(e) => setCurrent(e.target.value)} />}</Field>}
+        {weak && <Field label={t('auth.currentPassword')}>{(id) => <PasswordInput id={id} autoFocus value={current} onChange={(e) => setCurrent(e.target.value)} />}</Field>}
         <PasswordFields value={pw} onChange={setPw} autoFocus={!weak} />
         <Button type="submit" variant="primary" disabled={!passwordsOk(pw) || (weak && !current)}>
           {t('settings.save')}

@@ -132,6 +132,7 @@
     "newPassword": "Nova senha",
     "repeatPassword": "Repita a senha",
     "currentPassword": "Senha atual",
+    "holdToShowPassword": "Mantenha pressionado para mostrar a senha",
     "password": "Senha",
     "passwordMismatch": "As senhas não coincidem.",
     "passwordChanged": "Senha alterada.",

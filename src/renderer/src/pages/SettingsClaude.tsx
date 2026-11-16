@@ -7,7 +7,7 @@ import { BULK_LIMIT, PERMISSION_KINDS, PERMISSION_MODES, presetRules, type Permi
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import { useAssistant } from '../components/AssistantPanel'
 import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopOverwritten, useDesktopRunning } from '../components/ClaudeApps'
-import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
+import { Badge, Button, Card, CardHeader, Field, Input, Modal, PasswordInput, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
@@ -132,7 +132,7 @@ export function ClaudeSection() {
           }}
         >
           <p className="text-[13px] text-muted">{native ? t('claude.keyHelp') : t('ai.keyHelp', { name: preset.name })}</p>
-          <Field label={t('claude.apiKey')}>{(id) => <Input id={id} type="password" autoFocus value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} />}</Field>
+          <Field label={t('claude.apiKey')}>{(id) => <PasswordInput id={id} autoFocus value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} />}</Field>
           <div className="flex justify-between gap-2">
             {preset.keyUrl ? <a className="self-center text-[13px] font-medium text-accent hover:underline" href={preset.keyUrl} target="_blank" rel="noreferrer">{t('ai.getKey', { name: preset.name })}</a> : <span />}
             <div className="flex gap-2">

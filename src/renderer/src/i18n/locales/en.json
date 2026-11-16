@@ -510,6 +510,7 @@
     "newPassword": "New password",
     "repeatPassword": "Repeat password",
     "currentPassword": "Current password",
+    "holdToShowPassword": "Hold to show the password",
     "password": "Password",
     "passwordMismatch": "The passwords don’t match.",
     "passwordChanged": "Password changed.",

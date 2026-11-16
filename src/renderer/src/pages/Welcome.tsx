@@ -9,7 +9,7 @@ import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopRunning } 
 import { CurrencySelect } from '../components/CurrencySelect'
 import { useToast } from '../components/Toast'
 import { startTour } from '../components/Tour'
-import { Badge, Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
+import { Badge, Button, Field, PasswordInput, Segmented, Select, Switch, cx } from '../components/ui'
 import { LANGUAGES } from '../i18n'
 import { ApiError, call } from '../lib/api'
 import { FORMAT_PRESETS, formatDate as fmtDate, formatMoney as fmtMoney, formatTime as fmtTime, matchingPreset, type FormatPrefs } from '@shared/format'
@@ -276,7 +276,7 @@ export function Welcome() {
                 <p className="flex items-center gap-1.5 text-[13px] text-accent"><Check size={14} />{t('welcome.keySaved', { hint: assistant?.keyHint })}</p>
               ) : (
                 <Field label={t('claude.apiKey')} hint={preset.keyUrl ? <a className="font-medium text-accent hover:underline" href={preset.keyUrl} target="_blank" rel="noreferrer">{t('ai.getKey', { name: preset.name })}</a> : undefined}>
-                  {(id) => <Input id={id} type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} autoComplete="off" />}
+                  {(id) => <PasswordInput id={id} value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} autoComplete="off" />}
                 </Field>
               )
             ) : (

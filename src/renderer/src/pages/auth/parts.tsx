@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DeviceAuthKind } from '@shared/types'
 import { MIN_PASSWORD_LENGTH, checkPassword } from '@shared/password'
-import { Button, Field, Input, cx } from '../../components/ui'
+import { Button, Field, Input, PasswordInput, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import i18n from '../../i18n'
 import { ApiError, call } from '../../lib/api'
@@ -41,7 +41,7 @@ export function PasswordFields({ value, onChange, autoFocus }: { value: { a: str
   return (
     <div className="flex flex-col gap-4">
       <Field label={t('auth.newPassword')}>
-        {(id) => <Input id={id} type="password" autoFocus={autoFocus} autoComplete="new-password" value={value.a} onChange={(e) => onChange({ ...value, a: e.target.value })} />}
+        {(id) => <PasswordInput id={id} autoFocus={autoFocus} autoComplete="new-password" value={value.a} onChange={(e) => onChange({ ...value, a: e.target.value })} />}
       </Field>
       <div>
         <div className="flex gap-1" role="meter" aria-label={t('auth.strength')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={check.strength}>
@@ -60,7 +60,7 @@ export function PasswordFields({ value, onChange, autoFocus }: { value: { a: str
         </ul>
       </div>
       <Field label={t('auth.repeatPassword')}>
-        {(id) => <Input id={id} type="password" autoComplete="new-password" value={value.b} onChange={(e) => onChange({ ...value, b: e.target.value })} />}
+        {(id) => <PasswordInput id={id} autoComplete="new-password" value={value.b} onChange={(e) => onChange({ ...value, b: e.target.value })} />}
       </Field>
       {mismatch && <p className="text-[13px] text-negative">{t('auth.passwordMismatch')}</p>}
     </div>

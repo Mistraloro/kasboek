@@ -510,6 +510,7 @@
     "newPassword": "Nova palavra-passe",
     "repeatPassword": "Repita a palavra-passe",
     "currentPassword": "Palavra-passe atual",
+    "holdToShowPassword": "Prima sem soltar para mostrar a palavra-passe",
     "password": "Palavra-passe",
     "passwordMismatch": "As palavras-passe não coincidem.",
     "passwordChanged": "Palavra-passe alterada.",

@@ -510,6 +510,7 @@
     "newPassword": "Nueva contraseña",
     "repeatPassword": "Repite la contraseña",
     "currentPassword": "Contraseña actual",
+    "holdToShowPassword": "Mantén pulsado para ver la contraseña",
     "password": "Contraseña",
     "passwordMismatch": "Las contraseñas no coinciden.",
     "passwordChanged": "Contraseña cambiada.",
