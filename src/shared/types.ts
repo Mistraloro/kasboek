@@ -679,6 +679,9 @@ export interface Reconciliation {
   runningMismatches: number
 }
 
+/** A remark about a PDF statement, as a code the screen words in the person's language. */
+export type PdfNote = { code: 'other_account'; iban: string } | { code: 'dates_without_year' } | { code: 'pages_without_text'; count: number }
+
 export interface ImportPreview {
   sessionId: string
   fileName: string
@@ -720,6 +723,7 @@ export interface ImportPreview {
     /** False when no table of transactions was found in the text. */
     tableFound: boolean
     reconciliation: Reconciliation | null
+    notes: PdfNote[]
   } | null
 }
 

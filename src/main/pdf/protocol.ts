@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { PDF_LIMITS } from '@core/pdf/extract'
+import { PDF_LIMITS } from '@core/pdf/limits'
 import type { PdfText } from '@core/pdf/lines'
 
 /** What the reader process is sent. */

@@ -4,7 +4,7 @@
  * confirmation) can change the mapping, skip rows and set categories first.
  */
 import { randomUUID } from 'node:crypto'
-import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow, Reconciliation } from '@shared/types'
+import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow, PdfNote, Reconciliation } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { categorizeTransactions, createRule, insertTransaction, listRules, matchRule } from './finance'
@@ -37,6 +37,8 @@ export interface PdfSessionData {
   readBy: 'kasboek' | 'assistant'
   balances: StatementBalances
   period: StatementPeriod
+  /** Remarks from reading the file. */
+  notes?: PdfNote[]
 }
 
 interface Session {
@@ -520,7 +522,7 @@ export function preview(db: Db, id: string): ImportPreview {
     notes: s.notes,
     check: s.check ? checkSummary(s.check) : null,
     fileKind: s.kind,
-    pdf: s.pdf ? { pages: s.pdf.pages, readBy: s.pdf.readBy, tableFound: s.rows.length >= 2, reconciliation: s.rows.length >= 2 ? reconciliation(s.pdf, built) : null } : null
+    pdf: s.pdf ? { pages: s.pdf.pages, readBy: s.pdf.readBy, tableFound: s.rows.length >= 2, reconciliation: s.rows.length >= 2 ? reconciliation(s.pdf, built) : null, notes: s.pdf.notes ?? [] } : null
   }
 }
 

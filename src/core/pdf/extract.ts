@@ -6,8 +6,9 @@ import { getDocument, InvalidPDFException, PasswordException, VerbosityLevel } f
 import * as pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs'
 import { AppError } from '../errors'
 import type { PdfText, PdfTextItem } from './lines'
+import { PDF_LIMITS } from './limits'
 
-export const PDF_LIMITS = { maxPages: 150, maxItems: 300_000, maxChars: 3_000_000 }
+export { PDF_LIMITS }
 
 /** Fewer characters per page than this on average: a scan or a picture, not text. */
 const MIN_CHARS_PER_PAGE = 20
@@ -29,10 +30,10 @@ function mapError(err: unknown): AppError {
 /** The text of every page as positioned pieces. Pages without text are kept, with no items. */
 export async function extractText(bytes: Uint8Array, onPage?: (n: number, of: number) => void, limits = PDF_LIMITS): Promise<PdfText> {
   useInlineWorker()
+  // pdf.js 6 no longer evaluates generated code (no isEvalSupported option), so nothing is switched off for that.
   // pdf.js takes ownership of the buffer it is given: pass a copy.
   const task = getDocument({
     data: new Uint8Array(bytes),
-    isEvalSupported: false,
     disableFontFace: true,
     useSystemFonts: false,
     enableXfa: false,

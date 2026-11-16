@@ -29,6 +29,8 @@ import { claudeEffort } from '@shared/reasoning'
 import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
 import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
+import { openPdfSession } from './pdf/open'
+import { readPdf } from './pdf/read'
 import { helperPath } from './mcp/channel'
 import { checkForUpdate, downloadUpdate, installUpdate, openReleasePage, updateStatus } from './update'
 import * as mcpSetup from './mcp/setup'
@@ -53,6 +55,9 @@ async function openDialog(opts: Electron.OpenDialogOptions): Promise<string | nu
   const res = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
   return res.canceled ? null : (res.filePaths[0] ?? null)
 }
+
+/** The PDF read in progress, so the page can stop it. */
+let pdfRead: AbortController | null = null
 
 const kasboekFilter = [{ name: 'Kasboek export', extensions: [TRANSFER_EXTENSION] }]
 
@@ -346,6 +351,32 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: (_c, { sessionId }) => {
       cancelAssist(sessionId)
+      return { ok: true as const }
+    }
+  },
+  'import.analyzePdf': {
+    mutates: false,
+    assistant: false,
+    handler: async ({ db }, i) => {
+      const controller = new AbortController()
+      pdfRead = controller
+      try {
+        return await openPdfSession(db, {
+          fileName: i.fileName,
+          accountId: i.accountId,
+          contentBase64: i.contentBase64,
+          read: (bytes) => readPdf(bytes, { signal: controller.signal, onPage: (page, pages) => session.broadcast({ type: 'import.pdfProgress', page, pages }) })
+        })
+      } finally {
+        if (pdfRead === controller) pdfRead = null
+      }
+    }
+  },
+  'import.pdfCancel': {
+    mutates: false,
+    assistant: false,
+    handler: () => {
+      pdfRead?.abort()
       return { ok: true as const }
     }
   },

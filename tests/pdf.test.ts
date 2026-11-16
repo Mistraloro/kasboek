@@ -269,7 +269,7 @@ describe('PDF sessions', () => {
     const { d, acc } = db()
     const p = analyzeGrid(d, { fileName: 'afschrift.pdf', accountId: acc, grid: GRID, pdf: pdf() })
     expect(p).toMatchObject({ fileKind: 'pdf', mappingSource: 'detected', stats: { total: 2, ready: 2 } })
-    expect(p.pdf).toEqual({ pages: 1, readBy: 'kasboek', tableFound: true, reconciliation: { openingCents: 100000, closingCents: 347655, sumCents: 247655, differenceCents: 0, rowsChecked: 2, runningMismatches: 0 } })
+    expect(p.pdf).toEqual({ pages: 1, readBy: 'kasboek', tableFound: true, notes: [], reconciliation: { openingCents: 100000, closingCents: 347655, sumCents: 247655, differenceCents: 0, rowsChecked: 2, runningMismatches: 0 } })
     expect(sessionKind(p.sessionId)).toBe('pdf')
     expect(pdfLines(p.sessionId)).toEqual([LINE])
   })

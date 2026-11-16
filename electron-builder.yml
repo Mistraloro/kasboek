@@ -8,6 +8,7 @@ files:
   - out/**
   - resources/**
   - package.json
+  - THIRD_PARTY_NOTICES.md
   - '!**/*.map'
   - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
   - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/linuxmusl-*'
@@ -43,6 +44,7 @@ win:
     - out/**
     - resources/**
     - package.json
+    - THIRD_PARTY_NOTICES.md
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux}*'
     - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
@@ -69,6 +71,7 @@ mac:
     - out/**
     - resources/**
     - package.json
+    - THIRD_PARTY_NOTICES.md
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,linux}*'
     - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'
@@ -88,6 +91,7 @@ linux:
     - out/**
     - resources/**
     - package.json
+    - THIRD_PARTY_NOTICES.md
     - '!**/*.map'
     - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{win32,darwin}*'
     - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**'

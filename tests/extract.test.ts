@@ -3,22 +3,8 @@ import { AppError } from '@core/errors'
 import { extractText, PDF_LIMITS } from '@core/pdf/extract'
 import { toLines } from '@core/pdf/lines'
 import { readStatement } from '@core/pdf/statement'
-import { makePdf, type PdfPageSpec } from './helpers/make-pdf'
-
-const OWN = 'BE68539007547034'
-const XS = [40, 110, 300, 380, 460]
-
-/** A header and rows as text pieces in columns, top down from y = 780. */
-function statementPage(rows: string[][], top = 780): PdfPageSpec {
-  return { texts: rows.flatMap((row, r) => row.flatMap((c, i) => (c ? [{ x: XS[i]!, y: top - r * 14, text: c }] : []))) }
-}
-
-const HEADER = ['Date', 'Description', 'Debit', 'Credit', 'Balance']
-const PAGES = [
-  statementPage([['Statement of account'], [`Account ${OWN}`], ['Period 01/11/2026 to 30/11/2026'], ['Opening balance', '1,000.00'], ['Closing balance', '2,912.00'], HEADER, ['03/11/2026', 'Albert Heijn Brussel', '12.50', '', '987.50']]),
-  statementPage([['05/11/2026', 'Salary November', '', '2000.00', '2987.50'], ['07/11/2026', 'Proximus', '30.00', '', '2957.50']]),
-  statementPage([['09/11/2026', 'Delhaize', '45.50', '', '2912.00']])
-]
+import { makePdf } from './helpers/make-pdf'
+import { OWN_IBAN, STATEMENT_PAGES as PAGES } from './helpers/statement-pdf'
 
 async function failure(bytes: Uint8Array, limits?: typeof PDF_LIMITS): Promise<AppError> {
   const err = await extractText(bytes, undefined, limits).then(
@@ -46,7 +32,7 @@ describe('extractText', () => {
 
   it('gives a grid that the statement reader understands', async () => {
     const t = await extractText(makePdf(PAGES))
-    const read = readStatement(toLines(t), OWN)
+    const read = readStatement(toLines(t), OWN_IBAN)
     expect(read.headerFound).toBe(true)
     expect(read.grid).toHaveLength(5)
     expect(read.grid.map((r) => r.join('|')).join('\n')).toContain('Salary November')

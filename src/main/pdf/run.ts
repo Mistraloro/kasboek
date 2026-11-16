@@ -29,13 +29,13 @@ let busy = false
 export async function runReader(start: () => ReaderChild, bytes: Uint8Array, opts: ReadOptions = {}): Promise<PdfText> {
   if (busy) throw new AppError('import.pdf_busy', 'Another PDF is still being read. Wait a moment and try again.')
   busy = true
-  let child: ReaderChild | null = null
+  const started: { child: ReaderChild | null } = { child: null }
   let timer: NodeJS.Timeout | null = null
   let onAbort: (() => void) | null = null
   try {
     return await new Promise<PdfText>((resolve, reject) => {
       if (opts.signal?.aborted) return reject(new AppError('import.pdf_cancelled', 'Reading the PDF was cancelled.'))
-      child = start()
+      const child = (started.child = start())
       onAbort = () => reject(new AppError('import.pdf_cancelled', 'Reading the PDF was cancelled.'))
       opts.signal?.addEventListener('abort', onAbort, { once: true })
       timer = setTimeout(() => reject(new AppError('import.pdf_too_large', 'Reading this PDF took too long. Try a PDF of one statement.')), opts.timeoutMs ?? READ_TIMEOUT_MS)
@@ -56,7 +56,7 @@ export async function runReader(start: () => ReaderChild, bytes: Uint8Array, opt
     if (timer) clearTimeout(timer)
     if (onAbort) opts.signal?.removeEventListener('abort', onAbort)
     try {
-      child?.kill()
+      started.child?.kill()
     } finally {
       busy = false
     }

@@ -29,7 +29,11 @@ export default defineConfig({
     build: {
       externalizeDeps: { exclude: ['@anthropic-ai/sdk', 'zod', 'qrcode', 'hash-wasm', 'pdfjs-dist'] },
       // The PDF reader runs in a process of its own: a second entry, written next to the app's.
-      rollupOptions: { input: { index: resolve('src/main/index.ts'), 'pdf-reader': resolve('src/main/pdf/reader-process.ts') } }
+      // Shared chunks stay in the same folder too, because paths are found from __dirname (out/main).
+      rollupOptions: {
+        input: { index: resolve('src/main/index.ts'), 'pdf-reader': resolve('src/main/pdf/reader-process.ts') },
+        output: { chunkFileNames: '[name]-[hash].js' }
+      }
     }
   },
   preload: {
