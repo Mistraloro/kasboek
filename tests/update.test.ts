@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { installKind, newer, pickAsset } from '@core/update'
+import { buildUpdatePlan, failedUpdateMessage, installKind, msiOutcome, msiOutcomeMessage, newer, pickAsset, type MsiOutcome, type UpdatePlanInput } from '@core/update'
 
 const files = ['Kasboek-0.12.0-win-x64.msi', 'Kasboek-0.12.0-win-arm64.msi', 'Kasboek-0.12.0-mac-arm64.dmg', 'Kasboek-0.12.0-mac-x64.dmg', 'Kasboek-0.12.0-x86_64.AppImage', 'Kasboek-0.12.0-arm64.AppImage', 'Kasboek-0.12.0-amd64.deb', 'Kasboek-0.12.0-arm64.deb', 'SHA256SUMS.txt'].map((name) => ({ name }))
 
@@ -27,5 +27,101 @@ describe('updates', () => {
     expect(pickAsset(files, 'deb', 'x64')?.name).toBe('Kasboek-0.12.0-amd64.deb')
     expect(pickAsset(files, 'deb', 'arm64')?.name).toBe('Kasboek-0.12.0-arm64.deb')
     expect(pickAsset([{ name: 'Kasboek-0.12.0-win-x64.exe' }], 'msi', 'x64')).toBeNull()
+  })
+})
+
+const texts = { waiting: 'w', installing: 'i', starting: 's', failed: 'f', cancelled: 'c' }
+const hash = 'ab'.repeat(32)
+const winPlan = (over: Partial<UpdatePlanInput> = {}): UpdatePlanInput => ({
+  platform: 'win32',
+  pid: 4242,
+  exe: 'C:\\Program Files\\Kasboek\\Kasboek.exe',
+  args: [],
+  msi: 'C:\\Users\\Jérôme Dupont\\AppData\\Roaming\\Kasboek\\updates\\Kasboek-0.12.0-win-x64.msi',
+  sha256: hash,
+  log: 'C:\\Users\\Jérôme Dupont\\AppData\\Roaming\\Kasboek\\updates\\install.log',
+  result: 'C:\\Users\\Jérôme Dupont\\AppData\\Roaming\\Kasboek\\updates\\result.json',
+  updatesDir: 'C:\\Users\\Jérôme Dupont\\AppData\\Roaming\\Kasboek\\updates',
+  toVersion: '0.12.0',
+  theme: 'dark',
+  texts,
+  ...over
+})
+
+describe('update plan', () => {
+  it('keeps paths with accents and spaces', () => {
+    const plan = buildUpdatePlan(winPlan())
+    expect(plan.v).toBe(1)
+    expect(plan.msi).toContain('Jérôme Dupont')
+    expect(plan.sha256).toBe(hash)
+    expect(plan.texts).toEqual(texts)
+  })
+
+  it('refuses unsafe file names', () => {
+    const dir = 'C:\\Users\\a\\updates'
+    for (const name of ['evil name.msi', 'a&b.msi', 'a"b.msi', 'a%b.msi', '..']) {
+      expect(() => buildUpdatePlan(winPlan({ updatesDir: dir, msi: `${dir}\\${name}` }))).toThrow(/unsafe name/)
+    }
+  })
+
+  it('refuses a checksum that is not 64 hex characters', () => {
+    for (const sha256 of ['', 'abc', 'g'.repeat(64), hash + 'a', ` ${hash}`]) expect(() => buildUpdatePlan(winPlan({ sha256 }))).toThrow(/SHA-256/)
+  })
+
+  it('refuses paths outside the updates folder', () => {
+    const dir = 'C:\\Users\\a\\updates'
+    const ok = { updatesDir: dir, msi: `${dir}\\x.msi`, log: `${dir}\\install.log`, result: `${dir}\\result.json` }
+    expect(() => buildUpdatePlan(winPlan(ok))).not.toThrow()
+    const outside = ['C:\\Users\\a\\x.msi', `${dir}\\..\\x.msi`, `${dir}\\..\\updates2\\x.msi`, 'C:\\Users\\a\\updates-evil\\x.msi', 'D:\\updates\\x.msi', dir, 'x.msi', `${dir}/../x.msi`]
+    for (const path of outside) {
+      expect(() => buildUpdatePlan(winPlan({ ...ok, msi: path })), `msi ${path}`).toThrow(/outside|unsafe/)
+      expect(() => buildUpdatePlan(winPlan({ ...ok, log: path })), `log ${path}`).toThrow(/outside/)
+      expect(() => buildUpdatePlan(winPlan({ ...ok, result: path })), `result ${path}`).toThrow(/outside/)
+    }
+  })
+
+  it('compares Windows paths without case and with either separator', () => {
+    const plan = buildUpdatePlan(winPlan({ updatesDir: 'c:\\users\\a\\UPDATES', msi: 'C:/Users/a/updates/x.msi', log: 'C:\\USERS\\a\\updates\\i.log', result: 'C:\\Users\\a\\updates\\sub\\r.json' }))
+    expect(plan.msi).toBe('C:/Users/a/updates/x.msi')
+  })
+
+  it('compares other systems’ paths with case', () => {
+    const o = { platform: 'linux' as const, updatesDir: '/home/a/updates', msi: '/home/a/updates/x.msi', log: '/home/a/updates/i.log', result: '/home/a/updates/r.json' }
+    expect(() => buildUpdatePlan(winPlan(o))).not.toThrow()
+    expect(() => buildUpdatePlan(winPlan({ ...o, msi: '/home/a/Updates/x.msi' }))).toThrow(/outside/)
+    expect(() => buildUpdatePlan(winPlan({ ...o, msi: '/home/a/updates/../x.msi' }))).toThrow(/outside/)
+  })
+})
+
+describe('Windows Installer outcomes', () => {
+  it('maps exit codes', () => {
+    const expected: [number, MsiOutcome][] = [[0, 'ok'], [3010, 'reboot'], [1641, 'reboot'], [1602, 'cancelled'], [1618, 'busy'], [1625, 'blocked'], [1643, 'blocked'], [1603, 'failed'], [1, 'failed'], [-1, 'failed']]
+    for (const [code, outcome] of expected) expect(msiOutcome(code), String(code)).toBe(outcome)
+  })
+
+  it('has a message for every outcome', () => {
+    const all: MsiOutcome[] = ['ok', 'reboot', 'cancelled', 'busy', 'blocked', 'failed', 'not_closed', 'checksum']
+    const messages = all.map((o) => msiOutcomeMessage(o, '0.12.0'))
+    for (const m of messages) expect(m).toContain('0.12.0')
+    expect(new Set(messages.filter((_, i) => all[i] !== 'ok' && all[i] !== 'failed')).size).toBe(6)
+    expect(msiOutcomeMessage('busy', '1.0.0')).toMatch(/Another installation/)
+    expect(msiOutcomeMessage('cancelled', '1.0.0')).toMatch(/cancelled/)
+  })
+})
+
+describe('after a restart', () => {
+  it('counts a newer version as success, whatever the result says', () => {
+    expect(failedUpdateMessage('0.12.0', '0.12.0', { outcome: 'failed' })).toBeNull()
+    expect(failedUpdateMessage('0.12.0', '0.12.1', null)).toBeNull()
+  })
+
+  it('explains a failed install from the helper’s result', () => {
+    expect(failedUpdateMessage('0.12.0', '0.11.0', { code: 1618, outcome: 'busy' })).toBe(msiOutcomeMessage('busy', '0.12.0'))
+    expect(failedUpdateMessage('0.12.0', '0.11.0', { outcome: 'not_closed' })).toBe(msiOutcomeMessage('not_closed', '0.12.0'))
+  })
+
+  it('falls back to the general message without a usable result', () => {
+    const general = msiOutcomeMessage('failed', '0.12.0')
+    for (const result of [null, undefined, {}, { outcome: 'nonsense' }, { outcome: 7 }, 'text']) expect(failedUpdateMessage('0.12.0', '0.11.0', result)).toBe(general)
   })
 })

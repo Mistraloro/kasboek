@@ -1,4 +1,5 @@
 /** Pure helpers for updates: comparing versions and picking this computer's release file. */
+import { posix, win32 } from 'node:path'
 import type { UpdateKind } from '@shared/types'
 
 /** "0.11.2" > "0.11.1"; a leading "v" and anything after "-" are ignored. */
@@ -27,7 +28,7 @@ export function pickAsset<T extends { name: string }>(assets: T[], kind: UpdateK
   return assets.find((x) => new RegExp(pattern, 'i').test(x.name)) ?? null
 }
 
-/** Release file names are written to disk and into the Windows install script: letters, digits, dot, dash and underscore only. */
+/** Release file names are written to disk and into the update plan for the Windows helper: letters, digits, dot, dash and underscore only. */
 export const SAFE_ASSET_NAME = /^[A-Za-z0-9._-]+$/
 
 export function safeAssetName(name: string): boolean {
@@ -41,4 +42,86 @@ export function checksumFromSums(text: string, name: string): string | null {
     if (m && m[2] === name) return m[1]!.toLowerCase()
   }
   return null
+}
+
+/** What the Windows update helper (kasboek-mcp --apply-update) reads from `apply.json`. */
+export interface UpdatePlan {
+  v: 1
+  pid: number
+  exe: string
+  args: string[]
+  msi: string
+  sha256: string
+  log: string
+  result: string
+  toVersion: string
+  theme: 'light' | 'dark'
+  texts: { waiting: string; installing: string; starting: string; failed: string; cancelled: string }
+}
+
+export interface UpdatePlanInput extends Omit<UpdatePlan, 'v'> {
+  /** The folder that holds the downloaded file, the log and the result. */
+  updatesDir: string
+  /** Decides how paths are compared (case, separators); defaults to this system. */
+  platform?: NodeJS.Platform
+}
+
+/** `file` is inside `dir` (not `dir` itself), after resolving `..`; case-insensitive on Windows. */
+function insideFolder(dir: string, file: string, platform: NodeJS.Platform): boolean {
+  const p = platform === 'win32' ? win32 : posix
+  if (!p.isAbsolute(dir) || !p.isAbsolute(file)) return false
+  const rel = p.relative(p.resolve(dir), p.resolve(file))
+  return rel !== '' && rel !== '..' && !rel.startsWith(`..${p.sep}`) && !p.isAbsolute(rel)
+}
+
+/** The plan for the update helper; refuses anything that could make it install or write outside the updates folder. */
+export function buildUpdatePlan(o: UpdatePlanInput): UpdatePlan {
+  const platform = o.platform ?? process.platform
+  const p = platform === 'win32' ? win32 : posix
+  if (!safeAssetName(p.basename(o.msi))) throw new Error('The update file has an unsafe name.')
+  if (!/^[0-9a-fA-F]{64}$/.test(o.sha256)) throw new Error('The update checksum is not a SHA-256.')
+  for (const f of [o.msi, o.log, o.result]) if (!insideFolder(o.updatesDir, f, platform)) throw new Error('An update path is outside the updates folder.')
+  return { v: 1, pid: o.pid, exe: o.exe, args: o.args, msi: o.msi, sha256: o.sha256.toLowerCase(), log: o.log, result: o.result, toVersion: o.toVersion, theme: o.theme, texts: o.texts }
+}
+
+/** What Windows Installer's exit code means for the update. The last three are decided by the helper itself. */
+export type MsiOutcome = 'ok' | 'reboot' | 'cancelled' | 'busy' | 'blocked' | 'failed' | 'not_closed' | 'checksum'
+
+export function msiOutcome(code: number): MsiOutcome {
+  if (code === 0) return 'ok'
+  if (code === 3010 || code === 1641) return 'reboot'
+  if (code === 1602) return 'cancelled'
+  if (code === 1618) return 'busy'
+  if (code === 1625 || code === 1643) return 'blocked'
+  return 'failed'
+}
+
+/** The message for an update that didn't go in (shown after Kasboek opens again). */
+export function msiOutcomeMessage(o: MsiOutcome, version: string): string {
+  const retry = 'Try again, or install it from the release page.'
+  switch (o) {
+    case 'cancelled':
+      return `The update to ${version} was cancelled. ${retry}`
+    case 'busy':
+      return `Another installation was running, so the update to ${version} didn’t install. Try again when it has finished.`
+    case 'blocked':
+      return `Windows doesn’t allow this computer to install the update to ${version} (a policy blocks it). Ask whoever manages this computer.`
+    case 'not_closed':
+      return `Kasboek didn’t close in time, so the update to ${version} was not installed. ${retry}`
+    case 'checksum':
+      return `The update file for ${version} didn’t match its checksum, so it was not installed. ${retry}`
+    case 'reboot':
+      return `The update to ${version} needs Windows to restart before it is complete.`
+    default:
+      return `The update to ${version} didn’t install. ${retry}`
+  }
+}
+
+const OUTCOMES: readonly string[] = ['ok', 'reboot', 'cancelled', 'busy', 'blocked', 'failed', 'not_closed', 'checksum']
+
+/** After a restart: null when the pending update went in (the version is the truth), else why it didn't. `result` is the helper's result.json, if any. */
+export function failedUpdateMessage(pendingVersion: string, current: string, result: unknown): string | null {
+  if (!newer(pendingVersion, current)) return null
+  const outcome = (result as { outcome?: unknown } | null)?.outcome
+  return msiOutcomeMessage(typeof outcome === 'string' && OUTCOMES.includes(outcome) ? (outcome as MsiOutcome) : 'failed', pendingVersion)
 }

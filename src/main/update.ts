@@ -2,7 +2,7 @@
  * Updates from the project's GitHub releases. Kasboek asks GitHub for the latest release (at start
  * and once a day, when the person allows it), downloads the file for this computer, checks it
  * against the SHA-256 that GitHub reports for it, makes a backup and installs it:
- * - Windows: the MSI runs silently after Kasboek closes, then Kasboek opens again;
+ * - Windows: a helper installs the MSI after Kasboek closes (Windows Installer shows its progress), then Kasboek opens again;
  * - Linux AppImage: the file is replaced and started again;
  * - Linux .deb and macOS .dmg: the file is opened, and the person finishes the install.
  * Only release files of this repository are downloaded; nothing about the person's data is sent.
@@ -11,10 +11,11 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { chmodSync, copyFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { app, net, shell } from 'electron'
+import { app, nativeTheme, net, shell } from 'electron'
 import { AppError } from '@core/errors'
 import type { UpdateStatus } from '@shared/types'
-import { checksumFromSums, installKind, newer, pickAsset, safeAssetName } from '@core/update'
+import { buildUpdatePlan, checksumFromSums, failedUpdateMessage, installKind, newer, pickAsset, safeAssetName } from '@core/update'
+import { helperPath } from './mcp/channel'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { broadcast, isUnlocked } from './session'
@@ -23,6 +24,7 @@ import { TRANSFER_EXTENSION } from '@core/transfer-format'
 
 const REPO = 'Mistraloro/kasboek'
 const LATEST = `https://api.github.com/repos/${REPO}/releases/latest`
+const RELEASES = `https://github.com/${REPO}/releases/latest`
 const DAY = 24 * 60 * 60 * 1000
 
 /** Development runs only: a stand-in for the GitHub API (tests). Packaged builds always use GitHub. */
@@ -104,7 +106,7 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     }
     const kind = installKind()
     const found = kind ? pickAsset(r.assets ?? [], kind) : null
-    // A file name ends up on disk and in the Windows install script: refuse anything but plain names.
+    // A file name ends up on disk and in the Windows update plan: refuse anything but plain names.
     asset = found && safeAssetName(found.name) && allowedDownload(found.browser_download_url) ? { name: found.name, url: found.browser_download_url, size: found.size, sha256: await checksum(r.assets ?? [], found.name) } : null
     // Downloaded before (e.g. "Later" after the download): ready again.
     const have = asset && existsSync(join(updatesDir(), asset.name)) && status.state === 'ready' && file
@@ -155,24 +157,47 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
   }
 }
 
-/** Starts the installer after Kasboek has closed (Windows): waits for this process, installs, opens Kasboek. */
-function installMsi(msi: string): void {
-  const script = join(updatesDir(), 'install.cmd')
-  const log = join(updatesDir(), 'install.log')
-  writeFileSync(
-    script,
-    [
-      '@echo off',
-      // Paths may hold accents (a user folder like Jérôme): read this file as UTF-8.
-      'chcp 65001 >nul',
-      'rem Kasboek update: waits for Kasboek to close, installs silently, opens Kasboek again.',
-      ':wait',
-      `tasklist /FI "PID eq ${process.pid}" 2>nul | find "${process.pid}" >nul && (timeout /t 1 /nobreak >nul & goto wait)`,
-      `start "" /wait msiexec /i "${msi}" /qn /norestart /l*v "${log}"`,
-      `start "" "${process.execPath}"`
-    ].join('\r\n')
-  )
-  spawn('cmd.exe', ['/d', '/c', script], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+/**
+ * Windows: starts a copy of the kasboek-mcp helper that waits for Kasboek to close, installs the MSI
+ * and opens Kasboek again. It runs from a copy because the MSI replaces the original in resources.
+ * No console is wanted, and `detached` on Windows gives the helper none (so windowsHide isn't set).
+ */
+async function startUpdateHelper(msi: string, sha256: string): Promise<void> {
+  const source = helperPath()
+  if (!existsSync(source)) throw new AppError('update.helper_missing', `The update helper is missing from this installation. Download the new version from ${RELEASES} and install it yourself.`)
+  const copy = join(updatesDir(), 'kasboek-update.exe')
+  const planFile = join(updatesDir(), 'apply.json')
+  const dark = getPrefs().theme === 'dark' || (getPrefs().theme === 'system' && nativeTheme.shouldUseDarkColors)
+  copyFileSync(source, copy)
+  const plan = buildUpdatePlan({
+    pid: process.pid,
+    exe: process.execPath,
+    args: app.isPackaged ? [] : [app.getAppPath()],
+    msi,
+    sha256,
+    log: join(updatesDir(), 'install.log'),
+    result: join(updatesDir(), 'result.json'),
+    updatesDir: updatesDir(),
+    toVersion: status.latest ?? '',
+    theme: dark ? 'dark' : 'light',
+    texts: {
+      waiting: 'Waiting for Kasboek to close…',
+      installing: 'Installing the update…',
+      starting: 'Opening Kasboek…',
+      failed: 'The update didn’t install. Kasboek will open again.',
+      cancelled: 'The update was cancelled.'
+    }
+  })
+  rmSync(plan.result, { force: true })
+  writeFileSync(planFile, JSON.stringify(plan))
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(copy, ['--apply-update', planFile], { detached: true, stdio: 'ignore' })
+    child.once('error', reject)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+    })
+  })
 }
 
 /** Replaces the running AppImage with the new one and starts it. */
@@ -202,10 +227,11 @@ export async function installUpdate(): Promise<UpdateStatus> {
     if (err) throw new AppError('update.open', `The update was downloaded but couldn’t be opened: ${err}`)
     return set({ state: 'opened' })
   }
+  if (status.kind === 'msi' && !asset?.sha256) throw new AppError('update.no_checksum', 'The release has no checksum for this file, so Kasboek won’t install it. Download it from the release page instead.')
   // The note lets the next start tell whether the update went in.
   writeFileSync(pendingFile(), JSON.stringify({ version: status.latest, at: new Date().toISOString() }))
   try {
-    if (status.kind === 'msi') installMsi(file)
+    if (status.kind === 'msi') await startUpdateHelper(file, asset!.sha256!)
     else installAppImage(file)
   } catch (err) {
     rmSync(pendingFile(), { force: true })
@@ -219,7 +245,7 @@ export async function installUpdate(): Promise<UpdateStatus> {
 }
 
 export function openReleasePage(): void {
-  const url = status.pageUrl ?? `https://github.com/${REPO}/releases/latest`
+  const url = status.pageUrl ?? RELEASES
   if (url.startsWith('https://github.com/')) void shell.openExternal(url)
 }
 
@@ -228,8 +254,15 @@ function afterRestart(): void {
   if (!existsSync(pendingFile())) return
   try {
     const { version } = JSON.parse(readFileSync(pendingFile(), 'utf8')) as { version: string }
-    if (newer(version, app.getVersion())) {
-      failedInstall = `The update to ${version} didn’t install. Try again, or install it from the release page.`
+    let result: unknown = null
+    try {
+      result = JSON.parse(readFileSync(join(updatesDir(), 'result.json'), 'utf8'))
+    } catch {
+      // No result: the helper never got as far as writing one.
+    }
+    const message = failedUpdateMessage(version, app.getVersion(), result)
+    if (message) {
+      failedInstall = message
       set({ state: 'error', latest: version, error: failedInstall })
       rmSync(pendingFile(), { force: true })
       return
@@ -237,7 +270,11 @@ function afterRestart(): void {
   } catch {
     // An unreadable note: just clean up.
   }
-  rmSync(updatesDir(), { recursive: true, force: true })
+  try {
+    rmSync(updatesDir(), { recursive: true, force: true })
+  } catch {
+    // The helper may still hold its program for a moment: the next start cleans up.
+  }
 }
 
 let started = false
