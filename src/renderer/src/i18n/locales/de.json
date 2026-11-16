@@ -198,6 +198,7 @@
       "amount_zero": "Betrag ist null",
       "status_refused": "von der Bank abgelehnt",
       "currency_other": "andere Währung",
+      "balance_mismatch": "Saldo ergibt sich nicht aus der Zeile davor",
       "possible_duplicate": "ähnelt einer Buchung, die schon in Kasboek ist"
     },
     "remember": "Dieses Format merken",

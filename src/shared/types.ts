@@ -666,6 +666,19 @@ export interface ImportMapping {
   columns: ImportColumns
 }
 
+/** How a PDF statement's printed balances and the rows read from it agree (cents). */
+export interface Reconciliation {
+  openingCents: number | null
+  closingCents: number | null
+  /** Sum of the rows' amounts (rows the person skipped are left out). */
+  sumCents: number
+  /** Closing minus (opening plus sum); 0 when the rows add up. Null when a balance is missing. */
+  differenceCents: number | null
+  rowsChecked: number
+  /** Rows whose running balance doesn't follow from the one before. */
+  runningMismatches: number
+}
+
 export interface ImportPreview {
   sessionId: string
   fileName: string
@@ -699,6 +712,15 @@ export interface ImportPreview {
   }
   notes: string[]
   check: CheckSummary | null
+  fileKind: 'csv' | 'pdf'
+  /** Only for a PDF statement. */
+  pdf: {
+    pages: number
+    readBy: 'kasboek' | 'assistant'
+    /** False when no table of transactions was found in the text. */
+    tableFound: boolean
+    reconciliation: Reconciliation | null
+  } | null
 }
 
 export interface ImportBatch {

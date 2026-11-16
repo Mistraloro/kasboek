@@ -289,7 +289,7 @@ describe('assistant plumbing', () => {
   })
 
   it('masks account numbers before a check is sent', async () => {
-    const { maskIban } = await import('../src/main/assistant/csv')
+    const { maskIban } = await import('../src/shared/iban')
     expect(maskIban('Naar BE68 5390 0754 7034 voor huur')).toBe('Naar BE…7034 voor huur')
     // Stuck to other text (a mandate reference), and only when the checksum is right.
     expect(maskIban('MANDAAT NUMMER : 864551BE68539007547034XYZ')).toBe('MANDAAT NUMMER : 864551BE…7034XYZ')

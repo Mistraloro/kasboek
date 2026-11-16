@@ -198,6 +198,7 @@
       "amount_zero": "o montante é zero",
       "status_refused": "recusado pelo banco",
       "currency_other": "outra moeda",
+      "balance_mismatch": "o saldo não corresponde à linha anterior",
       "possible_duplicate": "parece um movimento que já está no Kasboek"
     },
     "remember": "Memorizar este formato",

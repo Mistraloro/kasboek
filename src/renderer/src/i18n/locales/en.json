@@ -198,6 +198,7 @@
       "amount_zero": "amount is zero",
       "status_refused": "refused by the bank",
       "currency_other": "other currency",
+      "balance_mismatch": "balance does not follow from the row before",
       "possible_duplicate": "looks like a transaction already in Kasboek"
     },
     "remember": "Remember this layout",

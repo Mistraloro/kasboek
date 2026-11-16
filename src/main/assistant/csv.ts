@@ -12,6 +12,7 @@ import { RULE_COLUMNS, listRules, ruleMatches, ruleText, type RuleText } from '@
 import * as imp from '@core/import'
 import { getSettings } from '@core/settings'
 import { mappingSchema } from '@shared/import-mapping'
+import { maskIban, maskNumbers } from '@shared/iban'
 import type { ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
 import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type RowGroup } from '@core/assist-plan'
 import { client, explainError, modelParams } from './claude'
@@ -39,39 +40,6 @@ You get the raw cells, the column mapping the app detected, the rows it couldn't
 - notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
 personNotes, when given, are things the person told the assistant to remember (e.g. which category a payee belongs in): follow them.
 Never invent amounts or dates that are not supported by the raw cells.`
-
-/**
- * Account numbers don't help the check: only the country and last four digits are sent. Also
- * found when stuck to other text ("…864551BE29001477…" in a mandate reference); a candidate only
- * counts when its IBAN checksum is right, so other codes are left alone.
- */
-const IBAN = /(?<![A-Z])([A-Z]{2})(\d{2})((?:[ ]?[A-Z0-9]){10,30})/g
-const IBAN_LENGTH: Record<string, number> = { BE: 16, NL: 18, FR: 27, DE: 22, LU: 20, ES: 24, PT: 25, IT: 27, GB: 22, IE: 22, AT: 20, CH: 21, LT: 20, MT: 31 }
-
-function validIban(iban: string): boolean {
-  const re = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55))
-  let rem = 0
-  for (const ch of re) rem = (rem * 10 + Number(ch)) % 97
-  return rem === 1
-}
-
-export const maskIban = (text: string): string =>
-  text.replace(IBAN, (m, cc: string) => {
-    const compact = m.replace(/\s/g, '')
-    // Try the country's length first (the match may run on into other text), then shorter ones.
-    const lengths = IBAN_LENGTH[cc] ? [IBAN_LENGTH[cc]!] : Array.from({ length: compact.length - 13 }, (_, i) => compact.length - i)
-    for (const len of lengths) {
-      const candidate = compact.slice(0, len)
-      if (candidate.length === len && validIban(candidate)) {
-        // Keep what followed the account number.
-        let used = 0
-        let count = 0
-        while (count < len && used < m.length) if (m[used++] !== ' ') count++
-        return `${cc}…${candidate.slice(-4)}${m.slice(used)}`
-      }
-    }
-    return m
-  })
 
 /** At most `n` items spread over the whole list rather than only the first ones. */
 function spread<T>(items: T[], n: number): T[] {
@@ -154,7 +122,7 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
         : {}),
       noteLanguage: LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English',
       account,
-      fileName: preview.fileName,
+      fileName: maskNumbers(preview.fileName),
       recognisedLayout: preview.layout,
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,

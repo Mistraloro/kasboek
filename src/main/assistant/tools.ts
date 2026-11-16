@@ -76,6 +76,8 @@ export function compactResult(op: OpName, data: unknown, input?: unknown): strin
       fileName: p.fileName,
       account: p.accountName,
       layout: p.layout,
+      fileKind: p.fileKind,
+      ...(p.pdf ? { pdf: { tableFound: p.pdf.tableFound, readBy: p.pdf.readBy, reconciliation: p.pdf.reconciliation } } : {}),
       mappingSource: p.mappingSource,
       headers: p.headers.map((h, i) => `${i}: ${h}`),
       mapping: p.mapping,

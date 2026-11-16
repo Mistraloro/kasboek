@@ -198,6 +198,7 @@
       "amount_zero": "montant nul",
       "status_refused": "refusée par la banque",
       "currency_other": "autre devise",
+      "balance_mismatch": "le solde ne découle pas de la ligne précédente",
       "possible_duplicate": "ressemble à une transaction déjà dans Kasboek"
     },
     "remember": "Retenir cette mise en page",

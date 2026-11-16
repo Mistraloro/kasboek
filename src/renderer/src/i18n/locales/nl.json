@@ -198,6 +198,7 @@
       "amount_zero": "bedrag is nul",
       "status_refused": "geweigerd door de bank",
       "currency_other": "andere munt",
+      "balance_mismatch": "saldo volgt niet uit de rij ervoor",
       "possible_duplicate": "lijkt op een transactie die al in Kasboek staat"
     },
     "remember": "Deze indeling onthouden",
