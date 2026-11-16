@@ -1,15 +1,16 @@
 import { ArrowLeft, FileLock2, KeyRound, ShieldCheck } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { call } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { formatDateTime } from '../../lib/format'
+import { usePrefsFmt } from '../../lib/settings'
 import { AuthCard, AuthLayout } from './AuthLayout'
 import { ImportFlow } from './ImportFlow'
 import { DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './parts'
-
-type Step = 'choose' | 'password' | 'import' | 'recovery' | 'twofactor'
+import { mayRefreshOnFocus, type SetupStep as Step } from '@shared/setup-rules'
 
 function Choice({ icon, title, body, onClick, disabled, note }: { icon: ReactNode; title: string; body: string; onClick: () => void; disabled?: boolean; note?: string }) {
   return (
@@ -32,23 +33,44 @@ function Choice({ icon, title, body, onClick, disabled, note }: { icon: ReactNod
 export function Setup() {
   const { t } = useTranslation()
   const toast = useToast()
-  const { status, refresh, set } = useAuth()
+  const { status, refresh, set, setSetupFlowActive } = useAuth()
   const deviceName = useDeviceName(status.device)
+  const fmt = usePrefsFmt()
   const [step, setStep] = useState<Step>('choose')
   const [pw, setPw] = useState({ a: '', b: '' })
   const [recoveryKey, setRecoveryKey] = useState('')
   const [busy, setBusy] = useState(false)
 
+  // Windows Hello may have been switched on (or was busy) after Kasboek looked: check again on return.
+  // Not once an account exists: the refresh would then show the app and skip the recovery key check.
+  useEffect(() => {
+    if (!mayRefreshOnFocus(step)) return
+    const again = (): void => void refresh()
+    window.addEventListener('focus', again)
+    return () => window.removeEventListener('focus', again)
+  }, [refresh, step])
+
   const create = (input: { mode: 'password'; password: string } | { mode: 'device' }): void => {
     setBusy(true)
+    // Before the call: the main process unlocks and may broadcast before the answer arrives.
+    setSetupFlowActive(true)
     void call('auth.setup', input)
       .then((r) => {
         setRecoveryKey(r.recoveryKey)
         setStep('recovery')
       })
-      .catch((e) => toast(errText(e), 'error'))
+      .catch((e) => {
+        setSetupFlowActive(false)
+        toast(errText(e), 'error')
+      })
       .finally(() => setBusy(false))
   }
+
+  // The flow is over: let the app take over once the status is current.
+  const finish = (): void => void refresh().then(
+      () => setSetupFlowActive(false),
+      () => window.location.reload()
+    )
 
   const back = (
     <button type="button" onClick={() => setStep('choose')} className="mb-3 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text">
@@ -66,12 +88,44 @@ export function Setup() {
               icon={<DeviceIcon kind={status.device} />}
               title={status.device ? t('auth.chooseDevice', { name: deviceName }) : t('auth.choosePasswordless')}
               body={t('auth.chooseDeviceBody')}
-              disabled={!status.device || busy}
-              note={status.device ? undefined : status.deviceChecking ? t('auth.deviceChecking') : t('auth.deviceUnavailableHint')}
+              disabled={!status.device || status.keyProtection !== 'os' || busy}
+              note={
+                status.device
+                  ? status.keyProtection !== 'os'
+                    ? t('auth.deviceUnprotectedHint')
+                    : undefined
+                  : status.deviceChecking
+                    ? t('auth.deviceChecking')
+                    : t('auth.deviceUnavailableHint')
+              }
               onClick={() => create({ mode: 'device' })}
             />
             <Choice icon={<FileLock2 size={16} />} title={t('auth.chooseImport')} body={t('auth.chooseImportBody')} onClick={() => setStep('import')} />
           </div>
+          {status.erased.length > 0 && (
+            <div className="mt-4 rounded-lg bg-surface-2 px-3 py-2.5">
+              <p className="text-[13px] font-medium">{t('auth.restoreErased')}</p>
+              <p className="text-[13px] text-muted">{t('auth.restoreErasedBody')}</p>
+              <div className="mt-2 flex flex-col items-start gap-1.5">
+                {status.erased.map((e) => (
+                  <Button
+                    key={e.name}
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true)
+                      void call('auth.restoreErased', { name: e.name })
+                        .then(set)
+                        .catch((err) => toast(errText(err), 'error'))
+                        .finally(() => setBusy(false))
+                    }}
+                  >
+                    {t('auth.restoreErasedItem', { date: formatDateTime(e.erasedAt, fmt) })}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           {status.keyProtection === 'weak' && <p className="mt-4 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">{t('settings.keyStorageWeakHint')}</p>}
         </AuthCard>
       )}
@@ -113,7 +167,7 @@ export function Setup() {
 
       {step === 'twofactor' && (
         <AuthCard title={t('auth.totpTitle')} body={t('auth.totpBody')}>
-          <TotpSetup onDone={() => void refresh()} onCancel={() => void refresh()} />
+          <TotpSetup onDone={finish} onCancel={finish} />
           <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
             <ShieldCheck size={13} /> {t('auth.totpLater')}
           </p>

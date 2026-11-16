@@ -552,7 +552,7 @@
     "recoveredBody": "Vous avez déverrouillé avec votre clé de récupération. Choisissez un nouveau mot de passe pour garder Kasboek en sécurité.",
     "eraseLink": "Effacer les données",
     "eraseTitle": "Effacer Kasboek sur cet ordinateur",
-    "eraseBody": "Supprime toutes les données de Kasboek sur cet ordinateur. C’est irréversible. Les exports et sauvegardes ailleurs ne sont pas touchés.",
+    "eraseBody": "Met de côté toutes les données de Kasboek sur cet ordinateur et repart de zéro. Tout, copies de sécurité comprises, reste chiffré en quarantaine pendant 30 jours. Pendant ce délai, vous pouvez le restaurer depuis l’écran de configuration avec le mot de passe d’origine ou la clé de récupération. Après 30 jours, tout est supprimé définitivement. Les exports et sauvegardes ailleurs ne sont pas touchés.",
     "eraseType": "Tapez EFFACER pour confirmer",
     "eraseWord": "EFFACER",
     "eraseConfirm": "Tout effacer",
@@ -576,7 +576,11 @@
     "rememberComputer": "Mémoriser cet ordinateur pendant 30 jours",
     "rememberedNote": "Code à deux facteurs mémorisé sur cet ordinateur jusqu’au {{date}}.",
     "deviceChecking": "Recherche de Windows Hello ou Touch ID…",
-    "recoveryHidden": "La clé est maintenant masquée : retrouvez-la là où vous l’avez conservée."
+    "recoveryHidden": "La clé est maintenant masquée : retrouvez-la là où vous l’avez conservée.",
+    "restoreErased": "Restaurer les données effacées",
+    "restoreErasedBody": "Les données effacées sont conservées 30 jours, puis supprimées définitivement. Choisissez la copie à restaurer. Il faut le mot de passe ou la clé de récupération d’alors.",
+    "deviceUnprotectedHint": "Nécessite que cet ordinateur protège la clé de Kasboek (compte Windows, Trousseau ou trousseau de clés Linux).",
+    "restoreErasedItem": "Restaurer la copie du {{date}}"
   },
   "transfer": {
     "title": "Passer à un autre ordinateur",
@@ -595,7 +599,17 @@
     "needsNewPassword": "Cet export utilisait Windows Hello ou Touch ID, indisponible ici. Choisissez un mot de passe pour cet ordinateur.",
     "replaceWarning": "Cela remplace tout le contenu de Kasboek sur cet ordinateur. Une copie de sécurité des données actuelles est faite d’abord.",
     "importConfirm": "Importer",
-    "imported": "Import terminé."
+    "imported": "Import terminé.",
+    "resetNotice": "Par sécurité, ces éléments n’ont pas été repris du fichier : {{items}}. Configurez-les à nouveau dans les Réglages.",
+    "reset": {
+      "aiKey": "clés IA",
+      "aiEndpoint": "fournisseur et adresse IA",
+      "permissions": "autorisations de l’assistant",
+      "mcp": "accès MCP",
+      "autoBackup": "sauvegardes automatiques (désactivées)",
+      "memory": "mémoire de l’assistant",
+      "sync": "clé de synchronisation et mot de passe WebDAV"
+    }
   },
   "categories": {
     "kind": {
@@ -1196,5 +1210,17 @@
     "joinSubmit": "Trouver la synchronisation",
     "startSubmit": "Connecter et synchroniser",
     "server": "Serveur WebDAV"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello ou Touch ID ne peut remplacer le mot de passe que si cet ordinateur protège la clé de Kasboek (compte Windows, Trousseau macOS ou trousseau de clés Linux). Choisissez plutôt un mot de passe.",
+    "auth_nothing_erased": "Il n’y a pas de données effacées à restaurer.",
+    "auth_restore_blocked": "Kasboek est déjà configuré ici. Les données effacées ne peuvent être restaurées que sur le premier écran.",
+    "auth_erase_failed": "Kasboek n’a pas pu mettre les données de côté, l’effacement a donc été arrêté. Rien n’a été supprimé.",
+    "auth_device_unavailable": "Windows Hello n’a pas pu être démarré. Réessayez ou relancez Kasboek.",
+    "auth_device_not_present": "Windows Hello n’est pas configuré sur cet ordinateur : aucune caméra, aucun lecteur d’empreintes ni aucun code PIN n’est disponible.",
+    "auth_device_not_configured": "Windows Hello n’est pas configuré pour votre compte Windows. Configurez-le d’abord dans les paramètres Windows.",
+    "auth_device_disabled": "Windows Hello est désactivé par une stratégie sur cet ordinateur.",
+    "auth_device_busy": "Windows Hello est occupé. Réessayez dans un instant.",
+    "auth_device_retries_exhausted": "Windows Hello s’est arrêté après trop de tentatives échouées. Réessayez plus tard."
   }
 }

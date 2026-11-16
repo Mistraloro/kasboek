@@ -1,7 +1,7 @@
 import { FileLock2, FolderSync, Server } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AuthStatus, PickedTransfer } from '@shared/types'
+import type { AuthStatus, ImportReset, PickedTransfer } from '@shared/types'
 import { Button, Field, Input } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { WebDavModal } from '../../components/WebDav'
@@ -11,7 +11,20 @@ import { usePrefsFmt } from '../../lib/settings'
 import { CodeInput, errText, PasswordFields, passwordsOk } from './parts'
 
 /** Pick a .kasboek file and open it with the login details it was made with. */
-export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s: AuthStatus) => void; onCancel: () => void; replacing?: boolean; preset?: PickedTransfer }) {
+export function ImportFlow({
+  onDone,
+  onCancel,
+  onNotice,
+  replacing,
+  preset
+}: {
+  onDone: (s: AuthStatus) => void
+  onCancel: () => void
+  /** Called when the reset notice appears: the data is replaced by then, so only "Continue" may close the dialog. */
+  onNotice?: (shown: boolean) => void
+  replacing?: boolean
+  preset?: PickedTransfer
+}) {
   const { t } = useTranslation()
   const toast = useToast()
   const fmt = usePrefsFmt()
@@ -23,6 +36,28 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
   const [newPw, setNewPw] = useState({ a: '', b: '' })
   const [busy, setBusy] = useState(false)
   const [dav, setDav] = useState(false)
+  // Set after an import that left some settings out: shown until the user continues.
+  const [done, setDone] = useState<{ status: AuthStatus; reset: ImportReset[] } | null>(null)
+  // A chosen sync folder leaves a downloaded copy behind until it is imported or dropped.
+  const cancel = (): void => {
+    if (picked) void call('sync.cancelJoin', { token: picked.token }).catch(() => undefined)
+    onCancel()
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">
+          {t('transfer.resetNotice', { items: done.reset.map((r) => t(`transfer.reset.${r}`)).join(', ') })}
+        </p>
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={() => onDone(done.status)}>
+            {t('auth.continue')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (!picked) {
     return (
@@ -98,9 +133,13 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
           ...(useRecovery ? { recoveryKey } : { password, ...(needsCode ? { code } : {}) }),
           ...(picked.needsNewPassword ? { newPassword: newPw.a } : {})
         })
-          .then((s) => {
+          .then(({ status, reset }) => {
             toast(t('transfer.imported'))
-            onDone(s)
+            if (reset.length) {
+              onNotice?.(true)
+              setDone({ status, reset })
+            }
+            else onDone(status)
           })
           .catch((err) => toast(errText(err), 'error'))
           .finally(() => setBusy(false))
@@ -135,7 +174,7 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
       )}
       {replacing && <p className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">{t('transfer.replaceWarning')}</p>}
       <div className="flex justify-end gap-2">
-        <Button onClick={onCancel}>{t('settings.cancel')}</Button>
+        <Button onClick={cancel}>{t('settings.cancel')}</Button>
         <Button type="submit" variant="primary" disabled={!ready || busy}>
           {busy ? t('auth.working') : t('transfer.importConfirm')}
         </Button>

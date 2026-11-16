@@ -128,7 +128,7 @@ export function throttleSeconds(account: AccountData, now = Date.now()): number 
   return Math.max(0, Math.ceil((Date.parse(lastFailedAt) + delay * 1000 - now) / 1000))
 }
 
-function checkThrottle(account: AccountData): void {
+export function checkThrottle(account: AccountData): void {
   const wait = throttleSeconds(account)
   if (wait > 0) throw new AppError('auth.throttled', `Too many attempts. Try again in ${wait} seconds.`)
 }

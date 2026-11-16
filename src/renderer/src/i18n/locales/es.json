@@ -552,7 +552,7 @@
     "recoveredBody": "Has desbloqueado con tu clave de recuperación. Elige una nueva contraseña para mantener Kasboek seguro.",
     "eraseLink": "Borrar datos",
     "eraseTitle": "Borrar Kasboek en este ordenador",
-    "eraseBody": "Elimina todos los datos de Kasboek en este ordenador. No se puede deshacer. Las exportaciones y copias guardadas en otros sitios no se tocan.",
+    "eraseBody": "Aparta todos los datos de Kasboek de este ordenador y empieza de cero. Todo, incluidas las copias de seguridad, se conserva cifrado en cuarentena durante 30 días. En ese plazo puedes restaurarlo desde la pantalla de configuración con la contraseña original o la clave de recuperación. Pasados los 30 días se elimina definitivamente. Las exportaciones y copias guardadas en otros sitios no se tocan.",
     "eraseType": "Escribe BORRAR para confirmar",
     "eraseWord": "BORRAR",
     "eraseConfirm": "Borrarlo todo",
@@ -576,7 +576,11 @@
     "rememberComputer": "Recordar este ordenador durante 30 días",
     "rememberedNote": "Código de verificación recordado en este ordenador hasta el {{date}}.",
     "deviceChecking": "Buscando Windows Hello o Touch ID…",
-    "recoveryHidden": "La clave está oculta ahora: búscala donde la guardaste."
+    "recoveryHidden": "La clave está oculta ahora: búscala donde la guardaste.",
+    "restoreErased": "Restaurar los datos borrados",
+    "restoreErasedBody": "Los datos borrados se conservan 30 días y después se eliminan definitivamente. Elige qué copia restaurar. Hace falta la contraseña o la clave de recuperación que tenía.",
+    "deviceUnprotectedHint": "Requiere que este ordenador proteja la clave de Kasboek (cuenta de Windows, Llavero o un llavero de Linux).",
+    "restoreErasedItem": "Restaurar la copia del {{date}}"
   },
   "transfer": {
     "title": "Pasar a otro ordenador",
@@ -595,7 +599,17 @@
     "needsNewPassword": "Esta exportación usaba Windows Hello o Touch ID, que no están disponibles aquí. Elige una contraseña para este ordenador.",
     "replaceWarning": "Esto sustituye todo lo que hay en Kasboek en este ordenador. Antes se hace una copia de seguridad de los datos actuales.",
     "importConfirm": "Importar",
-    "imported": "Importación completada."
+    "imported": "Importación completada.",
+    "resetNotice": "Por seguridad, esto no se tomó del archivo: {{items}}. Vuelve a configurarlo en Ajustes.",
+    "reset": {
+      "aiKey": "claves de IA",
+      "aiEndpoint": "proveedor y dirección de IA",
+      "permissions": "permisos del asistente",
+      "mcp": "acceso MCP",
+      "autoBackup": "copias automáticas (desactivadas)",
+      "memory": "memoria del asistente",
+      "sync": "clave de sincronización y contraseña WebDAV"
+    }
   },
   "categories": {
     "kind": {
@@ -1196,5 +1210,17 @@
     "joinSubmit": "Buscar la sincronización",
     "startSubmit": "Conectar y sincronizar",
     "server": "Servidor WebDAV"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello o Touch ID solo puede sustituir a la contraseña cuando este ordenador protege la clave de Kasboek (cuenta de Windows, Llavero de macOS o un llavero de Linux). Elige una contraseña en su lugar.",
+    "auth_nothing_erased": "No hay datos borrados que restaurar.",
+    "auth_restore_blocked": "Kasboek ya está configurado aquí. Los datos borrados solo se pueden restaurar en la primera pantalla.",
+    "auth_erase_failed": "Kasboek no pudo apartar los datos, así que se detuvo el borrado. No se eliminó nada.",
+    "auth_device_unavailable": "No se pudo iniciar Windows Hello. Inténtalo de nuevo o reinicia Kasboek.",
+    "auth_device_not_present": "Windows Hello no está configurado en este ordenador: no hay cámara, lector de huellas ni PIN disponible.",
+    "auth_device_not_configured": "Windows Hello no está configurado para tu cuenta de Windows. Configúralo primero en los ajustes de Windows.",
+    "auth_device_disabled": "Windows Hello está desactivado por una directiva de este ordenador.",
+    "auth_device_busy": "Windows Hello está ocupado. Inténtalo de nuevo en un momento.",
+    "auth_device_retries_exhausted": "Windows Hello se detuvo tras demasiados intentos fallidos. Inténtalo más tarde."
   }
 }

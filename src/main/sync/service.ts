@@ -29,6 +29,7 @@ import { openSyncFile as open, sealSyncFile as seal } from '@core/sync-file'
 import { SYNC_DIR, WebDavStore, normalizeWebDavUrl, type SyncStore } from '@core/sync-store'
 import { FolderStore } from '@core/sync-store-folder'
 import type { PickedTransfer, SyncStatus } from '@shared/types'
+import { startupLog } from '../graphics'
 import { paths } from '../paths'
 import { broadcast, db as liveDb, isUnlocked, onLock } from '../session'
 import { describeTransfer, writeTransfer } from '../transfer/service'
@@ -302,7 +303,28 @@ export async function startSync(input: { webdav?: WebDavInput } = {}): Promise<S
 /** Joining: the place (and a WebDAV password) waits here until the snapshot has been imported. */
 const pendingJoins = new Map<string, { place: Place; password?: string; tmp?: string }>()
 
+/** Whether this picked file is a sync folder's snapshot being joined (it keeps its sync key on import). */
+export const isPendingJoin = (token: string): boolean => pendingJoins.has(token)
+
+/** Forgets a join that was not completed and removes its downloaded copy of the snapshot. */
+export function cancelJoin(token: string): void {
+  const pending = pendingJoins.get(token)
+  pendingJoins.delete(token)
+  if (pending?.tmp) rmSync(pending.tmp, { force: true })
+}
+
+/** Downloaded snapshots left behind by an earlier run that stopped half-way. */
+export function removeJoinLeftovers(): void {
+  try {
+    for (const f of readdirSync(paths.dataDir)) if (/^join-[0-9a-f-]+\.kasboek$/.test(f)) rmSync(join(paths.dataDir, f), { force: true })
+  } catch {
+    // Never let cleaning up stop Kasboek from starting.
+  }
+}
+
 export async function pickJoin(input: { webdav?: WebDavInput } = {}): Promise<PickedTransfer> {
+  // Choosing again replaces an earlier, unfinished join.
+  for (const token of [...pendingJoins.keys()]) cancelJoin(token)
   const chosen = await choosePlace('Choose the sync folder to join', input.webdav)
   if (!chosen) throw new AppError('sync.cancelled', 'No folder chosen.')
   const { store, place } = chosen
@@ -330,9 +352,14 @@ export async function pickJoin(input: { webdav?: WebDavInput } = {}): Promise<Pi
     tmp = file = join(paths.dataDir, `join-${randomUUID()}.kasboek`)
     writeFileSync(file, data, { mode: 0o600 })
   }
-  const info = await describeTransfer(file)
-  pendingJoins.set(info.token, { place, password: chosen.password, tmp })
-  return info
+  try {
+    const info = await describeTransfer(file)
+    pendingJoins.set(info.token, { place, password: chosen.password, tmp })
+    return info
+  } catch (err) {
+    if (tmp) rmSync(tmp, { force: true })
+    throw err
+  }
 }
 
 /** After an import: when it was a join, start syncing from that place on this computer. */
@@ -387,6 +414,22 @@ export function stopSync(): SyncStatus {
   return syncStatus()
 }
 
+/**
+ * After an import switched sync off in the new database: removes the place file and the outbox, as stopSync does.
+ * Each removal that fails is logged and skipped; the import has already succeeded.
+ */
+export function removeSyncLeftovers(): void {
+  for (const target of [paths.syncFile, outboxDir()]) {
+    try {
+      rmSync(target, { recursive: target !== paths.syncFile, force: true })
+    } catch (err) {
+      startupLog(`sync: could not remove ${target} after an import: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+  known = null
+  lastError = null
+}
+
 export function dismissConflicts(): SyncStatus {
   sync.dismissConflicts(liveDb())
   publish()
@@ -427,9 +470,20 @@ export function onRemoteChanges(fn: () => void): void {
   onApplied = fn
 }
 
+const syncFailure = (err: unknown): string =>
+  err instanceof AppError ? err.message : `Sync failed: ${err instanceof Error ? err.message : String(err)}. Kasboek will try again.`
+
 export async function runSync(opts: { forceSnapshot?: boolean } = {}): Promise<void> {
   if (busy) return
-  const ctx = localContext()
+  let ctx: ReturnType<typeof localContext>
+  try {
+    ctx = localContext()
+  } catch (err) {
+    // E.g. the sync key is missing: show it as the sync problem, never as an unhandled rejection.
+    lastError = syncFailure(err)
+    publish()
+    return
+  }
   if (!ctx) return
   busy = true
   publish()
@@ -546,7 +600,7 @@ export async function runSync(opts: { forceSnapshot?: boolean } = {}): Promise<v
     lastSyncAt = state.lastSeen
     lastError = problems[0] ?? null
   } catch (err) {
-    lastError = err instanceof AppError ? err.message : `Sync failed: ${err instanceof Error ? err.message : String(err)}. Kasboek will try again.`
+    lastError = syncFailure(err)
   } finally {
     busy = false
     publish()
@@ -568,6 +622,7 @@ export function changedLocally(): void {
 }
 
 export function startSyncScheduler(): void {
+  removeJoinLeftovers()
   setInterval(() => void runSync(), 60_000)
   // Right before the database closes: write out what changed (into the outbox; it goes up at the next sync).
   onLock(() => {

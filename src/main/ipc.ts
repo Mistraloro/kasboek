@@ -1,10 +1,9 @@
-import { pathToFileURL } from 'node:url'
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebFrameMain } from 'electron'
 import { AppError } from '@core/errors'
 import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/ops'
 import { getSettings, updateSettings } from '@core/settings'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
-import { PUBLIC_OPS, type OpName } from '@shared/contract'
+import type { OpName } from '@shared/contract'
 import { graphicsStatus, markPainted } from './graphics'
 import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
@@ -12,10 +11,12 @@ import { defaultCategoryNames } from './i18n-categories'
 import { localizeDefaultCategories } from '@core/finance'
 import * as session from './session'
 import { applyTheme } from './theme'
+import { lockedRefusal } from './lock-guard'
+import { isTrustedFrameUrl } from './trusted-url'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
 import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
 import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
-import { afterImport as afterSyncImport, attach as attachSync, changedLocally as syncChangedLocally, dismissConflicts as dismissSyncConflicts, onRemoteChanges, pickJoin, runSync, startSync, stopSync, syncStatus } from './sync/service'
+import { afterImport as afterSyncImport, attach as attachSync, cancelJoin, changedLocally as syncChangedLocally, dismissConflicts as dismissSyncConflicts, isPendingJoin, onRemoteChanges, pickJoin, runSync, startSync, stopSync, syncStatus } from './sync/service'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
@@ -163,6 +164,14 @@ const desktopOps: OpTable = {
       return session.status()
     }
   },
+  'auth.restoreErased': {
+    mutates: false,
+    assistant: false,
+    handler: async (_c, { name }) => {
+      await session.restoreErasedData(name)
+      return session.status()
+    }
+  },
   'auth.changePassword': {
     mutates: true,
     assistant: false,
@@ -237,10 +246,10 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async (_c, input) => {
       if ((await session.status()).state === 'locked') throw new AppError('auth.locked', 'Unlock Kasboek first.')
-      await importTransfer(input)
+      const reset = await importTransfer(input, { joining: isPendingJoin(input.token) })
       // Joining a sync folder: from now on this computer syncs with it too.
       await afterSyncImport(input.token).catch((err: unknown) => console.warn('[sync] join failed:', err))
-      return session.status()
+      return { status: await session.status(), reset }
     }
   },
 
@@ -398,7 +407,23 @@ const desktopOps: OpTable = {
   },
   'sync.status': { mutates: false, assistant: false, handler: () => syncStatus() },
   'sync.start': { mutates: false, assistant: false, handler: (_c, input) => startSync(input) },
-  'sync.pickJoin': { mutates: false, assistant: false, handler: (_c, input) => pickJoin(input) },
+  'sync.pickJoin': {
+    mutates: false,
+    assistant: false,
+    handler: async (_c, input) => {
+      // Same rule as transfer.pick: not on the lock screen. At first setup (no account yet) and once logged in it works.
+      if ((await session.status()).state === 'locked') throw new AppError('auth.locked', 'Unlock Kasboek first.')
+      return pickJoin(input)
+    }
+  },
+  'sync.cancelJoin': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { token }) => {
+      cancelJoin(token)
+      return { ok: true as const }
+    }
+  },
   'sync.attach': { mutates: false, assistant: false, handler: (_c, input) => attachSync(input) },
   'sync.now': {
     mutates: false,
@@ -437,9 +462,8 @@ export function opContext(actor: OpContext['actor']): OpContext {
 
 /** Runs an operation, refusing everything but the login operations while locked. */
 export async function dispatch(name: OpName, input: unknown, actor: OpContext['actor']) {
-  if (!session.isUnlocked() && !PUBLIC_OPS.includes(name)) {
-    return { ok: false as const, error: { code: 'auth.locked', message: 'Kasboek is locked.' } }
-  }
+  const refusal = lockedRefusal(name, session.isUnlocked())
+  if (refusal) return refusal
   const result = await runOp(allOps, opContext(actor), name, input)
   // Tell open pages to refresh, e.g. when Claude changed a budget.
   if (result.ok && allOps[name]?.mutates) {
@@ -472,9 +496,7 @@ function notifyChanged(actor: OpContext['actor']): void {
 /** Only our own page may call operations; never a page that got navigated to. */
 function isTrusted(frame: WebFrameMain | null): boolean {
   if (!frame) return false
-  const dev = process.env['ELECTRON_RENDERER_URL']
-  if (!app.isPackaged && dev && frame.url.startsWith(dev)) return true
-  return frame.url.startsWith(pathToFileURL(paths.rendererDir).href)
+  return isTrustedFrameUrl(frame.url, paths.rendererDir, process.env['ELECTRON_RENDERER_URL'], app.isPackaged)
 }
 
 export function registerIpc(): void {

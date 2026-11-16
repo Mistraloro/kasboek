@@ -1,27 +1,21 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.14 (0.14.1)
-
-**Fixes**
-- **Windows on ARM (Snapdragon): no more white window.** On some graphics drivers, Kasboek opened as an empty white window. On Windows on ARM, Kasboek now draws without the graphics card by default. On any computer, if the graphics card fails to show Kasboek when it starts, Kasboek restarts once without it and remembers that.
-- **Windows Hello works again.** 0.13.0 said "Verification was cancelled or failed".
-- **The update window** (the "Update to …" button) could not be scrolled or clicked; only Esc closed it.
-- **The launch window** appears right away, before the rest of Kasboek loads.
+## What’s new in 0.15 (0.15.2)
 
 **New**
-- **Sync through a WebDAV server** (Nextcloud, ownCloud, Synology, QNAP, Koofr, pCloud, a NAS, …) instead of a cloud folder. Only encrypted files go there.
-- **Claude Desktop and the tray**: when Claude Desktop starts Kasboek's connection and Kasboek isn't running, Kasboek starts in the tray, locked. Closing the window while Claude is connected keeps Kasboek in the tray.
-- **Settings → About**: its own tab; the version under Lock opens it.
-- **Welcome window**: start syncing next to backups and auto-lock.
-- **Recovery key**: hidden while you type its last group, so you check it where you stored it.
-- **Graphics card** setting (Settings → General): automatic (recommended), always or never. It also says whether Kasboek draws with the graphics card right now, and why not.
-- **CSV import reads the exports of many more banks and payment apps**, from Europe, the UK, the Americas and beyond, with headers in many languages: ING, Rabobank, ABN AMRO, KBC, Belfius, BNP Paribas, Deutsche Bank, Sparkasse, DKB, N26, Revolut, Wise, PayPal, Monzo, Lloyds, Barclays, Chase, Bank of America, Santander, Nubank, Boursorama and more. It also understands:
-  - a separate debit/credit column;
-  - amounts with "DR"/"CR" or a currency sign;
-  - dates with month names or a time.
-- A **start-up log** (`startup.log` in the data folder) records technical facts only: version, system, graphics card and start-up steps, never your data. If Kasboek doesn't open properly, that file helps find out why.
+- **Erasing is recoverable.** Erased data, including its safety backups, is kept for 30 days. On the Setup screen you can restore it with the original password or recovery key. If your account is tied to this device (passwordless mode), Windows Hello or Touch ID is asked before anything is erased. A failed erase puts everything back.
+- **Importing a file or restoring a backup starts from safe settings.** AI settings and keys, permissions, MCP, auto-backup, assistant memory and sync are reset, and Kasboek tells you what was reset. Joining a sync keeps its sync key.
 
-Everything that came in 0.13 (transfers between currencies with exchange cost, settings in tabs, a fuller welcome window, the cleaner uninstall and more) is listed on the 0.13.0 release.
+**Fixes and safety**
+- **Windows Hello now works** (setup, unlock, and the checks before erasing or changing settings). On some computers the prompt was silently never shown. Each Hello answer (not set up, turned off by a policy, busy, too many failed attempts) has its own message, and `startup.log` records how Hello went.
+- **The recovery key check is no longer skipped** when you set up with Windows Hello: the setup screen stays until you have typed the last group of the key (and finished or skipped two-factor).
+- **Passwordless mode** is only offered when your computer protects the key itself. Importing a passwordless export on a computer without that asks you for a new password.
+- **CSV export** is safe against text that a spreadsheet could read as a formula.
+- **Passwords:** re-entering your password for sensitive actions has the same attempt limit as unlocking.
+- **Updates:** update file names and checksums are checked more strictly.
+- **Stricter check** that only Kasboek's own pages can call the app's backend.
+
+Everything that came in 0.14 (WebDAV sync, the Claude Desktop tray, many more CSV formats, the graphics card setting, the Windows on ARM fix and more) is listed on the 0.14.1 release.
 
 ## Download
 
@@ -39,10 +33,9 @@ All builds are 64-bit. Installing over an earlier version keeps your data. Kasbo
 
 These builds are not yet signed with a certificate:
 - **Windows** shows “Windows protected your PC”: click **More info → Run anyway**.
-- **macOS** says it can’t verify the developer: **right-click Kasboek → Open**, once.
+- **macOS** says it can’t verify the developer: **right-click Kasboek → Open**, once. On macOS 15 and later that shortcut no longer works: open **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ## Good to know
 
-- **Had a white window on 0.13 or earlier?** Install this version over it with the MSI; your data stays.
-- **Updating from 0.12 or 0.13**: their update window can’t be clicked (fixed in this version), so download the installer from this page once. From 0.14 on, the "Update to …" button works.
-- Windows Hello and Touch ID were only tested in simulation; please report anything odd.
+- **Updating from 0.12 or 0.13**: their update window can’t be clicked, so download the installer from this page once. From 0.14 on, the "Update to …" button works.
+- **Windows Hello** has been tested on a real Windows 11 computer. **Touch ID** has only been tested in simulation, not yet on a real Mac; please report anything odd.

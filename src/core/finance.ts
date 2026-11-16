@@ -614,21 +614,35 @@ export function transactionsCsv(db: Db, f: Omit<TxFilter, 'limit' | 'offset'>, o
     part_note: string | null
   }[]
   const sep = opts.decimal === ',' ? ';' : ','
-  const cell = (v: string | null): string => {
-    const x = v ?? ''
+  // Text from a bank file or typed by hand must never run as a formula in a spreadsheet: a leading
+  // = + - @ (or tab / carriage return) gets a single quote in front. Dates and amounts are ours.
+  const cell = (v: string | null, text = false): string => {
+    let x = v ?? ''
+    if (text && /^[=+\-@\t\r]/.test(x)) x = `'${x}`
     return /["\n\r]/.test(x) || x.includes(sep) ? `"${x.replace(/"/g, '""')}"` : x
   }
   const money = (c: number): string => {
     const abs = Math.abs(c)
     return `${c < 0 ? '-' : ''}${Math.floor(abs / 100)}${opts.decimal}${String(abs % 100).padStart(2, '0')}`
   }
-  const lines = [opts.labels.map(cell).join(sep)]
-  for (const r of rows)
+  const lines = [opts.labels.map((l) => cell(l)).join(sep)]
+  for (const r of rows) {
+    const text = (v: string | null): string => cell(v, true)
     lines.push(
-      [r.booking_date, r.account, r.counterparty_name, r.counterparty_iban, r.description, r.communication, r.category, money(r.amount), r.currency, [r.notes, r.part_note].filter(Boolean).join(' · ')]
-        .map((v) => cell(v))
-        .join(sep)
+      [
+        text(r.booking_date),
+        text(r.account),
+        text(r.counterparty_name),
+        text(r.counterparty_iban),
+        text(r.description),
+        text(r.communication),
+        text(r.category),
+        cell(money(r.amount)),
+        text(r.currency),
+        text([r.notes, r.part_note].filter(Boolean).join(' · '))
+      ].join(sep)
     )
+  }
   // A byte order mark, so spreadsheet programs read the accents right.
   return { csv: `\uFEFF${lines.join('\r\n')}\r\n`, rows: rows.length }
 }

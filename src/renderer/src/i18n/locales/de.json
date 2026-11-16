@@ -552,7 +552,7 @@
     "recoveredBody": "Du hast mit deinem Wiederherstellungsschlüssel entsperrt. Wähle ein neues Passwort, damit Kasboek sicher bleibt.",
     "eraseLink": "Daten löschen",
     "eraseTitle": "Kasboek auf diesem Computer löschen",
-    "eraseBody": "Löscht alle Daten von Kasboek auf diesem Computer. Das lässt sich nicht rückgängig machen. Exporte und Sicherungen an anderen Orten bleiben unberührt.",
+    "eraseBody": "Legt alle Daten von Kasboek auf diesem Computer beiseite und beginnt neu. Alles, auch die Sicherheitskopien, bleibt 30 Tage verschlüsselt in Quarantäne. In dieser Zeit lässt es sich auf dem Einrichtungsbildschirm mit dem ursprünglichen Passwort oder Wiederherstellungsschlüssel zurückholen. Nach 30 Tagen wird es endgültig gelöscht. Exporte und Sicherungen an anderen Orten bleiben unberührt.",
     "eraseType": "Tippe LÖSCHEN zur Bestätigung",
     "eraseWord": "LÖSCHEN",
     "eraseConfirm": "Alles löschen",
@@ -576,7 +576,11 @@
     "rememberComputer": "Diesen Computer 30 Tage merken",
     "rememberedNote": "Zwei-Faktor-Code auf diesem Computer gemerkt bis {{date}}.",
     "deviceChecking": "Suche nach Windows Hello oder Touch ID…",
-    "recoveryHidden": "Der Schlüssel ist jetzt verborgen: Sehen Sie dort nach, wo Sie ihn aufbewahrt haben."
+    "recoveryHidden": "Der Schlüssel ist jetzt verborgen: Sehen Sie dort nach, wo Sie ihn aufbewahrt haben.",
+    "restoreErased": "Gelöschte Daten wiederherstellen",
+    "restoreErasedBody": "Gelöschte Daten werden 30 Tage aufbewahrt und danach endgültig entfernt. Wähle, welche Kopie wiederhergestellt werden soll. Dafür brauchst du das damalige Passwort oder den Wiederherstellungsschlüssel.",
+    "deviceUnprotectedHint": "Setzt voraus, dass dieser Computer den Schlüssel von Kasboek schützt (Windows-Konto, Schlüsselbund oder ein Linux-Schlüsselbund).",
+    "restoreErasedItem": "Kopie vom {{date}} wiederherstellen"
   },
   "transfer": {
     "title": "Auf einen anderen Computer umziehen",
@@ -595,7 +599,17 @@
     "needsNewPassword": "Dieser Export nutzte Windows Hello oder Touch ID, was hier nicht verfügbar ist. Wähle ein Passwort für diesen Computer.",
     "replaceWarning": "Das ersetzt alles in Kasboek auf diesem Computer. Zuerst wird eine Sicherheitskopie der aktuellen Daten erstellt.",
     "importConfirm": "Importieren",
-    "imported": "Import abgeschlossen."
+    "imported": "Import abgeschlossen.",
+    "resetNotice": "Aus Sicherheitsgründen wurden diese nicht aus der Datei übernommen: {{items}}. Richte sie in den Einstellungen neu ein.",
+    "reset": {
+      "aiKey": "KI-Schlüssel",
+      "aiEndpoint": "KI-Anbieter und Adresse",
+      "permissions": "Berechtigungen des Assistenten",
+      "mcp": "MCP-Zugriff",
+      "autoBackup": "automatische Sicherungen (ausgeschaltet)",
+      "memory": "Gedächtnis des Assistenten",
+      "sync": "Sync-Schlüssel und WebDAV-Passwort"
+    }
   },
   "categories": {
     "kind": {
@@ -1196,5 +1210,17 @@
     "joinSubmit": "Synchronisierung suchen",
     "startSubmit": "Verbinden und synchronisieren",
     "server": "WebDAV-Server"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello oder Touch ID kann das Passwort nur ersetzen, wenn dieser Computer den Schlüssel von Kasboek schützt (Windows-Konto, macOS-Schlüsselbund oder ein Linux-Schlüsselbund). Wähle stattdessen ein Passwort.",
+    "auth_nothing_erased": "Es gibt keine gelöschten Daten zum Wiederherstellen.",
+    "auth_restore_blocked": "Kasboek ist hier bereits eingerichtet. Gelöschte Daten lassen sich nur auf dem ersten Bildschirm wiederherstellen.",
+    "auth_erase_failed": "Kasboek konnte die Daten nicht beiseitelegen, daher wurde das Löschen abgebrochen. Es wurde nichts gelöscht.",
+    "auth_device_unavailable": "Windows Hello konnte nicht gestartet werden. Versuche es erneut oder starte Kasboek neu.",
+    "auth_device_not_present": "Windows Hello ist auf diesem Computer nicht eingerichtet: Es ist keine Kamera, kein Fingerabdruckleser und keine PIN verfügbar.",
+    "auth_device_not_configured": "Windows Hello ist für dein Windows-Konto nicht eingerichtet. Richte es zuerst in den Windows-Einstellungen ein.",
+    "auth_device_disabled": "Windows Hello ist durch eine Richtlinie auf diesem Computer deaktiviert.",
+    "auth_device_busy": "Windows Hello ist beschäftigt. Versuche es gleich noch einmal.",
+    "auth_device_retries_exhausted": "Windows Hello wurde nach zu vielen fehlgeschlagenen Versuchen angehalten. Versuche es später erneut."
   }
 }

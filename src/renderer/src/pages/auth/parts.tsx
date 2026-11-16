@@ -5,9 +5,16 @@ import type { DeviceAuthKind } from '@shared/types'
 import { MIN_PASSWORD_LENGTH, checkPassword } from '@shared/password'
 import { Button, Field, Input, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
+import i18n from '../../i18n'
 import { ApiError, call } from '../../lib/api'
+import { recoveryKeyConfirmed, totpStepView } from '@shared/setup-rules'
 
-export const errText = (e: unknown): string => (e instanceof ApiError ? e.message : String(e))
+/** Errors from the main process come in English; the ones with a translation here are shown in the chosen language. */
+export const errText = (e: unknown): string => {
+  if (!(e instanceof ApiError)) return String(e)
+  const key = `errors.${e.code.replace(/\./g, '_')}`
+  return i18n.exists(key) ? i18n.t(key) : e.message
+}
 
 export function DeviceIcon({ kind, size = 16 }: { kind: DeviceAuthKind; size?: number }) {
   return kind === 'touch-id' ? <Fingerprint size={size} /> : kind === 'windows-hello' ? <ScanFace size={size} /> : <KeyRound size={size} />
@@ -84,7 +91,6 @@ export function RecoveryKeyPanel({ recoveryKey, onDone }: { recoveryKey: string;
   const toast = useToast()
   const [saved, setSaved] = useState(false)
   const [check, setCheck] = useState('')
-  const last = recoveryKey.split('-').at(-1) ?? ''
   return (
     <div className="flex flex-col gap-4">
       {/* Hidden while confirming, so the last group is read from where it was stored, not from here. */}
@@ -125,7 +131,7 @@ export function RecoveryKeyPanel({ recoveryKey, onDone }: { recoveryKey: string;
           {(id) => <Input id={id} value={check} onChange={(e) => setCheck(e.target.value.toUpperCase())} maxLength={4} className="num font-mono tracking-widest" />}
         </Field>
       )}
-      <Button variant="primary" disabled={!saved || check !== last} onClick={onDone}>
+      <Button variant="primary" disabled={!recoveryKeyConfirmed(recoveryKey, saved, check)} onClick={onDone}>
         {t('auth.continue')}
       </Button>
     </div>
@@ -139,9 +145,29 @@ export function TotpSetup({ onDone, onCancel }: { onDone: () => void; onCancel?:
   const [data, setData] = useState<{ secret: string; qrSvg: string } | null>(null)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
+  const [failure, setFailure] = useState<string | null>(null)
   useEffect(() => {
-    void call('auth.totpBegin').then(setData, (e) => toast(errText(e), 'error'))
+    void call('auth.totpBegin').then(setData, (e) => {
+      const text = errText(e)
+      setFailure(text)
+      toast(text, 'error')
+    })
   }, [toast])
+  const view = totpStepView(data ? 'ready' : failure !== null ? 'failed' : 'loading')
+  if (view.error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p role="alert" className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">
+          {failure}
+        </p>
+        {onCancel && (
+          <div className="flex justify-end">
+            <Button onClick={onCancel}>{t('auth.notNow')}</Button>
+          </div>
+        )}
+      </div>
+    )
+  }
   if (!data) return null
   return (
     <form

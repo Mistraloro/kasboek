@@ -12,13 +12,14 @@ import { makeSlot } from '@core/crypto'
 import { integrityOk, openDatabase, snapshotEncrypted } from '@core/database'
 import { AppError } from '@core/errors'
 import { MIGRATIONS, schemaVersion } from '@core/migrations'
-import { getSettings, updateSettings } from '@core/settings'
+import { getSettings, resetImportedSettings, updateSettings } from '@core/settings'
 import { encodeTransfer, openTransfer, readTransferHeader, TRANSFER_EXTENSION } from '@core/transfer-format'
 import { planRetention, timeFromName, type Tier } from '@core/backup-tiers'
-import type { BackupEntryInfo, BackupStatus, PickedTransfer } from '@shared/types'
+import type { BackupEntryInfo, BackupStatus, ImportReset, PickedTransfer } from '@shared/types'
 import { paths } from '../paths'
-import { deviceAuthKind } from '../security/device-auth'
+import { canUseDeviceMode } from '../security/device-mode'
 import { adopt, closeForReplace, db, isUnlocked, secrets } from '../session'
+import { removeSyncLeftovers } from '../sync/service'
 
 const AUTO_FILE = new RegExp(`^kasboek-backup-[0-9_-]+\\.${TRANSFER_EXTENSION}$`)
 
@@ -171,7 +172,7 @@ export async function describeTransfer(file: string): Promise<PickedTransfer> {
     mode: h.mode,
     twoFactor: h.twoFactor,
     hasPassword: !!h.slots.password,
-    needsNewPassword: h.mode === 'device' && !(await deviceAuthKind())
+    needsNewPassword: h.mode === 'device' && !(await canUseDeviceMode())
   }
 }
 
@@ -181,7 +182,7 @@ export async function importTransfer(input: {
   code?: string
   recoveryKey?: string
   newPassword?: string
-}): Promise<void> {
+}, opts: { joining?: boolean } = {}): Promise<ImportReset[]> {
   const file = picked.get(input.token)
   if (!file) throw new AppError('transfer.expired', 'Choose the file again.')
   const contents = await openTransfer(
@@ -193,14 +194,19 @@ export async function importTransfer(input: {
     throw new AppError('transfer.too_new', 'This file was made by a newer version of Kasboek. Update the app first.')
   }
 
-  // Check the database inside before touching anything.
+  // Check the database inside before touching anything. The file may come from anywhere: its AI address, permissions,
+  // backup folder, assistant memory and API keys are dropped here, on the staged copy, so a failure leaves everything as it was.
   const staged = join(paths.dataDir, `import-${randomUUID()}.db`)
   await writeFile(staged, dbFile, { mode: 0o600 })
+  let reset: ImportReset[]
   try {
     const check = openDatabase(staged, vault.dbKey, { migrate: false })
-    const ok = integrityOk(check)
-    check.close()
-    if (!ok) throw new AppError('transfer.corrupt', 'The data inside this file is damaged.')
+    try {
+      if (!integrityOk(check)) throw new AppError('transfer.corrupt', 'The data inside this file is damaged.')
+      reset = resetImportedSettings(check, { keepSyncKey: opts.joining })
+    } finally {
+      check.close()
+    }
   } catch (err) {
     await rm(staged, { force: true })
     throw err
@@ -217,7 +223,7 @@ export async function importTransfer(input: {
     attempts: { failed: 0, lastFailedAt: null }
   }
   if (header.mode === 'device') {
-    if (await deviceAuthKind()) {
+    if (await canUseDeviceMode()) {
       next.slots.device = master.toString('base64')
     } else {
       if (!input.newPassword) {
@@ -237,4 +243,7 @@ export async function importTransfer(input: {
   await rename(staged, paths.dbFile)
   await adopt(next, master, vault, usedRecovery)
   picked.delete(input.token)
+  // The staged database has sync off; the place file (URL, user name) and outbox next to it are stale now.
+  if (!opts.joining && reset.includes('sync')) removeSyncLeftovers()
+  return reset
 }

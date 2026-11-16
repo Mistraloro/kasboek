@@ -14,7 +14,7 @@ import { basename, dirname, join } from 'node:path'
 import { app, net, shell } from 'electron'
 import { AppError } from '@core/errors'
 import type { UpdateStatus } from '@shared/types'
-import { installKind, newer, pickAsset } from '@core/update'
+import { checksumFromSums, installKind, newer, pickAsset, safeAssetName } from '@core/update'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { broadcast, isUnlocked } from './session'
@@ -80,8 +80,7 @@ async function checksum(assets: { name: string; browser_download_url: string; di
   if (!sums || !allowedDownload(sums.browser_download_url)) return null
   const res = await net.fetch(sums.browser_download_url)
   if (!res.ok) return null
-  const line = (await res.text()).split('\n').find((l) => l.trim().endsWith(name))
-  return line?.trim().split(/\s+/)[0]?.toLowerCase() ?? null
+  return checksumFromSums(await res.text(), name)
 }
 
 export async function checkForUpdate(): Promise<UpdateStatus> {
@@ -105,7 +104,8 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     }
     const kind = installKind()
     const found = kind ? pickAsset(r.assets ?? [], kind) : null
-    asset = found && allowedDownload(found.browser_download_url) ? { name: found.name, url: found.browser_download_url, size: found.size, sha256: await checksum(r.assets ?? [], found.name) } : null
+    // A file name ends up on disk and in the Windows install script: refuse anything but plain names.
+    asset = found && safeAssetName(found.name) && allowedDownload(found.browser_download_url) ? { name: found.name, url: found.browser_download_url, size: found.size, sha256: await checksum(r.assets ?? [], found.name) } : null
     // Downloaded before (e.g. "Later" after the download): ready again.
     const have = asset && existsSync(join(updatesDir(), asset.name)) && status.state === 'ready' && file
     return set({ state: have ? 'ready' : 'available', error: failedInstall, latest: r.tag_name.replace(/^v/, ''), notes: r.body ?? null, pageUrl: r.html_url ?? null, kind: asset ? kind : null, sizeBytes: asset?.size ?? null, progress: have ? 1 : 0, lastCheckedAt })

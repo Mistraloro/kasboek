@@ -8,4 +8,4 @@ Before starting the "Build installers" workflow, raise the version and commit it
 - Commit, push, then start the build. Never build twice under the same version number.
 
 ## Coding work
-Send every coding request and every question about the code to the `dev-team:project-manager` agent, which assigns the right specialist. Don't do coding work directly in the main conversation.
+The main conversation acts as project manager: it splits coding work into tasks and sends each one directly to the right `dev-team` specialist (`architect`, `implementer`, `test-writer`, `code-reviewer`, `security-reviewer`, `docs-writer`), then combines their reports. Subagents can't start other subagents, so don't route work through `dev-team:project-manager`. Don't do coding work directly in the main conversation.

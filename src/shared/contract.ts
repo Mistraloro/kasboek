@@ -24,7 +24,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -114,7 +114,10 @@ export const contract = {
   'auth.forgetComputer': { input: empty, output: out<AuthStatus>() },
   'auth.unlockRecovery': { input: z.object({ recoveryKey: z.string().min(10).max(80) }).strict(), output: out<AuthStatus>() },
   'auth.lock': { input: empty, output: out<AuthStatus>() },
+  /** Moves the data, safety backups included, into quarantine for 30 days (restorable with the password or recovery key) and starts fresh. */
   'auth.erase': { input: z.object({ confirm: z.literal('ERASE') }).strict(), output: out<AuthStatus>() },
+  /** First screen only: brings back one erased copy, by the name listed in AuthStatus.erased. */
+  'auth.restoreErased': { input: z.object({ name: z.string().regex(/^\d{10,}$/) }).strict(), output: out<AuthStatus>() },
   'auth.changePassword': {
     input: z.object({ current: z.string().max(256).optional(), next: password }).strict(),
     output: out<AuthStatus>()
@@ -138,7 +141,7 @@ export const contract = {
         newPassword: password.optional()
       })
       .strict(),
-    output: out<AuthStatus>()
+    output: out<{ status: AuthStatus; reset: ImportReset[] }>()
   },
   'backup.status': { input: empty, output: out<BackupStatus>() },
   'backup.chooseFolder': { input: empty, output: out<{ folder: string | null }>() },
@@ -274,6 +277,8 @@ export const contract = {
   'sync.start': { input: syncPlace, output: out<SyncStatus>() },
   /** Choose an existing sync folder to join: returns its newest snapshot to open with Import. */
   'sync.pickJoin': { input: syncPlace, output: out<PickedTransfer>() },
+  /** Drops a chosen join that is not going ahead, and its downloaded copy. */
+  'sync.cancelJoin': { input: z.object({ token: z.string().min(1).max(100) }).strict(), output: out<{ ok: true }>() },
   /** For data that syncs: choose where the sync folder is on this computer. */
   'sync.attach': { input: syncPlace, output: out<SyncStatus>() },
   'sync.now': { input: empty, output: out<SyncStatus>() },
@@ -638,9 +643,11 @@ export const PUBLIC_OPS: readonly OpName[] = [
   'auth.status',
   'auth.setup',
   'sync.pickJoin',
+  'sync.cancelJoin',
   'auth.unlock',
   'auth.unlockRecovery',
   'auth.erase',
+  'auth.restoreErased',
   'transfer.pick',
   'transfer.import'
 ]

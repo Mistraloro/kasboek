@@ -280,6 +280,21 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
     tool calling get chat without changes.
 19. **Automatic release step**: GitHub returned 403 when the workflow created the release, even with
    Contents: write (most likely a tag ruleset). Find the cause so tagging a version publishes it.
+20. **Uninstalling from Windows' Installed apps should let people choose what to remove.** Today
+   "Uninstall" there removes the program silently and always keeps the data (the Settings route shows
+   no dialogs, see `build/msi-project.cjs`, step 3b), so a person who wants everything gone has to
+   know to run the installer again, choose Remove and tick "Also delete my Kasboek data". Make the
+   Installed apps entry (Uninstall, or Modify) open the installer's own maintenance screen, with
+   Repair and Remove, and on Remove the "Also delete my Kasboek data" choice, so the person decides
+   there whether to erase everything or keep the data. Check how the `.msi` registers its
+   uninstall entry (`ARPNOREMOVE`, `ARPNOMODIFY`, a custom uninstall command running
+   `msiexec /i <product> ` instead of `/x`), that Repair keeps the data, and that a silent
+   uninstall (`msiexec /x ... /qn`, used by updates and IT tools) still works without the dialog
+   and keeps the data. Never touch sync and backup folders.
+21. ~~**Fix: the recovery key check is skipped (found testing 0.15.1 on Windows, with Windows Hello).**~~
+   **Fixed in 0.15.2.** Cause: a focus listener in the Setup screen refreshed the account status when
+   the window regained focus after the Windows Hello prompt, which swapped the Setup screen for the
+   main app before the recovery key was confirmed. The Setup flow now stays mounted until it ends.
 
 ## Later, maybe
 

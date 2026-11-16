@@ -3,6 +3,7 @@ name: Build installers
 # Builds 64-bit installers on real machines for each OS:
 #   Windows: .msi (x64 + ARM64)   macOS: .dmg (Apple Silicon + Intel)   Linux: AppImage + .deb (x64 + ARM64)
 # Run by hand: a test build (Actions artifacts, kept 90 days), or tick "Publish as a release".
+# "Test build: Windows x64 installer only" builds just the x64 .msi, faster; such a run never publishes.
 # Push a tag like v0.9.0, or run with "Publish as a release": a permanent GitHub Release for the
 # version in package.json, with every installer attached.
 on:
@@ -10,6 +11,10 @@ on:
     inputs:
       release:
         description: Publish as a release (version from package.json)
+        type: boolean
+        default: false
+      windows_x64_only:
+        description: "Test build: Windows x64 installer only (never published)"
         type: boolean
         default: false
   push:
@@ -22,17 +27,32 @@ permissions:
 # as pull requests (.github/dependabot.yml), so a moved tag can never change what runs here.
 
 jobs:
+  # First, so a tag on a commit outside main fails before any installer is built. Other runs pass straight through.
+  check-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release
+        with:
+          persist-credentials: false
+          # The whole history, so the next step can tell whether this commit is part of main.
+          fetch-depth: 0
+      # A version tag pushed on a commit that never reached main (e.g. a pull request branch) is not published.
+      - name: Check that the commit is on main
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Commit $GITHUB_SHA is not part of origin/main. Only commits that are on main are published."
+            exit 1
+          fi
+
   build:
+    needs: check-main
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            dist: dist:win
-          - os: macos-latest
-            dist: dist:mac
-          - os: ubuntu-latest
-            dist: dist:linux
+        # The input is empty on tag pushes, so everything is built there.
+        include: ${{ fromJSON(inputs.windows_x64_only && '[{"os":"windows-latest","dist":"dist:win"}]' || '[{"os":"windows-latest","dist":"dist:win"},{"os":"macos-latest","dist":"dist:mac"},{"os":"ubuntu-latest","dist":"dist:linux"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -61,8 +81,12 @@ jobs:
           if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; export CSC_IDENTITY_AUTO_DISCOVERY=false; fi
           extra=""
           if [ "$RUNNER_OS" = "macOS" ] && [ -z "${CSC_LINK:-}" ]; then extra="--config.mac.identity=-"; fi
+          # The msi targets in electron-builder.yml name their architectures, which win over --x64;
+          # a target given on the command line ("msi:x64") replaces them, so only the x64 MSI is built.
+          if [ "$RUNNER_OS" = "Windows" ] && [ "$WINDOWS_X64_ONLY" = "true" ]; then extra="--win msi:x64"; fi
           npm run ${{ matrix.dist }} -- --publish never $extra
         env:
+          WINDOWS_X64_ONLY: ${{ inputs.windows_x64_only }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       # The app package must hold only the built app, never sources, tests or old releases.
@@ -80,15 +104,28 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.release
+    # Publishing only from main or a version tag, never from another branch, and never after a
+    # Windows-only test build (a release needs every installer).
+    if: (startsWith(github.ref, 'refs/tags/v') || inputs.release) && !inputs.windows_x64_only && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
     runs-on: ubuntu-latest
+    # A protected environment: in the repository settings, require reviewers for "release".
+    environment: release
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The whole history, so the next step can tell whether this commit is part of main.
+          fetch-depth: 0
+      # A version tag pushed on a commit that never reached main (e.g. a pull request branch) is not published.
+      - name: Check that the commit is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Commit $GITHUB_SHA is not part of origin/main. Only commits that are on main are published."
+            exit 1
+          fi
       - name: Work out the version
         run: |
           v="v$(node -p "require('./package.json').version")"
@@ -113,8 +150,14 @@ jobs:
         run: |
           find dist -type f | sort
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # Made by hand (e.g. "Draft a new release" on GitHub): add the installers to it.
-            gh release upload "$TAG" $(find dist -type f) --repo "$GITHUB_REPOSITORY" --clobber
+            # Made by hand (e.g. "Draft a new release" on GitHub): add the installers to it, but
+            # never replace files. A version number is built once.
+            assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')
+            if [ "$assets" != "0" ]; then
+              echo "Release $TAG already has $assets file(s). A version is never built twice: raise the version in package.json and build again."
+              exit 1
+            fi
+            gh release upload "$TAG" $(find dist -type f) --repo "$GITHUB_REPOSITORY"
           else
             # Creates the tag on the built commit. GitHub refuses this from a workflow when that
             # commit changes workflow files not yet on the default branch; then create the release

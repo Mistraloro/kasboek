@@ -267,6 +267,15 @@ export interface UpdateStatus {
 export type AuthMode = 'password' | 'device'
 export type DeviceAuthKind = 'windows-hello' | 'touch-id' | null
 
+/** What an import did not take over from the file (see resetImportedSettings); each has to be set up again in Settings. */
+export type ImportReset = 'aiKey' | 'aiEndpoint' | 'permissions' | 'mcp' | 'autoBackup' | 'memory' | 'sync'
+
+/** One quarantined copy: `name` is what restoring refers to, `erasedAt` is when it was set aside (ISO). */
+export interface ErasedCopy {
+  name: string
+  erasedAt: string
+}
+
 export interface AuthStatus {
   state: 'setup' | 'locked' | 'unlocked'
   mode: AuthMode | null
@@ -283,6 +292,8 @@ export interface AuthStatus {
   weakPassword: boolean
   /** Data from an earlier version exists and will be kept at setup. */
   legacyData: boolean
+  /** Erased copies that can still be restored (kept 30 days), newest first. */
+  erased: ErasedCopy[]
   keyProtection: KeyProtection
   error: { code: string; message: string } | null
 }

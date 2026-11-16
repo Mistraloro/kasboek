@@ -77,10 +77,6 @@ export async function saveAccount(account: AccountData): Promise<void> {
   await rename(tmp, paths.accountFile)
 }
 
-export async function deleteAccount(): Promise<void> {
-  await rm(paths.accountFile, { force: true })
-}
-
 /** Phase 1 stored the database key in keystore.json. Returns it so setup can keep the existing data. */
 export async function readLegacyDbKey(): Promise<string | null> {
   if (!existsSync(paths.legacyKeystoreFile) || !existsSync(paths.dbFile)) return null

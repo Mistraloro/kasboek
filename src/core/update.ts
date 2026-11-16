@@ -26,3 +26,19 @@ export function pickAsset<T extends { name: string }>(assets: T[], kind: UpdateK
   const pattern = { msi: `-win-${a}\\.msi$`, dmg: `-mac-${a}\\.dmg$`, appimage: `-${a}\\.AppImage$`, deb: `[-_]${a}\\.deb$` }[kind]
   return assets.find((x) => new RegExp(pattern, 'i').test(x.name)) ?? null
 }
+
+/** Release file names are written to disk and into the Windows install script: letters, digits, dot, dash and underscore only. */
+export const SAFE_ASSET_NAME = /^[A-Za-z0-9._-]+$/
+
+export function safeAssetName(name: string): boolean {
+  return SAFE_ASSET_NAME.test(name) && name !== '.' && name !== '..'
+}
+
+/** The SHA-256 for `name` from a SHA256SUMS file: lines of `<hash>  <name>` or `<hash> *<name>`, the name compared whole. */
+export function checksumFromSums(text: string, name: string): string | null {
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^([0-9a-fA-F]{64}) [ *](.+)$/.exec(line.trim())
+    if (m && m[2] === name) return m[1]!.toLowerCase()
+  }
+  return null
+}

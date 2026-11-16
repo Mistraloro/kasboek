@@ -552,7 +552,7 @@
     "recoveredBody": "Je hebt ontgrendeld met je herstelsleutel. Kies een nieuw wachtwoord om Kasboek veilig te houden.",
     "eraseLink": "Gegevens wissen",
     "eraseTitle": "Kasboek wissen op deze computer",
-    "eraseBody": "Verwijdert alle gegevens van Kasboek op deze computer. Dit kan niet ongedaan gemaakt worden. Exports en back-ups elders blijven onaangeroerd.",
+    "eraseBody": "Zet alle gegevens van Kasboek op deze computer opzij en begint opnieuw. Alles, ook de veiligheidskopieën, blijft 30 dagen versleuteld in quarantaine. In die tijd kun je het op het Setup-scherm herstellen met het oorspronkelijke wachtwoord of de herstelsleutel. Na 30 dagen wordt het definitief verwijderd. Exports en back-ups elders blijven onaangeroerd.",
     "eraseType": "Typ WISSEN om te bevestigen",
     "eraseConfirm": "Alles wissen",
     "cantOpen": "Kasboek kan zijn gegevens niet openen",
@@ -576,7 +576,11 @@
     "rememberedNote": "Code voor tweestapsverificatie onthouden op deze computer tot {{date}}.",
     "deviceChecking": "Zoeken naar Windows Hello of Touch ID…",
     "eraseWord": "WISSEN",
-    "recoveryHidden": "De sleutel is nu verborgen: zoek hem op waar je hem bewaarde."
+    "recoveryHidden": "De sleutel is nu verborgen: zoek hem op waar je hem bewaarde.",
+    "restoreErased": "Gewiste gegevens herstellen",
+    "restoreErasedBody": "Gewiste gegevens worden 30 dagen bewaard en daarna definitief verwijderd. Kies welke kopie je wilt herstellen. Daarvoor heb je het wachtwoord of de herstelsleutel van toen nodig.",
+    "deviceUnprotectedHint": "Vraagt dat deze computer de sleutel van Kasboek beschermt (Windows-account, Sleutelhanger of een Linux-sleutelbos).",
+    "restoreErasedItem": "De kopie van {{date}} herstellen"
   },
   "transfer": {
     "title": "Naar een andere computer verhuizen",
@@ -595,7 +599,17 @@
     "needsNewPassword": "Deze export gebruikte Windows Hello of Touch ID, wat hier niet beschikbaar is. Kies een wachtwoord voor deze computer.",
     "replaceWarning": "Dit vervangt alles in Kasboek op deze computer. Eerst wordt een veiligheidskopie van de huidige gegevens gemaakt.",
     "importConfirm": "Importeren",
-    "imported": "Import voltooid."
+    "imported": "Import voltooid.",
+    "resetNotice": "Om veiligheidsredenen zijn deze niet uit het bestand overgenomen: {{items}}. Stel ze opnieuw in via Instellingen.",
+    "reset": {
+      "aiKey": "AI-sleutels",
+      "aiEndpoint": "AI-aanbieder en adres",
+      "permissions": "rechten van de assistent",
+      "mcp": "MCP-toegang",
+      "autoBackup": "automatische back-ups (uitgezet)",
+      "memory": "geheugen van de assistent",
+      "sync": "synchronisatiesleutel en WebDAV-wachtwoord"
+    }
   },
   "categories": {
     "kind": {
@@ -1196,5 +1210,17 @@
     "joinSubmit": "Synchronisatie zoeken",
     "startSubmit": "Verbinden en synchroniseren",
     "server": "WebDAV-server"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello of Touch ID kan het wachtwoord alleen vervangen als deze computer de sleutel van Kasboek beschermt (Windows-account, macOS-sleutelhanger of een Linux-sleutelbos). Kies in plaats daarvan een wachtwoord.",
+    "auth_nothing_erased": "Er zijn geen gewiste gegevens om te herstellen.",
+    "auth_restore_blocked": "Kasboek is hier al ingesteld. Gewiste gegevens kunnen alleen op het eerste scherm hersteld worden.",
+    "auth_erase_failed": "Kasboek kon de gegevens niet opzij zetten, dus het wissen is gestopt. Er is niets verwijderd.",
+    "auth_device_unavailable": "Windows Hello kon niet worden gestart. Probeer het opnieuw of start Kasboek opnieuw op.",
+    "auth_device_not_present": "Windows Hello is niet ingesteld op deze computer: er is geen camera, vingerafdrukscanner of pincode beschikbaar.",
+    "auth_device_not_configured": "Windows Hello is niet ingesteld voor je Windows-account. Stel het eerst in via de Windows-instellingen.",
+    "auth_device_disabled": "Windows Hello is uitgeschakeld door een beleidsregel op deze computer.",
+    "auth_device_busy": "Windows Hello is bezig. Probeer het zo meteen opnieuw.",
+    "auth_device_retries_exhausted": "Windows Hello is gestopt na te veel mislukte pogingen. Probeer het later opnieuw."
   }
 }

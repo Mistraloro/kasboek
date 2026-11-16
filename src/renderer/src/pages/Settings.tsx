@@ -189,7 +189,7 @@ function SecuritySection() {
         ) : (
           <>
             <Button size="sm" onClick={() => setModal('password')}>{t('settings.changePassword')}</Button>
-            {status.device && <Button size="sm" onClick={() => setModal('passwordless')}>{t('settings.goPasswordless', { name: deviceName })}</Button>}
+            {status.device && status.keyProtection === 'os' && <Button size="sm" onClick={() => setModal('passwordless')}>{t('settings.goPasswordless', { name: deviceName })}</Button>}
           </>
         )}
       </Row>
@@ -292,6 +292,7 @@ function TransferSection() {
   const toast = useToast()
   const { set } = useAuth()
   const [importing, setImporting] = useState(false)
+  const [notice, setNotice] = useState(false)
   return (
     <Card>
       <CardHeader title={t('transfer.title')} description={t('transfer.hint')} />
@@ -308,8 +309,8 @@ function TransferSection() {
       <Row label={t('transfer.import')} hint={t('transfer.importHint')}>
         <Button size="sm" icon={<Upload size={14} />} onClick={() => setImporting(true)}>{t('transfer.importButton')}</Button>
       </Row>
-      <Modal open={importing} title={t('transfer.import')} onClose={() => setImporting(false)}>
-        {importing && <ImportFlow replacing onCancel={() => setImporting(false)} onDone={(s) => { setImporting(false); set(s); window.location.reload() }} />}
+      <Modal open={importing} title={t('transfer.import')} onClose={() => setImporting(false)} dismissible={!notice}>
+        {importing && <ImportFlow replacing onNotice={setNotice} onCancel={() => setImporting(false)} onDone={(s) => { setImporting(false); set(s); window.location.reload() }} />}
       </Modal>
     </Card>
   )
@@ -324,6 +325,7 @@ function SyncSection() {
   const { set } = useAuth()
   const [status, setStatus] = useState<SyncStatus | null>(null)
   const [joining, setJoining] = useState<PickedTransfer | null>(null)
+  const [joinNotice, setJoinNotice] = useState(false)
   const [confirmStop, setConfirmStop] = useState(false)
   const [showConflicts, setShowConflicts] = useState(false)
   const [dav, setDav] = useState<'start' | 'join' | 'attach' | null>(null)
@@ -397,8 +399,8 @@ function SyncSection() {
             : call(dav === 'attach' ? 'sync.attach' : 'sync.start', { webdav }).then(setStatus)
         }
       />
-      <Modal open={!!joining} title={t('sync.join')} onClose={() => setJoining(null)}>
-        {joining && <ImportFlow replacing preset={joining} onCancel={() => setJoining(null)} onDone={(s) => { setJoining(null); set(s); window.location.reload() }} />}
+      <Modal open={!!joining} title={t('sync.join')} onClose={() => setJoining(null)} dismissible={!joinNotice}>
+        {joining && <ImportFlow replacing preset={joining} onNotice={setJoinNotice} onCancel={() => setJoining(null)} onDone={(s) => { setJoining(null); set(s); window.location.reload() }} />}
       </Modal>
       <Modal open={confirmStop} title={t('sync.stop')} onClose={() => setConfirmStop(false)}>
         <p className="text-[13px] text-muted">{t('sync.stopConfirm')}</p>
@@ -436,6 +438,7 @@ function BackupSection() {
   const list = useOp('backup.list')
   const [showAll, setShowAll] = useState(false)
   const [restoring, setRestoring] = useState<PickedTransfer | null>(null)
+  const [restoreNotice, setRestoreNotice] = useState(false)
   const s = status.data
   const run = async (fn: () => Promise<unknown>): Promise<void> => {
     try {
@@ -492,8 +495,8 @@ function BackupSection() {
           )}
         </div>
       )}
-      <Modal open={!!restoring} title={t('settings.restoreTitle')} onClose={() => setRestoring(null)}>
-        {restoring && <ImportFlow replacing preset={restoring} onCancel={() => setRestoring(null)} onDone={(st) => { setRestoring(null); set(st); window.location.reload() }} />}
+      <Modal open={!!restoring} title={t('settings.restoreTitle')} onClose={() => setRestoring(null)} dismissible={!restoreNotice}>
+        {restoring && <ImportFlow replacing preset={restoring} onNotice={setRestoreNotice} onCancel={() => setRestoring(null)} onDone={(st) => { setRestoring(null); set(st); window.location.reload() }} />}
       </Modal>
     </Card>
   )

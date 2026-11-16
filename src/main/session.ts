@@ -3,13 +3,15 @@
  */
 import { randomBytes } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { rename, rm } from 'node:fs/promises'
+import { rename } from 'node:fs/promises'
 import { BrowserWindow, powerMonitor } from 'electron'
 import QRCode from 'qrcode'
 import {
+  checkThrottle,
   createAccount,
   forgetRemembered,
   rememberedUntil,
+  recordFailure,
   rotateRecoveryKey,
   setPassword,
   setPasswordless,
@@ -29,11 +31,14 @@ import { AppError } from '@core/errors'
 import { newTotpSecret, otpauthUri, verifyTotp } from '@core/totp'
 import type { AppEvent } from '@shared/contract'
 import { checkPassword } from '@shared/password'
-import type { AuthStatus } from '@shared/types'
+import type { AuthStatus, ErasedCopy } from '@shared/types'
+import { startupLog } from './graphics'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
-import { accountExists, deleteAccount, keyProtection, loadAccount, readLegacyDbKey, removeLegacyKeystore, saveAccount } from './security/account-store'
+import { accountExists, keyProtection, loadAccount, readLegacyDbKey, removeLegacyKeystore, saveAccount } from './security/account-store'
 import { deviceAuthKind, peekDeviceAuthKind, verifyDeviceUser } from './security/device-auth'
+import { keyIsOsProtected } from './security/device-mode'
+import { listErased, purgeErased, quarantineData, restoreErased } from './quarantine'
 
 interface Open {
   master: Buffer
@@ -66,6 +71,8 @@ export async function initSession(): Promise<void> {
   } catch (err) {
     loadError = err instanceof AppError ? err : new AppError('auth.corrupt', String(err))
   }
+  // Erased copies are kept for 30 days, then removed.
+  await purgeErased(paths).catch((err: unknown) => console.warn('[auth] could not clean up erased data:', err))
   // Checking for Windows Hello takes a moment (PowerShell): never let the first screen wait for it.
   peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }))
 }
@@ -102,6 +109,7 @@ export async function status(): Promise<AuthStatus> {
     recovered,
     weakPassword: !!open && weakPassword,
     legacyData: !account && (await readLegacyDbKey()) !== null,
+    erased: await erasedCopies(),
     keyProtection: await keyProtection(),
     error: loadError ? { code: loadError.code, message: loadError.message } : null
   }
@@ -112,9 +120,34 @@ function openWith(master: Buffer, vault: Vault): void {
   open = { master, vault, db: database }
 }
 
+/** Saves first and only then replaces the copy in memory, so a failed write never leaves memory ahead of the file. */
 async function persist(next: AccountData): Promise<void> {
-  account = next
   await saveAccount(next)
+  account = next
+}
+
+/**
+ * For the failed-attempt counter (and the reset after a correct login): memory is updated first, so
+ * guesses are counted even when the file can't be written; a failed write is logged, not raised.
+ */
+async function persistCounter(next: AccountData): Promise<void> {
+  account = next
+  try {
+    await saveAccount(next)
+  } catch (err) {
+    console.warn('[auth] could not save the login attempts:', err instanceof Error ? err.message : err)
+  }
+}
+
+async function erasedCopies(): Promise<ErasedCopy[]> {
+  return (await listErased(paths)).map((e) => ({ name: e.name, erasedAt: new Date(e.erasedAt).toISOString() }))
+}
+
+/** Passwordless mode keeps the key in the account file: only safe when the operating system seals that file. */
+async function requireOsProtection(): Promise<void> {
+  if (!(await keyIsOsProtected())) {
+    throw new AppError('auth.device_unprotected', 'Windows Hello or Touch ID can only replace the password when this computer protects Kasboek’s key (Windows account, macOS Keychain or a Linux keyring). Choose a password instead.')
+  }
 }
 
 async function requireDevice(reason: string): Promise<void> {
@@ -127,7 +160,10 @@ async function requireDevice(reason: string): Promise<void> {
 export async function setup(mode: AuthMode, password?: string): Promise<{ recoveryKey: string }> {
   if (account || loadError || accountExists()) throw new AppError('auth.exists', 'Kasboek is already set up.')
   if (mode === 'password' && !checkPassword(password ?? '').ok) throw new AppError('auth.weak_password', 'Choose a stronger password.')
-  if (mode === 'device') await requireDevice('Set up Kasboek')
+  if (mode === 'device') {
+    await requireOsProtection()
+    await requireDevice('Set up Kasboek')
+  }
   const legacyKey = await readLegacyDbKey()
   if (!legacyKey && existsSync(paths.dbFile)) {
     // A database without its account can't be opened by anyone: move it aside, don't delete it.
@@ -157,7 +193,7 @@ export async function unlock(input: { password?: string; code?: string; remember
   } else {
     result = await unlockWithPassword(acc, input.password ?? '', input.code || undefined, { remember: input.remember })
   }
-  await persist(result.account)
+  await persistCounter(result.account)
   if (!result.ok) {
     throw new AppError('auth.failed', acc.twoFactor ? 'The password or code is incorrect.' : 'The password is incorrect.')
   }
@@ -168,7 +204,7 @@ export async function unlock(input: { password?: string; code?: string; remember
 
 export async function unlockRecovery(recoveryKey: string): Promise<void> {
   const result = await unlockWithRecovery(requireAccount(), recoveryKey)
-  await persist(result.account)
+  await persistCounter(result.account)
   if (!result.ok) throw new AppError('auth.failed', 'That recovery key is not correct.')
   recovered = true
   openWith(result.unlocked.master, result.unlocked.vault)
@@ -191,24 +227,46 @@ export function closeForReplace(): void {
   lock('user', true)
 }
 
+/**
+ * Moves the data into quarantine (see quarantine.ts) and starts fresh. In passwordless mode Windows Hello
+ * or Touch ID must confirm first; with no account, or one that can't be read, typing ERASE is all there is.
+ */
 export async function erase(): Promise<void> {
+  if (account?.mode === 'device') await requireDevice('Erase Kasboek')
   lock('user')
-  await rm(paths.dbFile, { force: true })
-  await rm(paths.safetyDir, { recursive: true, force: true })
-  await deleteAccount()
-  await removeLegacyKeystore()
+  try {
+    await quarantineData(paths, Date.now(), startupLog)
+  } catch (err) {
+    // quarantineData puts back what it moved; reading the account again makes memory match whatever is on disk.
+    await initSession().catch((e: unknown) => startupLog(`erase failed, and the data could not be read again: ${e instanceof Error ? e.message : String(e)}`))
+    throw new AppError('auth.erase_failed', `Could not set the data aside, so erasing was stopped: ${err instanceof Error ? err.message : String(err)}`)
+  }
   account = null
   loadError = null
 }
 
-/** Re-checks who is at the keyboard before a sensitive change. */
+/** Brings back one erased copy, by the name from status().erased. It needs the original password or recovery key to open. */
+export async function restoreErasedData(name: string): Promise<void> {
+  if (account || loadError || accountExists()) throw new AppError('auth.restore_blocked', 'Kasboek is already set up. Restoring erased data is only possible on the first screen.')
+  try {
+    await restoreErased(paths, name)
+  } finally {
+    // Also after a failure: memory has to match what is on disk, or the first screen is stuck on the old state.
+    await initSession()
+  }
+}
+
+/** Re-checks who is at the keyboard before a sensitive change. Wrong passwords count and slow down, as at unlock. */
 async function reauth(password?: string): Promise<void> {
   const acc = requireAccount()
   if (recovered) return
-  if (acc.mode === 'device') return requireDevice('Confirm it’s you')
+  if (acc.mode === 'device') return requireDevice('Confirm it is you')
+  checkThrottle(acc)
   if (!password || !acc.slots.password || !(await openSlot(acc.slots.password, password, 'password'))) {
+    await persistCounter(recordFailure(acc))
     throw new AppError('auth.failed', 'The current password is incorrect.')
   }
+  if (acc.attempts.failed > 0) await persistCounter({ ...acc, attempts: { failed: 0, lastFailedAt: null } })
 }
 
 export async function changePassword(current: string | undefined, next: string): Promise<void> {
@@ -222,6 +280,7 @@ export async function changePassword(current: string | undefined, next: string):
 
 export async function switchToPasswordless(currentPassword?: string): Promise<void> {
   const { master } = secrets()
+  await requireOsProtection()
   await reauth(currentPassword)
   await requireDevice('Use Windows Hello or Touch ID for Kasboek')
   await persist(setPasswordless(requireAccount(), master))
