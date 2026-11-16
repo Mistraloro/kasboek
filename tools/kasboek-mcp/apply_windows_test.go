@@ -249,7 +249,6 @@ func TestApplyUpdateWithFakeMsiexec(t *testing.T) {
 				t.Fatal(err)
 			}
 			pl.PID = gone.Process.Pid
-			pl.Args = []string{"-test.run=^$"}
 			mark := filepath.Join(dir, "opened")
 			t.Setenv("KB_TEST_MARK", mark)
 			t.Setenv("KB_TEST_MSIEXEC_CODE", strconv.Itoa(tc.code))
