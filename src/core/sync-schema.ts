@@ -24,7 +24,7 @@ const RANDOM = `lower(hex(randomblob(16)))`
 /** In dependency order: a row only refers to tables before it. */
 export const SYNC_TABLES: TableSpec[] = [
   { table: 'settings', uid: `NEW.key`, cols: ['key', 'value'], fks: {}, when: (r) => `${r}.key IN ('currency')` },
-  { table: 'accounts', uid: RANDOM, cols: ['name', 'bank', 'iban', 'currency', 'kind', 'opening_balance_cents', 'archived', 'created_at'], fks: {} },
+  { table: 'accounts', uid: RANDOM, cols: ['name', 'bank', 'iban', 'currency', 'kind', 'opening_balance_cents', 'archived', 'created_at', 'fx_cost_pct'], fks: {} },
   { table: 'categories', uid: RANDOM, cols: ['name', 'kind', 'parent_id', 'color', 'sort_order', 'archived'], fks: { parent_id: 'categories' } },
   { table: 'rules', uid: RANDOM, cols: ['field', 'pattern', 'category_id', 'created_at', 'match', 'priority'], fks: { category_id: 'categories' } },
   {

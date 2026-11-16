@@ -112,7 +112,8 @@
     "accountSaved": "Conta salva.",
     "formatsHint": "Cada parte é definida separadamente. Exemplo: {{value}}",
     "negative": "Valores negativos",
-    "accountKindInvestment": "Registre o valor de vez em quando na página Patrimônio; os aportes e saques vêm dos movimentos."
+    "accountKindInvestment": "Registre o valor de vez em quando na página Patrimônio; os aportes e saques vêm dos movimentos.",
+    "fxCostHint": "Opcional. O que este banco cobra além da taxa de câmbio quando converte dinheiro para outra moeda, ex.: 1,5. Ajuda o Kasboek a reconhecer transferências entre as suas contas em moedas diferentes."
   },
   "auth": {
     "welcome": "Boas-vindas ao Kasboek",
@@ -235,7 +236,9 @@
   },
   "transfers": {
     "hint": "Dinheiro que sai de uma das suas contas e o mesmo valor que entra em outra em 3 dias. Emparelhadas, as duas metades contam como transferência: nem receita nem despesa.",
-    "maybe": "mesmo valor"
+    "maybe": "mesmo valor",
+    "costSaved": "Custo de câmbio salvo",
+    "maybeFx": "valor à taxa desse dia"
   },
   "splits": {
     "save": "Salvar a divisão"

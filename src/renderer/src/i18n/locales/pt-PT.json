@@ -468,7 +468,10 @@
       "data": "Cópias e sincronização",
       "assistant": "Assistente"
     },
-    "about": "Sobre o Kasboek"
+    "about": "Sobre o Kasboek",
+    "fxCost": "Custo de câmbio (%)",
+    "fxCostHint": "Opcional. O que este banco cobra além da taxa de câmbio quando converte dinheiro para outra moeda, p. ex. 1,5. Ajuda o Kasboek a reconhecer transferências entre as suas contas em moedas diferentes.",
+    "fxCostBad": "Indique uma percentagem entre 0 e 20."
   },
   "auth": {
     "welcome": "Bem-vindo ao Kasboek",
@@ -882,7 +885,14 @@
     "pairedHint": "Transferência entre as suas próprias contas",
     "pairedWith": "Transferência com {{account}}",
     "unpair": "Separar",
-    "pairSelected": "Emparelhar como transferência"
+    "pairSelected": "Emparelhar como transferência",
+    "cost": "custo de câmbio {{amount}}",
+    "noCost": "sem custo de câmbio",
+    "costBooked": "Custo de câmbio: {{amount}} (contado como comissão)",
+    "noCostBooked": "Nenhum custo de câmbio registado",
+    "changeCost": "Alterar",
+    "costSaved": "Custo de câmbio guardado",
+    "maybeFx": "montante à taxa desse dia"
   },
   "splits": {
     "badge_one": "dividido em {{count}}",

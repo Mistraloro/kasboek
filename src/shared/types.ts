@@ -22,6 +22,8 @@ export interface Account {
   openingBalanceCents: number
   archived: boolean
   createdAt: string
+  /** What the bank charges on top of the reference rate when converting currency (%), if known. */
+  fxCostPct: number | null
 }
 
 export interface Category {
@@ -424,8 +426,14 @@ export interface TransferPair {
   outId: number
   inId: number
   date: string
+  /** What left the first account, in its currency. */
   amountCents: number
   currency: string
+  /** What arrived, in the second account's currency (the same as above within one currency). */
+  inAmountCents: number
+  inCurrency: string
+  /** Between currencies: the exchange cost in the first account's currency; null when it can't be worked out or there is none. */
+  costCents: number | null
   fromAccount: string
   toAccount: string
   /** iban: the account number on one side is the other account's (sure); amount: same amount a few days apart. */

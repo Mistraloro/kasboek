@@ -468,7 +468,10 @@
       "data": "Back-ups en sync",
       "assistant": "Assistent"
     },
-    "about": "Over Kasboek"
+    "about": "Over Kasboek",
+    "fxCost": "Wisselkosten (%)",
+    "fxCostHint": "Optioneel. Wat deze bank bovenop de wisselkoers aanrekent als ze geld naar een andere munt omzet, bv. 1,5. Helpt Kasboek overboekingen tussen je rekeningen in verschillende munten te herkennen.",
+    "fxCostBad": "Geef een percentage tussen 0 en 20."
   },
   "auth": {
     "welcome": "Welkom bij Kasboek",
@@ -882,7 +885,14 @@
     "pairedHint": "Overboeking tussen je eigen rekeningen",
     "pairedWith": "Overboeking met {{account}}",
     "unpair": "Loskoppelen",
-    "pairSelected": "Koppelen als overboeking"
+    "pairSelected": "Koppelen als overboeking",
+    "cost": "wisselkosten {{amount}}",
+    "noCost": "geen wisselkosten",
+    "costBooked": "Wisselkosten: {{amount}} (geteld als kosten)",
+    "noCostBooked": "Geen wisselkosten geboekt",
+    "changeCost": "Wijzigen",
+    "costSaved": "Wisselkosten bewaard",
+    "maybeFx": "bedrag aan de koers van die dag"
   },
   "splits": {
     "badge_one": "in {{count}} gesplitst",

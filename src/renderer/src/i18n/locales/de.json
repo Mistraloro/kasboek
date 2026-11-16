@@ -468,7 +468,10 @@
       "data": "Sicherungen & Sync",
       "assistant": "Assistent"
     },
-    "about": "Über Kasboek"
+    "about": "Über Kasboek",
+    "fxCost": "Wechselkosten (%)",
+    "fxCostHint": "Optional. Was diese Bank zusätzlich zum Wechselkurs berechnet, wenn sie Geld in eine andere Währung umrechnet, z. B. 1,5. Hilft Kasboek, Überweisungen zwischen deinen Konten in verschiedenen Währungen zu erkennen.",
+    "fxCostBad": "Gib einen Prozentsatz zwischen 0 und 20 ein."
   },
   "auth": {
     "welcome": "Willkommen bei Kasboek",
@@ -882,7 +885,14 @@
     "pairedHint": "Umbuchung zwischen deinen eigenen Konten",
     "pairedWith": "Umbuchung mit {{account}}",
     "unpair": "Trennen",
-    "pairSelected": "Als Umbuchung verknüpfen"
+    "pairSelected": "Als Umbuchung verknüpfen",
+    "cost": "Wechselkosten {{amount}}",
+    "noCost": "keine Wechselkosten",
+    "costBooked": "Wechselkosten: {{amount}} (als Gebühr gezählt)",
+    "noCostBooked": "Keine Wechselkosten gebucht",
+    "changeCost": "Ändern",
+    "costSaved": "Wechselkosten gespeichert",
+    "maybeFx": "Betrag zum Kurs des Tages"
   },
   "splits": {
     "badge_one": "in {{count}} geteilt",

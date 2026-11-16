@@ -468,7 +468,10 @@
       "data": "Backups & sync",
       "assistant": "Assistant"
     },
-    "about": "About Kasboek"
+    "about": "About Kasboek",
+    "fxCost": "Exchange cost (%)",
+    "fxCostHint": "Optional. What this bank charges on top of the exchange rate when it converts money to another currency, e.g. 1.5. Helps Kasboek recognise transfers between your accounts in different currencies.",
+    "fxCostBad": "Enter a percentage between 0 and 20."
   },
   "auth": {
     "welcome": "Welcome to Kasboek",
@@ -882,7 +885,14 @@
     "pairedHint": "Transfer between your own accounts",
     "pairedWith": "Transfer with {{account}}",
     "unpair": "Separate",
-    "pairSelected": "Pair as transfer"
+    "pairSelected": "Pair as transfer",
+    "cost": "exchange cost {{amount}}",
+    "noCost": "no exchange cost",
+    "costBooked": "Exchange cost: {{amount}} (counted as a fee)",
+    "noCostBooked": "No exchange cost booked",
+    "changeCost": "Change",
+    "costSaved": "Exchange cost saved",
+    "maybeFx": "amount at that day's rate"
   },
   "splits": {
     "badge_one": "split in {{count}}",

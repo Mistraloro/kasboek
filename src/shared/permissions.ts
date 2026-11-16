@@ -9,7 +9,7 @@
  * (memory) are sent along with every later chat.
  */
 export const PERMISSION_KINDS = [
-  { id: 'categorise', ops: ['transactions.categorize', 'transactions.edit', 'transactions.rename', 'transactions.split', 'transfers.pair'], risk: 'low' },
+  { id: 'categorise', ops: ['transactions.categorize', 'transactions.edit', 'transactions.rename', 'transactions.split', 'transfers.pair', 'transfers.setCost'], risk: 'low' },
   { id: 'rules', ops: ['rules.create', 'rules.update'], risk: 'low' },
   { id: 'organise', ops: ['categories.create', 'budgets.set', 'goals.create'], risk: 'low' },
   { id: 'balances', ops: ['balances.set', 'valuations.set', 'fx.setRate'], risk: 'high' },

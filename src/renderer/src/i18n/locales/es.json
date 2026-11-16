@@ -468,7 +468,10 @@
       "data": "Copias y sincronización",
       "assistant": "Asistente"
     },
-    "about": "Acerca de Kasboek"
+    "about": "Acerca de Kasboek",
+    "fxCost": "Coste de cambio (%)",
+    "fxCostHint": "Opcional. Lo que este banco cobra además del tipo de cambio cuando convierte dinero a otra moneda, p. ej. 1,5. Ayuda a Kasboek a reconocer traspasos entre tus cuentas en monedas distintas.",
+    "fxCostBad": "Introduce un porcentaje entre 0 y 20."
   },
   "auth": {
     "welcome": "Te damos la bienvenida a Kasboek",
@@ -882,7 +885,14 @@
     "pairedHint": "Traspaso entre tus propias cuentas",
     "pairedWith": "Traspaso con {{account}}",
     "unpair": "Separar",
-    "pairSelected": "Emparejar como traspaso"
+    "pairSelected": "Emparejar como traspaso",
+    "cost": "coste de cambio {{amount}}",
+    "noCost": "sin coste de cambio",
+    "costBooked": "Coste de cambio: {{amount}} (contado como comisión)",
+    "noCostBooked": "Sin coste de cambio registrado",
+    "changeCost": "Cambiar",
+    "costSaved": "Coste de cambio guardado",
+    "maybeFx": "importe al tipo de ese día"
   },
   "splits": {
     "badge_one": "dividido en {{count}}",

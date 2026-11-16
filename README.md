@@ -43,7 +43,11 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
 
 ## Run it
 
-Requirements: Node.js 22.12 or newer. Nothing is compiled: the encrypted database engine ships
+**Using Kasboek needs nothing else:** the installers (MSI, DMG, AppImage, .deb) contain everything,
+including the runtime Kasboek runs on (Electron, with its own built-in Node.js). Node.js is only
+needed to work on Kasboek's source code.
+
+For development: Node.js 22.12 or newer. Nothing is compiled: the encrypted database engine ships
 prebuilt 64-bit binaries for Windows, macOS and Linux (x64 and ARM64).
 
 ```bash

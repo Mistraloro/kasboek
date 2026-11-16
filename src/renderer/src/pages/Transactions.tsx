@@ -63,9 +63,12 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   const items = page.data?.items ?? []
   const allSelected = items.length > 0 && items.every((i) => selected.has(i.id))
 
-  // Exactly two selected, money out of one account and the same amount into another: one transfer.
+  // Exactly two selected, money out of one account and into another (the same amount, or any amount
+  // in another currency): one transfer.
   const chosen = items.filter((i) => selected.has(i.id))
-  const pairable = chosen.length === 2 && chosen[0]!.accountId !== chosen[1]!.accountId && chosen[0]!.amountCents === -chosen[1]!.amountCents && !chosen.some((c) => c.transferAccount)
+  const [ca, cb] = chosen
+  const pairable =
+    chosen.length === 2 && ca!.accountId !== cb!.accountId && !chosen.some((c) => c.transferAccount) && Math.sign(ca!.amountCents) === -Math.sign(cb!.amountCents) && (ca!.currency !== cb!.currency || ca!.amountCents === -cb!.amountCents)
   const pairSelected = (): void => {
     const [a, b] = chosen
     if (!a || !b) return
@@ -323,6 +326,43 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   )
 }
 
+/** A transfer between currencies: its exchange cost (booked as a fee), and a way to change it. */
+function ExchangeCost({ txId, onSaved }: { txId: number; onSaved: () => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { money, fmt } = useSettings()
+  const [info, setInfo] = useState<{ cross: boolean; currency: string | null; costCents: number | null } | null>(null)
+  const [edit, setEdit] = useState<string | null>(null)
+  useEffect(() => void call('transfers.cost', { id: txId }).then(setInfo, () => setInfo(null)), [txId])
+  if (!info?.cross || !info.currency) return null
+  const cents = edit === null ? null : parseAmount(edit, 'auto', fmt.formats.decimal)
+  const save = (): void => {
+    if (cents === null || cents < 0) return
+    void call('transfers.setCost', { id: txId, costCents: cents }).then(
+      () => {
+        toast(t('transfers.costSaved'))
+        setEdit(null)
+        onSaved()
+      },
+      (e) => toast(errText(e), 'error')
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <span className="text-muted">{info.costCents ? t('transfers.costBooked', { amount: money(info.costCents, info.currency) }) : t('transfers.noCostBooked')}</span>
+      {edit === null ? (
+        <button type="button" className="font-medium text-accent hover:underline" onClick={() => setEdit(info.costCents ? centsToInput(info.costCents, fmt.formats) : '')}>{t('transfers.changeCost')}</button>
+      ) : (
+        <>
+          <Input className="num h-7! w-28!" inputMode="decimal" autoFocus value={edit} aria-label={t('transfers.changeCost')} onChange={(e) => setEdit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); save() } }} placeholder={info.currency} />
+          <Button size="sm" variant="primary" disabled={cents === null || cents < 0} onClick={save}>{t('settings.save')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEdit(null)}>{t('settings.cancel')}</Button>
+        </>
+      )}
+    </div>
+  )
+}
+
 function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transaction | 'new' | null; categories: Category[]; accounts: { id: number; name: string }[]; onClose: () => void; onSaved: () => void }) {
   const { t } = useTranslation()
   const toast = useToast()
@@ -373,10 +413,13 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
         {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: {base.counterpartyIban}</p>}
         {base && <div className="col-span-2"><SplitEditor tx={base} categories={categories} onSaved={onSaved} /></div>}
         {base?.transferAccount && (
-          <p className="col-span-2 flex items-center gap-2 text-xs text-muted">
-            ⇄ {t('transfers.pairedWith', { account: base.transferAccount })}
-            <button type="button" className="font-medium text-accent hover:underline" onClick={() => void call('transfers.unpair', { id: base.id }).then(onSaved, (e) => toast(errText(e), 'error'))}>{t('transfers.unpair')}</button>
-          </p>
+          <div className="col-span-2 flex flex-col gap-1.5">
+            <p className="flex items-center gap-2 text-xs text-muted">
+              ⇄ {t('transfers.pairedWith', { account: base.transferAccount })}
+              <button type="button" className="font-medium text-accent hover:underline" onClick={() => void call('transfers.unpair', { id: base.id }).then(onSaved, (e) => toast(errText(e), 'error'))}>{t('transfers.unpair')}</button>
+            </p>
+            <ExchangeCost txId={base.id} onSaved={onSaved} />
+          </div>
         )}
         <div className="col-span-2 flex justify-between gap-2">
           {base ? (
@@ -411,7 +454,7 @@ function TransfersModal({ open, onClose, onPaired }: { open: boolean; onClose: (
     })
   }, [open])
   const pair = (): void => {
-    const pairs = (list ?? []).filter((p) => picked.has(key(p))).map((p) => ({ outId: p.outId, inId: p.inId }))
+    const pairs = (list ?? []).filter((p) => picked.has(key(p))).map((p) => ({ outId: p.outId, inId: p.inId, ...(p.costCents !== null ? { costCents: p.costCents } : {}) }))
     void call('transfers.pair', { pairs }).then(
       (r) => {
         toast(t('transfers.paired', { count: r.paired }))
@@ -442,9 +485,15 @@ function TransfersModal({ open, onClose, onPaired }: { open: boolean; onClose: (
                 <span className="num w-24 text-muted">{formatDate(p.date, fmt)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{p.fromAccount} → {p.toAccount}</span>
-                  <span className="block text-xs text-muted">{t(p.confidence === 'iban' ? 'transfers.sure' : 'transfers.maybe')}</span>
+                  <span className="block text-xs text-muted">
+                    {t(p.confidence === 'iban' ? 'transfers.sure' : p.inCurrency !== p.currency ? 'transfers.maybeFx' : 'transfers.maybe')}
+                    {p.inCurrency !== p.currency && (p.costCents ? ` · ${t('transfers.cost', { amount: money(p.costCents, p.currency) })}` : ` · ${t('transfers.noCost')}`)}
+                  </span>
                 </span>
-                <span className="num w-24 text-right font-medium">{money(p.amountCents, p.currency)}</span>
+                <span className="num text-right font-medium">
+                  {money(p.amountCents, p.currency)}
+                  {p.inCurrency !== p.currency && <span className="block text-xs font-normal text-muted">→ {money(p.inAmountCents, p.inCurrency)}</span>}
+                </span>
               </label>
             </li>
           ))}

@@ -582,17 +582,20 @@ function AccountsSection() {
   const { settings } = useSettings()
   const { fmt, money } = useSettings()
   const today = localToday()
-  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind, balance: '', balanceDate: today })
+  const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind, balance: '', balanceDate: today, fxCost: '' })
   const [balanceOf, setBalanceOf] = useState<AccountWithBalance | null>(null)
   const open = (a: AccountWithBalance | 'new'): void => {
     setForm(
       a === 'new'
-        ? { name: '', bank: '', iban: '', currency: settings.currency, kind: 'current', balance: '', balanceDate: today }
-        : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency, kind: a.kind, balance: '', balanceDate: today }
+        ? { name: '', bank: '', iban: '', currency: settings.currency, kind: 'current', balance: '', balanceDate: today, fxCost: '' }
+        : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency, kind: a.kind, balance: '', balanceDate: today, fxCost: a.fxCostPct === null ? '' : formatNumber(a.fxCostPct, fmt, 2).replace(/[.,]?0+$/, '') }
     )
     setEditing(a)
   }
   const balanceCents = form.balance.trim() ? parseAmount(form.balance, 'auto', fmt.formats.decimal) : null
+  // A percentage like "1,5" or "1.5"; empty = not known.
+  const fxCostPct = form.fxCost.trim() === '' ? null : Number(form.fxCost.trim().replace('%', '').replace(',', '.'))
+  const fxCostBad = fxCostPct !== null && (!Number.isFinite(fxCostPct) || fxCostPct < 0 || fxCostPct > 20)
   const save = async (): Promise<void> => {
     try {
       if (editing === 'new')
@@ -602,9 +605,10 @@ function AccountsSection() {
           iban: form.iban || null,
           currency: form.currency,
           kind: form.kind,
+          fxCostPct,
           ...(balanceCents !== null ? { bankBalance: { date: form.balanceDate, cents: balanceCents } } : {})
         })
-      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency, kind: form.kind })
+      else if (editing) await call('accounts.update', { id: editing.id, name: form.name, bank: form.bank, iban: form.iban || null, currency: form.currency, kind: form.kind, fxCostPct })
       toast(editing === 'new' ? t('settings.accountAdded') : t('settings.accountSaved'))
       setEditing(null)
       void accounts.reload()
@@ -653,6 +657,9 @@ function AccountsSection() {
             {(id) => <CurrencySelect id={id} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />}
           </Field>
           <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <Input id={id} value={form.iban} onChange={(e) => setForm({ ...form, iban: e.target.value })} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
+          <Field label={t('settings.fxCost')} hint={fxCostBad ? <span className="text-negative">{t('settings.fxCostBad')}</span> : t('settings.fxCostHint')}>
+            {(id) => <Input id={id} value={form.fxCost} inputMode="decimal" className="num w-32!" placeholder="1,5" onChange={(e) => setForm({ ...form, fxCost: e.target.value })} />}
+          </Field>
           {editing === 'new' && (
             <div>
               <p className="mb-1 text-[13px] font-medium">{t(form.kind === 'investment' ? 'balance.newInvestment' : 'balance.newTitle')}</p>
@@ -663,7 +670,7 @@ function AccountsSection() {
           )}
           <div className="flex justify-end gap-2">
             <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={!form.name.trim() || (form.balance.trim() !== '' && balanceCents === null)}>{t('settings.save')}</Button>
+            <Button type="submit" variant="primary" disabled={!form.name.trim() || fxCostBad || (form.balance.trim() !== '' && balanceCents === null)}>{t('settings.save')}</Button>
           </div>
         </form>
       </Modal>

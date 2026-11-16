@@ -468,7 +468,10 @@
       "data": "Sauvegardes et synchro",
       "assistant": "Assistant"
     },
-    "about": "À propos de Kasboek"
+    "about": "À propos de Kasboek",
+    "fxCost": "Frais de change (%)",
+    "fxCostHint": "Facultatif. Ce que cette banque prélève en plus du taux de change quand elle convertit de l’argent dans une autre devise, p. ex. 1,5. Aide Kasboek à reconnaître les virements entre vos comptes dans des devises différentes.",
+    "fxCostBad": "Indiquez un pourcentage entre 0 et 20."
   },
   "auth": {
     "welcome": "Bienvenue dans Kasboek",
@@ -882,7 +885,14 @@
     "pairedHint": "Virement entre vos propres comptes",
     "pairedWith": "Virement avec {{account}}",
     "unpair": "Dissocier",
-    "pairSelected": "Associer comme virement"
+    "pairSelected": "Associer comme virement",
+    "cost": "frais de change {{amount}}",
+    "noCost": "sans frais de change",
+    "costBooked": "Frais de change : {{amount}} (comptés comme frais)",
+    "noCostBooked": "Aucun frais de change enregistré",
+    "changeCost": "Modifier",
+    "costSaved": "Frais de change enregistrés",
+    "maybeFx": "montant au taux du jour"
   },
   "splits": {
     "badge_one": "réparti en {{count}}",

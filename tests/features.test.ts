@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { openDatabase } from '@core/database'
 import { insertTransaction, listTransactions, monthSummary } from '@core/finance'
-import { findTransfers, pairTransfers, unpairTransfer } from '@core/transfers'
+import { findTransfers, pairTransfers, setTransferCost, transferCost, unpairTransfer } from '@core/transfers'
+import { setManualRate } from '@core/fx'
 
 function db() {
   const d = openDatabase(join(mkdtempSync(join(tmpdir(), 'kb-feat-')), 'k.db'), randomBytes(32).toString('hex'))
@@ -53,6 +54,62 @@ describe('transfers between own accounts (#28)', () => {
     pairTransfers(d, [{ outId: o, inId: i }])
     const cats = (d.prepare('SELECT category_id FROM transactions ORDER BY id').all() as { category_id: number }[]).map((r) => r.category_id)
     expect(cats).toEqual([cat(d, 'Savings'), cat(d, 'Savings')])
+  })
+})
+
+describe('transfers between currencies', () => {
+  const setup = (opts: { pct?: number | null } = {}) => {
+    const { d } = db()
+    const eur = Number(d.prepare("INSERT INTO accounts (name, iban, currency, fx_cost_pct) VALUES ('Euro', 'BE68539007547034', 'EUR', ?)").run(opts.pct ?? null).lastInsertRowid)
+    const usd = Number(d.prepare("INSERT INTO accounts (name, iban, currency) VALUES ('Dollar', 'BE71096123456769', 'USD')").run().lastInsertRowid)
+    setManualRate(d, { currency: 'USD', date: '2026-10-01', perEur: 1.08 })
+    return { d, eur, usd }
+  }
+
+  it('pairs €100 out with $105 in, and books the exchange cost as a fee', () => {
+    const { d, eur, usd } = setup()
+    const o = tx(d, eur, '2026-10-01', -10000)
+    const i = tx(d, usd, '2026-10-02', 10500)
+    const [p] = findTransfers(d)
+    // $108 at the day's rate, $105 arrived: $3 ≈ €2.78 lost.
+    expect(p).toMatchObject({ outId: o, inId: i, amountCents: 10000, currency: 'EUR', inAmountCents: 10500, inCurrency: 'USD', costCents: 278, confidence: 'amount' })
+    const before = monthSummary(d, '2026-10')
+    pairTransfers(d, [p!])
+    const after = monthSummary(d, '2026-10')
+    // The transfer itself is neither income nor spending; only the cost is spending.
+    expect(after.incomeCents).toBe(before.incomeCents - 9722)
+    expect(after.spendingCents).toBe(before.spendingCents - 10000 + 278)
+    expect(transferCost(d, i)).toBe(278)
+    // The exact cost from the statement replaces it; unpairing removes it.
+    setTransferCost(d, o, 250)
+    expect(transferCost(d, o)).toBe(250)
+    unpairTransfer(d, o)
+    expect(d.prepare('SELECT count(*) AS n FROM transaction_splits').get()).toEqual({ n: 0 })
+  })
+
+  it('does not pair amounts that are too far apart, and uses the bank’s cost to match', () => {
+    const { d, eur, usd } = setup()
+    tx(d, eur, '2026-10-01', -10000)
+    tx(d, usd, '2026-10-01', 9000) // 17% below the rate's value: not a transfer
+    expect(findTransfers(d)).toEqual([])
+    const withPct = setup({ pct: 2 })
+    tx(withPct.d, withPct.eur, '2026-10-01', -10000)
+    const i = tx(withPct.d, withPct.usd, '2026-10-01', 10584) // $108 minus 2%
+    tx(withPct.d, withPct.usd, '2026-10-01', 10790) // also possible without the 2%, but further from it
+    expect(findTransfers(withPct.d).map((p) => p.inId)).toEqual([i])
+  })
+
+  it('without a rate, pairs only on the account number and uses the bank’s percentage', () => {
+    const { d } = db()
+    const eur = Number(d.prepare("INSERT INTO accounts (name, iban, currency, fx_cost_pct) VALUES ('Euro', 'BE68539007547034', 'EUR', 1.5)").run().lastInsertRowid)
+    const chf = Number(d.prepare("INSERT INTO accounts (name, iban, currency) VALUES ('Franc', 'CH9300762011623852957', 'CHF')").run().lastInsertRowid)
+    tx(d, eur, '2026-10-01', -20000)
+    tx(d, chf, '2026-10-01', 18500)
+    expect(findTransfers(d)).toEqual([])
+    const o = tx(d, eur, '2026-10-05', -20000, { counterpartyIban: 'CH9300762011623852957' })
+    tx(d, chf, '2026-10-05', 18500)
+    const [p] = findTransfers(d)
+    expect(p).toMatchObject({ outId: o, confidence: 'iban', costCents: 300 })
   })
 })
 

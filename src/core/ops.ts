@@ -9,7 +9,7 @@ import * as imp from './import'
 import * as fx from './fx'
 import * as wealth from './wealth'
 import { listBankBalances, setBankBalance } from './balance'
-import { findTransfers, pairTransfers, unpairTransfer } from './transfers'
+import { findTransfers, pairTransfers, setTransferCost, transferCostInfo, unpairTransfer } from './transfers'
 import { findRecurring } from './recurring'
 import { monthReview } from './review'
 import { listAlerts } from './alerts'
@@ -46,6 +46,7 @@ interface AccountRow {
   opening_balance_cents: number
   archived: number
   created_at: string
+  fx_cost_pct: number | null
 }
 
 interface CategoryRow {
@@ -67,7 +68,8 @@ const toAccount = (r: AccountRow): Account => ({
   kind: r.kind,
   openingBalanceCents: r.opening_balance_cents,
   archived: r.archived === 1,
-  createdAt: r.created_at
+  createdAt: r.created_at,
+  fxCostPct: r.fx_cost_pct ?? null
 })
 
 const toCategory = (r: CategoryRow): Category => ({
@@ -159,13 +161,14 @@ export const coreOps: OpTable = {
       const cur = db.prepare('SELECT * FROM accounts WHERE id = ?').get(input.id) as AccountRow | undefined
       if (!cur) throw new AppError('accounts.not_found', 'Account not found.')
       db.transaction(() => {
-        db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, currency = ?, kind = ?, archived = ? WHERE id = ?').run(
+        db.prepare('UPDATE accounts SET name = ?, bank = ?, iban = ?, currency = ?, kind = ?, archived = ?, fx_cost_pct = ? WHERE id = ?').run(
           input.name ?? cur.name,
           input.bank ?? cur.bank,
           input.iban !== undefined ? normalizeIban(input.iban) : cur.iban,
           input.currency ?? cur.currency,
           input.kind ?? cur.kind,
           input.archived !== undefined ? (input.archived ? 1 : 0) : cur.archived,
+          input.fxCostPct !== undefined ? input.fxCostPct : cur.fx_cost_pct,
           input.id
         )
         // Changing the currency corrects it: amounts that were in the old one now count in the new one.
@@ -185,10 +188,10 @@ export const coreOps: OpTable = {
         return db.transaction(() => {
           const row = db
             .prepare(
-              `INSERT INTO accounts (name, bank, iban, currency, kind, opening_balance_cents)
-               VALUES (?, ?, ?, ?, ?, ?) RETURNING *`
+              `INSERT INTO accounts (name, bank, iban, currency, kind, opening_balance_cents, fx_cost_pct)
+               VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`
             )
-            .get(input.name, input.bank, iban, input.currency, input.kind, input.openingBalanceCents) as AccountRow
+            .get(input.name, input.bank, iban, input.currency, input.kind, input.openingBalanceCents, input.fxCostPct ?? null) as AccountRow
           // The balance the bank shows now: the starting point for the balance from here on.
           if (input.bankBalance && input.kind === 'investment') wealth.setValuation(db, { accountId: row.id, date: input.bankBalance.date, valueCents: input.bankBalance.cents })
           else if (input.bankBalance) setBankBalance(db, { accountId: row.id, date: input.bankBalance.date, balanceCents: input.bankBalance.cents })
@@ -262,6 +265,8 @@ export const coreOps: OpTable = {
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },
   'transfers.find': { mutates: false, assistant: true, handler: ({ db }) => findTransfers(db) },
   'transfers.pair': { mutates: true, assistant: true, handler: ({ db }, { pairs }) => pairTransfers(db, pairs) },
+  'transfers.cost': { mutates: false, assistant: false, handler: ({ db }, { id }) => transferCostInfo(db, id) },
+  'transfers.setCost': { mutates: true, assistant: true, handler: ({ db }, { id, costCents }) => setTransferCost(db, id, costCents) },
   'transfers.unpair': {
     mutates: true,
     assistant: false,

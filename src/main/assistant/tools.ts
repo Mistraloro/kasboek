@@ -177,6 +177,10 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
       if (!parts.length) return 'Remove the split of a transaction'
       return `Split a transaction into ${parts.map((p) => `${money(db, p.amountCents)} ${cat(p.categoryId)}`).join(', ')}`
     }
+    case 'transfers.setCost': {
+      const tx = db.prepare('SELECT currency FROM transactions WHERE transfer_pair = (SELECT transfer_pair FROM transactions WHERE id = ?) AND amount_cents < 0').get(input['id']) as { currency: string } | undefined
+      return `Set the exchange cost of this transfer to ${money(db, Number(input['costCents']), tx?.currency)} (counted as a fee)`
+    }
     case 'transfers.pair': {
       const n = (input['pairs'] as unknown[] | undefined)?.length ?? 0
       return `Pair ${n} transfer${n === 1 ? '' : 's'} between your own accounts (both halves count as neither income nor spending)`

@@ -34,6 +34,8 @@ const password = z
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD.')
 const month = z.string().regex(MONTH, 'Use YYYY-MM.')
 const id = z.number().int().positive()
+/** A bank's exchange cost on top of the reference rate, in percent; null clears it. */
+const fxCostPct = z.number().min(0).max(20).nullable()
 const cents = z.number().int().min(-1e12).max(1e12)
 const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.')
 
@@ -284,7 +286,9 @@ export const contract = {
     output: out<AccountWithBalance[]>()
   },
   'accounts.update': {
-    input: z.object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), currency: currency.optional(), kind: z.enum(ACCOUNT_KINDS).optional(), archived: z.boolean().optional() }).strict(),
+    input: z
+      .object({ id, name: z.string().trim().min(1).max(80).optional(), bank: z.string().trim().max(60).optional(), iban: z.string().trim().max(34).nullable().optional(), currency: currency.optional(), kind: z.enum(ACCOUNT_KINDS).optional(), archived: z.boolean().optional(), fxCostPct: fxCostPct.optional() })
+      .strict(),
     output: out<Account>()
   },
   'accounts.create': {
@@ -296,6 +300,8 @@ export const contract = {
         currency: currency.default('EUR'),
         kind: z.enum(ACCOUNT_KINDS).default('current'),
         openingBalanceCents: z.number().int().default(0),
+        /** What the bank charges on top of the reference rate when converting currency (%), if known. */
+        fxCostPct: fxCostPct.optional(),
         /** What the bank shows on a day (usually today): the balance is counted from there. */
         bankBalance: z.object({ date, cents: z.number().int() }).strict().optional()
       })
@@ -457,16 +463,24 @@ export const contract = {
     output: out<RecurringSummary>()
   },
   'transfers.find': {
-    description: 'Transfers between the person’s own accounts that aren’t paired yet: money out of one account and the same amount into another within 3 days. confidence "iban" means the account number matches (sure); "amount" only the amount and date.',
+    description:
+      'Transfers between the person’s own accounts that aren’t paired yet: money out of one account and into another within 3 days, the same amount, or between currencies its value at that day’s rate minus the bank’s cost. confidence "iban" means the account number matches (sure); "amount" only the amount and date. costCents: between currencies, the exchange cost in the sending account’s currency.',
     input: empty,
     output: out<TransferPair[]>()
   },
   'transfers.pair': {
-    description: 'Pair transfers between own accounts (from transfers_find). Both halves go into a transfer category, so they count as neither income nor spending.',
-    input: z.object({ pairs: z.array(z.object({ outId: id, inId: id }).strict()).min(1).max(2000) }).strict(),
+    description:
+      'Pair transfers between own accounts (from transfers_find). Both halves go into a transfer category, so they count as neither income nor spending. Between currencies, the exchange cost (costCents, or worked out from the rate) is booked as a fee on the sending half.',
+    input: z.object({ pairs: z.array(z.object({ outId: id, inId: id, costCents: z.number().int().min(0).max(1e10).optional() }).strict()).min(1).max(2000) }).strict(),
     output: out<{ paired: number }>()
   },
   'transfers.unpair': { input: z.object({ id }).strict(), output: out<{ ok: true }>() },
+  'transfers.cost': { input: z.object({ id }).strict(), output: out<{ cross: boolean; currency: string | null; costCents: number | null }>() },
+  'transfers.setCost': {
+    description: 'Change the exchange cost of a paired transfer between currencies (e.g. the exact cost from the bank statement), in cents of the sending account’s currency. Either half’s id.',
+    input: z.object({ id, costCents: z.number().int().min(0).max(1e10) }).strict(),
+    output: out<{ costCents: number }>()
+  },
   'rules.list': { description: 'List categorisation rules ("text in counterparty/description → category").', input: empty, output: out<Rule[]>() },
   'rules.create': {
     description:
