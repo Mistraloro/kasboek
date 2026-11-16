@@ -1,6 +1,6 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.11
+## What’s new in 0.12
 
 **New**
 - **Fixed costs**: subscriptions, rent, insurance and salary found from your transactions, with what is still due this month, price changes and late payments.

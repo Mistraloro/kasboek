@@ -2,7 +2,7 @@
 
 **What this covers**
 - **Range:** branch `ccr-0f0084e8-2jcj1g`, from `cf32f63` up to the 0.11.0 version commit. Sections 1–5 cover up to `8679bc2`; section 6 covers what came after (reasoning, permissions, memory).
-- **Version:** 0.11.0, the first build since build 14.
+- **Version:** 0.12.0 (0.11.x were test builds only, never released).
 
 **Checks run**
 - 120 vitest tests pass; typecheck and the i18n check are clean.
@@ -162,3 +162,4 @@
 ### To look at
 - The Windows path (silent MSI and restart) was not run here; only the AppImage path, the deb/dmg path and the "didn't install" note were run end to end. If `kasboek-mcp.exe` is in use by a Claude app during the MSI upgrade, Windows may hold that file until a restart.
 - Without code signing, the update is only as trustworthy as the GitHub account that publishes releases.
+- Fixed in the review: the Windows install script switches to UTF-8 (`chcp 65001`) so user folders with accents work; a failing AppImage replace no longer leaves the window on "Installing…"; the automatic check waits until the welcome window is done.

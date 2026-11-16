@@ -163,6 +163,8 @@ function installMsi(msi: string): void {
     script,
     [
       '@echo off',
+      // Paths may hold accents (a user folder like Jérôme): read this file as UTF-8.
+      'chcp 65001 >nul',
       'rem Kasboek update: waits for Kasboek to close, installs silently, opens Kasboek again.',
       ':wait',
       `tasklist /FI "PID eq ${process.pid}" 2>nul | find "${process.pid}" >nul && (timeout /t 1 /nobreak >nul & goto wait)`,
@@ -200,10 +202,17 @@ export async function installUpdate(): Promise<UpdateStatus> {
     if (err) throw new AppError('update.open', `The update was downloaded but couldn’t be opened: ${err}`)
     return set({ state: 'opened' })
   }
-  set({ state: 'installing' })
+  // The note lets the next start tell whether the update went in.
   writeFileSync(pendingFile(), JSON.stringify({ version: status.latest, at: new Date().toISOString() }))
-  if (status.kind === 'msi') installMsi(file)
-  else installAppImage(file)
+  try {
+    if (status.kind === 'msi') installMsi(file)
+    else installAppImage(file)
+  } catch (err) {
+    rmSync(pendingFile(), { force: true })
+    set({ error: err instanceof AppError ? err.message : 'The update couldn’t be started.' })
+    throw err
+  }
+  set({ state: 'installing' })
   // Closing locks Kasboek (and makes the usual backup on quit).
   setTimeout(() => app.quit(), 300)
   return status
@@ -243,7 +252,8 @@ export function startUpdateChecks(): void {
     // Never let cleaning up stop Kasboek from starting.
   }
   if (!supported()) return
-  const due = (): boolean => getPrefs().updateCheck && (!status.lastCheckedAt || Date.now() - Date.parse(status.lastCheckedAt) > DAY)
+  // Only once the person has made the choice in the welcome window.
+  const due = (): boolean => getPrefs().welcomeDone && getPrefs().updateCheck && (!status.lastCheckedAt || Date.now() - Date.parse(status.lastCheckedAt) > DAY)
   setTimeout(() => void (due() && checkForUpdate()), 15_000)
   setInterval(() => void (due() && checkForUpdate()), 60 * 60 * 1000)
 }
