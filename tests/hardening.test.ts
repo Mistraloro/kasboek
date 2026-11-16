@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -721,6 +721,82 @@ describe('session', () => {
       expect(readFileSync(join(mocks.dataDir, 'kasboek.db')).equals(before)).toBe(true)
       expect(readdirSync(mocks.dataDir).filter((f) => f.startsWith('import-'))).toEqual([])
       expect(session.isUnlocked()).toBe(true)
+    })
+
+    describe('local sync leftovers', () => {
+      const placeFile = () => join(mocks.dataDir, 'sync.json')
+      const outbox = () => join(mocks.dataDir, 'sync-outbox')
+      const seedSyncOn = (): void => {
+        seedForeignSettings()
+        sync.setMeta(session.db(), 'groupId', 'g1')
+        session.db().prepare('UPDATE sync_flags SET enabled = 1').run()
+      }
+      const seedLeftovers = (): void => {
+        writeFileSync(placeFile(), JSON.stringify({ deviceId: 'device0001', folder: null, webdav: { url: 'https://dav.example/x', user: 'me' } }))
+        mkdirSync(outbox())
+        writeFileSync(join(outbox(), 'c-1.kbsync'), 'x')
+      }
+      const pick = async () => transfer.describeTransfer(await exportFile())
+
+      it('removes the place file and the outbox after an import that switched sync off', async () => {
+        await session.setup('password', PASSWORD)
+        seedSyncOn()
+        seedLeftovers()
+        const picked = await pick()
+        expect(await transfer.importTransfer({ token: picked.token, password: PASSWORD })).toContain('sync')
+        expect(existsSync(placeFile())).toBe(false)
+        expect(existsSync(outbox())).toBe(false)
+        expect(syncService.syncStatus().state).toBe('off')
+      })
+
+      it('keeps them for a join', async () => {
+        await session.setup('password', PASSWORD)
+        seedSyncOn()
+        seedLeftovers()
+        const picked = await pick()
+        expect(await transfer.importTransfer({ token: picked.token, password: PASSWORD }, { joining: true })).not.toContain('sync')
+        expect(existsSync(placeFile())).toBe(true)
+        expect(existsSync(join(outbox(), 'c-1.kbsync'))).toBe(true)
+      })
+
+      it('leaves them untouched when the reset fails', async () => {
+        await session.setup('password', PASSWORD)
+        seedSyncOn()
+        seedLeftovers()
+        const picked = await pick()
+        vi.spyOn(await import('@core/settings'), 'resetImportedSettings').mockImplementation(() => {
+          throw new Error('database is locked')
+        })
+        await expect(transfer.importTransfer({ token: picked.token, password: PASSWORD })).rejects.toThrow('database is locked')
+        expect(existsSync(placeFile())).toBe(true)
+        expect(existsSync(join(outbox(), 'c-1.kbsync'))).toBe(true)
+      })
+
+      it('leaves them untouched when swapping in the new database fails', async () => {
+        await session.setup('password', PASSWORD)
+        seedSyncOn()
+        seedLeftovers()
+        const picked = await pick()
+        mocks.failRename.mockImplementation((_from, to) => to === join(mocks.dataDir, 'kasboek.db'))
+        await expect(transfer.importTransfer({ token: picked.token, password: PASSWORD })).rejects.toThrow('simulated')
+        mocks.failRename.mockReturnValue(false)
+        expect(existsSync(placeFile())).toBe(true)
+        expect(existsSync(join(outbox(), 'c-1.kbsync'))).toBe(true)
+      })
+
+      it('does not fail the import when a leftover cannot be deleted, and still removes the other', async () => {
+        await session.setup('password', PASSWORD)
+        seedSyncOn()
+        seedLeftovers()
+        // A folder in the place file's spot cannot be removed like a file.
+        rmSync(placeFile())
+        mkdirSync(placeFile())
+        const picked = await pick()
+        expect(await transfer.importTransfer({ token: picked.token, password: PASSWORD })).toContain('sync')
+        expect(existsSync(placeFile())).toBe(true)
+        expect(existsSync(outbox())).toBe(false)
+        expect(readFileSync(join(mocks.dataDir, 'startup.log'), 'utf8')).toContain('could not remove')
+      })
     })
 
     it('keeps the sync key of a joined snapshot, so joining still works', async () => {

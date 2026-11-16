@@ -29,6 +29,7 @@ import { openSyncFile as open, sealSyncFile as seal } from '@core/sync-file'
 import { SYNC_DIR, WebDavStore, normalizeWebDavUrl, type SyncStore } from '@core/sync-store'
 import { FolderStore } from '@core/sync-store-folder'
 import type { PickedTransfer, SyncStatus } from '@shared/types'
+import { startupLog } from '../graphics'
 import { paths } from '../paths'
 import { broadcast, db as liveDb, isUnlocked, onLock } from '../session'
 import { describeTransfer, writeTransfer } from '../transfer/service'
@@ -411,6 +412,22 @@ export function stopSync(): SyncStatus {
   lastError = null
   publish()
   return syncStatus()
+}
+
+/**
+ * After an import switched sync off in the new database: removes the place file and the outbox, as stopSync does.
+ * Each removal that fails is logged and skipped; the import has already succeeded.
+ */
+export function removeSyncLeftovers(): void {
+  for (const target of [paths.syncFile, outboxDir()]) {
+    try {
+      rmSync(target, { recursive: target !== paths.syncFile, force: true })
+    } catch (err) {
+      startupLog(`sync: could not remove ${target} after an import: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+  known = null
+  lastError = null
 }
 
 export function dismissConflicts(): SyncStatus {
