@@ -156,7 +156,8 @@
 
 ### Welcome window (`pages/Welcome.tsx`) and tour (`components/Tour.tsx`)
 - Shown after unlocking on a computer where `prefs.welcomeDone` is false (new data, a join, or the first start after this update).
-- Steps: an introduction; basics (language, theme, main currency, with a preview of the number and date format); safety (automatic backups, which asks for a folder, and auto-lock, plus a note on the recovery key); the AI provider (all presets but "custom") and key, or skip; the update switch, on by default.
+- Steps: an introduction; basics (language, theme, main currency, with a preview of the number and date format); safety (automatic backups, which asks for a folder, and auto-lock, plus a note on the recovery key); the AI provider (all presets but "custom") and key, or skip; Claude apps (the MCP switch, then "Add to Claude Desktop" / "Add to Claude Code" with their state, the same operations as Settings); the update switch, on by default.
+- Claude Code's state is now absent, current or outdated (`codeEntryState` in `core/mcp-config.ts`): `claude mcp get kasboek` must name this installation's helper and data folder. Settings shows "Update" only when it is outdated, as for Claude Desktop (it used to show "Update" whenever Kasboek was added).
 - It ends with "Show me around" or "Skip the tour". The tour puts a spotlight on each part (the 8 pages, the assistant, Settings, Lock; targets carry `data-tour`), opens the page it talks about, and closes with Escape or a click outside. Settings has "Show the tour".
 
 ### To look at

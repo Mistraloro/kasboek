@@ -1099,7 +1099,11 @@
     "safetyBody": "Die Daten von Kasboek liegen nur auf diesem Computer, darum ist eine Sicherung anderswo wichtig.",
     "safetyRecovery": "Bewahre deinen Wiederherstellungsschlüssel sicher auf: Ohne dein Passwort oder diesen Schlüssel kann niemand deine Daten öffnen, auch Kasboek nicht.",
     "noTour": "Rundgang überspringen",
-    "tour": "Zeig mir alles"
+    "tour": "Zeig mir alles",
+    "claudeTitle": "Claude Desktop und Claude Code",
+    "claudeBody": "Nutzt du schon eine Claude-App? Sie kann dein Budget lesen und Änderungen vorschlagen, solange Kasboek offen und entsperrt ist. Ihre Änderungen warten auf dein OK in Kasboek. Optional.",
+    "claudeNote": "Kasboek fügt nur seinen eigenen Eintrag zu den Einstellungen der Claude-App hinzu und legt vorher eine Kopie der Datei an. Starte Claude Desktop danach neu.",
+    "codeNotFound": "Claude Code wurde auf diesem Computer nicht gefunden. Du kannst es später in den Einstellungen einrichten."
   },
   "tour": {
     "label": "Rundgang durch Kasboek",

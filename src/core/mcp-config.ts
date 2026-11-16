@@ -45,6 +45,17 @@ export function desktopEntryState(text: string | null, entry: ServerEntry): 'abs
   return JSON.stringify(current) === JSON.stringify(entry) ? 'current' : 'outdated'
 }
 
+/**
+ * Claude Code: whether `claude mcp get kasboek` succeeded (`ok`) and whether what it prints names
+ * this installation's helper and data folder. Paths are compared ignoring case and slash direction.
+ */
+export function codeEntryState(ok: boolean, out: string, entry: ServerEntry): 'absent' | 'current' | 'outdated' {
+  if (!ok) return 'absent'
+  const norm = (s: string): string => s.replace(/\\/g, '/').toLowerCase()
+  const text = norm(out)
+  return [entry.command, ...entry.args].every((part) => text.includes(norm(part))) ? 'current' : 'outdated'
+}
+
 /** Returns the new file text with mcpServers.kasboek set; everything else is kept as it was. */
 export function withKasboek(text: string | null, entry: ServerEntry): string {
   const config = parse(text)

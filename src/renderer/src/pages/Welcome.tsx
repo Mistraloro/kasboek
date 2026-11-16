@@ -1,14 +1,14 @@
-import { ArrowDownToLine, Bot, Check, FileUp, FolderInput, Lock, Monitor, Moon, PiggyBank, ShieldCheck, Sparkles, Sun } from 'lucide-react'
+import { ArrowDownToLine, Bot, Check, FileUp, FolderInput, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import type { LanguageCode } from '@shared/languages'
-import type { BackupStatus, Settings } from '@shared/types'
+import type { BackupStatus, McpSetupStatus, Settings } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
 import { CurrencySelect } from '../components/CurrencySelect'
 import { useToast } from '../components/Toast'
 import { startTour } from '../components/Tour'
-import { Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
+import { Badge, Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
 import { LANGUAGES } from '../i18n'
 import { call } from '../lib/api'
 import { formatDate, formatMoney } from '../lib/format'
@@ -16,8 +16,63 @@ import { usePrefs, usePrefsFmt } from '../lib/settings'
 import { AuthCard, AuthLayout } from './auth/AuthLayout'
 import { errText } from './auth/parts'
 
-const STEPS = ['intro', 'basics', 'safety', 'assistant', 'updates'] as const
+const STEPS = ['intro', 'basics', 'safety', 'assistant', 'claude', 'updates'] as const
 type Step = (typeof STEPS)[number]
+
+/** Claude Desktop and Claude Code: the connection switch and the one-click setup, as in Settings. */
+function ClaudeApps({ enabled, onEnabled }: { enabled: boolean; onEnabled: (v: boolean) => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const [st, setSt] = useState<McpSetupStatus | null>(null)
+  const [busy, setBusy] = useState(false)
+  const reload = (): void => void call('mcp.setupStatus').then(setSt, () => setSt(null))
+  useEffect(reload, [enabled])
+  const act = (p: Promise<unknown>, done: string): void => {
+    setBusy(true)
+    p.then(() => toast(done), (e) => toast(errText(e), 'error')).finally(() => {
+      setBusy(false)
+      reload()
+    })
+  }
+  const state = (s: 'absent' | 'current' | 'outdated'): ReactNode => <Badge tone={s === 'current' ? 'accent' : s === 'outdated' ? 'warning' : 'neutral'}>{t(`mcp.state.${s}`)}</Badge>
+  return (
+    <div className="flex flex-col gap-2.5">
+      <Choice icon={<Plug size={16} />} title={t('mcp.title')} hint={t('mcp.hint')}>
+        <Switch label={t('mcp.title')} checked={enabled} onChange={onEnabled} />
+      </Choice>
+      {enabled && st && (
+        <>
+          {!st.helperFound && <p className="text-xs text-warning">{t('mcp.helperMissing')}</p>}
+          <Choice icon={<Monitor size={16} />} title={t('mcp.desktopLabel')} hint={st.desktop ? undefined : t('mcp.desktopUnavailable')}>
+            {st.desktop && (
+              <span className="flex items-center gap-2">
+                {state(st.desktop.state)}
+                {st.desktop.state !== 'current' && (
+                  <Button size="sm" variant="primary" disabled={busy} onClick={() => act(call('mcp.desktopAdd'), t('mcp.addedDesktop'))}>
+                    {st.desktop.state === 'outdated' ? t('mcp.update') : t('mcp.addDesktop')}
+                  </Button>
+                )}
+              </span>
+            )}
+          </Choice>
+          <Choice icon={<Terminal size={16} />} title={t('mcp.codeLabel')} hint={st.code ? undefined : t('welcome.codeNotFound')}>
+            {st.code && (
+              <span className="flex items-center gap-2">
+                {state(st.code.state)}
+                {st.code.state !== 'current' && (
+                  <Button size="sm" variant="primary" disabled={busy} onClick={() => act(call('mcp.codeAdd'), t('mcp.codeAdded'))}>
+                    {st.code.state === 'outdated' ? t('mcp.update') : t('mcp.addCode')}
+                  </Button>
+                )}
+              </span>
+            )}
+          </Choice>
+          <p className="text-xs text-muted">{t('welcome.claudeNote')}</p>
+        </>
+      )}
+    </div>
+  )
+}
 
 /** One setting in the welcome window: an icon, a title and hint, and its control. */
 function Choice({ icon, title, hint, children }: { icon: ReactNode; title: string; hint?: ReactNode; children?: ReactNode }) {
@@ -68,12 +123,12 @@ export function Welcome() {
     void call('assistant.configure', { aiProvider: id }).then(setSettings, fail)
   }
   const saveKey = (): void => {
-    if (!key.trim()) return go('updates')
+    if (!key.trim()) return go('claude')
     setBusy(true)
     void call('assistant.setKey', { apiKey: key.trim(), provider })
       .then(() => {
         setKey('')
-        go('updates')
+        go('claude')
       })
       .catch(fail)
       .finally(() => setBusy(false))
@@ -201,11 +256,18 @@ export function Welcome() {
             <div className="flex items-center justify-between gap-2">
               <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => go('safety')}>{t('auth.back')}</button>
               <div className="flex items-center gap-3">
-                <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => go('updates')}>{t('welcome.skip')}</button>
+                <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => go('claude')}>{t('welcome.skip')}</button>
                 <Button type="submit" variant="primary" disabled={busy}>{busy ? t('claude.checking') : t('welcome.next')}</Button>
               </div>
             </div>
           </form>
+        </AuthCard>
+      )}
+
+      {step === 'claude' && (
+        <AuthCard title={t('welcome.claudeTitle')} body={t('welcome.claudeBody')}>
+          <ClaudeApps enabled={!!settings?.mcpEnabled} onEnabled={(mcpEnabled) => void call('assistant.configure', { mcpEnabled }).then(setSettings, fail)} />
+          {nav('assistant', <Button variant="primary" onClick={() => go('updates')}>{t('welcome.next')}</Button>)}
         </AuthCard>
       )}
 
@@ -218,7 +280,7 @@ export function Welcome() {
             <p className="text-xs text-muted">{t('welcome.updatesPrivacy')}</p>
           </div>
           {nav(
-            'assistant',
+            'claude',
             <div className="flex items-center gap-3">
               <button type="button" className="text-[13px] text-muted hover:text-text" onClick={() => finish(false)}>{t('welcome.noTour')}</button>
               <Button variant="primary" onClick={() => finish(true)}>{t('welcome.tour')}</Button>

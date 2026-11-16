@@ -1099,7 +1099,11 @@
     "safetyBody": "Kasboek's data lives only on this computer, so a backup elsewhere matters.",
     "safetyRecovery": "Keep your recovery key somewhere safe: without your password or that key, nobody can open your data, not even Kasboek.",
     "noTour": "Skip the tour",
-    "tour": "Show me around"
+    "tour": "Show me around",
+    "claudeTitle": "Claude Desktop and Claude Code",
+    "claudeBody": "Already use a Claude app? It can read your budget and propose changes while Kasboek is open and unlocked. Its changes wait for your OK in Kasboek. Optional.",
+    "claudeNote": "Kasboek adds only its own entry to the Claude app's settings, and keeps a copy of the file first. Restart Claude Desktop afterwards.",
+    "codeNotFound": "Claude Code wasn’t found on this computer. You can set it up later in Settings."
   },
   "tour": {
     "label": "Tour of Kasboek",

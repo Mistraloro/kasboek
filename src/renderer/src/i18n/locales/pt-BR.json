@@ -327,7 +327,10 @@
     "safetyBody": "Os dados do Kasboek estão só neste computador, por isso uma cópia de segurança em outro lugar é importante.",
     "safetyRecovery": "Guarde a sua chave de recuperação em um lugar seguro: sem a sua senha ou essa chave ninguém consegue abrir os seus dados, nem o Kasboek.",
     "noTour": "Pular a visita",
-    "tour": "Mostrar o aplicativo"
+    "tour": "Mostrar o aplicativo",
+    "claudeBody": "Já usa um aplicativo Claude? Pode ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado. As alterações aguardam a sua aprovação no Kasboek. Opcional.",
+    "claudeNote": "O Kasboek só adiciona a sua própria entrada às definições do aplicativo Claude e guarda primeiro uma cópia do arquivo. Depois reinicie o Claude Desktop.",
+    "codeNotFound": "O Claude Code não foi encontrado neste computador. Pode configurá-lo mais tarde nas Configurações."
   },
   "tour": {
     "skip": "Pular",

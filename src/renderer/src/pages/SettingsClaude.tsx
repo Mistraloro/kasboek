@@ -209,9 +209,10 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
           <Row label={t('mcp.codeLabel')} hint={st.code ? <span className="selectable break-all">{st.code.path}</span> : t('mcp.codeNotFound')}>
             {st.code && (
               <>
-                <Badge tone={st.code.installed ? 'accent' : 'neutral'}>{st.code.installed ? t('mcp.state.current') : t('mcp.state.absent')}</Badge>
-                <Button size="sm" variant={st.code.installed ? 'secondary' : 'primary'} disabled={busy} onClick={() => act(call('mcp.codeAdd'), t('mcp.codeAdded'))}>{st.code.installed ? t('mcp.update') : t('mcp.addCode')}</Button>
-                {st.code.installed && <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(call('mcp.codeRemove'), t('mcp.removedCode'))}>{t('mcp.remove')}</Button>}
+                <Badge tone={st.code.state === 'current' ? 'accent' : st.code.state === 'outdated' ? 'warning' : 'neutral'}>{t(`mcp.state.${st.code.state}`)}</Badge>
+                {/* Like Claude Desktop: "Update" only when the entry points at another helper or data folder. */}
+                {st.code.state !== 'current' && <Button size="sm" variant="primary" disabled={busy} onClick={() => act(call('mcp.codeAdd'), t('mcp.codeAdded'))}>{st.code.state === 'outdated' ? t('mcp.update') : t('mcp.addCode')}</Button>}
+                {st.code.state !== 'absent' && <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(call('mcp.codeRemove'), t('mcp.removedCode'))}>{t('mcp.remove')}</Button>}
               </>
             )}
           </Row>

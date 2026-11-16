@@ -691,7 +691,8 @@ export interface McpSetupStatus {
   /** null when Claude Desktop isn't available on this system. */
   desktop: { configPath: string; state: 'absent' | 'current' | 'outdated' } | null
   /** null when the `claude` command wasn't found. */
-  code: { path: string; installed: boolean } | null
+  /** Whether Claude Code has Kasboek, and with this installation's helper and data folder. */
+  code: { path: string; state: 'absent' | 'current' | 'outdated' } | null
   devBuild: boolean
   /** Why the connection for Claude apps couldn't start, if it failed. */
   bridgeError: string | null

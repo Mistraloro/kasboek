@@ -1099,7 +1099,11 @@
     "safetyBody": "Les données de Kasboek ne sont que sur cet ordinateur : une sauvegarde ailleurs est importante.",
     "safetyRecovery": "Gardez votre clé de récupération en lieu sûr : sans votre mot de passe ou cette clé, personne ne peut ouvrir vos données, pas même Kasboek.",
     "noTour": "Passer la visite",
-    "tour": "Faire la visite"
+    "tour": "Faire la visite",
+    "claudeTitle": "Claude Desktop et Claude Code",
+    "claudeBody": "Vous utilisez déjà une appli Claude ? Elle peut lire votre budget et proposer des changements tant que Kasboek est ouvert et déverrouillé. Ses changements attendent votre accord dans Kasboek. Facultatif.",
+    "claudeNote": "Kasboek ajoute uniquement sa propre entrée aux réglages de l’appli Claude et garde d’abord une copie du fichier. Redémarrez ensuite Claude Desktop.",
+    "codeNotFound": "Claude Code est introuvable sur cet ordinateur. Vous pourrez le configurer plus tard dans les Réglages."
   },
   "tour": {
     "label": "Visite de Kasboek",

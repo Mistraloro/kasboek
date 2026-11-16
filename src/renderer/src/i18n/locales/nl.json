@@ -1099,7 +1099,11 @@
     "safetyBody": "De gegevens van Kasboek staan alleen op deze computer, dus een back-up elders is belangrijk.",
     "safetyRecovery": "Bewaar je herstelsleutel op een veilige plek: zonder je wachtwoord of die sleutel kan niemand je gegevens openen, ook Kasboek niet.",
     "noTour": "Rondleiding overslaan",
-    "tour": "Toon me de weg"
+    "tour": "Toon me de weg",
+    "claudeTitle": "Claude Desktop en Claude Code",
+    "claudeBody": "Gebruik je al een Claude-app? Die kan je budget lezen en wijzigingen voorstellen terwijl Kasboek open en ontgrendeld is. Wijzigingen wachten op je akkoord in Kasboek. Optioneel.",
+    "claudeNote": "Kasboek voegt alleen zijn eigen regel toe aan de instellingen van de Claude-app en bewaart eerst een kopie van het bestand. Herstart Claude Desktop daarna.",
+    "codeNotFound": "Claude Code is niet gevonden op deze computer. Je kunt het later instellen bij Instellingen."
   },
   "tour": {
     "label": "Rondleiding door Kasboek",

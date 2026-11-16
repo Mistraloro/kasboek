@@ -9,7 +9,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { AppError } from '@core/errors'
-import { claudeDesktopConfigPaths, desktopEntryState, withKasboek, withoutKasboek, type ServerEntry } from '@core/mcp-config'
+import { claudeDesktopConfigPaths, codeEntryState, desktopEntryState, withKasboek, withoutKasboek, type ServerEntry } from '@core/mcp-config'
 import type { McpSetupStatus } from '@shared/types'
 import { paths } from '../paths'
 import { stamp } from '../transfer/service'
@@ -92,13 +92,15 @@ function runClaude(exe: string, args: string[]): Promise<{ ok: boolean; out: str
     const file = isCmd ? (process.env['ComSpec'] ?? 'cmd.exe') : exe
     const argv = isCmd ? ['/d', '/s', '/c', [exe, ...args].map((a) => `"${a.replace(/"/g, '')}"`).join(' ')] : args
     execFile(file, argv, { timeout: 30_000, windowsHide: true, windowsVerbatimArguments: isCmd }, (err, stdout, stderr) =>
-      resolve({ ok: !err, out: `${stdout}${stderr}`.trim().slice(0, 500) })
+      resolve({ ok: !err, out: `${stdout}${stderr}`.trim().slice(0, 4000) })
     )
   })
 }
 
-export async function codeInstalled(exe: string): Promise<boolean> {
-  return (await runClaude(exe, ['mcp', 'get', 'kasboek'])).ok
+/** `claude mcp get` prints the command it would start; another helper or data folder means out of date. */
+async function codeState(exe: string): Promise<'absent' | 'current' | 'outdated'> {
+  const r = await runClaude(exe, ['mcp', 'get', 'kasboek'])
+  return codeEntryState(r.ok, r.out, serverEntry())
 }
 
 export async function addToCode(): Promise<void> {
@@ -124,7 +126,7 @@ export async function setupStatus(): Promise<McpSetupStatus> {
     entry: serverEntry(),
     helperFound: existsSync(helperPath()),
     desktop: path ? { configPath: path, state: desktopEntryState(await readConfig(path).catch(() => null), serverEntry()) } : null,
-    code: exe ? { path: exe, installed: await codeInstalled(exe) } : null,
+    code: exe ? { path: exe, state: await codeState(exe) } : null,
     devBuild: !app.isPackaged,
     bridgeError: mcpBridgeError()
   }
