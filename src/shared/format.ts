@@ -68,6 +68,26 @@ export const DEFAULT_FORMATS: FormatPrefs = {
   time: '24h'
 }
 
+/**
+ * Common styles to pick from in one go (the welcome window). Shown as examples, so they need no
+ * names: "−1.234,56 € · 31/12/2026". Settings still has every separate option.
+ */
+export const FORMAT_PRESETS: { id: string; formats: FormatPrefs }[] = [
+  { id: 'eu', formats: { ...DEFAULT_FORMATS } },
+  { id: 'eu-dots', formats: { ...DEFAULT_FORMATS, date: 'DD.MM.YYYY' } },
+  { id: 'eu-dashes', formats: { ...DEFAULT_FORMATS, date: 'DD-MM-YYYY' } },
+  { id: 'fr', formats: { ...DEFAULT_FORMATS, group: ' ' } },
+  { id: 'ch', formats: { ...DEFAULT_FORMATS, decimal: '.', group: "'", currencyPosition: 'before-space', date: 'DD.MM.YYYY' } },
+  { id: 'uk', formats: { ...DEFAULT_FORMATS, decimal: '.', group: ',', currencyPosition: 'before' } },
+  { id: 'us', formats: { ...DEFAULT_FORMATS, decimal: '.', group: ',', currencyPosition: 'before', date: 'MM/DD/YYYY', time: '12h' } },
+  { id: 'iso', formats: { ...DEFAULT_FORMATS, decimal: '.', group: ' ', date: 'YYYY-MM-DD' } }
+]
+
+/** The preset these formats match exactly, or null when they were chosen one by one. */
+export function matchingPreset(f: FormatPrefs): string | null {
+  return FORMAT_PRESETS.find((p) => (Object.keys(p.formats) as (keyof FormatPrefs)[]).every((k) => p.formats[k] === f[k]))?.id ?? null
+}
+
 /** Formats from before separate settings existed (a single "format locale"). */
 export function formatsFromLegacyLocale(locale: string | undefined): FormatPrefs {
   switch (locale) {

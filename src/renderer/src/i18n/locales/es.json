@@ -1094,7 +1094,6 @@
     "start": "Empezar",
     "basicsTitle": "Lo básico",
     "basicsBody": "Puedes cambiar todo esto más tarde en Ajustes.",
-    "formats": "Los importes y las fechas se verán así: {{example}}. Otros formatos se eligen en Ajustes.",
     "safetyTitle": "Protege tus datos",
     "safetyBody": "Los datos de Kasboek solo están en este ordenador, así que una copia de seguridad en otro sitio es importante.",
     "safetyRecovery": "Guarda tu clave de recuperación en un lugar seguro: sin tu contraseña o esa clave nadie puede abrir tus datos, ni siquiera Kasboek.",
@@ -1103,7 +1102,11 @@
     "claudeTitle": "Claude Desktop y Claude Code",
     "claudeBody": "¿Ya usas una app de Claude? Puede leer tu presupuesto y proponer cambios mientras Kasboek está abierto y desbloqueado. Sus cambios esperan tu aprobación en Kasboek. Opcional.",
     "claudeNote": "Kasboek solo añade su propia entrada a los ajustes de la app de Claude y guarda antes una copia del archivo. Después reinicia Claude Desktop.",
-    "codeNotFound": "No se encontró Claude Code en este ordenador. Puedes configurarlo más tarde en Ajustes."
+    "codeNotFound": "No se encontró Claude Code en este ordenador. Puedes configurarlo más tarde en Ajustes.",
+    "formatLabel": "Números y fechas",
+    "formatHint": "Cómo se ven los importes, las fechas y las horas. Cada parte se ajusta por separado en Ajustes.",
+    "ecb": "Tipos de cambio del BCE",
+    "ecbHint": "Para cuentas o pagos en otras monedas: los tipos de referencia diarios del Banco Central Europeo, descargados ahora y mantenidos al día. Solo se descargan los tipos; no se envía nada sobre ti."
   },
   "tour": {
     "label": "Recorrido por Kasboek",

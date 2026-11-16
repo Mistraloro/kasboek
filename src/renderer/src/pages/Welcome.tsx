@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Bot, Check, FileUp, FolderInput, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
+import { ArrowDownToLine, Bot, Check, Coins, FileUp, FolderInput, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
@@ -11,8 +11,8 @@ import { startTour } from '../components/Tour'
 import { Badge, Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
 import { LANGUAGES } from '../i18n'
 import { call } from '../lib/api'
-import { formatDate, formatMoney } from '../lib/format'
-import { usePrefs, usePrefsFmt } from '../lib/settings'
+import { FORMAT_PRESETS, formatDate as fmtDate, formatMoney as fmtMoney, formatTime as fmtTime, matchingPreset, type FormatPrefs } from '@shared/format'
+import { usePrefs } from '../lib/settings'
 import { AuthCard, AuthLayout } from './auth/AuthLayout'
 import { errText } from './auth/parts'
 
@@ -99,7 +99,6 @@ export function Welcome() {
   const { t } = useTranslation()
   const toast = useToast()
   const { prefs, updatePrefs } = usePrefs()
-  const fmt = usePrefsFmt()
   const assistant = useAssistant()
   const [step, setStep] = useState<Step>('intro')
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -107,6 +106,7 @@ export function Welcome() {
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [updates, setUpdates] = useState(prefs.updateCheck)
+  const [ecb, setEcb] = useState(true)
   useEffect(() => {
     void call('settings.get').then(setSettings)
     void call('backup.status').then(setBackup)
@@ -145,6 +145,8 @@ export function Welcome() {
   const finish = (tour: boolean): void => {
     void updatePrefs({ updateCheck: updates, welcomeDone: true }).then(() => {
       if (updates) void call('update.check')
+      // The ECB's reference rates: downloaded once now, then kept up to date. Only the rates are fetched.
+      if (ecb) void call('settings.update', { fxAutoUpdate: true }).then(() => call('fx.updateEcb')).catch(() => undefined)
       if (tour) startTour()
     })
   }
@@ -203,9 +205,22 @@ export function Welcome() {
             <Field label={t('fx.main')} hint={t('fx.mainHint')}>
               {(id) => <CurrencySelect id={id} value={settings?.currency ?? 'EUR'} onChange={(e) => void call('settings.update', { currency: e.target.value }).then(setSettings, fail)} />}
             </Field>
-            <p className="text-xs text-muted">
-              {t('welcome.formats', { example: `${formatMoney(-123456, settings?.currency ?? 'EUR', fmt)} · ${formatDate('2026-12-31', fmt)}` })}
-            </p>
+            <Field label={t('welcome.formatLabel')} hint={t('welcome.formatHint')}>
+              {(id) => {
+                const cur = settings?.currency ?? 'EUR'
+                const sample = (f: FormatPrefs): string => `${fmtMoney(-123456, cur, f)} · ${fmtDate('2026-12-31', f, prefs.language)} · ${fmtTime('2026-12-31T14:30:00', f)}`
+                const chosen = matchingPreset(prefs.formats)
+                return (
+                  <Select id={id} value={chosen ?? 'custom'} onChange={(e) => { const p = FORMAT_PRESETS.find((x) => x.id === e.target.value); if (p) void updatePrefs({ formats: p.formats }) }}>
+                    {!chosen && <option value="custom">{sample(prefs.formats)}</option>}
+                    {FORMAT_PRESETS.map((p) => <option key={p.id} value={p.id}>{sample(p.formats)}</option>)}
+                  </Select>
+                )
+              }}
+            </Field>
+            <Choice icon={<Coins size={16} />} title={t('welcome.ecb')} hint={t('welcome.ecbHint')}>
+              <Switch label={t('welcome.ecb')} checked={ecb} onChange={setEcb} />
+            </Choice>
           </div>
           {nav('intro', <Button variant="primary" onClick={() => go('safety')}>{t('welcome.next')}</Button>)}
         </AuthCard>

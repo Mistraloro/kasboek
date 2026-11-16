@@ -323,14 +323,15 @@
     "introPlan": "Planejar e acompanhar",
     "introPlanHint": "Orçamentos, custos fixos, metas de economia, uma visão anual e o seu patrimônio.",
     "basicsBody": "Você pode alterar tudo isso mais tarde nas Configurações.",
-    "formats": "Os valores e as datas vão ficar assim: {{example}}. Outros formatos são escolhidos nas Configurações.",
     "safetyBody": "Os dados do Kasboek estão só neste computador, por isso uma cópia de segurança em outro lugar é importante.",
     "safetyRecovery": "Guarde a sua chave de recuperação em um lugar seguro: sem a sua senha ou essa chave ninguém consegue abrir os seus dados, nem o Kasboek.",
     "noTour": "Pular a visita",
     "tour": "Mostrar o aplicativo",
     "claudeBody": "Já usa um aplicativo Claude? Pode ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado. As alterações aguardam a sua aprovação no Kasboek. Opcional.",
     "claudeNote": "O Kasboek só adiciona a sua própria entrada às definições do aplicativo Claude e guarda primeiro uma cópia do arquivo. Depois reinicie o Claude Desktop.",
-    "codeNotFound": "O Claude Code não foi encontrado neste computador. Pode configurá-lo mais tarde nas Configurações."
+    "codeNotFound": "O Claude Code não foi encontrado neste computador. Pode configurá-lo mais tarde nas Configurações.",
+    "formatHint": "O aspeto dos valores, datas e horas. Cada parte é definida à parte nas Configurações.",
+    "ecbHint": "Para contas ou pagamentos noutras moedas: as taxas de referência diárias do Banco Central Europeu, baixadas agora e mantidas atualizadas. Só as taxas são obtidas; nada sobre si é enviado."
   },
   "tour": {
     "skip": "Pular",

@@ -1094,7 +1094,6 @@
     "start": "Beginnen",
     "basicsTitle": "De basis",
     "basicsBody": "Je kunt dit allemaal later wijzigen bij Instellingen.",
-    "formats": "Bedragen en datums zien er zo uit: {{example}}. Andere notaties kies je bij Instellingen.",
     "safetyTitle": "Je gegevens veilig houden",
     "safetyBody": "De gegevens van Kasboek staan alleen op deze computer, dus een back-up elders is belangrijk.",
     "safetyRecovery": "Bewaar je herstelsleutel op een veilige plek: zonder je wachtwoord of die sleutel kan niemand je gegevens openen, ook Kasboek niet.",
@@ -1103,7 +1102,11 @@
     "claudeTitle": "Claude Desktop en Claude Code",
     "claudeBody": "Gebruik je al een Claude-app? Die kan je budget lezen en wijzigingen voorstellen terwijl Kasboek open en ontgrendeld is. Wijzigingen wachten op je akkoord in Kasboek. Optioneel.",
     "claudeNote": "Kasboek voegt alleen zijn eigen regel toe aan de instellingen van de Claude-app en bewaart eerst een kopie van het bestand. Herstart Claude Desktop daarna.",
-    "codeNotFound": "Claude Code is niet gevonden op deze computer. Je kunt het later instellen bij Instellingen."
+    "codeNotFound": "Claude Code is niet gevonden op deze computer. Je kunt het later instellen bij Instellingen.",
+    "formatLabel": "Getallen en datums",
+    "formatHint": "Hoe bedragen, datums en tijden eruitzien. Elk onderdeel stel je apart in bij Instellingen.",
+    "ecb": "Wisselkoersen van de ECB",
+    "ecbHint": "Voor rekeningen of betalingen in andere munten: de dagelijkse referentiekoersen van de Europese Centrale Bank, nu gedownload en daarna bijgewerkt. Alleen de koersen worden opgehaald; er wordt niets over jou verstuurd."
   },
   "tour": {
     "label": "Rondleiding door Kasboek",

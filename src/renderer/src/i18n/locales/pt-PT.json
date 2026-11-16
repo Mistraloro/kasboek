@@ -1094,7 +1094,6 @@
     "start": "Começar",
     "basicsTitle": "O essencial",
     "basicsBody": "Pode alterar tudo isto mais tarde nas Definições.",
-    "formats": "Os montantes e as datas vão ficar assim: {{example}}. Outros formatos escolhem-se nas Definições.",
     "safetyTitle": "Proteger os seus dados",
     "safetyBody": "Os dados do Kasboek estão só neste computador, por isso uma cópia de segurança noutro lado é importante.",
     "safetyRecovery": "Guarde a sua chave de recuperação num lugar seguro: sem a sua palavra-passe ou essa chave ninguém consegue abrir os seus dados, nem o Kasboek.",
@@ -1103,7 +1102,11 @@
     "claudeTitle": "Claude Desktop e Claude Code",
     "claudeBody": "Já usa uma aplicação Claude? Pode ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado. As alterações aguardam a sua aprovação no Kasboek. Opcional.",
     "claudeNote": "O Kasboek só adiciona a sua própria entrada às definições da aplicação Claude e guarda primeiro uma cópia do ficheiro. Depois reinicie o Claude Desktop.",
-    "codeNotFound": "O Claude Code não foi encontrado neste computador. Pode configurá-lo mais tarde nas Definições."
+    "codeNotFound": "O Claude Code não foi encontrado neste computador. Pode configurá-lo mais tarde nas Definições.",
+    "formatLabel": "Números e datas",
+    "formatHint": "O aspeto dos montantes, datas e horas. Cada parte define-se à parte nas Definições.",
+    "ecb": "Taxas de câmbio do BCE",
+    "ecbHint": "Para contas ou pagamentos noutras moedas: as taxas de referência diárias do Banco Central Europeu, descarregadas agora e mantidas atualizadas. Só as taxas são obtidas; nada sobre si é enviado."
   },
   "tour": {
     "label": "Visita ao Kasboek",

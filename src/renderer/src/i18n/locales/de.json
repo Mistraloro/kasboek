@@ -1094,7 +1094,6 @@
     "start": "Los geht's",
     "basicsTitle": "Die Grundlagen",
     "basicsBody": "Du kannst all das später in den Einstellungen ändern.",
-    "formats": "Beträge und Daten sehen dann so aus: {{example}}. Andere Formate wählst du in den Einstellungen.",
     "safetyTitle": "Deine Daten schützen",
     "safetyBody": "Die Daten von Kasboek liegen nur auf diesem Computer, darum ist eine Sicherung anderswo wichtig.",
     "safetyRecovery": "Bewahre deinen Wiederherstellungsschlüssel sicher auf: Ohne dein Passwort oder diesen Schlüssel kann niemand deine Daten öffnen, auch Kasboek nicht.",
@@ -1103,7 +1102,11 @@
     "claudeTitle": "Claude Desktop und Claude Code",
     "claudeBody": "Nutzt du schon eine Claude-App? Sie kann dein Budget lesen und Änderungen vorschlagen, solange Kasboek offen und entsperrt ist. Ihre Änderungen warten auf dein OK in Kasboek. Optional.",
     "claudeNote": "Kasboek fügt nur seinen eigenen Eintrag zu den Einstellungen der Claude-App hinzu und legt vorher eine Kopie der Datei an. Starte Claude Desktop danach neu.",
-    "codeNotFound": "Claude Code wurde auf diesem Computer nicht gefunden. Du kannst es später in den Einstellungen einrichten."
+    "codeNotFound": "Claude Code wurde auf diesem Computer nicht gefunden. Du kannst es später in den Einstellungen einrichten.",
+    "formatLabel": "Zahlen und Daten",
+    "formatHint": "Wie Beträge, Daten und Uhrzeiten aussehen. Jeder Teil lässt sich in den Einstellungen einzeln festlegen.",
+    "ecb": "Wechselkurse der EZB",
+    "ecbHint": "Für Konten oder Zahlungen in anderen Währungen: die täglichen Referenzkurse der Europäischen Zentralbank, jetzt geladen und danach aktuell gehalten. Nur die Kurse werden abgerufen; nichts über dich wird gesendet."
   },
   "tour": {
     "label": "Rundgang durch Kasboek",
