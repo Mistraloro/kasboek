@@ -3,11 +3,12 @@
  * The kasboek-mcp helper itself is started and ended by the Claude app; stopping the connection
  * here makes it answer "not available" until it is switched on again.
  */
-import { app, BrowserWindow, Menu, Tray, nativeImage } from 'electron'
+import { app, Menu, Tray, nativeImage } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { getSettings, updateSettings } from '@core/settings'
 import { mcpBridgeState } from './mcp/bridge'
 import { getPrefs } from './prefs'
+import { trayWanted } from '@shared/window-policy'
 import { broadcast, db, isUnlocked } from './session'
 
 type Text = 'open' | 'on' | 'off' | 'locked' | 'used' | 'stop' | 'start' | 'quit'
@@ -30,12 +31,27 @@ let tray: Tray | null = null
 let shownKey = ''
 let menu: Menu | null = null
 
-function showWindow(): void {
-  const win = BrowserWindow.getAllWindows()[0]
-  if (!win) return
-  if (win.isMinimized()) win.restore()
-  win.show()
-  win.focus()
+let startedInTray = false
+let openWindow: () => void = () => {}
+/** Some Linux desktops have no tray: asking again every few seconds would only repeat the warning. */
+let unavailable = false
+
+/** Called once at start: whether a Claude app started Kasboek in the tray, and how to open the window. */
+export function initTray(o: { startedInTray: boolean; open: () => void }): void {
+  startedInTray = o.startedInTray
+  openWindow = o.open
+  syncTray()
+}
+
+/** Whether a tray icon exists now (the window may only hide into it when it does). */
+export function hasTray(): boolean {
+  return tray !== null
+}
+
+/** Shows the icon when the person keeps Kasboek in the tray or a Claude app started it there; hides it otherwise. */
+export function syncTray(): void {
+  if (trayWanted({ keepInTray: getPrefs().keepInTray, startedInTray })) createTray()
+  else destroyTray()
 }
 
 function setMcp(enabled: boolean): void {
@@ -58,7 +74,7 @@ export function refreshTray(): void {
   const status = !unlocked ? text('locked') : enabled ? text('on') : text('off')
   tray.setToolTip(`Kasboek · ${status}`)
   menu = Menu.buildFromTemplate([
-      { label: text('open'), click: showWindow },
+      { label: text('open'), click: openWindow },
       { type: 'separator' },
       { label: status, enabled: false },
       ...(time && enabled ? [{ label: text('used').replace('{time}', time), enabled: false }] : []),
@@ -69,19 +85,20 @@ export function refreshTray(): void {
   tray.setContextMenu(menu)
 }
 
-export function createTray(): void {
-  if (tray) return
+function createTray(): void {
+  if (tray || unavailable) return
   const size = process.platform === 'darwin' ? 18 : 16
   try {
     tray = new Tray(nativeImage.createFromPath(icon).resize({ width: size, height: size }))
   } catch (err) {
     // Some Linux desktops have no tray: the app works without it.
+    unavailable = true
     console.warn('[tray] not available:', err instanceof Error ? err.message : err)
     return
   }
   // Windows and Linux: a click opens the window; the menu is on right-click (and on macOS on click).
   tray.on('click', () => {
-    if (process.platform !== 'darwin') showWindow()
+    if (process.platform !== 'darwin') openWindow()
   })
   refreshTray()
   // Development builds: lets end-to-end tests read and click the menu.
@@ -95,4 +112,6 @@ export function createTray(): void {
 export function destroyTray(): void {
   tray?.destroy()
   tray = null
+  shownKey = ''
+  menu = null
 }

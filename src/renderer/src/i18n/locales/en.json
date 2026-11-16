@@ -406,6 +406,8 @@
     "newRecoveryBody": "The current recovery key will stop working here. Exports made earlier still open with the old one.",
     "autoLock": "Auto-lock",
     "autoLockHint": "Also locks when the screen locks or the computer sleeps.",
+    "keepInTray": "Keep Kasboek running in the tray when I close the window",
+    "keepInTrayHint": "Off: closing the window quits Kasboek. On: Kasboek stays in the tray (the menu bar on a Mac) so Claude can keep using it. Open it again from the tray icon or its shortcut.",
     "minutes_one": "After {{count}} minute",
     "minutes_other": "After {{count}} minutes",
     "encryptionHint": "Your budget data is encrypted on disk.",

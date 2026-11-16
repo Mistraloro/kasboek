@@ -7,6 +7,7 @@ import type { OpName } from '@shared/contract'
 import { graphicsStatus, markPainted } from './graphics'
 import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
+import { syncTray } from './tray'
 import { defaultCategoryNames } from './i18n-categories'
 import { localizeDefaultCategories } from '@core/finance'
 import * as session from './session'
@@ -115,6 +116,7 @@ const desktopOps: OpTable = {
       // A new graphics choice also forgets an earlier failure, so "automatic" tries the graphics card again.
       const next = updatePrefs(patch.graphics ? { ...patch, graphicsFailed: false } : patch)
       if (patch.theme) applyTheme(next.theme)
+      if (patch.keepInTray !== undefined) syncTray()
       return next
     }
   },

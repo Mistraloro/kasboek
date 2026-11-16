@@ -406,6 +406,8 @@
     "newRecoveryBody": "De huidige herstelsleutel werkt hier dan niet meer. Eerder gemaakte exports openen nog met de oude.",
     "autoLock": "Automatisch vergrendelen",
     "autoLockHint": "Vergrendelt ook als het scherm vergrendelt of de computer slaapt.",
+    "keepInTray": "Kasboek in het systeemvak laten draaien als ik het venster sluit",
+    "keepInTrayHint": "Uit: het venster sluiten sluit Kasboek af. Aan: Kasboek blijft draaien in het systeemvak (de menubalk op een Mac), zodat Claude het kan blijven gebruiken. Open het weer via het pictogram of de snelkoppeling.",
     "minutes_one": "Na {{count}} minuut",
     "minutes_other": "Na {{count}} minuten",
     "encryptionHint": "Je budgetgegevens zijn versleuteld op de schijf.",

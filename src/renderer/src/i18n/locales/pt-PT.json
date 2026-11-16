@@ -406,6 +406,8 @@
     "newRecoveryBody": "A chave de recuperação atual deixa de funcionar aqui. As exportações feitas antes continuam a abrir com a antiga.",
     "autoLock": "Bloqueio automático",
     "autoLockHint": "Também bloqueia quando o ecrã bloqueia ou o computador entra em suspensão.",
+    "keepInTray": "Manter o Kasboek na área de notificação ao fechar a janela",
+    "keepInTrayHint": "Desativado: fechar a janela fecha o Kasboek. Ativado: o Kasboek continua na área de notificação (a barra de menus no Mac) para o Claude o poder continuar a usar. Abra-o de novo pelo ícone ou pelo atalho.",
     "minutes_one": "Após {{count}} minuto",
     "minutes_other": "Após {{count}} minutos",
     "encryptionHint": "Os dados do seu orçamento estão encriptados no disco.",

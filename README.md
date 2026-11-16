@@ -40,7 +40,11 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   DeepSeek, Gemini, OpenRouter, Together, Fireworks, Ollama, LM Studio or any OpenAI-compatible server.
 - **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (welcome window or
   Settings → Assistant). Settings shows whether each app is connected now or when it last used
-  Kasboek; a tray icon shows the connection and can stop it.
+  Kasboek; a tray icon shows the connection and can stop it. When Claude Desktop starts Kasboek's
+  connection and Kasboek isn't running, Kasboek starts in the tray, locked. Closing the window quits
+  Kasboek (on a Mac it stays in the Dock until Cmd+Q); Settings → General → "Keep Kasboek running in the
+  tray when I close the window" (off by default) hides it in the tray instead. Opening Kasboek from its
+  shortcut or the Start menu while it runs always brings its window to the front.
 - **Sync**: keep several computers in step through a cloud folder you already use, or your own
   WebDAV server (Nextcloud, ownCloud, Synology, a NAS, …); only encrypted files go there, and changes
   merge per field.
@@ -168,7 +172,7 @@ npm run test:mcp    # the Go MCP helper
 
 - `kasboek.db`: encrypted database
 - `account.json`: login key slots, sealed by the operating system (only opens on this computer and account)
-- `prefs.json`: theme, language, formats, auto-lock (nothing sensitive)
+- `prefs.json`: theme, language, formats, auto-lock, graphics card, keep in the tray (nothing sensitive)
 - `sync.json`: this computer's sync id and folder, when syncing
 - `safety-backups/`: copies made automatically before an import and before an update
 - `updates/`: a downloaded update while it installs

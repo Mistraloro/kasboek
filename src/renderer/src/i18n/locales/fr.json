@@ -406,6 +406,8 @@
     "newRecoveryBody": "La clé de récupération actuelle ne fonctionnera plus ici. Les exports faits avant s’ouvrent encore avec l’ancienne.",
     "autoLock": "Verrouillage automatique",
     "autoLockHint": "Verrouille aussi quand l’écran se verrouille ou que l’ordinateur se met en veille.",
+    "keepInTray": "Laisser Kasboek actif dans la zone de notification quand je ferme la fenêtre",
+    "keepInTrayHint": "Désactivé : fermer la fenêtre quitte Kasboek. Activé : Kasboek reste dans la zone de notification (la barre des menus sur Mac) pour que Claude puisse continuer à l’utiliser. Rouvrez-le depuis l’icône ou son raccourci.",
     "minutes_one": "Après {{count}} minute",
     "minutes_other": "Après {{count}} minutes",
     "encryptionHint": "Les données de votre budget sont chiffrées sur le disque.",

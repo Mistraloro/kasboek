@@ -406,6 +406,8 @@
     "newRecoveryBody": "Der aktuelle Wiederherstellungsschlüssel funktioniert hier dann nicht mehr. Frühere Exporte öffnen sich weiter mit dem alten.",
     "autoLock": "Automatisch sperren",
     "autoLockHint": "Sperrt auch, wenn der Bildschirm gesperrt wird oder der Computer schläft.",
+    "keepInTray": "Kasboek im Infobereich weiterlaufen lassen, wenn ich das Fenster schließe",
+    "keepInTrayHint": "Aus: Beim Schließen des Fensters wird Kasboek beendet. An: Kasboek bleibt im Infobereich (auf dem Mac in der Menüleiste), damit Claude es weiter nutzen kann. Öffne es wieder über das Symbol oder die Verknüpfung.",
     "minutes_one": "Nach {{count}} Minute",
     "minutes_other": "Nach {{count}} Minuten",
     "encryptionHint": "Deine Budgetdaten sind auf der Festplatte verschlüsselt.",

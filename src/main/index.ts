@@ -5,11 +5,12 @@
 import { app, dialog } from 'electron'
 import { applyGraphicsChoice, startupLog } from './graphics'
 import { getPrefs } from './prefs'
+import { isBackgroundLaunch, mustShowOnSecondInstance } from '@shared/window-policy'
 import { showSplash, splashProgress } from './splash'
 
 const MCP_MODE = process.argv.includes('--mcp')
 // Started by the kasboek-mcp helper because a Claude app wants Kasboek: only the tray icon, locked.
-const BACKGROUND = process.argv.includes('--background')
+const BACKGROUND = isBackgroundLaunch(process.argv)
 
 // 64-bit only (x64 or ARM64): larger address space for ASLR, and the only builds we ship and test.
 if (process.arch !== 'x64' && process.arch !== 'arm64') {
@@ -30,6 +31,11 @@ if (!MCP_MODE && !firstCopy) app.quit()
 app.setAppUserModelId('app.kasboek')
 
 if (firstCopy) {
+  // A second launch (shortcut, Start menu, Kasboek.exe again) hands over here and quits at once; this
+  // copy brings its window up. Registered before the rest loads so an early hand-over is not missed.
+  app.on('second-instance', (_e, argv) => {
+    if (mustShowOnSecondInstance(argv)) void import('./app').then((m) => m.showMainWindow())
+  })
   // Before the app is ready: whether to draw with the graphics card (see graphics.ts).
   applyGraphicsChoice()
   void app.whenReady().then(async () => {

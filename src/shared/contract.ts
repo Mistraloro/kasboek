@@ -83,7 +83,8 @@ export const contract = {
         autoLockMinutes: z.number().int().min(0).max(240),
         updateCheck: z.boolean(),
         welcomeDone: z.boolean(),
-        graphics: z.enum(GRAPHICS_CHOICES)
+        graphics: z.enum(GRAPHICS_CHOICES),
+        keepInTray: z.boolean()
       })
       .partial()
       .strict(),

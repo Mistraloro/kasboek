@@ -406,6 +406,8 @@
     "newRecoveryBody": "La clave de recuperación actual dejará de funcionar aquí. Las exportaciones anteriores se siguen abriendo con la antigua.",
     "autoLock": "Bloqueo automático",
     "autoLockHint": "También bloquea cuando se bloquea la pantalla o el ordenador entra en reposo.",
+    "keepInTray": "Mantener Kasboek en la bandeja al cerrar la ventana",
+    "keepInTrayHint": "Desactivado: al cerrar la ventana se cierra Kasboek. Activado: Kasboek sigue en la bandeja (la barra de menús en un Mac) para que Claude pueda seguir usándolo. Ábrelo de nuevo desde el icono o su acceso directo.",
     "minutes_one": "Tras {{count}} minuto",
     "minutes_other": "Tras {{count}} minutos",
     "encryptionHint": "Los datos de tu presupuesto están cifrados en el disco.",
