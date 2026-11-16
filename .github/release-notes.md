@@ -1,6 +1,6 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.14
+## What’s new in 0.14 (0.14.1)
 
 **Fixes**
 - **Windows on ARM (Snapdragon): no more white window.** On some graphics drivers, Kasboek opened as an empty white window. On Windows on ARM, Kasboek now draws without the graphics card by default. On any computer, if the graphics card fails to show Kasboek when it starts, Kasboek restarts once without it and remembers that.
