@@ -44,5 +44,5 @@ These builds are not yet signed with a certificate:
 ## Good to know
 
 - **Had a white window on 0.13 or earlier?** Install this version over it with the MSI; your data stays.
-- From 0.12.0 you can update from inside Kasboek: the "Update to 0.14.0" button appears at the top.
+- **Updating from 0.12 or 0.13**: their update window can’t be clicked (fixed in this version), so download the installer from this page once. From 0.14 on, the "Update to …" button works.
 - Windows Hello and Touch ID were only tested in simulation; please report anything odd.
