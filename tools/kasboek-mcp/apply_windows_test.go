@@ -119,7 +119,7 @@ func TestApplyUpdateWithFakeMsiexec(t *testing.T) {
 			}
 			fast := realTiming
 			fast.sleep = func(time.Duration) {}
-			if err := applyWith(file, winPlatform{msiexec: os.Args[0]}, fast); err != nil {
+			if err := applyWith(file, winPlatform{msiexec: os.Args[0]}, fast, startNoWindow); err != nil {
 				t.Fatal(err)
 			}
 			if r := readResult(t, pl); r.Code != tc.code || r.Outcome != tc.outcome {

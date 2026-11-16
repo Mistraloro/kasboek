@@ -1102,12 +1102,19 @@
     "title": "O Kasboek {{version}} está disponível",
     "current": "Tem a versão {{version}}.",
     "downloading": "A descarregar… {{percent}} % de {{size}}",
-    "readyRestart": "Descarregado e verificado. O Kasboek fecha, instala a atualização e volta a abrir. Demora cerca de um minuto.",
+    "readyRestart": "Descarregado e verificado. O Kasboek fecha, mostra o progresso da instalação numa janela própria e volta a abrir. Demora cerca de um minuto.",
     "ready": {
       "dmg": "Descarregado e verificado. O Kasboek abre a imagem de disco; arraste o Kasboek para Aplicações e substitua a versão antiga.",
       "deb": "Descarregado e verificado. O Kasboek abre o pacote no instalador de software."
     },
-    "installing": "A instalar… O Kasboek fecha e volta a abrir dentro de momentos.",
+    "installing": "A instalar… O Kasboek fecha, mostra o progresso e volta a abrir dentro de momentos.",
+    "helper": {
+      "waiting": "A aguardar que o Kasboek feche…",
+      "installing": "A instalar o Kasboek {{version}}…",
+      "starting": "A iniciar o Kasboek…",
+      "failed": "Não foi possível instalar a atualização. O Kasboek vai iniciar novamente.",
+      "cancelled": "A atualização foi cancelada. O Kasboek vai iniciar novamente."
+    },
     "opened": {
       "dmg": "Arraste o Kasboek para Aplicações e escolha Substituir. Depois feche o Kasboek e volte a abri-lo.",
       "deb": "Termine a instalação no instalador de software, depois feche o Kasboek e volte a abri-lo."

@@ -2,7 +2,7 @@
  * Updates from the project's GitHub releases. Kasboek asks GitHub for the latest release (at start
  * and once a day, when the person allows it), downloads the file for this computer, checks it
  * against the SHA-256 that GitHub reports for it, makes a backup and installs it:
- * - Windows: a helper installs the MSI after Kasboek closes (Windows Installer shows its progress), then Kasboek opens again;
+ * - Windows: a helper installs the MSI after Kasboek closes (it shows its own progress window), then Kasboek opens again;
  * - Linux AppImage: the file is replaced and started again;
  * - Linux .deb and macOS .dmg: the file is opened, and the person finishes the install.
  * Only release files of this repository are downloaded; nothing about the person's data is sent.
@@ -20,6 +20,7 @@ import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { broadcast, isUnlocked } from './session'
 import { stamp, writeTransfer } from './transfer/service'
+import { updateTexts } from './update-texts'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
 
 const REPO = 'Mistraloro/kasboek'
@@ -159,7 +160,7 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
 
 /**
  * Windows: starts a copy of the kasboek-mcp helper that waits for Kasboek to close, installs the MSI
- * and opens Kasboek again. It runs from a copy because the MSI replaces the original in resources.
+ * and opens Kasboek again, showing a progress window in the meantime. It runs from a copy because the MSI replaces the original in resources.
  * No console is wanted, and `detached` on Windows gives the helper none (so windowsHide isn't set).
  */
 async function startUpdateHelper(msi: string, sha256: string): Promise<void> {
@@ -180,13 +181,7 @@ async function startUpdateHelper(msi: string, sha256: string): Promise<void> {
     updatesDir: updatesDir(),
     toVersion: status.latest ?? '',
     theme: dark ? 'dark' : 'light',
-    texts: {
-      waiting: 'Waiting for Kasboek to close…',
-      installing: 'Installing the update…',
-      starting: 'Opening Kasboek…',
-      failed: 'The update didn’t install. Kasboek will open again.',
-      cancelled: 'The update was cancelled.'
-    }
+    texts: updateTexts(getPrefs().language)
   })
   rmSync(plan.result, { force: true })
   writeFileSync(planFile, JSON.stringify(plan))

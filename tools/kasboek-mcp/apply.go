@@ -52,7 +52,7 @@ type updateResult struct {
 	At        string `json:"at"`
 }
 
-// ui shows the person what is going on. Nothing shows it yet; a window can implement this later.
+// ui shows the person what is going on: the progress window (updatewin_windows.go), or nothing.
 type ui interface {
 	waiting()
 	installing()
@@ -135,7 +135,8 @@ func validatePlan(p updatePlan, dir string) error {
 	return nil
 }
 
-// msiexecArgs: -passive shows Windows Installer's own small progress dialog, -qn shows nothing.
+// msiexecArgs: /passive shows Windows Installer's own small progress dialog (used only when our own
+// window could not be shown), /qn shows nothing (our window shows the progress).
 func msiexecArgs(msi, log string, passive bool) []string {
 	mode := "/qn"
 	if passive {
@@ -227,12 +228,12 @@ func runUpdate(p platform, u ui, pl updatePlan, t timing, passive bool) error {
 	defer u.close()
 	u.waiting()
 	if !waitForKasboek(p, pl, t) {
-		u.failed(pl.Texts.Failed)
+		u.failed(pl.text(textFailed))
 		return errors.Join(errors.New("kasboek did not close"), writeResult(pl, -1, "not_closed"))
 	}
 	sum, err := fileSHA256(pl.MSI)
 	if err != nil || !strings.EqualFold(sum, pl.SHA256) {
-		u.failed(pl.Texts.Failed)
+		u.failed(pl.text(textFailed))
 		return errors.Join(errors.New("update file does not match its checksum"), writeResult(pl, -1, "checksum"), relaunch(p, u, pl))
 	}
 	u.installing()
@@ -246,9 +247,9 @@ func runUpdate(p platform, u ui, pl updatePlan, t timing, passive bool) error {
 	}
 	outcome := msiOutcome(code)
 	if outcome == "cancelled" {
-		u.failed(pl.Texts.Cancelled)
+		u.failed(pl.text(textCancelled))
 	} else if outcome != "ok" && outcome != "reboot" {
-		u.failed(pl.Texts.Failed)
+		u.failed(pl.text(textFailed))
 	}
 	werr := writeResult(pl, code, outcome)
 	return errors.Join(err, werr, relaunch(p, u, pl))

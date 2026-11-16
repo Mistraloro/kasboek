@@ -1102,12 +1102,19 @@
     "title": "Kasboek {{version}} is beschikbaar",
     "current": "Je hebt {{version}}.",
     "downloading": "Downloaden… {{percent}}% van {{size}}",
-    "readyRestart": "Gedownload en gecontroleerd. Kasboek sluit, installeert de update en opent opnieuw. Dat duurt ongeveer een minuut.",
+    "readyRestart": "Gedownload en gecontroleerd. Kasboek sluit, toont de voortgang van de installatie in een eigen venster en opent opnieuw. Dat duurt ongeveer een minuut.",
     "ready": {
       "dmg": "Gedownload en gecontroleerd. Kasboek opent de schijfkopie; sleep Kasboek naar Apps en vervang de oude.",
       "deb": "Gedownload en gecontroleerd. Kasboek opent het pakket in je software-installatie."
     },
-    "installing": "Installeren… Kasboek sluit zo en opent dan opnieuw.",
+    "installing": "Installeren… Kasboek sluit zo, toont de voortgang en opent dan opnieuw.",
+    "helper": {
+      "waiting": "Wachten tot Kasboek gesloten is…",
+      "installing": "Kasboek {{version}} wordt geïnstalleerd…",
+      "starting": "Kasboek wordt gestart…",
+      "failed": "De update kon niet worden geïnstalleerd. Kasboek wordt opnieuw gestart.",
+      "cancelled": "De update is geannuleerd. Kasboek wordt opnieuw gestart."
+    },
     "opened": {
       "dmg": "Sleep Kasboek naar Apps en kies Vervang. Sluit Kasboek daarna af en open het opnieuw.",
       "deb": "Rond de installatie af in de software-installatie, sluit Kasboek daarna af en open het opnieuw."

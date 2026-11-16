@@ -307,7 +307,15 @@
     "downloadingShort": "Baixando… {{percent}} %",
     "current": "Você tem a versão {{version}}.",
     "downloading": "Baixando… {{percent}} % de {{size}}",
-    "readyRestart": "Baixado e verificado. O Kasboek fecha, instala a atualização e volta a abrir. Demora cerca de um minuto.",
+    "readyRestart": "Baixado e verificado. O Kasboek fecha, mostra o progresso da instalação em uma janela própria e volta a abrir. Demora cerca de um minuto.",
+    "installing": "Instalando… O Kasboek fecha, mostra o progresso e volta a abrir em instantes.",
+    "helper": {
+      "waiting": "Aguardando o Kasboek fechar…",
+      "installing": "Instalando o Kasboek {{version}}…",
+      "starting": "Iniciando o Kasboek…",
+      "failed": "Não foi possível instalar a atualização. O Kasboek vai iniciar de novo.",
+      "cancelled": "A atualização foi cancelada. O Kasboek vai iniciar de novo."
+    },
     "ready": {
       "dmg": "Baixado e verificado. O Kasboek abre a imagem de disco; arraste o Kasboek para Aplicações e substitua a versão antiga.",
       "deb": "Baixado e verificado. O Kasboek abre o pacote no instalador de software."

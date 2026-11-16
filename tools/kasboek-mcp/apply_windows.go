@@ -102,7 +102,7 @@ func cmdLine(program string, args []string) string {
 	return strings.Join(parts, " ")
 }
 
-// runMsiexec is not hidden, so Windows Installer's own progress dialog shows.
+// runMsiexec: whether Windows Installer shows a dialog is up to its arguments (see msiexecArgs).
 func (w winPlatform) runMsiexec(args []string) (int, error) {
 	cmd := exec.Command(w.msiexec)
 	cmd.SysProcAttr = &syscall.SysProcAttr{CmdLine: cmdLine(w.msiexec, args)}
@@ -124,13 +124,13 @@ func (winPlatform) start(exe string, args []string) error {
 }
 
 func applyUpdate(path string) error {
-	return applyWith(path, newWinPlatform(), realTiming)
+	return applyWith(path, newWinPlatform(), realTiming, startWindow)
 }
 
-func applyWith(path string, p platform, t timing) error {
+func applyWith(path string, p platform, t timing, start uiStarter) error {
 	pl, err := loadPlan(path)
 	if err != nil {
 		return err
 	}
-	return runUpdate(p, noUI{}, pl, t, true)
+	return applyPlan(p, pl, t, start)
 }

@@ -86,8 +86,9 @@ npm run dev        # start the app with hot reload
 (switch in the welcome window and in Settings; GitHub sees the IP address, nothing else is sent).
 A newer release shows an "Update to …" button at the top. The download is checked against the
 SHA-256 GitHub reports for the file (or the release's `SHA256SUMS.txt`), the data is backed up to
-`safety-backups`, then: Windows installs the MSI with Windows Installer's own progress dialog and
-reopens Kasboek by itself; an AppImage replaces
+`safety-backups`, then: on Windows, Kasboek closes and a small Kasboek window shows the
+installation progress (in your language) while the MSI is installed, and Kasboek reopens by itself;
+if that window can't be shown, Windows Installer's own progress dialog is used instead; an AppImage replaces
 itself; a `.deb` or `.dmg` is opened for you to finish. Only published releases count: test builds
 on the Actions page are not offered.
 
