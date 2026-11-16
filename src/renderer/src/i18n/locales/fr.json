@@ -468,7 +468,8 @@
       "accounts": "Comptes",
       "security": "Sécurité",
       "data": "Sauvegardes et synchro",
-      "assistant": "Assistant"
+      "assistant": "Assistant",
+      "about": "À propos"
     },
     "about": "À propos de Kasboek",
     "fxCost": "Frais de change (%)",
@@ -574,7 +575,8 @@
     "weakBody": "Kasboek demande désormais des mots de passe plus forts pour protéger vos données, surtout dans les sauvegardes et exports. Choisissez-en un nouveau pour continuer.",
     "rememberComputer": "Mémoriser cet ordinateur pendant 30 jours",
     "rememberedNote": "Code à deux facteurs mémorisé sur cet ordinateur jusqu’au {{date}}.",
-    "deviceChecking": "Recherche de Windows Hello ou Touch ID…"
+    "deviceChecking": "Recherche de Windows Hello ou Touch ID…",
+    "recoveryHidden": "La clé est maintenant masquée : retrouvez-la là où vous l’avez conservée."
   },
   "transfer": {
     "title": "Passer à un autre ordinateur",
@@ -1150,7 +1152,9 @@
     "formatLabel": "Nombres et dates",
     "formatHint": "L’aspect des montants, dates et heures. Chaque élément se règle séparément dans les Réglages.",
     "ecb": "Taux de change de la BCE",
-    "ecbHint": "Pour les comptes ou paiements dans d’autres devises : les taux de référence quotidiens de la Banque centrale européenne, téléchargés maintenant puis tenus à jour. Seuls les taux sont récupérés ; rien sur vous n’est envoyé."
+    "ecbHint": "Pour les comptes ou paiements dans d’autres devises : les taux de référence quotidiens de la Banque centrale européenne, téléchargés maintenant puis tenus à jour. Seuls les taux sont récupérés ; rien sur vous n’est envoyé.",
+    "syncHint": "Facultatif. Gardez les mêmes données sur vos autres ordinateurs via un dossier cloud que vous utilisez déjà ; seuls des fichiers chiffrés y vont. Possible aussi plus tard dans les Paramètres.",
+    "syncOn": "Synchronisé"
   },
   "tour": {
     "label": "Visite de Kasboek",

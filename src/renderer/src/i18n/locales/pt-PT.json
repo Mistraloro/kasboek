@@ -468,7 +468,8 @@
       "accounts": "Contas",
       "security": "Segurança",
       "data": "Cópias e sincronização",
-      "assistant": "Assistente"
+      "assistant": "Assistente",
+      "about": "Sobre"
     },
     "about": "Sobre o Kasboek",
     "fxCost": "Custo de câmbio (%)",
@@ -574,7 +575,8 @@
     "weakBody": "O Kasboek pede agora palavras-passe mais fortes para proteger os seus dados, sobretudo em cópias e exportações. Escolha uma nova para continuar.",
     "rememberComputer": "Memorizar este computador durante 30 dias",
     "rememberedNote": "Código de dois fatores memorizado neste computador até {{date}}.",
-    "deviceChecking": "A procurar Windows Hello ou Touch ID…"
+    "deviceChecking": "A procurar Windows Hello ou Touch ID…",
+    "recoveryHidden": "A chave está agora oculta: procure-a onde a guardou."
   },
   "transfer": {
     "title": "Mudar para outro computador",
@@ -1150,7 +1152,9 @@
     "formatLabel": "Números e datas",
     "formatHint": "O aspeto dos montantes, datas e horas. Cada parte define-se à parte nas Definições.",
     "ecb": "Taxas de câmbio do BCE",
-    "ecbHint": "Para contas ou pagamentos noutras moedas: as taxas de referência diárias do Banco Central Europeu, descarregadas agora e mantidas atualizadas. Só as taxas são obtidas; nada sobre si é enviado."
+    "ecbHint": "Para contas ou pagamentos noutras moedas: as taxas de referência diárias do Banco Central Europeu, descarregadas agora e mantidas atualizadas. Só as taxas são obtidas; nada sobre si é enviado.",
+    "syncHint": "Opcional. Mantenha os mesmos dados nos seus outros computadores através de uma pasta na nuvem que já usa; só vão para lá ficheiros encriptados. Também pode fazê-lo mais tarde nas Definições.",
+    "syncOn": "A sincronizar"
   },
   "tour": {
     "label": "Visita ao Kasboek",

@@ -147,7 +147,7 @@ function Shell() {
             type="button"
             title={t('settings.about')}
             onClick={() => {
-              openSettingsTab('general')
+              openSettingsTab('about')
               setPage('settings')
             }}
             className="num mt-2 self-start rounded px-3 text-[11px] text-muted/70 transition-colors hover:text-text"

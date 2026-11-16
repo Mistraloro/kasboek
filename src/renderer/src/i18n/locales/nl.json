@@ -468,7 +468,8 @@
       "accounts": "Rekeningen",
       "security": "Beveiliging",
       "data": "Back-ups en sync",
-      "assistant": "Assistent"
+      "assistant": "Assistent",
+      "about": "Over"
     },
     "about": "Over Kasboek",
     "fxCost": "Wisselkosten (%)",
@@ -574,7 +575,8 @@
     "rememberComputer": "Deze computer 30 dagen onthouden",
     "rememberedNote": "Code voor tweestapsverificatie onthouden op deze computer tot {{date}}.",
     "deviceChecking": "Zoeken naar Windows Hello of Touch ID…",
-    "eraseWord": "WISSEN"
+    "eraseWord": "WISSEN",
+    "recoveryHidden": "De sleutel is nu verborgen: zoek hem op waar je hem bewaarde."
   },
   "transfer": {
     "title": "Naar een andere computer verhuizen",
@@ -1150,7 +1152,9 @@
     "formatLabel": "Getallen en datums",
     "formatHint": "Hoe bedragen, datums en tijden eruitzien. Elk onderdeel stel je apart in bij Instellingen.",
     "ecb": "Wisselkoersen van de ECB",
-    "ecbHint": "Voor rekeningen of betalingen in andere munten: de dagelijkse referentiekoersen van de Europese Centrale Bank, nu gedownload en daarna bijgewerkt. Alleen de koersen worden opgehaald; er wordt niets over jou verstuurd."
+    "ecbHint": "Voor rekeningen of betalingen in andere munten: de dagelijkse referentiekoersen van de Europese Centrale Bank, nu gedownload en daarna bijgewerkt. Alleen de koersen worden opgehaald; er wordt niets over jou verstuurd.",
+    "syncHint": "Optioneel. Houd dezelfde gegevens op je andere computers via een cloudmap die je al gebruikt; er komen alleen versleutelde bestanden in. Kan ook later in Instellingen.",
+    "syncOn": "Synchroniseert"
   },
   "tour": {
     "label": "Rondleiding door Kasboek",

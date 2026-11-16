@@ -87,13 +87,21 @@ export function RecoveryKeyPanel({ recoveryKey, onDone }: { recoveryKey: string;
   const last = recoveryKey.split('-').at(-1) ?? ''
   return (
     <div className="flex flex-col gap-4">
-      <div className="selectable num rounded-lg border border-border bg-surface-2 px-4 py-4 text-center font-mono text-[17px] leading-relaxed font-semibold tracking-wider">
+      {/* Hidden while confirming, so the last group is read from where it was stored, not from here. */}
+      <div
+        aria-hidden={saved}
+        className={cx(
+          'num rounded-lg border border-border bg-surface-2 px-4 py-4 text-center font-mono text-[17px] leading-relaxed font-semibold tracking-wider transition-[filter]',
+          saved ? 'pointer-events-none blur-md select-none' : 'selectable'
+        )}
+      >
         {recoveryKey.split('-').slice(0, 4).join('-')}
         <br />
         {recoveryKey.split('-').slice(4).join('-')}
       </div>
       <Button
         icon={<Copy size={14} />}
+        disabled={saved}
         onClick={() =>
           void navigator.clipboard.writeText(recoveryKey).then(
             () => toast(t('auth.copied')),
@@ -113,7 +121,7 @@ export function RecoveryKeyPanel({ recoveryKey, onDone }: { recoveryKey: string;
         {t('auth.recoverySaved')}
       </label>
       {saved && (
-        <Field label={t('auth.recoveryConfirm', { n: 8 })}>
+        <Field label={t('auth.recoveryConfirm', { n: 8 })} hint={t('auth.recoveryHidden')}>
           {(id) => <Input id={id} value={check} onChange={(e) => setCheck(e.target.value.toUpperCase())} maxLength={4} className="num font-mono tracking-widest" />}
         </Field>
       )}

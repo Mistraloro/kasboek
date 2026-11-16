@@ -181,7 +181,8 @@
     "safetyBody": "Los datos de Kasboek solo están en esta computadora, así que una copia de seguridad en otro sitio es importante.",
     "claudeNote": "Kasboek solo agrega su propia entrada a los ajustes de la app de Claude y guarda antes una copia del archivo. Cierra Claude Desktop por completo antes de agregarlo y ábrelo de nuevo después.",
     "codeNotFound": "No se encontró Claude Code en esta computadora. Puedes configurarlo más tarde en Configuración.",
-    "formatHint": "Cómo se ven los importes, las fechas y las horas. Cada parte se ajusta por separado en Configuración."
+    "formatHint": "Cómo se ven los importes, las fechas y las horas. Cada parte se ajusta por separado en Configuración.",
+    "syncHint": "Opcional. Mantén los mismos datos en tus otros computadoras mediante una carpeta en la nube que ya usas; allí solo van archivos cifrados. También puedes hacerlo más tarde en Configuración."
   },
   "tour": {
     "step": {

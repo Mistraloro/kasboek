@@ -468,7 +468,8 @@
       "accounts": "Cuentas",
       "security": "Seguridad",
       "data": "Copias y sincronización",
-      "assistant": "Asistente"
+      "assistant": "Asistente",
+      "about": "Acerca de"
     },
     "about": "Acerca de Kasboek",
     "fxCost": "Coste de cambio (%)",
@@ -574,7 +575,8 @@
     "weakBody": "Kasboek ahora pide contraseñas más seguras para proteger tus datos, sobre todo en copias y exportaciones. Elige una nueva para continuar.",
     "rememberComputer": "Recordar este ordenador durante 30 días",
     "rememberedNote": "Código de verificación recordado en este ordenador hasta el {{date}}.",
-    "deviceChecking": "Buscando Windows Hello o Touch ID…"
+    "deviceChecking": "Buscando Windows Hello o Touch ID…",
+    "recoveryHidden": "La clave está oculta ahora: búscala donde la guardaste."
   },
   "transfer": {
     "title": "Pasar a otro ordenador",
@@ -1150,7 +1152,9 @@
     "formatLabel": "Números y fechas",
     "formatHint": "Cómo se ven los importes, las fechas y las horas. Cada parte se ajusta por separado en Ajustes.",
     "ecb": "Tipos de cambio del BCE",
-    "ecbHint": "Para cuentas o pagos en otras monedas: los tipos de referencia diarios del Banco Central Europeo, descargados ahora y mantenidos al día. Solo se descargan los tipos; no se envía nada sobre ti."
+    "ecbHint": "Para cuentas o pagos en otras monedas: los tipos de referencia diarios del Banco Central Europeo, descargados ahora y mantenidos al día. Solo se descargan los tipos; no se envía nada sobre ti.",
+    "syncHint": "Opcional. Mantén los mismos datos en tus otros ordenadores mediante una carpeta en la nube que ya usas; allí solo van archivos cifrados. También puedes hacerlo más tarde en Ajustes.",
+    "syncOn": "Sincronizando"
   },
   "tour": {
     "label": "Recorrido por Kasboek",

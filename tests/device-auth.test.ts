@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { helloScript } from '../src/main/security/device-auth'
 
 describe('Windows Hello prompt', () => {
-  it('passes Kasboek’s window to the prompt, with the plain call as fallback', () => {
-    const s = helloScript('Unlock Kasboek', 1311000n)
-    expect(s).toContain('[Int64]1311000')
+  it('asks with the plain call and brings the prompt forward', () => {
+    const s = helloScript('Unlock Kasboek')
     expect(s).toContain("$reason = 'Unlock Kasboek'")
-    expect(s).toContain('[KasboekHello]::RequestForWindow($factory, $hwnd, $reason, $iid)')
+    expect(s).not.toContain('RequestVerificationForWindowAsync')
+    expect(s).toContain('[KasboekHello]::BringPromptForward()')
     expect(s).toContain('RequestVerificationAsync($reason)')
     // The C# block is a double-quoted here-string: it must hold no PowerShell variables.
     const cs = s.slice(s.indexOf('@"'), s.indexOf('"@'))

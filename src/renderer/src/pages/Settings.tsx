@@ -17,7 +17,7 @@ import { ClaudeSection, PermissionsSection } from './SettingsClaude'
 import { MemorySection } from './SettingsMemory'
 import { useUpdate } from '../components/Update'
 import { GRAPHICS_CHOICES, type GraphicsChoice } from '@shared/graphics'
-import { SETTINGS_TABS, openSettingsTab, settingsTab, type SettingsTab } from '../lib/settings-tab'
+import { SETTINGS_TABS, onSettingsTab, openSettingsTab, settingsTab, type SettingsTab } from '../lib/settings-tab'
 import { startTour } from '../components/Tour'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
@@ -39,10 +39,8 @@ export function Row({ label, hint, children }: { label: ReactNode; hint?: ReactN
 export function SettingsPage() {
   const { t } = useTranslation()
   const [tab, setTabState] = useState<SettingsTab>(settingsTab())
-  const setTab = (next: SettingsTab): void => {
-    openSettingsTab(next)
-    setTabState(next)
-  }
+  const setTab = (next: SettingsTab): void => openSettingsTab(next)
+  useEffect(() => onSettingsTab(setTabState), [])
   return (
     <>
       <PageHeader title={t('settings.title')} />
@@ -69,9 +67,9 @@ export function SettingsPage() {
             <AppearanceSection />
             <FormatsSection />
             <CurrenciesSection />
-            <AboutSection />
           </>
         )}
+        {tab === 'about' && <AboutSection />}
         {tab === 'accounts' && <AccountsSection />}
         {tab === 'security' && <SecuritySection />}
         {tab === 'data' && (

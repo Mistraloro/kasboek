@@ -468,7 +468,8 @@
       "accounts": "Accounts",
       "security": "Security",
       "data": "Backups & sync",
-      "assistant": "Assistant"
+      "assistant": "Assistant",
+      "about": "About"
     },
     "about": "About Kasboek",
     "fxCost": "Exchange cost (%)",
@@ -574,7 +575,8 @@
     "rememberComputer": "Remember this computer for 30 days",
     "rememberedNote": "Two-factor code remembered on this computer until {{date}}.",
     "deviceChecking": "Checking for Windows Hello or Touch ID…",
-    "eraseWord": "ERASE"
+    "eraseWord": "ERASE",
+    "recoveryHidden": "The key is hidden now: look it up where you stored it."
   },
   "transfer": {
     "title": "Move to another computer",
@@ -1150,7 +1152,9 @@
     "formatLabel": "Numbers and dates",
     "formatHint": "How amounts, dates and times look. Every part can be set separately in Settings.",
     "ecb": "Exchange rates from the ECB",
-    "ecbHint": "For accounts or payments in other currencies: the European Central Bank's daily reference rates, downloaded now and kept up to date. Only the rates are fetched; nothing about you is sent."
+    "ecbHint": "For accounts or payments in other currencies: the European Central Bank's daily reference rates, downloaded now and kept up to date. Only the rates are fetched; nothing about you is sent.",
+    "syncHint": "Optional. Keep the same data on your other computers through a cloud folder you already use; only encrypted files go there. You can also do this later in Settings.",
+    "syncOn": "Syncing"
   },
   "tour": {
     "label": "Tour of Kasboek",

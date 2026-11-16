@@ -42,8 +42,8 @@ func (b *bridge) setClient(name string) {
 	b.client.Store(name)
 }
 
-var errNotRunning = errors.New("Kasboek isn't running, is locked, or MCP access is off. Open Kasboek, unlock it, and turn on " +
-	"\"Claude Desktop & Claude Code (MCP)\" in Settings → Claude.")
+var errNotRunning = errors.New("Kasboek is locked, not running, or its Claude connection is off. Ask the person to unlock Kasboek " +
+	"(its icon in the tray or menu bar opens it) and to turn on \"Claude Desktop & Claude Code (MCP)\" in Settings → Assistant.")
 
 func (b *bridge) request(call, name string, input json.RawMessage) (json.RawMessage, error) {
 	raw, err := os.ReadFile(filepath.Join(b.dataDir, "mcp-bridge.json"))

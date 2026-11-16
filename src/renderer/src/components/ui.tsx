@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -185,8 +186,10 @@ export function Modal({ open, title, onClose, children, dismissible = true }: { 
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose, dismissible])
   if (!open) return null
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onMouseDown={dismissible ? onClose : undefined}>
+  // On document.body: a modal opened from the title bar (the update button) would otherwise sit inside
+  // its window-drag area, where clicks and scrolling don't reach the page.
+  return createPortal(
+    <div className="no-drag fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onMouseDown={dismissible ? onClose : undefined}>
       <div
         role="dialog"
         aria-modal="true"
@@ -203,7 +206,8 @@ export function Modal({ open, title, onClose, children, dismissible = true }: { 
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

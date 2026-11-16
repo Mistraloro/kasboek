@@ -146,7 +146,14 @@ func (s *server) handle(m rpcMessage) {
 			"instructions":    instructions,
 		})
 	case "notifications/initialized":
-		s.started.Do(func() { go s.watch() })
+		s.started.Do(func() {
+			go func() {
+				if _, err := s.bridge.list(); err != nil {
+					startApp(s.bridge.dataDir)
+				}
+			}()
+			go s.watch()
+		})
 	case "ping":
 		s.reply(m.ID, map[string]any{})
 	case "tools/list":

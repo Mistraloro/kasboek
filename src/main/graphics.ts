@@ -116,9 +116,10 @@ export function watchGraphics(): void {
 }
 
 /** Watch the main window: it must report its first screen, and its page must not crash unnoticed. */
-export function watchWindow(win: BrowserWindow): void {
+export function watchWindow(win: BrowserWindow, { hidden = false } = {}): void {
+  // A window started hidden (in the background for a Claude app) may not draw until it is shown.
   const timer = setTimeout(() => {
-    if (!painted) {
+    if (!painted && !hidden) {
       startupLog(`no first screen after ${PAINT_TIMEOUT_MS / 1000} s`)
       fallBack('no first screen')
     }

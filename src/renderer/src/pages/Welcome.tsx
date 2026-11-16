@@ -1,9 +1,9 @@
-import { ArrowDownToLine, Bot, Check, Coins, FileUp, FolderInput, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
+import { ArrowDownToLine, Bot, Check, Coins, FileUp, FolderInput, FolderSync, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import type { LanguageCode } from '@shared/languages'
-import type { BackupStatus, McpSetupStatus, Settings } from '@shared/types'
+import type { BackupStatus, McpSetupStatus, Settings, SyncStatus } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
 import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopRunning } from '../components/ClaudeApps'
 import { CurrencySelect } from '../components/CurrencySelect'
@@ -11,7 +11,7 @@ import { useToast } from '../components/Toast'
 import { startTour } from '../components/Tour'
 import { Badge, Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
 import { LANGUAGES } from '../i18n'
-import { call } from '../lib/api'
+import { ApiError, call } from '../lib/api'
 import { FORMAT_PRESETS, formatDate as fmtDate, formatMoney as fmtMoney, formatTime as fmtTime, matchingPreset, type FormatPrefs } from '@shared/format'
 import { usePrefs } from '../lib/settings'
 import { AuthCard, AuthLayout } from './auth/AuthLayout'
@@ -109,6 +109,7 @@ export function Welcome() {
   const [step, setStep] = useState<Step>('intro')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [backup, setBackup] = useState<BackupStatus | null>(null)
+  const [sync, setSync] = useState<SyncStatus | null>(null)
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [updates, setUpdates] = useState(prefs.updateCheck)
@@ -116,6 +117,7 @@ export function Welcome() {
   useEffect(() => {
     void call('settings.get').then(setSettings)
     void call('backup.status').then(setBackup)
+    void call('sync.status').then(setSync)
   }, [])
   const provider: ProviderId = settings?.aiProvider ?? 'anthropic'
   const preset = PROVIDERS[provider]
@@ -147,6 +149,9 @@ export function Welcome() {
     } catch (e) {
       fail(e)
     }
+  }
+  const startSync = (): void => {
+    void call('sync.start').then(setSync, (e) => (e instanceof ApiError && e.code === 'sync.cancelled' ? undefined : fail(e)))
   }
   const finish = (tour: boolean): void => {
     void updatePrefs({ updateCheck: updates, welcomeDone: true }).then(() => {
@@ -237,6 +242,13 @@ export function Welcome() {
           <div className="flex flex-col gap-2.5">
             <Choice icon={<FolderInput size={16} />} title={t('settings.auto')} hint={backup?.autoEnabled && backup.folder ? <span className="selectable">{backup.folder}</span> : t('settings.autoHint')}>
               <Switch label={t('settings.auto')} checked={!!backup?.autoEnabled} onChange={(v) => void toggleBackups(v)} />
+            </Choice>
+            <Choice icon={<FolderSync size={16} />} title={t('sync.title')} hint={sync?.state === 'on' && sync.folder ? <span className="selectable">{sync.folder}</span> : t('welcome.syncHint')}>
+              {sync?.state === 'on' ? (
+                <span className="inline-flex items-center gap-1 text-[13px] font-medium text-accent"><Check size={14} />{t('welcome.syncOn')}</span>
+              ) : (
+                <Button size="sm" onClick={startSync}>{t('sync.startButton')}</Button>
+              )}
             </Choice>
             <Choice icon={<Lock size={16} />} title={t('settings.autoLock')} hint={t('settings.autoLockHint')}>
               <Select className="w-40" aria-label={t('settings.autoLock')} value={prefs.autoLockMinutes} onChange={(e) => void updatePrefs({ autoLockMinutes: Number(e.target.value) })}>

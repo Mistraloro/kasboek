@@ -468,7 +468,8 @@
       "accounts": "Konten",
       "security": "Sicherheit",
       "data": "Sicherungen & Sync",
-      "assistant": "Assistent"
+      "assistant": "Assistent",
+      "about": "Über"
     },
     "about": "Über Kasboek",
     "fxCost": "Wechselkosten (%)",
@@ -574,7 +575,8 @@
     "weakBody": "Kasboek verlangt jetzt stärkere Passwörter, um deine Daten zu schützen, besonders in Sicherungen und Exporten. Wähle ein neues, um fortzufahren.",
     "rememberComputer": "Diesen Computer 30 Tage merken",
     "rememberedNote": "Zwei-Faktor-Code auf diesem Computer gemerkt bis {{date}}.",
-    "deviceChecking": "Suche nach Windows Hello oder Touch ID…"
+    "deviceChecking": "Suche nach Windows Hello oder Touch ID…",
+    "recoveryHidden": "Der Schlüssel ist jetzt verborgen: Sehen Sie dort nach, wo Sie ihn aufbewahrt haben."
   },
   "transfer": {
     "title": "Auf einen anderen Computer umziehen",
@@ -1150,7 +1152,9 @@
     "formatLabel": "Zahlen und Daten",
     "formatHint": "Wie Beträge, Daten und Uhrzeiten aussehen. Jeder Teil lässt sich in den Einstellungen einzeln festlegen.",
     "ecb": "Wechselkurse der EZB",
-    "ecbHint": "Für Konten oder Zahlungen in anderen Währungen: die täglichen Referenzkurse der Europäischen Zentralbank, jetzt geladen und danach aktuell gehalten. Nur die Kurse werden abgerufen; nichts über dich wird gesendet."
+    "ecbHint": "Für Konten oder Zahlungen in anderen Währungen: die täglichen Referenzkurse der Europäischen Zentralbank, jetzt geladen und danach aktuell gehalten. Nur die Kurse werden abgerufen; nichts über dich wird gesendet.",
+    "syncHint": "Optional. Dieselben Daten auf Ihren anderen Computern über einen Cloud-Ordner, den Sie schon nutzen; dorthin kommen nur verschlüsselte Dateien. Geht auch später in den Einstellungen.",
+    "syncOn": "Wird synchronisiert"
   },
   "tour": {
     "label": "Rundgang durch Kasboek",
