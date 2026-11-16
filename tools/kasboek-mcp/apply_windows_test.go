@@ -17,10 +17,10 @@ import (
 	"time"
 )
 
-// The test program plays three parts when started with the right environment: a fake msiexec
-// (first argument /i: exits with the code in KB_TEST_MSIEXEC_CODE, after a minute if
-// KB_TEST_MSIEXEC_HANG is set), a Kasboek that was opened again (creates the file in KB_TEST_MARK),
-// and a program that just sits there (KB_TEST_SLEEP).
+// The test program plays three parts: a fake msiexec (first argument /i: exits with the code in
+// KB_TEST_MSIEXEC_CODE, after a minute if KB_TEST_MSIEXEC_HANG is set), a Kasboek that was opened
+// again (recognised by its file name, Kasboek.exe, as the plan allows no arguments: creates the file
+// named by KB_TEST_MARK), and a program that just sits there (KB_TEST_SLEEP).
 func TestMain(m *testing.M) {
 	if len(os.Args) > 1 && os.Args[1] == "/i" {
 		if os.Getenv("KB_TEST_MSIEXEC_HANG") != "" {
@@ -29,8 +29,10 @@ func TestMain(m *testing.M) {
 		code, _ := strconv.Atoi(os.Getenv("KB_TEST_MSIEXEC_CODE"))
 		os.Exit(code)
 	}
-	if mark := os.Getenv("KB_TEST_MARK"); mark != "" {
-		_ = os.WriteFile(mark, nil, 0o600)
+	if strings.EqualFold(filepath.Base(os.Args[0]), "Kasboek.exe") {
+		if mark := os.Getenv("KB_TEST_MARK"); mark != "" {
+			_ = os.WriteFile(mark, nil, 0o600)
+		}
 		os.Exit(0)
 	}
 	if os.Getenv("KB_TEST_SLEEP") != "" {
@@ -58,7 +60,7 @@ func TestWaitExit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer w.closeProcess(h)
-	if img, err := w.imagePath(h); err != nil || !samePath(img, os.Args[0]) {
+	if img, err := w.imagePath(h); err != nil || !sameFile(img, os.Args[0]) {
 		t.Fatalf("image path %q, %v", img, err)
 	}
 	if exited, err := w.waitExit(h, 200*time.Millisecond); err != nil || exited {
@@ -233,7 +235,7 @@ func TestApplyUpdateWithFakeMsiexec(t *testing.T) {
 		t.Run(tc.outcome, func(t *testing.T) {
 			pl := testPlan(t)
 			dir := filepath.Dir(pl.MSI)
-			// Kasboek is a copy of the test program, so "opening it again" can be seen.
+			// Kasboek.exe is a copy of the test program (plan has no arguments), so "opening it again" can be seen.
 			self, err := os.ReadFile(os.Args[0])
 			if err != nil {
 				t.Fatal(err)
