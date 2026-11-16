@@ -295,6 +295,15 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    **Fixed in 0.15.2.** Cause: a focus listener in the Setup screen refreshed the account status when
    the window regained focus after the Windows Hello prompt, which swapped the Setup screen for the
    main app before the recovery key was confirmed. The Setup flow now stays mounted until it ends.
+22. **Windows Hello: keep the person's last used option (PIN or fingerprint).** Reported testing
+   0.15.1: the person had used the PIN, but the Hello prompt opened on the fingerprint scanner
+   instead. Wanted: the prompt starts on the option they used last. Kasboek asks through
+   `UserConsentVerifier.RequestVerificationAsync` (`src/main/security/device-auth.ts`), and Windows
+   decides which option that dialog shows first; the API has no setting for it, so this may not be
+   possible with that call. Investigate before promising: whether the dialog already offers "More
+   choices" (PIN) and whether another call (for example a `KeyCredentialManager` or the in-process
+   `IUserConsentVerifierInterop` route from the long-term idea in the Windows Hello review) lets
+   Windows remember the last method. If Windows cannot do it, record that here and leave it as is.
 
 ## Later, maybe
 
