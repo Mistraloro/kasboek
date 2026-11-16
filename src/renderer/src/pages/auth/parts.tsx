@@ -7,6 +7,7 @@ import { Button, Field, Input, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import i18n from '../../i18n'
 import { ApiError, call } from '../../lib/api'
+import { recoveryKeyConfirmed } from '@shared/setup-rules'
 
 /** Errors from the main process come in English; the ones with a translation here are shown in the chosen language. */
 export const errText = (e: unknown): string => {
@@ -90,7 +91,6 @@ export function RecoveryKeyPanel({ recoveryKey, onDone }: { recoveryKey: string;
   const toast = useToast()
   const [saved, setSaved] = useState(false)
   const [check, setCheck] = useState('')
-  const last = recoveryKey.split('-').at(-1) ?? ''
   return (
     <div className="flex flex-col gap-4">
       {/* Hidden while confirming, so the last group is read from where it was stored, not from here. */}
@@ -131,7 +131,7 @@ export function RecoveryKeyPanel({ recoveryKey, onDone }: { recoveryKey: string;
           {(id) => <Input id={id} value={check} onChange={(e) => setCheck(e.target.value.toUpperCase())} maxLength={4} className="num font-mono tracking-widest" />}
         </Field>
       )}
-      <Button variant="primary" disabled={!saved || check !== last} onClick={onDone}>
+      <Button variant="primary" disabled={!recoveryKeyConfirmed(recoveryKey, saved, check)} onClick={onDone}>
         {t('auth.continue')}
       </Button>
     </div>

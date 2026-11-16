@@ -10,8 +10,7 @@ import { usePrefsFmt } from '../../lib/settings'
 import { AuthCard, AuthLayout } from './AuthLayout'
 import { ImportFlow } from './ImportFlow'
 import { DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './parts'
-
-type Step = 'choose' | 'password' | 'import' | 'recovery' | 'twofactor'
+import { mayRefreshOnFocus, type SetupStep as Step } from '@shared/setup-rules'
 
 function Choice({ icon, title, body, onClick, disabled, note }: { icon: ReactNode; title: string; body: string; onClick: () => void; disabled?: boolean; note?: string }) {
   return (
@@ -43,11 +42,13 @@ export function Setup() {
   const [busy, setBusy] = useState(false)
 
   // Windows Hello may have been switched on (or was busy) after Kasboek looked: check again on return.
+  // Not once an account exists: the refresh would then show the app and skip the recovery key check.
   useEffect(() => {
+    if (!mayRefreshOnFocus(step)) return
     const again = (): void => void refresh()
     window.addEventListener('focus', again)
     return () => window.removeEventListener('focus', again)
-  }, [refresh])
+  }, [refresh, step])
 
   const create = (input: { mode: 'password'; password: string } | { mode: 'device' }): void => {
     setBusy(true)
