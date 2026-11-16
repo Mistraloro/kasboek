@@ -879,6 +879,10 @@
     "stopButton": "Dejar de sincronizar",
     "stopConfirm": "Este ordenador deja de enviar y recibir cambios. Sus datos se quedan como están. Para volver a sincronizar, únete de nuevo a la carpeta."
   },
+  "dateInput": {
+    "invalid": "Escribe una fecha como {{format}}, por ejemplo {{example}}.",
+    "tooLate": "La fecha no puede ser posterior al {{date}}."
+  },
   "balance": {
     "matches": "Coincide con lo que contó Kasboek.",
     "differs": "Kasboek esperaba {{expected}}: una diferencia de {{difference}}.",

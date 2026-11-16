@@ -879,6 +879,10 @@
     "stopButton": "Stoppen",
     "stopConfirm": "Deze computer stuurt en ontvangt geen wijzigingen meer. De gegevens blijven zoals ze nu zijn. Wil je later weer synchroniseren, sluit dan opnieuw aan bij de map."
   },
+  "dateInput": {
+    "invalid": "Vul een datum in als {{format}}, bijvoorbeeld {{example}}.",
+    "tooLate": "De datum mag niet na {{date}} liggen."
+  },
   "balance": {
     "matches": "Klopt met wat Kasboek telde.",
     "differs": "Kasboek verwachtte {{expected}}: een verschil van {{difference}}.",

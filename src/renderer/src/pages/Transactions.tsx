@@ -6,6 +6,7 @@ import { centsToInput } from '@shared/format'
 import { addMonths, monthOf } from '@shared/month'
 import type { TransferPair, Category, Transaction } from '@shared/types'
 import type { Page } from '../App'
+import { DateInput } from '../components/DateInput'
 import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -399,7 +400,7 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
             </Field>
           </div>
         )}
-        <Field label={t('transactions.date')}>{(id) => <Input id={id} type="date" value={form.bookingDate} onChange={(e) => setForm({ ...form, bookingDate: e.target.value })} />}</Field>
+        <Field label={t('transactions.date')}>{(id) => <DateInput id={id} value={form.bookingDate} onChange={(bookingDate) => setForm({ ...form, bookingDate })} />}</Field>
         <Field label={t('transactions.amount')} hint={t('transactions.amountHint')}>{(id) => <Input id={id} className="num" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="-12,50" />}</Field>
         <div className="col-span-2"><Field label={t('transactions.counterparty')}>{(id) => <Input id={id} value={form.counterpartyName} onChange={(e) => setForm({ ...form, counterpartyName: e.target.value })} />}</Field></div>
         <div className="col-span-2"><Field label={t('transactions.description')}>{(id) => <Input id={id} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}</Field></div>

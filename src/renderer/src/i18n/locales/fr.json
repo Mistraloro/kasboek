@@ -879,6 +879,10 @@
     "stopButton": "Arrêter",
     "stopConfirm": "Cet ordinateur n’envoie et ne reçoit plus de modifications. Ses données restent telles quelles. Pour synchroniser à nouveau, rejoignez le dossier."
   },
+  "dateInput": {
+    "invalid": "Saisissez une date au format {{format}}, par exemple {{example}}.",
+    "tooLate": "La date ne peut pas être postérieure au {{date}}."
+  },
   "balance": {
     "matches": "Correspond à ce que Kasboek a compté.",
     "differs": "Kasboek attendait {{expected}} : une différence de {{difference}}.",

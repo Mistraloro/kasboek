@@ -879,6 +879,10 @@
     "stopButton": "Parar",
     "stopConfirm": "Este computador deixa de enviar e receber alterações. Os dados ficam como estão. Para voltar a sincronizar, junte-se novamente à pasta."
   },
+  "dateInput": {
+    "invalid": "Introduza uma data como {{format}}, por exemplo {{example}}.",
+    "tooLate": "A data não pode ser posterior a {{date}}."
+  },
   "balance": {
     "matches": "Corresponde ao que o Kasboek contou.",
     "differs": "O Kasboek esperava {{expected}}: uma diferença de {{difference}}.",

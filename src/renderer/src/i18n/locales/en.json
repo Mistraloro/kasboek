@@ -879,6 +879,10 @@
     "stopButton": "Stop syncing",
     "stopConfirm": "This computer stops sending and receiving changes. Its data stays as it is now. To sync again later, join the folder again."
   },
+  "dateInput": {
+    "invalid": "Enter a date as {{format}}, for example {{example}}.",
+    "tooLate": "The date can't be after {{date}}."
+  },
   "balance": {
     "matches": "Matches what Kasboek counted.",
     "differs": "Kasboek expected {{expected}}: a difference of {{difference}}.",

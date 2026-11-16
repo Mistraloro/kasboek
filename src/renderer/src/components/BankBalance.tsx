@@ -7,6 +7,7 @@ import { errText } from '../pages/auth/parts'
 import { call, useOp } from '../lib/api'
 import { formatDate } from '../lib/format'
 import { useSettings } from '../lib/settings'
+import { DateInput } from './DateInput'
 import { useToast } from './Toast'
 import { Badge, Button, Field, Input, Modal, cx } from './ui'
 import { localToday } from '@shared/month'
@@ -41,7 +42,7 @@ export function BalanceFields({ value, date, currency, onValue, onDate, dateLabe
   return (
     <div className="grid grid-cols-2 gap-3">
       <Field label={t('balance.amount', { currency })}>{(id) => <Input id={id} inputMode="decimal" className="num" value={value} onChange={(e) => onValue(e.target.value)} placeholder="0,00" />}</Field>
-      <Field label={dateLabel ? t('balance.onDate') : ''}>{(id) => <Input id={id} type="date" max={today()} value={date} onChange={(e) => onDate(e.target.value)} />}</Field>
+      <Field label={dateLabel ? t('balance.onDate') : ''}>{(id) => <DateInput id={id} max={today()} value={date} onChange={onDate} />}</Field>
     </div>
   )
 }

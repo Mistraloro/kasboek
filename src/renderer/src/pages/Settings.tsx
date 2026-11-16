@@ -2,6 +2,7 @@ import { Download, FolderInput, FolderOpen, FolderSync, Monitor, Moon, Plus, Ser
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance, type PickedTransfer, type SyncStatus } from '@shared/types'
+import { DateInput } from '../components/DateInput'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, PasswordInput, Segmented, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
@@ -580,11 +581,11 @@ function CurrenciesSection() {
       <Modal open={adding} title={t('fx.addRate')} onClose={() => setAdding(false)}>
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void saveRate() }}>
           <Field label={t('fx.currency')}>{(id) => <CurrencySelect id={id} value={rate.currency} onChange={(e) => setRate({ ...rate, currency: e.target.value })} />}</Field>
-          <Field label={t('fx.date')} hint={t('fx.dateHint')}>{(id) => <Input id={id} type="date" value={rate.date} onChange={(e) => setRate({ ...rate, date: e.target.value })} required />}</Field>
+          <Field label={t('fx.date')} hint={t('fx.dateHint')}>{(id) => <DateInput id={id} value={rate.date} onChange={(date) => setRate({ ...rate, date })} required />}</Field>
           <Field label={t('fx.perEur', { currency: rate.currency })}>{(id) => <Input id={id} inputMode="decimal" value={rate.perEur} onChange={(e) => setRate({ ...rate, perEur: e.target.value })} placeholder="1.0800" className="num" required />}</Field>
           <div className="flex justify-end gap-2">
             <Button onClick={() => setAdding(false)}>{t('settings.cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={!(Number(rate.perEur.replace(',', '.')) > 0) || rate.currency === 'EUR'}>{t('settings.save')}</Button>
+            <Button type="submit" variant="primary" disabled={!(Number(rate.perEur.replace(',', '.')) > 0) || rate.currency === 'EUR' || !rate.date}>{t('settings.save')}</Button>
           </div>
         </form>
       </Modal>
@@ -690,7 +691,7 @@ function AccountsSection() {
           )}
           <div className="flex justify-end gap-2">
             <Button onClick={() => setEditing(null)}>{t('settings.cancel')}</Button>
-            <Button type="submit" variant="primary" disabled={!form.name.trim() || fxCostBad || (form.balance.trim() !== '' && balanceCents === null)}>{t('settings.save')}</Button>
+            <Button type="submit" variant="primary" disabled={!form.name.trim() || fxCostBad || (form.balance.trim() !== '' && balanceCents === null) || (balanceCents !== null && !form.balanceDate)}>{t('settings.save')}</Button>
           </div>
         </form>
       </Modal>

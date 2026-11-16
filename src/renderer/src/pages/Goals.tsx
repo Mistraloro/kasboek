@@ -5,6 +5,7 @@ import { parseAmount } from '@shared/amount'
 import { centsToInput } from '@shared/format'
 import type { Goal } from '@shared/types'
 import { Meter } from '../components/charts'
+import { DateInput } from '../components/DateInput'
 import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -66,9 +67,11 @@ function GoalModal({ goal, onClose, onSaved }: { goal: Goal | 'new' | null; onCl
   const { fmt } = useSettings()
   const accounts = useOp('accounts.list')
   const [form, setForm] = useState({ name: '', target: '', date: '', accountId: '', saved: '' })
+  const [dateBad, setDateBad] = useState(false)
   const base = goal && goal !== 'new' ? goal : null
   useEffect(() => {
     if (!goal) return
+    setDateBad(false)
     setForm({
       name: base?.name ?? '',
       target: base ? centsToInput(base.targetCents, fmt.formats) : '',
@@ -80,7 +83,7 @@ function GoalModal({ goal, onClose, onSaved }: { goal: Goal | 'new' | null; onCl
   if (!goal) return null
   const target = parseAmount(form.target, 'auto', fmt.formats.decimal)
   const saved = form.saved.trim() ? parseAmount(form.saved, 'auto', fmt.formats.decimal) : 0
-  const valid = !!form.name.trim() && target !== null && target > 0 && (form.accountId !== '' || (saved !== null && saved >= 0))
+  const valid = !dateBad && !!form.name.trim() && target !== null && target > 0 && (form.accountId !== '' || (saved !== null && saved >= 0))
   const save = (): void => {
     const g = { name: form.name, targetCents: target!, targetDate: form.date || null, accountId: form.accountId ? Number(form.accountId) : null, savedCents: form.accountId ? null : saved }
     const p = base ? call('goals.update', { id: base.id, ...g }) : call('goals.create', g)
@@ -91,7 +94,7 @@ function GoalModal({ goal, onClose, onSaved }: { goal: Goal | 'new' | null; onCl
       <form className="grid grid-cols-2 gap-4" onSubmit={(e) => { e.preventDefault(); if (valid) save() }}>
         <div className="col-span-2"><Field label={t('goals.name')}>{(id) => <Input id={id} value={form.name} maxLength={80} placeholder={t('goals.namePlaceholder')} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />}</Field></div>
         <Field label={t('goals.target')}>{(id) => <Input id={id} className="num" inputMode="decimal" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} />}</Field>
-        <Field label={t('goals.date')} hint={t('goals.dateHint')}>{(id) => <Input id={id} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />}</Field>
+        <Field label={t('goals.date')} hint={t('goals.dateHint')}>{(id) => <DateInput id={id} value={form.date} onChange={(date, usable) => { setForm({ ...form, date }); setDateBad(!usable) }} />}</Field>
         <div className="col-span-2">
           <Field label={t('goals.trackWith')}>
             {(id) => (

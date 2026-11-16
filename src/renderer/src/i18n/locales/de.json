@@ -879,6 +879,10 @@
     "stopButton": "Beenden",
     "stopConfirm": "Dieser Computer sendet und empfängt keine Änderungen mehr. Seine Daten bleiben, wie sie jetzt sind. Um später wieder zu synchronisieren, tritt dem Ordner erneut bei."
   },
+  "dateInput": {
+    "invalid": "Gib ein Datum als {{format}} ein, zum Beispiel {{example}}.",
+    "tooLate": "Das Datum darf nicht nach dem {{date}} liegen."
+  },
   "balance": {
     "matches": "Stimmt mit dem überein, was Kasboek gezählt hat.",
     "differs": "Kasboek hat {{expected}} erwartet: {{difference}} Unterschied.",
