@@ -490,7 +490,13 @@
         "failed": "O Kasboek desenha agora sem a placa gráfica: ela não mostrou o Kasboek num arranque anterior.",
         "flag": "O Kasboek desenha agora sem a placa gráfica: foi iniciado com --disable-gpu."
       }
-    }
+    },
+    "erasedCopy": "Dados apagados",
+    "erasedCopyHint": "Os dados apagados em {{date}} são guardados 30 dias e podem ser restaurados no primeiro ecrã. Elimine-os agora para os remover de vez.",
+    "erasedDelete": "Eliminar definitivamente",
+    "erasedDeleteTitle": "Eliminar definitivamente os dados apagados",
+    "erasedDeleteBody": "Isto remove para sempre a cópia apagada, incluindo as suas cópias de segurança. Não pode ser anulado.",
+    "erasedDeleted": "Dados apagados eliminados."
   },
   "auth": {
     "welcome": "Bem-vindo ao Kasboek",
@@ -552,7 +558,7 @@
     "recoveredBody": "Desbloqueou com a chave de recuperação. Escolha uma nova palavra-passe para manter o Kasboek seguro.",
     "eraseLink": "Apagar dados",
     "eraseTitle": "Apagar o Kasboek neste computador",
-    "eraseBody": "Elimina todos os dados do Kasboek neste computador. Não pode ser anulado. Exportações e cópias guardadas noutro lado não são afetadas.",
+    "eraseBody": "Põe de lado todos os dados do Kasboek neste computador e começa do zero. A cópia continua cifrada e é guardada 30 dias: restaure-a no primeiro ecrã com a sua palavra-passe ou chave de recuperação, ou elimine-a mais cedo nas Definições. As cópias de segurança não são eliminadas. Exportações e cópias guardadas noutro lado não são afetadas.",
     "eraseType": "Escreva APAGAR para confirmar",
     "eraseWord": "APAGAR",
     "eraseConfirm": "Apagar tudo",
@@ -576,7 +582,10 @@
     "rememberComputer": "Memorizar este computador durante 30 dias",
     "rememberedNote": "Código de dois fatores memorizado neste computador até {{date}}.",
     "deviceChecking": "A procurar Windows Hello ou Touch ID…",
-    "recoveryHidden": "A chave está agora oculta: procure-a onde a guardou."
+    "recoveryHidden": "A chave está agora oculta: procure-a onde a guardou.",
+    "restoreErased": "Restaurar os dados apagados",
+    "restoreErasedBody": "Os dados apagados em {{date}} ainda estão guardados. Para os restaurar é preciso a palavra-passe ou a chave de recuperação que tinham.",
+    "deviceUnprotectedHint": "Requer que este computador proteja a chave do Kasboek (conta do Windows, Porta-chaves ou um porta-chaves do Linux)."
   },
   "transfer": {
     "title": "Mudar para outro computador",
@@ -1196,5 +1205,10 @@
     "joinSubmit": "Procurar a sincronização",
     "startSubmit": "Ligar e sincronizar",
     "server": "Servidor WebDAV"
+  },
+  "errors": {
+    "auth_device_unprotected": "O Windows Hello ou o Touch ID só pode substituir a palavra-passe quando este computador protege a chave do Kasboek (conta do Windows, Porta-chaves do macOS ou um porta-chaves do Linux). Escolha antes uma palavra-passe.",
+    "auth_nothing_erased": "Não há dados apagados para restaurar.",
+    "auth_restore_blocked": "O Kasboek já está configurado aqui. Os dados apagados só podem ser restaurados no primeiro ecrã."
   }
 }

@@ -490,7 +490,13 @@
         "failed": "Kasboek dessine maintenant sans la carte graphique : elle n’a pas affiché Kasboek lors d’un démarrage précédent.",
         "flag": "Kasboek dessine maintenant sans la carte graphique : il a été lancé avec --disable-gpu."
       }
-    }
+    },
+    "erasedCopy": "Données effacées",
+    "erasedCopyHint": "Les données effacées le {{date}} sont conservées 30 jours et peuvent être restaurées sur le premier écran. Supprimez-les maintenant pour les effacer définitivement.",
+    "erasedDelete": "Supprimer définitivement",
+    "erasedDeleteTitle": "Supprimer définitivement les données effacées",
+    "erasedDeleteBody": "Cela supprime définitivement la copie effacée, y compris ses copies de sécurité. C’est irréversible.",
+    "erasedDeleted": "Données effacées supprimées."
   },
   "auth": {
     "welcome": "Bienvenue dans Kasboek",
@@ -552,7 +558,7 @@
     "recoveredBody": "Vous avez déverrouillé avec votre clé de récupération. Choisissez un nouveau mot de passe pour garder Kasboek en sécurité.",
     "eraseLink": "Effacer les données",
     "eraseTitle": "Effacer Kasboek sur cet ordinateur",
-    "eraseBody": "Supprime toutes les données de Kasboek sur cet ordinateur. C’est irréversible. Les exports et sauvegardes ailleurs ne sont pas touchés.",
+    "eraseBody": "Met de côté toutes les données de Kasboek sur cet ordinateur et repart de zéro. La copie reste chiffrée et est conservée 30 jours : restaurez-la sur le premier écran avec votre mot de passe ou votre clé de récupération, ou supprimez-la plus tôt dans les Réglages. Les copies de sécurité ne sont pas supprimées. Les exports et sauvegardes ailleurs ne sont pas touchés.",
     "eraseType": "Tapez EFFACER pour confirmer",
     "eraseWord": "EFFACER",
     "eraseConfirm": "Tout effacer",
@@ -576,7 +582,10 @@
     "rememberComputer": "Mémoriser cet ordinateur pendant 30 jours",
     "rememberedNote": "Code à deux facteurs mémorisé sur cet ordinateur jusqu’au {{date}}.",
     "deviceChecking": "Recherche de Windows Hello ou Touch ID…",
-    "recoveryHidden": "La clé est maintenant masquée : retrouvez-la là où vous l’avez conservée."
+    "recoveryHidden": "La clé est maintenant masquée : retrouvez-la là où vous l’avez conservée.",
+    "restoreErased": "Restaurer les données effacées",
+    "restoreErasedBody": "Les données effacées le {{date}} sont toujours conservées. Pour les restaurer, il faut le mot de passe ou la clé de récupération d’alors.",
+    "deviceUnprotectedHint": "Nécessite que cet ordinateur protège la clé de Kasboek (compte Windows, Trousseau ou trousseau de clés Linux)."
   },
   "transfer": {
     "title": "Passer à un autre ordinateur",
@@ -1196,5 +1205,10 @@
     "joinSubmit": "Trouver la synchronisation",
     "startSubmit": "Connecter et synchroniser",
     "server": "Serveur WebDAV"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello ou Touch ID ne peut remplacer le mot de passe que si cet ordinateur protège la clé de Kasboek (compte Windows, Trousseau macOS ou trousseau de clés Linux). Choisissez plutôt un mot de passe.",
+    "auth_nothing_erased": "Il n’y a pas de données effacées à restaurer.",
+    "auth_restore_blocked": "Kasboek est déjà configuré ici. Les données effacées ne peuvent être restaurées que sur le premier écran."
   }
 }

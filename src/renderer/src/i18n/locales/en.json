@@ -490,7 +490,13 @@
         "failed": "Kasboek now draws without the graphics card: it did not show Kasboek on an earlier start.",
         "flag": "Kasboek now draws without the graphics card: it was started with --disable-gpu."
       }
-    }
+    },
+    "erasedCopy": "Erased data",
+    "erasedCopyHint": "Data erased on {{date}} is kept for 30 days and can be restored on the first screen. Delete it now to remove it for good.",
+    "erasedDelete": "Delete permanently",
+    "erasedDeleteTitle": "Delete erased data permanently",
+    "erasedDeleteBody": "This removes the erased copy, including its safety backups, for good. It can’t be undone.",
+    "erasedDeleted": "Erased data deleted."
   },
   "auth": {
     "welcome": "Welcome to Kasboek",
@@ -552,7 +558,7 @@
     "recoveredBody": "You unlocked with your recovery key. Choose a new password to keep Kasboek secure.",
     "eraseLink": "Erase data",
     "eraseTitle": "Erase Kasboek on this computer",
-    "eraseBody": "Deletes all Kasboek data on this computer. It can’t be undone. Exports and backups elsewhere are not touched.",
+    "eraseBody": "Moves all Kasboek data on this computer aside and starts fresh. The copy stays encrypted and is kept for 30 days: restore it on the first screen with your password or recovery key, or delete it sooner in Settings. Safety backups are not deleted. Exports and backups elsewhere are not touched.",
     "eraseType": "Type ERASE to confirm",
     "eraseConfirm": "Erase everything",
     "cantOpen": "Kasboek can’t open its data",
@@ -576,7 +582,10 @@
     "rememberedNote": "Two-factor code remembered on this computer until {{date}}.",
     "deviceChecking": "Checking for Windows Hello or Touch ID…",
     "eraseWord": "ERASE",
-    "recoveryHidden": "The key is hidden now: look it up where you stored it."
+    "recoveryHidden": "The key is hidden now: look it up where you stored it.",
+    "restoreErased": "Restore erased data",
+    "restoreErasedBody": "Data erased on {{date}} is still kept. Restoring it needs the password or recovery key it had.",
+    "deviceUnprotectedHint": "Needs this computer to protect Kasboek’s key (Windows account, Keychain or a Linux keyring)."
   },
   "transfer": {
     "title": "Move to another computer",
@@ -1196,5 +1205,10 @@
     "joinSubmit": "Find the sync data",
     "startSubmit": "Connect and sync",
     "server": "WebDAV server"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello or Touch ID can only replace the password when this computer protects Kasboek’s key (Windows account, macOS Keychain or a Linux keyring). Choose a password instead.",
+    "auth_nothing_erased": "There is no erased data to restore.",
+    "auth_restore_blocked": "Kasboek is already set up here. Erased data can only be restored on the first screen."
   }
 }

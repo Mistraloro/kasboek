@@ -1,4 +1,3 @@
-import { pathToFileURL } from 'node:url'
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebFrameMain } from 'electron'
 import { AppError } from '@core/errors'
 import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/ops'
@@ -12,10 +11,11 @@ import { defaultCategoryNames } from './i18n-categories'
 import { localizeDefaultCategories } from '@core/finance'
 import * as session from './session'
 import { applyTheme } from './theme'
+import { isTrustedFrameUrl } from './trusted-url'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
 import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
 import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
-import { afterImport as afterSyncImport, attach as attachSync, changedLocally as syncChangedLocally, dismissConflicts as dismissSyncConflicts, onRemoteChanges, pickJoin, runSync, startSync, stopSync, syncStatus } from './sync/service'
+import { afterImport as afterSyncImport, attach as attachSync, cancelJoin, changedLocally as syncChangedLocally, dismissConflicts as dismissSyncConflicts, onRemoteChanges, pickJoin, runSync, startSync, stopSync, syncStatus } from './sync/service'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
@@ -160,6 +160,22 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async () => {
       await session.erase()
+      return session.status()
+    }
+  },
+  'auth.restoreErased': {
+    mutates: false,
+    assistant: false,
+    handler: async () => {
+      await session.restoreErasedData()
+      return session.status()
+    }
+  },
+  'auth.deleteErasedNow': {
+    mutates: false,
+    assistant: false,
+    handler: async (_c, { current }) => {
+      await session.deleteErasedNow(current)
       return session.status()
     }
   },
@@ -398,7 +414,23 @@ const desktopOps: OpTable = {
   },
   'sync.status': { mutates: false, assistant: false, handler: () => syncStatus() },
   'sync.start': { mutates: false, assistant: false, handler: (_c, input) => startSync(input) },
-  'sync.pickJoin': { mutates: false, assistant: false, handler: (_c, input) => pickJoin(input) },
+  'sync.pickJoin': {
+    mutates: false,
+    assistant: false,
+    handler: async (_c, input) => {
+      // Same rule as transfer.pick: not on the lock screen. At first setup (no account yet) and once logged in it works.
+      if ((await session.status()).state === 'locked') throw new AppError('auth.locked', 'Unlock Kasboek first.')
+      return pickJoin(input)
+    }
+  },
+  'sync.cancelJoin': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { token }) => {
+      cancelJoin(token)
+      return { ok: true as const }
+    }
+  },
   'sync.attach': { mutates: false, assistant: false, handler: (_c, input) => attachSync(input) },
   'sync.now': {
     mutates: false,
@@ -472,9 +504,7 @@ function notifyChanged(actor: OpContext['actor']): void {
 /** Only our own page may call operations; never a page that got navigated to. */
 function isTrusted(frame: WebFrameMain | null): boolean {
   if (!frame) return false
-  const dev = process.env['ELECTRON_RENDERER_URL']
-  if (!app.isPackaged && dev && frame.url.startsWith(dev)) return true
-  return frame.url.startsWith(pathToFileURL(paths.rendererDir).href)
+  return isTrustedFrameUrl(frame.url, paths.rendererDir, process.env['ELECTRON_RENDERER_URL'], app.isPackaged)
 }
 
 export function registerIpc(): void {

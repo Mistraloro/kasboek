@@ -152,7 +152,7 @@
     "usePasswordInstead": "Usar a senha",
     "recoveredTitle": "Escolha uma nova senha",
     "recoveredBody": "Desbloqueou com a chave de recuperação. Escolha uma nova senha para manter o Kasboek seguro.",
-    "eraseBody": "Exclui todos os dados do Kasboek neste computador. Não pode ser desfeito. Exportações e cópias salvas em outro lugar não são afetadas.",
+    "eraseBody": "Separa todos os dados do Kasboek neste computador e começa do zero. A cópia continua criptografada e fica guardada por 30 dias: restaure-a na primeira tela com sua senha ou chave de recuperação, ou exclua antes em Configurações. As cópias de segurança não são excluídas. Exportações e cópias salvas em outro lugar não são afetadas.",
     "choosePasswordless": "Sem senha",
     "ruleCommon": "Não ser uma senha comum nem conter «Kasboek»",
     "strength": "Força da senha",

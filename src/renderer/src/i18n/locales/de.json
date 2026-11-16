@@ -490,7 +490,13 @@
         "failed": "Kasboek zeichnet jetzt ohne Grafikkarte: Sie hat Kasboek bei einem früheren Start nicht angezeigt.",
         "flag": "Kasboek zeichnet jetzt ohne Grafikkarte: Es wurde mit --disable-gpu gestartet."
       }
-    }
+    },
+    "erasedCopy": "Gelöschte Daten",
+    "erasedCopyHint": "Am {{date}} gelöschte Daten werden 30 Tage aufbewahrt und lassen sich auf dem ersten Bildschirm wiederherstellen. Lösche sie jetzt, um sie endgültig zu entfernen.",
+    "erasedDelete": "Endgültig löschen",
+    "erasedDeleteTitle": "Gelöschte Daten endgültig löschen",
+    "erasedDeleteBody": "Damit wird die gelöschte Kopie samt ihren Sicherheitskopien endgültig entfernt. Das lässt sich nicht rückgängig machen.",
+    "erasedDeleted": "Gelöschte Daten entfernt."
   },
   "auth": {
     "welcome": "Willkommen bei Kasboek",
@@ -552,7 +558,7 @@
     "recoveredBody": "Du hast mit deinem Wiederherstellungsschlüssel entsperrt. Wähle ein neues Passwort, damit Kasboek sicher bleibt.",
     "eraseLink": "Daten löschen",
     "eraseTitle": "Kasboek auf diesem Computer löschen",
-    "eraseBody": "Löscht alle Daten von Kasboek auf diesem Computer. Das lässt sich nicht rückgängig machen. Exporte und Sicherungen an anderen Orten bleiben unberührt.",
+    "eraseBody": "Legt alle Daten von Kasboek auf diesem Computer beiseite und beginnt neu. Die Kopie bleibt verschlüsselt und wird 30 Tage aufbewahrt: Stelle sie auf dem ersten Bildschirm mit deinem Passwort oder Wiederherstellungsschlüssel wieder her oder lösche sie früher in den Einstellungen. Sicherheitskopien werden nicht gelöscht. Exporte und Sicherungen an anderen Orten bleiben unberührt.",
     "eraseType": "Tippe LÖSCHEN zur Bestätigung",
     "eraseWord": "LÖSCHEN",
     "eraseConfirm": "Alles löschen",
@@ -576,7 +582,10 @@
     "rememberComputer": "Diesen Computer 30 Tage merken",
     "rememberedNote": "Zwei-Faktor-Code auf diesem Computer gemerkt bis {{date}}.",
     "deviceChecking": "Suche nach Windows Hello oder Touch ID…",
-    "recoveryHidden": "Der Schlüssel ist jetzt verborgen: Sehen Sie dort nach, wo Sie ihn aufbewahrt haben."
+    "recoveryHidden": "Der Schlüssel ist jetzt verborgen: Sehen Sie dort nach, wo Sie ihn aufbewahrt haben.",
+    "restoreErased": "Gelöschte Daten wiederherstellen",
+    "restoreErasedBody": "Am {{date}} gelöschte Daten werden noch aufbewahrt. Zum Wiederherstellen brauchst du das damalige Passwort oder den Wiederherstellungsschlüssel.",
+    "deviceUnprotectedHint": "Setzt voraus, dass dieser Computer den Schlüssel von Kasboek schützt (Windows-Konto, Schlüsselbund oder ein Linux-Schlüsselbund)."
   },
   "transfer": {
     "title": "Auf einen anderen Computer umziehen",
@@ -1196,5 +1205,10 @@
     "joinSubmit": "Synchronisierung suchen",
     "startSubmit": "Verbinden und synchronisieren",
     "server": "WebDAV-Server"
+  },
+  "errors": {
+    "auth_device_unprotected": "Windows Hello oder Touch ID kann das Passwort nur ersetzen, wenn dieser Computer den Schlüssel von Kasboek schützt (Windows-Konto, macOS-Schlüsselbund oder ein Linux-Schlüsselbund). Wähle stattdessen ein Passwort.",
+    "auth_nothing_erased": "Es gibt keine gelöschten Daten zum Wiederherstellen.",
+    "auth_restore_blocked": "Kasboek ist hier bereits eingerichtet. Gelöschte Daten lassen sich nur auf dem ersten Bildschirm wiederherstellen."
   }
 }

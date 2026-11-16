@@ -283,6 +283,8 @@ export interface AuthStatus {
   weakPassword: boolean
   /** Data from an earlier version exists and will be kept at setup. */
   legacyData: boolean
+  /** When the newest erased copy was set aside (ISO), or null. It is kept for 30 days. */
+  erasedAt: string | null
   keyProtection: KeyProtection
   error: { code: string; message: string } | null
 }

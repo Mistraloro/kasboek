@@ -23,6 +23,11 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
   const [newPw, setNewPw] = useState({ a: '', b: '' })
   const [busy, setBusy] = useState(false)
   const [dav, setDav] = useState(false)
+  // A chosen sync folder leaves a downloaded copy behind until it is imported or dropped.
+  const cancel = (): void => {
+    if (picked) void call('sync.cancelJoin', { token: picked.token }).catch(() => undefined)
+    onCancel()
+  }
 
   if (!picked) {
     return (
@@ -135,7 +140,7 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
       )}
       {replacing && <p className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">{t('transfer.replaceWarning')}</p>}
       <div className="flex justify-end gap-2">
-        <Button onClick={onCancel}>{t('settings.cancel')}</Button>
+        <Button onClick={cancel}>{t('settings.cancel')}</Button>
         <Button type="submit" variant="primary" disabled={!ready || busy}>
           {busy ? t('auth.working') : t('transfer.importConfirm')}
         </Button>

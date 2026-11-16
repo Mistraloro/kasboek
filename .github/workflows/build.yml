@@ -80,9 +80,12 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.release
+    # Publishing only from main or a version tag, never from another branch.
+    if: (startsWith(github.ref, 'refs/tags/v') || inputs.release) && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
     runs-on: ubuntu-latest
+    # A protected environment: in the repository settings, require reviewers for "release".
+    environment: release
     permissions:
       contents: write
     steps:
@@ -113,8 +116,14 @@ jobs:
         run: |
           find dist -type f | sort
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            # Made by hand (e.g. "Draft a new release" on GitHub): add the installers to it.
-            gh release upload "$TAG" $(find dist -type f) --repo "$GITHUB_REPOSITORY" --clobber
+            # Made by hand (e.g. "Draft a new release" on GitHub): add the installers to it, but
+            # never replace files. A version number is built once.
+            assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')
+            if [ "$assets" != "0" ]; then
+              echo "Release $TAG already has $assets file(s). A version is never built twice: raise the version in package.json and build again."
+              exit 1
+            fi
+            gh release upload "$TAG" $(find dist -type f) --repo "$GITHUB_REPOSITORY"
           else
             # Creates the tag on the built commit. GitHub refuses this from a workflow when that
             # commit changes workflow files not yet on the default branch; then create the release

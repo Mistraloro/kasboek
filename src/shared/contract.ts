@@ -114,7 +114,12 @@ export const contract = {
   'auth.forgetComputer': { input: empty, output: out<AuthStatus>() },
   'auth.unlockRecovery': { input: z.object({ recoveryKey: z.string().min(10).max(80) }).strict(), output: out<AuthStatus>() },
   'auth.lock': { input: empty, output: out<AuthStatus>() },
+  /** Moves the data into quarantine for 30 days (restorable with the password or recovery key) and starts fresh. */
   'auth.erase': { input: z.object({ confirm: z.literal('ERASE') }).strict(), output: out<AuthStatus>() },
+  /** First screen only: brings back the newest erased copy. */
+  'auth.restoreErased': { input: empty, output: out<AuthStatus>() },
+  /** Removes every erased copy for good. Unlocked only, with the current password. */
+  'auth.deleteErasedNow': { input: z.object({ current: z.string().max(256).optional() }).strict(), output: out<AuthStatus>() },
   'auth.changePassword': {
     input: z.object({ current: z.string().max(256).optional(), next: password }).strict(),
     output: out<AuthStatus>()
@@ -274,6 +279,8 @@ export const contract = {
   'sync.start': { input: syncPlace, output: out<SyncStatus>() },
   /** Choose an existing sync folder to join: returns its newest snapshot to open with Import. */
   'sync.pickJoin': { input: syncPlace, output: out<PickedTransfer>() },
+  /** Drops a chosen join that is not going ahead, and its downloaded copy. */
+  'sync.cancelJoin': { input: z.object({ token: z.string().min(1).max(100) }).strict(), output: out<{ ok: true }>() },
   /** For data that syncs: choose where the sync folder is on this computer. */
   'sync.attach': { input: syncPlace, output: out<SyncStatus>() },
   'sync.now': { input: empty, output: out<SyncStatus>() },
@@ -638,9 +645,11 @@ export const PUBLIC_OPS: readonly OpName[] = [
   'auth.status',
   'auth.setup',
   'sync.pickJoin',
+  'sync.cancelJoin',
   'auth.unlock',
   'auth.unlockRecovery',
   'auth.erase',
+  'auth.restoreErased',
   'transfer.pick',
   'transfer.import'
 ]

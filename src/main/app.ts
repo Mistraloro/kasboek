@@ -8,6 +8,7 @@ import { paths } from './paths'
 import { createTray, destroyTray, refreshTray } from './tray'
 import { startAlertChecks } from './notify'
 import { startUpdateChecks } from './update'
+import { isDevRendererUrl } from './trusted-url'
 import { closeSplash, splashMinimumElapsed, splashProgress } from './splash'
 import { startupLog, watchGraphics, watchWindow } from './graphics'
 import { getPrefs } from './prefs'
@@ -63,8 +64,7 @@ function harden(): void {
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => allowed.has(perm))
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-navigate', (e, url) => {
-      const dev = process.env['ELECTRON_RENDERER_URL']
-      if (!(dev && url.startsWith(dev))) e.preventDefault()
+      if (!isDevRendererUrl(url, process.env['ELECTRON_RENDERER_URL'], app.isPackaged)) e.preventDefault()
     })
     contents.on('will-attach-webview', (e) => e.preventDefault())
     contents.setWindowOpenHandler(({ url }) => {

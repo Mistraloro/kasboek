@@ -5,9 +5,15 @@ import type { DeviceAuthKind } from '@shared/types'
 import { MIN_PASSWORD_LENGTH, checkPassword } from '@shared/password'
 import { Button, Field, Input, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
+import i18n from '../../i18n'
 import { ApiError, call } from '../../lib/api'
 
-export const errText = (e: unknown): string => (e instanceof ApiError ? e.message : String(e))
+/** Errors from the main process come in English; the ones with a translation here are shown in the chosen language. */
+export const errText = (e: unknown): string => {
+  if (!(e instanceof ApiError)) return String(e)
+  const key = `errors.${e.code.replace(/\./g, '_')}`
+  return i18n.exists(key) ? i18n.t(key) : e.message
+}
 
 export function DeviceIcon({ kind, size = 16 }: { kind: DeviceAuthKind; size?: number }) {
   return kind === 'touch-id' ? <Fingerprint size={size} /> : kind === 'windows-hello' ? <ScanFace size={size} /> : <KeyRound size={size} />

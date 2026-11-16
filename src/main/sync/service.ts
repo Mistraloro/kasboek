@@ -302,7 +302,25 @@ export async function startSync(input: { webdav?: WebDavInput } = {}): Promise<S
 /** Joining: the place (and a WebDAV password) waits here until the snapshot has been imported. */
 const pendingJoins = new Map<string, { place: Place; password?: string; tmp?: string }>()
 
+/** Forgets a join that was not completed and removes its downloaded copy of the snapshot. */
+export function cancelJoin(token: string): void {
+  const pending = pendingJoins.get(token)
+  pendingJoins.delete(token)
+  if (pending?.tmp) rmSync(pending.tmp, { force: true })
+}
+
+/** Downloaded snapshots left behind by an earlier run that stopped half-way. */
+export function removeJoinLeftovers(): void {
+  try {
+    for (const f of readdirSync(paths.dataDir)) if (/^join-[0-9a-f-]+\.kasboek$/.test(f)) rmSync(join(paths.dataDir, f), { force: true })
+  } catch {
+    // Never let cleaning up stop Kasboek from starting.
+  }
+}
+
 export async function pickJoin(input: { webdav?: WebDavInput } = {}): Promise<PickedTransfer> {
+  // Choosing again replaces an earlier, unfinished join.
+  for (const token of [...pendingJoins.keys()]) cancelJoin(token)
   const chosen = await choosePlace('Choose the sync folder to join', input.webdav)
   if (!chosen) throw new AppError('sync.cancelled', 'No folder chosen.')
   const { store, place } = chosen
@@ -330,9 +348,14 @@ export async function pickJoin(input: { webdav?: WebDavInput } = {}): Promise<Pi
     tmp = file = join(paths.dataDir, `join-${randomUUID()}.kasboek`)
     writeFileSync(file, data, { mode: 0o600 })
   }
-  const info = await describeTransfer(file)
-  pendingJoins.set(info.token, { place, password: chosen.password, tmp })
-  return info
+  try {
+    const info = await describeTransfer(file)
+    pendingJoins.set(info.token, { place, password: chosen.password, tmp })
+    return info
+  } catch (err) {
+    if (tmp) rmSync(tmp, { force: true })
+    throw err
+  }
 }
 
 /** After an import: when it was a join, start syncing from that place on this computer. */
@@ -568,6 +591,7 @@ export function changedLocally(): void {
 }
 
 export function startSyncScheduler(): void {
+  removeJoinLeftovers()
   setInterval(() => void runSync(), 60_000)
   // Right before the database closes: write out what changed (into the outbox; it goes up at the next sync).
   onLock(() => {

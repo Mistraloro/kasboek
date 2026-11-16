@@ -69,7 +69,7 @@
     "forgot": "¿Olvidaste la contraseña?",
     "recoveredBody": "Desbloqueaste con tu clave de recuperación. Elige una nueva contraseña para mantener Kasboek seguro.",
     "eraseTitle": "Borrar Kasboek en esta computadora",
-    "eraseBody": "Elimina todos los datos de Kasboek en esta computadora. No se puede deshacer. Las exportaciones y copias guardadas en otros sitios no se tocan.",
+    "eraseBody": "Aparta todos los datos de Kasboek de esta computadora y empieza de cero. La copia sigue cifrada y se conserva 30 días: restáurala en la primera pantalla con tu contraseña o clave de recuperación, o elimínala antes en Ajustes. Las copias de seguridad no se eliminan. Las exportaciones y copias guardadas en otros sitios no se tocan.",
     "deviceUnavailableHint": "Necesita Windows Hello o Touch ID, que no están disponibles en esta computadora.",
     "rememberComputer": "Recordar esta computadora durante 30 días",
     "rememberedNote": "Código de verificación recordado en esta computadora hasta el {{date}}."

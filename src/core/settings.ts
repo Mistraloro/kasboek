@@ -56,3 +56,19 @@ export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
   })()
   return getSettings(db)
 }
+
+/** Settings that decide where data is sent, what Claude may do and where files are written. */
+const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'permissions', 'mcpEnabled', 'autoBackupFolder'] as const
+
+/**
+ * After an import or a sync join: a file from elsewhere must not bring its own AI address, permissions,
+ * backup folder or API keys. These go back to their defaults; everything else (currency, …) stays.
+ */
+export function resetImportedSettings(db: Db): void {
+  db.transaction(() => {
+    const del = db.prepare('DELETE FROM settings WHERE key = ?')
+    for (const key of UNTRUSTED_AFTER_IMPORT) del.run(key)
+    // The key names of keyName() in main/assistant/provider.ts: Claude's own and one per other provider.
+    db.prepare("DELETE FROM secrets WHERE key = 'anthropicApiKey' OR key LIKE 'aiKey.%'").run()
+  })()
+}

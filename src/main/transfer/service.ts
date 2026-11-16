@@ -12,7 +12,7 @@ import { makeSlot } from '@core/crypto'
 import { integrityOk, openDatabase, snapshotEncrypted } from '@core/database'
 import { AppError } from '@core/errors'
 import { MIGRATIONS, schemaVersion } from '@core/migrations'
-import { getSettings, updateSettings } from '@core/settings'
+import { getSettings, resetImportedSettings, updateSettings } from '@core/settings'
 import { encodeTransfer, openTransfer, readTransferHeader, TRANSFER_EXTENSION } from '@core/transfer-format'
 import { planRetention, timeFromName, type Tier } from '@core/backup-tiers'
 import type { BackupEntryInfo, BackupStatus, PickedTransfer } from '@shared/types'
@@ -236,5 +236,7 @@ export async function importTransfer(input: {
   closeForReplace()
   await rename(staged, paths.dbFile)
   await adopt(next, master, vault, usedRecovery)
+  // The file may come from anywhere: its AI address, permissions, backup folder and API keys are not taken over.
+  resetImportedSettings(db())
   picked.delete(input.token)
 }
