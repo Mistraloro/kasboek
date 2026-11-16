@@ -205,7 +205,7 @@ export async function erase(): Promise<void> {
 async function reauth(password?: string): Promise<void> {
   const acc = requireAccount()
   if (recovered) return
-  if (acc.mode === 'device') return requireDevice('Confirm it’s you')
+  if (acc.mode === 'device') return requireDevice('Confirm it is you')
   if (!password || !acc.slots.password || !(await openSlot(acc.slots.password, password, 'password'))) {
     throw new AppError('auth.failed', 'The current password is incorrect.')
   }

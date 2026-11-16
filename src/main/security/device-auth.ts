@@ -41,11 +41,28 @@ function powershell(script: string, timeoutMs: number): Promise<{ out: string; e
 }
 
 let cached: DeviceAuthKind | undefined
+let cachedAt = 0
 let pending: Promise<DeviceAuthKind> | null = null
+
+/** "Not available" is only remembered briefly: Hello may be set up, or just busy, while Kasboek is open. */
+export const NEGATIVE_TTL_MS = 10_000
+
+/** Whether an earlier answer can still be used. A positive answer stays; a negative one expires. */
+export function answerIsFresh(answer: DeviceAuthKind | undefined, answeredAt: number, now: number): boolean {
+  if (answer === undefined) return false
+  if (answer !== null) return true
+  return now - answeredAt < NEGATIVE_TTL_MS
+}
+
+function remember(kind: DeviceAuthKind): DeviceAuthKind {
+  cached = kind
+  cachedAt = Date.now()
+  return kind
+}
 
 /** The answer if the check has finished, otherwise undefined (and the check is started). */
 export function peekDeviceAuthKind(onDone?: () => void): DeviceAuthKind | undefined {
-  if (cached === undefined && !pending) {
+  if (!answerIsFresh(cached, cachedAt, Date.now()) && !pending) {
     pending = deviceAuthKind().finally(() => {
       pending = null
       onDone?.()
@@ -55,18 +72,18 @@ export function peekDeviceAuthKind(onDone?: () => void): DeviceAuthKind | undefi
 }
 
 export async function deviceAuthKind(): Promise<DeviceAuthKind> {
-  if (cached !== undefined) return cached
-  if (fake()) return (cached = process.platform === 'darwin' ? 'touch-id' : 'windows-hello')
-  if (process.platform === 'darwin') return (cached = systemPreferences.canPromptTouchID() ? 'touch-id' : null)
+  if (answerIsFresh(cached, cachedAt, Date.now())) return cached ?? null
+  if (fake()) return remember(process.platform === 'darwin' ? 'touch-id' : 'windows-hello')
+  if (process.platform === 'darwin') return remember(systemPreferences.canPromptTouchID() ? 'touch-id' : null)
   if (process.platform === 'win32') {
     const r = await powershell(
       `$a = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()) ([Windows.Security.Credentials.UI.UserConsentVerifierAvailability]); Write-Output $a`,
       15_000
     )
     startupLog(`windows hello: ${r.out || 'no answer'}${r.err ? ` (${r.err.slice(0, 300)})` : ''}`)
-    return (cached = r.out === 'Available' ? 'windows-hello' : null)
+    return remember(r.out === 'Available' ? 'windows-hello' : null)
   }
-  return (cached = null)
+  return remember(null)
 }
 
 /** Shows the system prompt. Resolves true only if the user was verified. */
@@ -82,12 +99,24 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
     }
   }
   if (kind === 'windows-hello') {
-    const safe = reason.replace(/'/g, "''")
-    const r = await powershell(helloScript(safe), 120_000)
+    const r = await powershell(helloScript(psQuote(reason)), 120_000)
     startupLog(`windows hello: ${r.out || 'no answer'}${r.err ? ` (${r.err.slice(0, 300)})` : ''}`)
     return r.out === 'Verified'
   }
   return false
+}
+
+/**
+ * Text for inside a single-quoted PowerShell string. PowerShell also treats the typographic quotes
+ * (U+2018 to U+201B) as quotes, so a reason such as "Confirm it's you" typed with one would end the
+ * string early and the script would not parse. Anything else outside plain ASCII is dropped, since
+ * the script travels over stdin in the console code page.
+ */
+export function psQuote(text: string): string {
+  return text
+    .replace(/[\u2018-\u201B]/g, "'")
+    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/'/g, "''")
 }
 
 /**
@@ -99,6 +128,8 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
 export function helloScript(reason: string): string {
   return `
 $reason = '${reason}'
+$bringForward = $true
+try {
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -127,7 +158,10 @@ public static class KasboekHello {
   }
 }
 "@
-try { [KasboekHello]::BringPromptForward() } catch { }
+} catch { $bringForward = $false }
+# Bringing the prompt forward is only a convenience: if the helper cannot be compiled (security
+# software, a restricted language mode, an unwritable temp folder), still show the prompt.
+if ($bringForward) { try { [KasboekHello]::BringPromptForward() } catch { } }
 $r = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::RequestVerificationAsync($reason)) ([Windows.Security.Credentials.UI.UserConsentVerificationResult])
 Write-Output $r
 `

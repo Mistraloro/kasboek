@@ -1,5 +1,5 @@
 import { ArrowLeft, FileLock2, KeyRound, ShieldCheck } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../components/ui'
 import { useToast } from '../../components/Toast'
@@ -38,6 +38,13 @@ export function Setup() {
   const [pw, setPw] = useState({ a: '', b: '' })
   const [recoveryKey, setRecoveryKey] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Windows Hello may have been switched on (or was busy) after Kasboek looked: check again on return.
+  useEffect(() => {
+    const again = (): void => void refresh()
+    window.addEventListener('focus', again)
+    return () => window.removeEventListener('focus', again)
+  }, [refresh])
 
   const create = (input: { mode: 'password'; password: string } | { mode: 'device' }): void => {
     setBusy(true)
