@@ -26,7 +26,11 @@ export default defineConfig({
     // JavaScript libraries are bundled (only what is used ends up in the app); the database library
     // has native code and stays a dependency. Bundled ones are devDependencies, so the installer
     // doesn't carry their full packages.
-    build: { externalizeDeps: { exclude: ['@anthropic-ai/sdk', 'zod', 'qrcode', 'hash-wasm'] } }
+    build: {
+      externalizeDeps: { exclude: ['@anthropic-ai/sdk', 'zod', 'qrcode', 'hash-wasm', 'pdfjs-dist'] },
+      // The PDF reader runs in a process of its own: a second entry, written next to the app's.
+      rollupOptions: { input: { index: resolve('src/main/index.ts'), 'pdf-reader': resolve('src/main/pdf/reader-process.ts') } }
+    }
   },
   preload: {
     resolve: { alias },
