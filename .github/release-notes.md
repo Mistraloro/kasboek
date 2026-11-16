@@ -1,21 +1,13 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.15 (0.15.2)
+## What’s new in 0.16 (0.16.0)
 
 **New**
-- **Erasing is recoverable.** Erased data, including its safety backups, is kept for 30 days. On the Setup screen you can restore it with the original password or recovery key. If your account is tied to this device (passwordless mode), Windows Hello or Touch ID is asked before anything is erased. A failed erase puts everything back.
-- **Importing a file or restoring a backup starts from safe settings.** AI settings and keys, permissions, MCP, auto-backup, assistant memory and sync are reset, and Kasboek tells you what was reset. Joining a sync keeps its sync key.
+- **Keep Kasboek running in the tray when you close the window** is now a setting (Settings → General), off by default. With it off, closing the window quits Kasboek (on a Mac it stays in the Dock until you quit). With it on, closing hides it in the tray. If Claude Desktop starts Kasboek’s connection while Kasboek isn’t running, Kasboek still starts in the tray, locked. Closing its window with the setting off quits it, and Claude Desktop starts it again the next time it needs it.
+- **Opening Kasboek from its shortcut, the Start menu or the taskbar while it is already running brings the window to the front**, also when it was hidden in the tray or minimised.
+- **A new update window on Windows.** Updating no longer flashes terminal windows: Kasboek closes, a small Kasboek window shows the installation progress, and Kasboek opens again by itself. If the update cannot start, Kasboek stays open and tells you. If it cannot install, Kasboek opens again at the old version and says why.
 
-**Fixes and safety**
-- **Windows Hello now works** (setup, unlock, and the checks before erasing or changing settings). On some computers the prompt was silently never shown. Each Hello answer (not set up, turned off by a policy, busy, too many failed attempts) has its own message, and `startup.log` records how Hello went.
-- **The recovery key check is no longer skipped** when you set up with Windows Hello: the setup screen stays until you have typed the last group of the key (and finished or skipped two-factor).
-- **Passwordless mode** is only offered when your computer protects the key itself. Importing a passwordless export on a computer without that asks you for a new password.
-- **CSV export** is safe against text that a spreadsheet could read as a formula.
-- **Passwords:** re-entering your password for sensitive actions has the same attempt limit as unlocking.
-- **Updates:** update file names and checksums are checked more strictly.
-- **Stricter check** that only Kasboek's own pages can call the app's backend.
-
-Everything that came in 0.14 (WebDAV sync, the Claude Desktop tray, many more CSV formats, the graphics card setting, the Windows on ARM fix and more) is listed on the 0.14.1 release.
+Everything that came in 0.15 (recoverable erase, import and restore starting from safe settings, Windows Hello fixes and more) is listed on the 0.15.2 release.
 
 ## Download
 
@@ -39,3 +31,5 @@ These builds are not yet signed with a certificate:
 
 - **Updating from 0.12 or 0.13**: their update window can’t be clicked, so download the installer from this page once. From 0.14 on, the "Update to …" button works.
 - **Windows Hello** has been tested on a real Windows 11 computer. **Touch ID** has only been tested in simulation, not yet on a real Mac; please report anything odd.
+- **Updating from 0.15.x** still uses the old update screen once (terminal windows may flash); the new update window appears from the update after 0.16.0.
+- The **tray option**, the **shortcut behaviour** and the **new update window** are new in this version and have not yet been tested on Windows 11; please report anything odd.
