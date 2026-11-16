@@ -302,6 +302,9 @@ export async function startSync(input: { webdav?: WebDavInput } = {}): Promise<S
 /** Joining: the place (and a WebDAV password) waits here until the snapshot has been imported. */
 const pendingJoins = new Map<string, { place: Place; password?: string; tmp?: string }>()
 
+/** Whether this picked file is a sync folder's snapshot being joined (it keeps its sync key on import). */
+export const isPendingJoin = (token: string): boolean => pendingJoins.has(token)
+
 /** Forgets a join that was not completed and removes its downloaded copy of the snapshot. */
 export function cancelJoin(token: string): void {
   const pending = pendingJoins.get(token)

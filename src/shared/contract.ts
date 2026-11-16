@@ -24,7 +24,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -114,12 +114,10 @@ export const contract = {
   'auth.forgetComputer': { input: empty, output: out<AuthStatus>() },
   'auth.unlockRecovery': { input: z.object({ recoveryKey: z.string().min(10).max(80) }).strict(), output: out<AuthStatus>() },
   'auth.lock': { input: empty, output: out<AuthStatus>() },
-  /** Moves the data into quarantine for 30 days (restorable with the password or recovery key) and starts fresh. */
+  /** Moves the data, safety backups included, into quarantine for 30 days (restorable with the password or recovery key) and starts fresh. */
   'auth.erase': { input: z.object({ confirm: z.literal('ERASE') }).strict(), output: out<AuthStatus>() },
-  /** First screen only: brings back the newest erased copy. */
-  'auth.restoreErased': { input: empty, output: out<AuthStatus>() },
-  /** Removes every erased copy for good. Unlocked only, with the current password. */
-  'auth.deleteErasedNow': { input: z.object({ current: z.string().max(256).optional() }).strict(), output: out<AuthStatus>() },
+  /** First screen only: brings back one erased copy, by the name listed in AuthStatus.erased. */
+  'auth.restoreErased': { input: z.object({ name: z.string().regex(/^\d{10,}$/) }).strict(), output: out<AuthStatus>() },
   'auth.changePassword': {
     input: z.object({ current: z.string().max(256).optional(), next: password }).strict(),
     output: out<AuthStatus>()
@@ -143,7 +141,7 @@ export const contract = {
         newPassword: password.optional()
       })
       .strict(),
-    output: out<AuthStatus>()
+    output: out<{ status: AuthStatus; reset: ImportReset[] }>()
   },
   'backup.status': { input: empty, output: out<BackupStatus>() },
   'backup.chooseFolder': { input: empty, output: out<{ folder: string | null }>() },

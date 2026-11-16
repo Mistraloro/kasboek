@@ -1,5 +1,5 @@
 import { DEFAULT_PERMISSIONS } from '@shared/permissions'
-import type { Settings } from '@shared/types'
+import type { ImportReset, Settings } from '@shared/types'
 import type { Db } from './database'
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -58,17 +58,42 @@ export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
 }
 
 /** Settings that decide where data is sent, what Claude may do and where files are written. */
-const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'permissions', 'mcpEnabled', 'autoBackupFolder'] as const
+const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled'] as const
 
 /**
  * After an import or a sync join: a file from elsewhere must not bring its own AI address, permissions,
- * backup folder or API keys. These go back to their defaults; everything else (currency, …) stays.
+ * backup folder, assistant memory or API keys. These go back to their defaults; everything else (currency, …) stays.
+ * The sync key and WebDAV password go too, unless this import is a sync join: it needs the key that came with
+ * the snapshot, and its caller stores the WebDAV password right afterwards. Runs in one transaction, so a failure
+ * changes nothing. Returns what actually held something that was reset.
  */
-export function resetImportedSettings(db: Db): void {
-  db.transaction(() => {
+export function resetImportedSettings(db: Db, opts: { keepSyncKey?: boolean } = {}): ImportReset[] {
+  const hasSetting = (key: string): boolean => db.prepare('SELECT 1 FROM settings WHERE key = ?').get(key) !== undefined
+  const hasSecret = (where: string): boolean => db.prepare(`SELECT 1 FROM secrets WHERE ${where}`).get() !== undefined
+  // A file from an older version has no memory table yet.
+  const hasMemoryTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'memories'").get() !== undefined
+  const aiSecrets = "key = 'anthropicApiKey' OR key LIKE 'aiKey.%'"
+  const syncSecrets = opts.keepSyncKey ? "key = 'webdavPassword'" : "key IN ('syncKey', 'webdavPassword')"
+
+  const reset: ImportReset[] = []
+  const note = (item: ImportReset, found: boolean): void => {
+    if (found) reset.push(item)
+  }
+  return db.transaction(() => {
+    note('aiKey', hasSecret(aiSecrets))
+    note('aiEndpoint', hasSetting('aiBaseUrl') || hasSetting('aiProvider'))
+    note('permissions', hasSetting('permissions'))
+    note('mcp', hasSetting('mcpEnabled'))
+    note('autoBackup', hasSetting('autoBackupFolder') || hasSetting('autoBackupEnabled'))
+    note('memory', hasSetting('memoryEnabled') || (hasMemoryTable && db.prepare('SELECT 1 FROM memories').get() !== undefined))
+    // The WebDAV password of a join is replaced by the caller: nothing to tell the user about.
+    note('sync', !opts.keepSyncKey && hasSecret(syncSecrets))
+
     const del = db.prepare('DELETE FROM settings WHERE key = ?')
     for (const key of UNTRUSTED_AFTER_IMPORT) del.run(key)
     // The key names of keyName() in main/assistant/provider.ts: Claude's own and one per other provider.
-    db.prepare("DELETE FROM secrets WHERE key = 'anthropicApiKey' OR key LIKE 'aiKey.%'").run()
+    db.prepare(`DELETE FROM secrets WHERE ${aiSecrets} OR ${syncSecrets}`).run()
+    if (hasMemoryTable) db.prepare('DELETE FROM memories').run()
+    return reset
   })()
 }

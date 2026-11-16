@@ -630,7 +630,7 @@ export function transactionsCsv(db: Db, f: Omit<TxFilter, 'limit' | 'offset'>, o
     const text = (v: string | null): string => cell(v, true)
     lines.push(
       [
-        cell(r.booking_date),
+        text(r.booking_date),
         text(r.account),
         text(r.counterparty_name),
         text(r.counterparty_iban),

@@ -490,13 +490,7 @@
         "failed": "Kasboek dibuja ahora sin la tarjeta gráfica: no mostró Kasboek en un inicio anterior.",
         "flag": "Kasboek dibuja ahora sin la tarjeta gráfica: se inició con --disable-gpu."
       }
-    },
-    "erasedCopy": "Datos borrados",
-    "erasedCopyHint": "Los datos borrados el {{date}} se conservan 30 días y se pueden restaurar en la primera pantalla. Elimínalos ahora para quitarlos definitivamente.",
-    "erasedDelete": "Eliminar definitivamente",
-    "erasedDeleteTitle": "Eliminar definitivamente los datos borrados",
-    "erasedDeleteBody": "Esto elimina para siempre la copia borrada, incluidas sus copias de seguridad. No se puede deshacer.",
-    "erasedDeleted": "Datos borrados eliminados."
+    }
   },
   "auth": {
     "welcome": "Te damos la bienvenida a Kasboek",
@@ -558,7 +552,7 @@
     "recoveredBody": "Has desbloqueado con tu clave de recuperación. Elige una nueva contraseña para mantener Kasboek seguro.",
     "eraseLink": "Borrar datos",
     "eraseTitle": "Borrar Kasboek en este ordenador",
-    "eraseBody": "Aparta todos los datos de Kasboek de este ordenador y empieza de cero. La copia sigue cifrada y se conserva 30 días: restáurala en la primera pantalla con tu contraseña o clave de recuperación, o elimínala antes en Ajustes. Las copias de seguridad no se eliminan. Las exportaciones y copias guardadas en otros sitios no se tocan.",
+    "eraseBody": "Aparta todos los datos de Kasboek de este ordenador y empieza de cero. Todo, incluidas las copias de seguridad, se conserva cifrado en cuarentena durante 30 días. En ese plazo puedes restaurarlo desde la pantalla de configuración con la contraseña original o la clave de recuperación. Pasados los 30 días se elimina definitivamente. Las exportaciones y copias guardadas en otros sitios no se tocan.",
     "eraseType": "Escribe BORRAR para confirmar",
     "eraseWord": "BORRAR",
     "eraseConfirm": "Borrarlo todo",
@@ -584,8 +578,9 @@
     "deviceChecking": "Buscando Windows Hello o Touch ID…",
     "recoveryHidden": "La clave está oculta ahora: búscala donde la guardaste.",
     "restoreErased": "Restaurar los datos borrados",
-    "restoreErasedBody": "Los datos borrados el {{date}} aún se conservan. Para restaurarlos hace falta la contraseña o la clave de recuperación que tenían.",
-    "deviceUnprotectedHint": "Requiere que este ordenador proteja la clave de Kasboek (cuenta de Windows, Llavero o un llavero de Linux)."
+    "restoreErasedBody": "Los datos borrados se conservan 30 días y después se eliminan definitivamente. Elige qué copia restaurar. Hace falta la contraseña o la clave de recuperación que tenía.",
+    "deviceUnprotectedHint": "Requiere que este ordenador proteja la clave de Kasboek (cuenta de Windows, Llavero o un llavero de Linux).",
+    "restoreErasedItem": "Restaurar la copia del {{date}}"
   },
   "transfer": {
     "title": "Pasar a otro ordenador",
@@ -604,7 +599,17 @@
     "needsNewPassword": "Esta exportación usaba Windows Hello o Touch ID, que no están disponibles aquí. Elige una contraseña para este ordenador.",
     "replaceWarning": "Esto sustituye todo lo que hay en Kasboek en este ordenador. Antes se hace una copia de seguridad de los datos actuales.",
     "importConfirm": "Importar",
-    "imported": "Importación completada."
+    "imported": "Importación completada.",
+    "resetNotice": "Por seguridad, esto no se tomó del archivo: {{items}}. Vuelve a configurarlo en Ajustes.",
+    "reset": {
+      "aiKey": "claves de IA",
+      "aiEndpoint": "proveedor y dirección de IA",
+      "permissions": "permisos del asistente",
+      "mcp": "acceso MCP",
+      "autoBackup": "copias automáticas (desactivadas)",
+      "memory": "memoria del asistente",
+      "sync": "clave de sincronización y contraseña WebDAV"
+    }
   },
   "categories": {
     "kind": {
@@ -1209,6 +1214,7 @@
   "errors": {
     "auth_device_unprotected": "Windows Hello o Touch ID solo puede sustituir a la contraseña cuando este ordenador protege la clave de Kasboek (cuenta de Windows, Llavero de macOS o un llavero de Linux). Elige una contraseña en su lugar.",
     "auth_nothing_erased": "No hay datos borrados que restaurar.",
-    "auth_restore_blocked": "Kasboek ya está configurado aquí. Los datos borrados solo se pueden restaurar en la primera pantalla."
+    "auth_restore_blocked": "Kasboek ya está configurado aquí. Los datos borrados solo se pueden restaurar en la primera pantalla.",
+    "auth_erase_failed": "Kasboek no pudo apartar los datos, así que se detuvo el borrado. No se eliminó nada."
   }
 }

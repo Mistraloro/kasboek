@@ -1,7 +1,7 @@
 import { FileLock2, FolderSync, Server } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AuthStatus, PickedTransfer } from '@shared/types'
+import type { AuthStatus, ImportReset, PickedTransfer } from '@shared/types'
 import { Button, Field, Input } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { WebDavModal } from '../../components/WebDav'
@@ -23,10 +23,27 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
   const [newPw, setNewPw] = useState({ a: '', b: '' })
   const [busy, setBusy] = useState(false)
   const [dav, setDav] = useState(false)
+  // Set after an import that left some settings out: shown until the user continues.
+  const [done, setDone] = useState<{ status: AuthStatus; reset: ImportReset[] } | null>(null)
   // A chosen sync folder leaves a downloaded copy behind until it is imported or dropped.
   const cancel = (): void => {
     if (picked) void call('sync.cancelJoin', { token: picked.token }).catch(() => undefined)
     onCancel()
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">
+          {t('transfer.resetNotice', { items: done.reset.map((r) => t(`transfer.reset.${r}`)).join(', ') })}
+        </p>
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={() => onDone(done.status)}>
+            {t('auth.continue')}
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (!picked) {
@@ -103,9 +120,10 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
           ...(useRecovery ? { recoveryKey } : { password, ...(needsCode ? { code } : {}) }),
           ...(picked.needsNewPassword ? { newPassword: newPw.a } : {})
         })
-          .then((s) => {
+          .then(({ status, reset }) => {
             toast(t('transfer.imported'))
-            onDone(s)
+            if (reset.length) setDone({ status, reset })
+            else onDone(status)
           })
           .catch((err) => toast(errText(err), 'error'))
           .finally(() => setBusy(false))

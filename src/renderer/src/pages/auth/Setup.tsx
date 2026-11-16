@@ -5,7 +5,7 @@ import { Button } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { call } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
-import { formatDate } from '../../lib/format'
+import { formatDateTime } from '../../lib/format'
 import { usePrefsFmt } from '../../lib/settings'
 import { AuthCard, AuthLayout } from './AuthLayout'
 import { ImportFlow } from './ImportFlow'
@@ -90,23 +90,28 @@ export function Setup() {
             />
             <Choice icon={<FileLock2 size={16} />} title={t('auth.chooseImport')} body={t('auth.chooseImportBody')} onClick={() => setStep('import')} />
           </div>
-          {status.erasedAt && (
+          {status.erased.length > 0 && (
             <div className="mt-4 rounded-lg bg-surface-2 px-3 py-2.5">
-              <p className="text-[13px] text-muted">{t('auth.restoreErasedBody', { date: formatDate(status.erasedAt, fmt) })}</p>
-              <Button
-                className="mt-2"
-                size="sm"
-                disabled={busy}
-                onClick={() => {
-                  setBusy(true)
-                  void call('auth.restoreErased')
-                    .then(set)
-                    .catch((e) => toast(errText(e), 'error'))
-                    .finally(() => setBusy(false))
-                }}
-              >
-                {t('auth.restoreErased')}
-              </Button>
+              <p className="text-[13px] font-medium">{t('auth.restoreErased')}</p>
+              <p className="text-[13px] text-muted">{t('auth.restoreErasedBody')}</p>
+              <div className="mt-2 flex flex-col items-start gap-1.5">
+                {status.erased.map((e) => (
+                  <Button
+                    key={e.name}
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true)
+                      void call('auth.restoreErased', { name: e.name })
+                        .then(set)
+                        .catch((err) => toast(errText(err), 'error'))
+                        .finally(() => setBusy(false))
+                    }}
+                  >
+                    {t('auth.restoreErasedItem', { date: formatDateTime(e.erasedAt, fmt) })}
+                  </Button>
+                ))}
+              </div>
             </div>
           )}
           {status.keyProtection === 'weak' && <p className="mt-4 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">{t('settings.keyStorageWeakHint')}</p>}

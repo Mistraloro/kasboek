@@ -94,7 +94,7 @@ export function SettingsPage() {
 
 /* ---------- Security ---------- */
 
-type SecurityModal = null | 'password' | 'passwordless' | 'totp-on' | 'totp-off' | 'recovery' | 'erased'
+type SecurityModal = null | 'password' | 'passwordless' | 'totp-on' | 'totp-off' | 'recovery'
 
 /** Version, data folder, updates and the tour. */
 function AboutSection() {
@@ -228,22 +228,6 @@ function SecuritySection() {
           {status.keyProtection === 'weak' ? t('settings.keyStorageWeak') : t('settings.keyStorageOs')}
         </Badge>
       </Row>
-      {status.erasedAt && (
-        <Row label={t('settings.erasedCopy')} hint={t('settings.erasedCopyHint', { date: formatDate(status.erasedAt, fmt) })}>
-          <Button size="sm" variant="danger" onClick={() => setModal('erased')}>{t('settings.erasedDelete')}</Button>
-        </Row>
-      )}
-      <Modal open={modal === 'erased'} title={t('settings.erasedDeleteTitle')} onClose={close}>
-        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); run(call('auth.deleteErasedNow', { current: device ? undefined : current }), t('settings.erasedDeleted')) }}>
-          <p className="text-[13px] text-muted">{t('settings.erasedDeleteBody')}</p>
-          {currentField}
-          {device && <p className="text-[13px] text-muted">{t('settings.confirmWithDevice', { name: deviceName })}</p>}
-          <div className="flex justify-end gap-2">
-            <Button onClick={close}>{t('settings.cancel')}</Button>
-            <Button type="submit" variant="danger" disabled={busy || (!device && !current)}>{t('settings.erasedDelete')}</Button>
-          </div>
-        </form>
-      </Modal>
       <Modal open={modal === 'password'} title={device ? t('settings.usePassword') : t('settings.changePassword')} onClose={close}>
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); run(call('auth.changePassword', { current: device ? undefined : current, next: pw.a }), t('auth.passwordChanged')) }}>
           {currentField}

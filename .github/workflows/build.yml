@@ -92,6 +92,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The whole history, so the next step can tell whether this commit is part of main.
+          fetch-depth: 0
+      # A version tag pushed on a commit that never reached main (e.g. a pull request branch) is not published.
+      - name: Check that the commit is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Commit $GITHUB_SHA is not part of origin/main. Only commits that are on main are published."
+            exit 1
+          fi
       - name: Work out the version
         run: |
           v="v$(node -p "require('./package.json').version")"

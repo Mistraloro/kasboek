@@ -31,11 +31,12 @@ import { AppError } from '@core/errors'
 import { newTotpSecret, otpauthUri, verifyTotp } from '@core/totp'
 import type { AppEvent } from '@shared/contract'
 import { checkPassword } from '@shared/password'
-import type { AuthStatus } from '@shared/types'
+import type { AuthStatus, ErasedCopy } from '@shared/types'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { accountExists, keyProtection, loadAccount, readLegacyDbKey, removeLegacyKeystore, saveAccount } from './security/account-store'
 import { deviceAuthKind, peekDeviceAuthKind, verifyDeviceUser } from './security/device-auth'
+import { keyIsOsProtected } from './security/device-mode'
 import { listErased, purgeErased, quarantineData, restoreErased } from './quarantine'
 
 interface Open {
@@ -107,7 +108,7 @@ export async function status(): Promise<AuthStatus> {
     recovered,
     weakPassword: !!open && weakPassword,
     legacyData: !account && (await readLegacyDbKey()) !== null,
-    erasedAt: await newestErased(),
+    erased: await erasedCopies(),
     keyProtection: await keyProtection(),
     error: loadError ? { code: loadError.code, message: loadError.message } : null
   }
@@ -137,14 +138,13 @@ async function persistCounter(next: AccountData): Promise<void> {
   }
 }
 
-async function newestErased(): Promise<string | null> {
-  const newest = (await listErased(paths))[0]
-  return newest ? new Date(newest.erasedAt).toISOString() : null
+async function erasedCopies(): Promise<ErasedCopy[]> {
+  return (await listErased(paths)).map((e) => ({ name: e.name, erasedAt: new Date(e.erasedAt).toISOString() }))
 }
 
 /** Passwordless mode keeps the key in the account file: only safe when the operating system seals that file. */
 async function requireOsProtection(): Promise<void> {
-  if ((await keyProtection()) !== 'os') {
+  if (!(await keyIsOsProtected())) {
     throw new AppError('auth.device_unprotected', 'Windows Hello or Touch ID can only replace the password when this computer protects Kasboek’s key (Windows account, macOS Keychain or a Linux keyring). Choose a password instead.')
   }
 }
@@ -233,23 +233,22 @@ export function closeForReplace(): void {
 export async function erase(): Promise<void> {
   if (account?.mode === 'device') await requireDevice('Erase Kasboek')
   lock('user')
-  await quarantineData(paths)
+  try {
+    await quarantineData(paths)
+  } catch (err) {
+    // quarantineData puts back what it moved; reading the account again makes memory match whatever is on disk.
+    await initSession()
+    throw new AppError('auth.erase_failed', `Could not set the data aside, so erasing was stopped: ${err instanceof Error ? err.message : String(err)}`)
+  }
   account = null
   loadError = null
 }
 
-/** Brings back the newest erased copy. It needs the original password or recovery key to open. */
-export async function restoreErasedData(): Promise<void> {
+/** Brings back one erased copy, by the name from status().erased. It needs the original password or recovery key to open. */
+export async function restoreErasedData(name: string): Promise<void> {
   if (account || loadError || accountExists()) throw new AppError('auth.restore_blocked', 'Kasboek is already set up. Restoring erased data is only possible on the first screen.')
-  await restoreErased(paths)
+  await restoreErased(paths, name)
   await initSession()
-}
-
-/** Removes every erased copy now. Only while unlocked, and after checking who is at the keyboard. */
-export async function deleteErasedNow(password?: string): Promise<void> {
-  secrets()
-  await reauth(password)
-  await purgeErased(paths, { all: true })
 }
 
 /** Re-checks who is at the keyboard before a sensitive change. Wrong passwords count and slow down, as at unlock. */
