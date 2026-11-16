@@ -1180,5 +1180,21 @@
       "settings": "Cuentas, copias de seguridad, sincronización entre ordenadores, el asistente, formatos y más.",
       "lock": "Bloquea Kasboek cuando te ausentes. También se bloquea solo al cabo de un rato."
     }
+  },
+  "webdav": {
+    "intro": "Sincroniza a través de tu propio servidor WebDAV: Nextcloud, ownCloud, Synology, QNAP, Koofr, pCloud u otro. Kasboek crea allí una carpeta «Kasboek sync»; solo van archivos cifrados. Un teléfono también puede sincronizar así.",
+    "url": "Dirección del servidor (carpeta WebDAV)",
+    "urlHint": "En Nextcloud: Archivos → Ajustes (abajo a la izquierda) → WebDAV. Debe empezar por https://, o http:// para un servidor de tu red doméstica.",
+    "user": "Usuario",
+    "password": "Contraseña",
+    "passwordHint": "Mejor una contraseña de aplicación creada para Kasboek. Se guarda en tus datos cifrados, solo en este ordenador.",
+    "connecting": "Conectando…",
+    "start": "Sincronizar mediante un servidor WebDAV",
+    "startHint": "En lugar de una carpeta en la nube: tu propio servidor o NAS.",
+    "choose": "Servidor WebDAV…",
+    "join": "Unirse por WebDAV…",
+    "joinSubmit": "Buscar la sincronización",
+    "startSubmit": "Conectar y sincronizar",
+    "server": "Servidor WebDAV"
   }
 }

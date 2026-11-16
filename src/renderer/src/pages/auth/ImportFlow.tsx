@@ -1,9 +1,10 @@
-import { FileLock2, FolderSync } from 'lucide-react'
+import { FileLock2, FolderSync, Server } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthStatus, PickedTransfer } from '@shared/types'
 import { Button, Field, Input } from '../../components/ui'
 import { useToast } from '../../components/Toast'
+import { WebDavModal } from '../../components/WebDav'
 import { ApiError, call } from '../../lib/api'
 import { formatDateTime } from '../../lib/format'
 import { usePrefsFmt } from '../../lib/settings'
@@ -21,14 +22,30 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
   const [recoveryKey, setRecoveryKey] = useState('')
   const [newPw, setNewPw] = useState({ a: '', b: '' })
   const [busy, setBusy] = useState(false)
+  const [dav, setDav] = useState(false)
 
   if (!picked) {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-[13px] text-muted">{t('transfer.importIntro')}</p>
         {replacing && <p className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">{t('transfer.replaceWarning')}</p>}
-        <div className="flex justify-end gap-2">
+        <WebDavModal
+          open={dav}
+          title={t('sync.join')}
+          submit={t('webdav.joinSubmit')}
+          onClose={() => setDav(false)}
+          onSubmit={(webdav) =>
+            call('sync.pickJoin', { webdav }).then((p) => {
+              setPicked(p)
+              setUseRecovery(!p.hasPassword)
+            })
+          }
+        />
+        <div className="flex flex-wrap justify-end gap-2">
           <Button onClick={onCancel}>{t('settings.cancel')}</Button>
+          <Button icon={<Server size={14} />} title={t('sync.joinHint')} onClick={() => setDav(true)}>
+            {t('webdav.join')}
+          </Button>
           <Button
             icon={<FolderSync size={14} />}
             title={t('sync.joinHint')}

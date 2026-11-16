@@ -118,7 +118,9 @@ export interface SyncDevice {
 export interface SyncStatus {
   /** off: not syncing. on: syncing. detached: this data syncs, but this computer hasn't chosen the folder yet. */
   state: 'off' | 'on' | 'detached'
+  /** The folder, or the WebDAV server's address. */
   folder: string | null
+  kind: 'folder' | 'webdav' | null
   devices: SyncDevice[]
   lastSyncAt: string | null
   /** A problem with the last sync, in plain words. */

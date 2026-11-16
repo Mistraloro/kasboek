@@ -190,5 +190,9 @@
       "goals": "Ahorra para algo: un monto para una fecha, con lo que debes apartar cada mes.",
       "settings": "Cuentas, copias de seguridad, sincronización entre computadoras, el asistente, formatos y más."
     }
+  },
+  "webdav": {
+    "urlHint": "En Nextcloud: Archivos → Configuración (abajo a la izquierda) → WebDAV. Debe empezar por https://, o http:// para un servidor de tu red doméstica.",
+    "passwordHint": "Mejor una contraseña de aplicación creada para Kasboek. Se guarda en tus datos cifrados, solo en esta computadora."
   }
 }

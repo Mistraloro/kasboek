@@ -1,4 +1,4 @@
-import { Download, FolderInput, FolderOpen, FolderSync, Monitor, Moon, Plus, ShieldAlert, ShieldCheck, Sun, Upload } from 'lucide-react'
+import { Download, FolderInput, FolderOpen, FolderSync, Monitor, Moon, Plus, Server, ShieldAlert, ShieldCheck, Sun, Upload } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance, type PickedTransfer, type SyncStatus } from '@shared/types'
@@ -13,6 +13,7 @@ import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS,
 import { useSettings } from '../lib/settings'
 import { ImportFlow } from './auth/ImportFlow'
 import { CurrencySelect } from '../components/CurrencySelect'
+import { WebDavModal } from '../components/WebDav'
 import { ClaudeSection, PermissionsSection } from './SettingsClaude'
 import { MemorySection } from './SettingsMemory'
 import { useUpdate } from '../components/Update'
@@ -325,6 +326,7 @@ function SyncSection() {
   const [joining, setJoining] = useState<PickedTransfer | null>(null)
   const [confirmStop, setConfirmStop] = useState(false)
   const [showConflicts, setShowConflicts] = useState(false)
+  const [dav, setDav] = useState<'start' | 'join' | 'attach' | null>(null)
   useEffect(() => {
     void call('sync.status').then(setStatus)
     return window.kasboek.onEvent((e) => e.type === 'sync.updated' && setStatus(e.status))
@@ -340,7 +342,11 @@ function SyncSection() {
           <Row label={t('sync.start')} hint={t('sync.startHint')}>
             <Button size="sm" variant="primary" icon={<FolderSync size={14} />} onClick={() => run(call('sync.start'))}>{t('sync.startButton')}</Button>
           </Row>
+          <Row label={t('webdav.start')} hint={t('webdav.startHint')}>
+            <Button size="sm" icon={<Server size={14} />} onClick={() => setDav('start')}>{t('webdav.choose')}</Button>
+          </Row>
           <Row label={t('sync.join')} hint={t('sync.joinHint')}>
+            <Button size="sm" icon={<Server size={14} />} onClick={() => setDav('join')}>{t('webdav.join')}</Button>
             <Button size="sm" icon={<FolderInput size={14} />} onClick={() => void call('sync.pickJoin').then(setJoining, (e) => (e instanceof ApiError && e.code === 'sync.cancelled' ? undefined : toast(errText(e), 'error')))}>{t('sync.joinFolder')}</Button>
           </Row>
           <div className="px-5 py-4 text-xs text-muted">{t('sync.risk')}</div>
@@ -348,12 +354,13 @@ function SyncSection() {
       )}
       {status.state === 'detached' && (
         <Row label={t('sync.detached')} hint={t('sync.detachedHint')}>
+          <Button size="sm" icon={<Server size={14} />} onClick={() => setDav('attach')}>{t('webdav.choose')}</Button>
           <Button size="sm" variant="primary" icon={<FolderOpen size={14} />} onClick={() => run(call('sync.attach'))}>{t('sync.chooseFolder')}</Button>
         </Row>
       )}
       {status.state === 'on' && (
         <>
-          <Row label={t('sync.folder')} hint={<span className="selectable break-all">{status.folder}</span>}>
+          <Row label={status.kind === 'webdav' ? t('webdav.server') : t('sync.folder')} hint={<span className="selectable break-all">{status.folder}</span>}>
             <Badge tone={status.error ? 'warning' : 'accent'}>{status.busy ? t('sync.syncing') : status.error ? t('sync.problem') : t('sync.on')}</Badge>
             <Button size="sm" disabled={status.busy} onClick={() => run(call('sync.now'))}>{t('sync.now')}</Button>
           </Row>
@@ -379,6 +386,17 @@ function SyncSection() {
           </Row>
         </>
       )}
+      <WebDavModal
+        open={!!dav}
+        title={dav === 'join' ? t('sync.join') : dav === 'attach' ? t('sync.detached') : t('webdav.start')}
+        submit={dav === 'join' ? t('webdav.joinSubmit') : t('webdav.startSubmit')}
+        onClose={() => setDav(null)}
+        onSubmit={(webdav) =>
+          dav === 'join'
+            ? call('sync.pickJoin', { webdav }).then(setJoining)
+            : call(dav === 'attach' ? 'sync.attach' : 'sync.start', { webdav }).then(setStatus)
+        }
+      />
       <Modal open={!!joining} title={t('sync.join')} onClose={() => setJoining(null)}>
         {joining && <ImportFlow replacing preset={joining} onCancel={() => setJoining(null)} onDone={(s) => { setJoining(null); set(s); window.location.reload() }} />}
       </Modal>

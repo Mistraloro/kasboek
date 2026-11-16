@@ -4,8 +4,16 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 
 **Fixes**
 - **Windows on ARM (Snapdragon): no more white window.** On some graphics drivers, Kasboek opened as an empty white window. On Windows on ARM, Kasboek now draws without the graphics card by default. On any computer, if the graphics card fails to show Kasboek when it starts, Kasboek restarts once without it and remembers that.
+- **Windows Hello works again.** 0.13.0 said "Verification was cancelled or failed".
+- **The update window** (the "Update to …" button) could not be scrolled or clicked; only Esc closed it.
+- **The launch window** appears right away, before the rest of Kasboek loads.
 
 **New**
+- **Sync through a WebDAV server** (Nextcloud, ownCloud, Synology, QNAP, Koofr, pCloud, a NAS, …) instead of a cloud folder. Only encrypted files go there.
+- **Claude Desktop and the tray**: when Claude Desktop starts Kasboek's connection and Kasboek isn't running, Kasboek starts in the tray, locked. Closing the window while Claude is connected keeps Kasboek in the tray.
+- **Settings → About**: its own tab; the version under Lock opens it.
+- **Welcome window**: start syncing next to backups and auto-lock.
+- **Recovery key**: hidden while you type its last group, so you check it where you stored it.
 - **Graphics card** setting (Settings → General): automatic (recommended), always or never. It also says whether Kasboek draws with the graphics card right now, and why not.
 - **CSV import reads the exports of many more banks and payment apps**, from Europe, the UK, the Americas and beyond, with headers in many languages: ING, Rabobank, ABN AMRO, KBC, Belfius, BNP Paribas, Deutsche Bank, Sparkasse, DKB, N26, Revolut, Wise, PayPal, Monzo, Lloyds, Barclays, Chase, Bank of America, Santander, Nubank, Boursorama and more. It also understands:
   - a separate debit/credit column;

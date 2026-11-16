@@ -41,8 +41,9 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
 - **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (welcome window or
   Settings → Assistant). Settings shows whether each app is connected now or when it last used
   Kasboek; a tray icon shows the connection and can stop it.
-- **Sync**: keep several computers in step through a cloud folder you already use; only encrypted
-  files go there, and changes merge per field.
+- **Sync**: keep several computers in step through a cloud folder you already use, or your own
+  WebDAV server (Nextcloud, ownCloud, Synology, a NAS, …); only encrypted files go there, and changes
+  merge per field.
 - **Same everywhere**: Windows, macOS and Linux use the same encrypted database and the same export
   format, so an export from one opens on any other (with your login).
 - **Security**: password (Argon2id) or passwordless (Windows Hello / Touch ID), optional two-factor codes,
@@ -138,10 +139,15 @@ Kasboek is running and unlocked; changes wait for your approval in Kasboek.
 
 ## Sync
 
-Settings → Backups & sync → Sync between computers → Choose folder (a folder your cloud app syncs). On the other
-computer: Join a sync folder, then your password and 2FA code (or recovery key). Kasboek writes
+Settings → Backups & sync → Sync between computers → Choose folder (a folder your cloud app syncs),
+or WebDAV server (address, user name, preferably an app password). On the other computer: Join a
+sync folder (or Join through WebDAV), then your password and 2FA code (or recovery key). Kasboek writes
 encrypted change files there; the key never leaves your encrypted data except inside an
 encrypted snapshot. Passwordless sign-in is set up per computer.
+
+The file formats (exports, the database, sync files) are described in
+[docs/FORMATS.md](docs/FORMATS.md), for a future phone app; `src/core/portable.ts` reads them
+without Node.js.
 
 ## Checks
 

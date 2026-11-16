@@ -1180,5 +1180,21 @@
       "settings": "Konten, Sicherungen, Synchronisieren zwischen Computern, der Assistent, Formate und mehr.",
       "lock": "Sperr Kasboek, wenn du kurz weggehst. Nach einer Weile sperrt es sich auch selbst."
     }
+  },
+  "webdav": {
+    "intro": "Über Ihren eigenen WebDAV-Server synchronisieren: Nextcloud, ownCloud, Synology, QNAP, Koofr, pCloud oder einen anderen. Kasboek legt dort einen Ordner „Kasboek sync“ an; nur verschlüsselte Dateien kommen hinein. Auch ein Telefon kann so synchronisieren.",
+    "url": "Serveradresse (WebDAV-Ordner)",
+    "urlHint": "Bei Nextcloud: Dateien → Einstellungen (unten links) → WebDAV. Muss mit https:// beginnen, oder http:// für einen Server im Heimnetz.",
+    "user": "Benutzername",
+    "password": "Passwort",
+    "passwordHint": "Am besten ein App-Passwort für Kasboek. Es wird nur auf diesem Computer in Ihren verschlüsselten Daten gespeichert.",
+    "connecting": "Verbinden…",
+    "start": "Über einen WebDAV-Server synchronisieren",
+    "startHint": "Statt eines Cloud-Ordners: Ihr eigener Server oder NAS.",
+    "choose": "WebDAV-Server…",
+    "join": "Über WebDAV beitreten…",
+    "joinSubmit": "Synchronisierung suchen",
+    "startSubmit": "Verbinden und synchronisieren",
+    "server": "WebDAV-Server"
   }
 }

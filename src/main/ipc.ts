@@ -397,9 +397,9 @@ const desktopOps: OpTable = {
     }
   },
   'sync.status': { mutates: false, assistant: false, handler: () => syncStatus() },
-  'sync.start': { mutates: false, assistant: false, handler: () => startSync() },
-  'sync.pickJoin': { mutates: false, assistant: false, handler: () => pickJoin() },
-  'sync.attach': { mutates: false, assistant: false, handler: () => attachSync() },
+  'sync.start': { mutates: false, assistant: false, handler: (_c, input) => startSync(input) },
+  'sync.pickJoin': { mutates: false, assistant: false, handler: (_c, input) => pickJoin(input) },
+  'sync.attach': { mutates: false, assistant: false, handler: (_c, input) => attachSync(input) },
   'sync.now': {
     mutates: false,
     assistant: false,

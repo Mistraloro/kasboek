@@ -357,5 +357,12 @@
       "import": "Traga uma exportação CSV do seu banco. Deixe o assistente verificá-la antes de salvar.",
       "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo."
     }
+  },
+  "webdav": {
+    "intro": "Sincronize através do seu próprio servidor WebDAV: Nextcloud, ownCloud, Synology, QNAP, Koofr, pCloud ou outro. O Kasboek cria lá uma pasta «Kasboek sync»; só vão para lá arquivos criptografados. Um celular também pode sincronizar assim.",
+    "urlHint": "No Nextcloud: Arquivos → Configurações (em baixo à esquerda) → WebDAV. Tem de começar por https://, ou http:// para um servidor da sua rede doméstica.",
+    "user": "Nome de usuário",
+    "password": "Senha",
+    "passwordHint": "De preferência uma senha de aplicativo criada para o Kasboek. Fica salva nos seus dados criptografados, só neste computador."
   }
 }

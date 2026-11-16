@@ -1180,5 +1180,21 @@
       "settings": "Accounts, backups, sync between computers, the assistant, formats and more.",
       "lock": "Lock Kasboek when you step away. It also locks by itself after a while."
     }
+  },
+  "webdav": {
+    "intro": "Sync through your own WebDAV server: Nextcloud, ownCloud, Synology, QNAP, Koofr, pCloud or another. Kasboek puts a “Kasboek sync” folder there; only encrypted files go into it. A phone can sync this way too.",
+    "url": "Server address (WebDAV folder)",
+    "urlHint": "For Nextcloud: Files → Settings (bottom left) → WebDAV. Must start with https://, or http:// for a server in your home network.",
+    "user": "User name",
+    "password": "Password",
+    "passwordHint": "Preferably an app password made for Kasboek. It is kept in your encrypted data on this computer only.",
+    "connecting": "Connecting…",
+    "start": "Sync through a WebDAV server",
+    "startHint": "Instead of a cloud folder: your own server or NAS.",
+    "choose": "WebDAV server…",
+    "join": "Join through WebDAV…",
+    "joinSubmit": "Find the sync data",
+    "startSubmit": "Connect and sync",
+    "server": "WebDAV server"
   }
 }

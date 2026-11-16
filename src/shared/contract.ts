@@ -40,6 +40,21 @@ const fxCostPct = z.number().min(0).max(20).nullable()
 const cents = z.number().int().min(-1e12).max(1e12)
 const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.')
 
+/** Where to sync: nothing (a folder, chosen in a dialog) or a WebDAV server. */
+const syncPlace = z
+  .object({
+    webdav: z
+      .object({
+        url: z.string().trim().min(1).max(500),
+        user: z.string().max(200),
+        password: z.string().max(500)
+      })
+      .strict()
+      .optional()
+  })
+  .strict()
+  .default({})
+
 export const contract = {
   /* ----- App & preferences (available while locked) ----- */
   'app.info': { input: empty, output: out<AppInfo>() },
@@ -256,11 +271,11 @@ export const contract = {
   /* ----- Sync between computers ----- */
   'sync.status': { input: empty, output: out<SyncStatus>() },
   /** Choose a folder and start syncing this computer's data through it. */
-  'sync.start': { input: empty, output: out<SyncStatus>() },
+  'sync.start': { input: syncPlace, output: out<SyncStatus>() },
   /** Choose an existing sync folder to join: returns its newest snapshot to open with Import. */
-  'sync.pickJoin': { input: empty, output: out<PickedTransfer>() },
+  'sync.pickJoin': { input: syncPlace, output: out<PickedTransfer>() },
   /** For data that syncs: choose where the sync folder is on this computer. */
-  'sync.attach': { input: empty, output: out<SyncStatus>() },
+  'sync.attach': { input: syncPlace, output: out<SyncStatus>() },
   'sync.now': { input: empty, output: out<SyncStatus>() },
   'sync.stop': { input: empty, output: out<SyncStatus>() },
   'sync.dismissConflicts': { input: empty, output: out<SyncStatus>() },
