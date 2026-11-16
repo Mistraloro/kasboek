@@ -316,6 +316,13 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    is still synchronous, so a short stall remains, but the window now says why. Not changed: the backup
    on quit. It is a different backup (the automatic backup folder, only when the data changed and
    automatic backups are on), so the safety copy in `safety/` can't replace it.
+24. **Keep the original amount and currency of foreign payments.** Asked about card payments in a
+   currency other than the account's: today the amount is stored in the account's currency and the
+   foreign amount and its currency are not kept (an import only flags the row as "other currency").
+   Build after the PDF import: store the original amount, currency and rate on the transaction (from
+   the file's columns when the bank gives them, or typed in), show it next to the billed amount
+   ("EUR 45.00 (USD 49.20)"), keep it through CSV and PDF import, sync and export, and keep the
+   overviews using the billed amount in the account's currency.
 
 ## Later, maybe
 
