@@ -2,7 +2,7 @@
 
 **What this covers**
 - **Range:** branch `ccr-0f0084e8-2jcj1g`, from `cf32f63` up to the 0.11.0 version commit. Sections 1–5 cover up to `8679bc2`; section 6 covers what came after (reasoning, permissions, memory).
-- **Version:** 0.12.0 (0.11.x were test builds only, never released).
+- **Version:** 0.13.0 (0.12.0 was the first release; 0.11.x were test builds only).
 
 **Checks run**
 - 120 vitest tests pass; typecheck and the i18n check are clean.

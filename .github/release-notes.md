@@ -1,39 +1,22 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.12
+## What’s new in 0.13
 
 **New**
-- **Fixed costs**: subscriptions, rent, insurance and salary found from your transactions, with what is still due this month, price changes and late payments.
-- **Savings goals**: an amount by a date, following an account or kept by hand, with what to put aside per month.
-- **Transfers between your own accounts** are paired (automatically when the account number matches) and count as neither income nor spending.
-- **Split a payment** over several categories; **refunds** and shares paid back lower spending instead of counting as income.
-- **Warnings** on the Overview (and as notifications): a budget at 80% or 100%, or a balance heading below zero before payday.
-- **Monthly review** by the AI, from a button on the Overview.
-- **Bank balance**: enter what your bank shows, and Kasboek counts from there and shows any difference later.
-- **Export**: transactions as CSV, and a year report as PDF.
-- **Transactions**: rename or pair a selection, and saved searches. **Month picker**: click the month to jump to any month and year.
-- **Tray icon**: whether Claude apps are connected, with "Stop Claude connection" and Quit.
-- **Updates from inside Kasboek**: an "Update to …" button appears when a new version is out; Kasboek downloads it, checks it, backs up your data and installs it (on a Mac you drag it to Applications). You can switch the check off.
-- **Welcome window** on first start: an introduction, the basics (language, look, currency), backups and auto-lock, the assistant's AI and the update check, then a short tour of the app (also in Settings).
-
-**Assistant**
-- **Permissions**: choose what the assistant may change by itself and what waits for your OK, like Claude's permission modes. "Always ask" stays the default.
-- **Memory**: the assistant can remember facts and preferences between conversations ("remember that I get paid on the 25th"). Kept encrypted on this computer only, never synced, visible and editable in Settings; account and card numbers are refused.
-- **Reasoning**: turn the model's thinking off or set its level, per model and provider, right under the message box.
-
-**CSV import and Check**
-- Pending payments (Hello bank! “2026-”) are no longer imported twice once booked.
-- Duplicates are also found by bank reference, and rows the bank reworded are marked "Maybe imported".
-- Check runs in parts with progress, shows its reasoning in the assistant panel, suggests safe rules, also sorts older uncategorised transactions (only when you accept), keeps a transfer's own message, and can be undone part by part.
-- The bank's own text is kept next to the tidied one, so rules keep working, and names you tidied are used again next time.
-- The open import and a running check stay when you switch tabs.
+- **Transfers between accounts in different currencies** are recognised at that day's exchange rate. What the bank kept on the conversion is shown and counted as a fee (in "Fees & taxes"); you can change it per transfer, for example to the exact cost on your statement. Accounts get an optional "Exchange cost (%)".
+- **Settings in tabs**: General, Accounts, Security, Backups & sync, and Assistant.
+- **Welcome window**: also the number and date style, exchange rates from the ECB (on by default), and adding Kasboek to Claude Desktop and Claude Code.
+- **Claude apps**: Settings shows whether Claude Desktop or Claude Code is connected now, or when it last used Kasboek.
+- The **version** is shown at the bottom of the menu.
 
 **Fixes**
-- Mistral: no more "answer was cut off", time limits and retries, and the chat no longer stops working after Stop.
-- Net worth ranges longer than your history are disabled, with an explanation.
-- "Today" follows your own clock, not UTC; a new account and its balance are saved together; many smaller fixes from an outside review.
-- The installer no longer contains the source code.
-- Smaller downloads: about a quarter smaller, one Windows installer type (.msi), and a separate macOS download for Apple Silicon and for Intel.
+- Windows Hello now opens in front of Kasboek instead of behind it.
+- Adding Kasboek to Claude Desktop while Claude Desktop was open could be undone when it quit. Kasboek now asks you to close it first.
+- Claude Code no longer shows "Update" when Kasboek is already added and up to date.
+- Installer: no more warning 1946 about the shortcut; shortcuts left by an older install are replaced.
+- Uninstalling removes everything Kasboek added (program, shortcuts, registry entries, caches, and its entries in Claude Desktop and Claude Code). Your data stays, unless you run the installer again, choose Remove and tick "Also delete my Kasboek data". Sync and backup folders are never touched.
+
+Everything that came in 0.12 (fixed costs, savings goals, updates from inside Kasboek, permissions, memory and more) is listed on the 0.12.0 release.
 
 ## Download
 
@@ -45,7 +28,7 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 | macOS with an Intel chip | `Kasboek-…-mac-x64.dmg` |
 | Linux | `.AppImage` (any distribution) or `.deb` (Debian/Ubuntu), x64 or arm64 |
 
-All builds are 64-bit. Installing over an earlier version keeps your data. An export made on one system imports on any other with your login.
+All builds are 64-bit. Installing over an earlier version keeps your data. Kasboek needs nothing else installed. An export made on one system imports on any other with your login.
 
 ## First start
 
@@ -55,6 +38,6 @@ These builds are not yet signed with a certificate:
 
 ## Good to know
 
-- **Syncing between computers? Update all of them.** A computer on an older version ignores the newer rule settings (whole-word matching, order) it receives.
+- **Syncing between computers? Update all of them.** A computer on an older version ignores the newer settings (such as an account's exchange cost) it receives.
+- From 0.12.0 you can update from inside Kasboek: the "Update to 0.13.0" button appears at the top.
 - Windows Hello and Touch ID were only tested in simulation; please report anything odd.
-- If you used 0.9 with a short password, Kasboek asks for a stronger one at the next unlock.
