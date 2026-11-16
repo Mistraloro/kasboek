@@ -16,6 +16,7 @@ import { CurrencySelect } from '../components/CurrencySelect'
 import { ClaudeSection, PermissionsSection } from './SettingsClaude'
 import { MemorySection } from './SettingsMemory'
 import { useUpdate } from '../components/Update'
+import { GRAPHICS_CHOICES, type GraphicsChoice } from '@shared/graphics'
 import { SETTINGS_TABS, openSettingsTab, settingsTab, type SettingsTab } from '../lib/settings-tab'
 import { startTour } from '../components/Tour'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
@@ -746,6 +747,35 @@ function AppearanceSection() {
           {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </Select>
       </Row>
+      <GraphicsRow />
     </Card>
+  )
+}
+
+/** Drawing with or without the graphics card: some drivers (Windows on ARM) leave the window white. */
+function GraphicsRow() {
+  const { t } = useTranslation()
+  const { prefs, updatePrefs, info } = useSettings()
+  const [changed, setChanged] = useState(false)
+  const now = info.graphics.hardware ? t('settings.graphics.nowOn') : t(`settings.graphics.nowOff.${info.graphics.reason ?? 'setting'}`)
+  return (
+    <Row label={t('settings.graphics.label')} hint={<>{now} {changed ? t('settings.graphics.restartHint') : t('settings.graphics.hint')}</>}>
+      {changed && (
+        <Button size="sm" onClick={() => void call('app.restart')}>
+          {t('settings.graphics.restart')}
+        </Button>
+      )}
+      <Select
+        className="w-56"
+        aria-label={t('settings.graphics.label')}
+        value={prefs.graphics}
+        onChange={(e) => {
+          setChanged(true)
+          void updatePrefs({ graphics: e.target.value as GraphicsChoice })
+        }}
+      >
+        {GRAPHICS_CHOICES.map((c) => <option key={c} value={c}>{t(`settings.graphics.${c}`)}</option>)}
+      </Select>
+    </Row>
   )
 }

@@ -114,7 +114,12 @@
     "formatsHint": "Cada parte é definida separadamente. Exemplo: {{value}}",
     "negative": "Valores negativos",
     "accountKindInvestment": "Registre o valor de vez em quando na página Patrimônio; os aportes e saques vêm dos movimentos.",
-    "fxCostHint": "Opcional. O que este banco cobra além da taxa de câmbio quando converte dinheiro para outra moeda, ex.: 1,5. Ajuda o Kasboek a reconhecer transferências entre as suas contas em moedas diferentes."
+    "fxCostHint": "Opcional. O que este banco cobra além da taxa de câmbio quando converte dinheiro para outra moeda, ex.: 1,5. Ajuda o Kasboek a reconhecer transferências entre as suas contas em moedas diferentes.",
+    "graphics": {
+      "nowOff": {
+        "failed": "O Kasboek desenha agora sem a placa gráfica: ela não mostrou o Kasboek em um arranque anterior."
+      }
+    }
   },
   "auth": {
     "welcome": "Boas-vindas ao Kasboek",

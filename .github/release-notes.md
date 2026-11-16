@@ -1,22 +1,19 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.13
-
-**New**
-- **Transfers between accounts in different currencies** are recognised at that day's exchange rate. What the bank kept on the conversion is shown and counted as a fee (in "Fees & taxes"); you can change it per transfer, for example to the exact cost on your statement. Accounts get an optional "Exchange cost (%)".
-- **Settings in tabs**: General, Accounts, Security, Backups & sync, and Assistant.
-- **Welcome window**: also the number and date style, exchange rates from the ECB (on by default), and adding Kasboek to Claude Desktop and Claude Code.
-- **Claude apps**: Settings shows whether Claude Desktop or Claude Code is connected now, or when it last used Kasboek.
-- The **version** is shown at the bottom of the menu.
+## What’s new in 0.14
 
 **Fixes**
-- Windows Hello now opens in front of Kasboek instead of behind it.
-- Adding Kasboek to Claude Desktop while Claude Desktop was open could be undone when it quit. Kasboek now asks you to close it first.
-- Claude Code no longer shows "Update" when Kasboek is already added and up to date.
-- Installer: no more warning 1946 about the shortcut; shortcuts left by an older install are replaced.
-- Uninstalling removes everything Kasboek added (program, shortcuts, registry entries, caches, and its entries in Claude Desktop and Claude Code). Your data stays, unless you run the installer again, choose Remove and tick "Also delete my Kasboek data". Sync and backup folders are never touched.
+- **Windows on ARM (Snapdragon): no more white window.** On some graphics drivers, Kasboek opened as an empty white window. On Windows on ARM, Kasboek now draws without the graphics card by default. On any computer, if the graphics card fails to show Kasboek when it starts, Kasboek restarts once without it and remembers that.
 
-Everything that came in 0.12 (fixed costs, savings goals, updates from inside Kasboek, permissions, memory and more) is listed on the 0.12.0 release.
+**New**
+- **Graphics card** setting (Settings → General): automatic (recommended), always or never. It also says whether Kasboek draws with the graphics card right now, and why not.
+- **CSV import reads the exports of many more banks and payment apps**, from Europe, the UK, the Americas and beyond, with headers in many languages: ING, Rabobank, ABN AMRO, KBC, Belfius, BNP Paribas, Deutsche Bank, Sparkasse, DKB, N26, Revolut, Wise, PayPal, Monzo, Lloyds, Barclays, Chase, Bank of America, Santander, Nubank, Boursorama and more. It also understands:
+  - a separate debit/credit column;
+  - amounts with "DR"/"CR" or a currency sign;
+  - dates with month names or a time.
+- A **start-up log** (`startup.log` in the data folder) records technical facts only: version, system, graphics card and start-up steps, never your data. If Kasboek doesn't open properly, that file helps find out why.
+
+Everything that came in 0.13 (transfers between currencies with exchange cost, settings in tabs, a fuller welcome window, the cleaner uninstall and more) is listed on the 0.13.0 release.
 
 ## Download
 
@@ -38,6 +35,6 @@ These builds are not yet signed with a certificate:
 
 ## Good to know
 
-- **Syncing between computers? Update all of them.** A computer on an older version ignores the newer settings (such as an account's exchange cost) it receives.
-- From 0.12.0 you can update from inside Kasboek: the "Update to 0.13.0" button appears at the top.
+- **Had a white window on 0.13 or earlier?** Install this version over it with the MSI; your data stays.
+- From 0.12.0 you can update from inside Kasboek: the "Update to 0.14.0" button appears at the top.
 - Windows Hello and Touch ID were only tested in simulation; please report anything odd.

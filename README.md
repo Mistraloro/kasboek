@@ -96,6 +96,11 @@ Locally, each OS builds its own installers: `npm run dist:win`, `npm run dist:ma
 `npm run dist:linux`. (The Linux packages can also be built on other systems; the `.msi` needs
 Windows.)
 
+**A white or empty window?** Some graphics drivers (notably on Windows on ARM / Snapdragon) can't
+show Kasboek's window. Kasboek then draws without the graphics card: by default on Windows on ARM,
+and on any computer after the graphics card failed to show it at a start (Kasboek restarts once by
+itself). Settings → General → Graphics card changes it; `startup.log` in the data folder says what happened.
+
 **Uninstalling** removes the program, its shortcuts, registry entries, caches and Kasboek's
 entries in Claude Desktop and Claude Code. Your data stays, so a reinstall picks up where you left
 off. To delete it too, run the same installer again, choose Remove and tick “Also delete my Kasboek data”. Sync and backup folders are never touched.
@@ -161,6 +166,8 @@ npm run test:mcp    # the Go MCP helper
 - `sync.json`: this computer's sync id and folder, when syncing
 - `safety-backups/`: copies made automatically before an import and before an update
 - `updates/`: a downloaded update while it installs
+- `startup.log`: what happened during the last start (version, system, graphics card, steps), never
+  your data; useful when Kasboek doesn't open properly
 
 The assistant's memory, settings that sync and everything you enter live inside `kasboek.db`.
 

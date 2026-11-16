@@ -5,6 +5,7 @@ import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/op
 import { getSettings, updateSettings } from '@core/settings'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
 import { PUBLIC_OPS, type OpName } from '@shared/contract'
+import { graphicsStatus, markPainted } from './graphics'
 import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
 import { defaultCategoryNames } from './i18n-categories'
@@ -36,6 +37,7 @@ export function onAppReady(fn: () => void): void {
   readyListener = fn
 }
 function appReady(): void {
+  markPainted()
   readyListener?.()
   readyListener = null
 }
@@ -69,6 +71,7 @@ const desktopOps: OpTable = {
       commit: __BUILD_COMMIT__,
       platform: process.platform,
       dataDir: paths.dataDir,
+      graphics: graphicsStatus(),
       mcpCommand: { command: helperPath(), args: ['--data-dir', paths.dataDir] }
     })
   },
@@ -93,11 +96,23 @@ const desktopOps: OpTable = {
     }
   },
   'prefs.get': { mutates: false, assistant: false, handler: () => getPrefs() },
+  'app.restart': {
+    mutates: false,
+    assistant: false,
+    handler: () => {
+      setTimeout(() => {
+        app.relaunch()
+        app.quit()
+      }, 100)
+      return { ok: true as const }
+    }
+  },
   'prefs.update': {
     mutates: false,
     assistant: false,
     handler: (_c, patch) => {
-      const next = updatePrefs(patch)
+      // A new graphics choice also forgets an earlier failure, so "automatic" tries the graphics card again.
+      const next = updatePrefs(patch.graphics ? { ...patch, graphicsFailed: false } : patch)
       if (patch.theme) applyTheme(next.theme)
       return next
     }

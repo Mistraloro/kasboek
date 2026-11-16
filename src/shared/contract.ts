@@ -16,6 +16,7 @@ import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
 import { EFFORTS, REASONING_LEVELS } from './reasoning'
 import { SENSITIVE_MESSAGE, looksSensitive } from './sensitive'
 import { PERMISSION_KINDS, PERMISSION_MODES, type PermissionKind } from './permissions'
+import { GRAPHICS_CHOICES } from './graphics'
 
 const currency = z
   .string()
@@ -43,6 +44,8 @@ export const contract = {
   /* ----- App & preferences (available while locked) ----- */
   'app.info': { input: empty, output: out<AppInfo>() },
   'app.ready': { input: empty, output: out<{ ok: true }>() },
+  /** Start Kasboek again (after changing how it draws). */
+  'app.restart': { input: empty, output: out<{ ok: true }>() },
   'prefs.get': { input: empty, output: out<Prefs>() },
   'prefs.update': {
     input: z
@@ -64,7 +67,8 @@ export const contract = {
           .strict(),
         autoLockMinutes: z.number().int().min(0).max(240),
         updateCheck: z.boolean(),
-        welcomeDone: z.boolean()
+        welcomeDone: z.boolean(),
+        graphics: z.enum(GRAPHICS_CHOICES)
       })
       .partial()
       .strict(),

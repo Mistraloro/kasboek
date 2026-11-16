@@ -473,7 +473,23 @@
     "about": "About Kasboek",
     "fxCost": "Exchange cost (%)",
     "fxCostHint": "Optional. What this bank charges on top of the exchange rate when it converts money to another currency, e.g. 1.5. Helps Kasboek recognise transfers between your accounts in different currencies.",
-    "fxCostBad": "Enter a percentage between 0 and 20."
+    "fxCostBad": "Enter a percentage between 0 and 20.",
+    "graphics": {
+      "label": "Graphics card",
+      "auto": "Automatic (recommended)",
+      "on": "Always use it",
+      "off": "Never use it",
+      "hint": "Without the graphics card Kasboek may scroll a little less smoothly, and it shows correctly on every computer. A change takes effect after a restart.",
+      "restartHint": "Restart Kasboek to use the new choice.",
+      "restart": "Restart Kasboek",
+      "nowOn": "Kasboek now draws with the graphics card.",
+      "nowOff": {
+        "setting": "Kasboek now draws without the graphics card, as you chose.",
+        "windows-arm": "Kasboek now draws without the graphics card: on Windows on ARM, graphics drivers can leave the window white.",
+        "failed": "Kasboek now draws without the graphics card: it did not show Kasboek on an earlier start.",
+        "flag": "Kasboek now draws without the graphics card: it was started with --disable-gpu."
+      }
+    }
   },
   "auth": {
     "welcome": "Welcome to Kasboek",

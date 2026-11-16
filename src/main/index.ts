@@ -8,6 +8,7 @@ import { createTray, destroyTray, refreshTray } from './tray'
 import { startAlertChecks } from './notify'
 import { startUpdateChecks } from './update'
 import { closeSplash, showSplash, splashMinimumElapsed, splashProgress } from './splash'
+import { applyGraphicsChoice, startupLog, watchGraphics, watchWindow } from './graphics'
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
 import { initSession, lock, onLock, startAutoLock } from './session'
@@ -28,12 +29,14 @@ if (process.arch !== 'x64' && process.arch !== 'arm64') {
 if (MCP_MODE) {
   process.stderr.write('Kasboek: "--mcp" is no longer supported. In your MCP config, use the kasboek-mcp program that is installed next to Kasboek (see Kasboek → Settings → Claude).\n')
   app.exit(2)
-} else if (!app.requestSingleInstanceLock()) {
-  // One running copy only: two processes must never write the same database.
-  app.quit()
 }
+// One running copy only: two processes must never write the same database.
+const firstCopy = !MCP_MODE && app.requestSingleInstanceLock()
+if (!MCP_MODE && !firstCopy) app.quit()
 
 app.setAppUserModelId('app.kasboek')
+// Before the app is ready: whether to draw with the graphics card (see graphics.ts).
+if (firstCopy) applyGraphicsChoice()
 paths.rendererDir = join(__dirname, '../renderer')
 
 function createWindow(): BrowserWindow {
@@ -62,6 +65,7 @@ function createWindow(): BrowserWindow {
     }
   })
   if (!isMac) trackOverlay(win)
+  watchWindow(win)
   // Shown when the page reports its first screen is drawn (see startApp), so it never appears blank.
   win.webContents.once('did-finish-load', () => splashProgress(0.8, 'Loading the interface…'))
 
@@ -104,12 +108,15 @@ app.on('second-instance', () => {
 
 void app.whenReady().then(async () => {
   harden()
+  watchGraphics()
   showSplash(getPrefs().theme)
   splashProgress(0.15, 'Starting…')
   initThemeSync()
   applyTheme(getPrefs().theme)
   splashProgress(0.3, 'Opening your data…')
+  startupLog('opening data')
   await initSession()
+  startupLog('data opened')
   onLock(clearImportSessions)
   splashProgress(0.55, 'Preparing…')
   registerIpc()
@@ -127,7 +134,10 @@ void app.whenReady().then(async () => {
   }
   onAppReady(reveal)
   // Never leave the person with only the launch window.
-  setTimeout(reveal, 20_000)
+  setTimeout(() => {
+    if (!shown) startupLog('showing the window without a first screen (20 s)')
+    reveal()
+  }, 20_000)
   startBackupScheduler()
   startSyncScheduler()
   startAutoLock()

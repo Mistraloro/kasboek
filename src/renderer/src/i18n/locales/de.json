@@ -473,7 +473,23 @@
     "about": "Über Kasboek",
     "fxCost": "Wechselkosten (%)",
     "fxCostHint": "Optional. Was diese Bank zusätzlich zum Wechselkurs berechnet, wenn sie Geld in eine andere Währung umrechnet, z. B. 1,5. Hilft Kasboek, Überweisungen zwischen deinen Konten in verschiedenen Währungen zu erkennen.",
-    "fxCostBad": "Gib einen Prozentsatz zwischen 0 und 20 ein."
+    "fxCostBad": "Gib einen Prozentsatz zwischen 0 und 20 ein.",
+    "graphics": {
+      "label": "Grafikkarte",
+      "auto": "Automatisch (empfohlen)",
+      "on": "Immer verwenden",
+      "off": "Nie verwenden",
+      "hint": "Ohne Grafikkarte scrollt Kasboek vielleicht etwas weniger flüssig, und es wird auf jedem Computer richtig angezeigt. Eine Änderung gilt nach einem Neustart.",
+      "restartHint": "Starten Sie Kasboek neu, um die neue Wahl zu verwenden.",
+      "restart": "Kasboek neu starten",
+      "nowOn": "Kasboek zeichnet jetzt mit der Grafikkarte.",
+      "nowOff": {
+        "setting": "Kasboek zeichnet jetzt ohne Grafikkarte, wie Sie es gewählt haben.",
+        "windows-arm": "Kasboek zeichnet jetzt ohne Grafikkarte: Unter Windows on ARM können Grafiktreiber das Fenster weiß lassen.",
+        "failed": "Kasboek zeichnet jetzt ohne Grafikkarte: Sie hat Kasboek bei einem früheren Start nicht angezeigt.",
+        "flag": "Kasboek zeichnet jetzt ohne Grafikkarte: Es wurde mit --disable-gpu gestartet."
+      }
+    }
   },
   "auth": {
     "welcome": "Willkommen bei Kasboek",

@@ -473,7 +473,23 @@
     "about": "Sobre o Kasboek",
     "fxCost": "Custo de câmbio (%)",
     "fxCostHint": "Opcional. O que este banco cobra além da taxa de câmbio quando converte dinheiro para outra moeda, p. ex. 1,5. Ajuda o Kasboek a reconhecer transferências entre as suas contas em moedas diferentes.",
-    "fxCostBad": "Indique uma percentagem entre 0 e 20."
+    "fxCostBad": "Indique uma percentagem entre 0 e 20.",
+    "graphics": {
+      "label": "Placa gráfica",
+      "auto": "Automático (recomendado)",
+      "on": "Usar sempre",
+      "off": "Nunca usar",
+      "hint": "Sem a placa gráfica, o Kasboek pode deslizar com um pouco menos de fluidez, e aparece corretamente em qualquer computador. Uma alteração aplica-se depois de reiniciar.",
+      "restartHint": "Reinicie o Kasboek para usar a nova opção.",
+      "restart": "Reiniciar o Kasboek",
+      "nowOn": "O Kasboek desenha agora com a placa gráfica.",
+      "nowOff": {
+        "setting": "O Kasboek desenha agora sem a placa gráfica, como escolheu.",
+        "windows-arm": "O Kasboek desenha agora sem a placa gráfica: no Windows on ARM, os controladores gráficos podem deixar a janela em branco.",
+        "failed": "O Kasboek desenha agora sem a placa gráfica: ela não mostrou o Kasboek num arranque anterior.",
+        "flag": "O Kasboek desenha agora sem a placa gráfica: foi iniciado com --disable-gpu."
+      }
+    }
   },
   "auth": {
     "welcome": "Bem-vindo ao Kasboek",

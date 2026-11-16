@@ -473,7 +473,23 @@
     "about": "À propos de Kasboek",
     "fxCost": "Frais de change (%)",
     "fxCostHint": "Facultatif. Ce que cette banque prélève en plus du taux de change quand elle convertit de l’argent dans une autre devise, p. ex. 1,5. Aide Kasboek à reconnaître les virements entre vos comptes dans des devises différentes.",
-    "fxCostBad": "Indiquez un pourcentage entre 0 et 20."
+    "fxCostBad": "Indiquez un pourcentage entre 0 et 20.",
+    "graphics": {
+      "label": "Carte graphique",
+      "auto": "Automatique (recommandé)",
+      "on": "Toujours l’utiliser",
+      "off": "Ne jamais l’utiliser",
+      "hint": "Sans la carte graphique, Kasboek défile peut-être un peu moins fluidement, et il s’affiche correctement sur tout ordinateur. Un changement s’applique après un redémarrage.",
+      "restartHint": "Redémarrez Kasboek pour utiliser le nouveau choix.",
+      "restart": "Redémarrer Kasboek",
+      "nowOn": "Kasboek dessine maintenant avec la carte graphique.",
+      "nowOff": {
+        "setting": "Kasboek dessine maintenant sans la carte graphique, comme vous l’avez choisi.",
+        "windows-arm": "Kasboek dessine maintenant sans la carte graphique : sous Windows on ARM, les pilotes graphiques peuvent laisser la fenêtre blanche.",
+        "failed": "Kasboek dessine maintenant sans la carte graphique : elle n’a pas affiché Kasboek lors d’un démarrage précédent.",
+        "flag": "Kasboek dessine maintenant sans la carte graphique : il a été lancé avec --disable-gpu."
+      }
+    }
   },
   "auth": {
     "welcome": "Bienvenue dans Kasboek",

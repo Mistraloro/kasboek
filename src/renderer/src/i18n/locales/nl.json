@@ -473,7 +473,23 @@
     "about": "Over Kasboek",
     "fxCost": "Wisselkosten (%)",
     "fxCostHint": "Optioneel. Wat deze bank bovenop de wisselkoers aanrekent als ze geld naar een andere munt omzet, bv. 1,5. Helpt Kasboek overboekingen tussen je rekeningen in verschillende munten te herkennen.",
-    "fxCostBad": "Geef een percentage tussen 0 en 20."
+    "fxCostBad": "Geef een percentage tussen 0 en 20.",
+    "graphics": {
+      "label": "Grafische kaart",
+      "auto": "Automatisch (aanbevolen)",
+      "on": "Altijd gebruiken",
+      "off": "Nooit gebruiken",
+      "hint": "Zonder grafische kaart scrolt Kasboek misschien iets minder vloeiend, en het toont op elke computer goed. Een wijziging geldt na opnieuw starten.",
+      "restartHint": "Start Kasboek opnieuw om de nieuwe keuze te gebruiken.",
+      "restart": "Kasboek opnieuw starten",
+      "nowOn": "Kasboek tekent nu met de grafische kaart.",
+      "nowOff": {
+        "setting": "Kasboek tekent nu zonder grafische kaart, zoals je koos.",
+        "windows-arm": "Kasboek tekent nu zonder grafische kaart: op Windows on ARM kunnen grafische drivers het venster wit laten.",
+        "failed": "Kasboek tekent nu zonder grafische kaart: die toonde Kasboek niet bij een vorige start.",
+        "flag": "Kasboek tekent nu zonder grafische kaart: het werd gestart met --disable-gpu."
+      }
+    }
   },
   "auth": {
     "welcome": "Welkom bij Kasboek",

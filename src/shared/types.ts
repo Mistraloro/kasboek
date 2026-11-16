@@ -1,3 +1,4 @@
+import type { GraphicsChoice, GraphicsStatus } from './graphics'
 import type { ProviderId } from './ai-providers'
 import type { FormatPrefs } from './format'
 import type { LanguageCode } from './languages'
@@ -233,6 +234,10 @@ export interface Prefs {
   updateCheck: boolean
   /** The welcome window (assistant and update choice) was finished on this computer. */
   welcomeDone: boolean
+  /** Draw with the graphics card: automatic, always or never. Takes effect at the next start. */
+  graphics: GraphicsChoice
+  /** Set by Kasboek when the graphics card failed to show its window; "automatic" then draws in software. */
+  graphicsFailed: boolean
 }
 
 /** How the update for this computer is installed. */
@@ -289,6 +294,8 @@ export interface AppInfo {
   commit: string
   platform: NodeJSPlatform
   dataDir: string
+  /** Whether this run draws with the graphics card, and if not, why. */
+  graphics: GraphicsStatus
   /** Command and arguments to run Kasboek as an MCP server. */
   mcpCommand: { command: string; args: string[] }
 }

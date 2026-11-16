@@ -51,7 +51,10 @@
     "rememberedHint": "Recordado en esta computadora hasta el {{date}}. Otras computadoras, importaciones y exportaciones siguen pidiendo el código.",
     "forgetComputer": "Olvidar esta computadora",
     "forgotten": "Esta computadora volverá a pedir el código.",
-    "negative": "Montos negativos"
+    "negative": "Montos negativos",
+    "graphics": {
+      "hint": "Sin la tarjeta gráfica, Kasboek puede desplazarse con algo menos de fluidez, y se muestra bien en cualquier computadora. Un cambio se aplica tras reiniciar."
+    }
   },
   "auth": {
     "welcomeBody": "Tu presupuesto se queda en esta computadora, cifrado. Primero, elige cómo lo desbloquearás.",
