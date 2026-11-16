@@ -33,6 +33,13 @@ type bridgeResponse struct {
 type bridge struct {
 	dataDir string
 	nextID  atomic.Int64
+	// The connecting app's name from MCP initialize ("claude-ai" for Claude Desktop, "claude-code"),
+	// passed on so Kasboek can show which app is connected.
+	client atomic.Value
+}
+
+func (b *bridge) setClient(name string) {
+	b.client.Store(name)
 }
 
 var errNotRunning = errors.New("Kasboek isn't running, is locked, or MCP access is off. Open Kasboek, unlock it, and turn on " +
@@ -54,6 +61,9 @@ func (b *bridge) request(call, name string, input json.RawMessage) (json.RawMess
 	defer conn.Close()
 	id := b.nextID.Add(1)
 	req := map[string]any{"token": d.Token, "id": id, "call": call}
+	if c, _ := b.client.Load().(string); c != "" {
+		req["client"] = c
+	}
 	if name != "" {
 		req["name"] = name
 	}

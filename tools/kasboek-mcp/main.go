@@ -125,8 +125,14 @@ func (s *server) handle(m rpcMessage) {
 	case "initialize":
 		var p struct {
 			ProtocolVersion string `json:"protocolVersion"`
+			ClientInfo      struct {
+				Name string `json:"name"`
+			} `json:"clientInfo"`
 		}
 		_ = json.Unmarshal(m.Params, &p)
+		if len(p.ClientInfo.Name) <= 64 {
+			s.bridge.setClient(p.ClientInfo.Name)
+		}
 		v := supportedVersions[0]
 		for _, sv := range supportedVersions {
 			if sv == p.ProtocolVersion {

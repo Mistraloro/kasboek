@@ -634,9 +634,9 @@
     "removeTitle": "Quitar Kasboek de Claude Desktop",
     "addBody": "Kasboek solo añadirá (o actualizará) su propia entrada en este archivo. Los demás servidores y ajustes se quedan como están.",
     "removeBody": "Kasboek solo quitará su propia entrada de este archivo.",
-    "backupNote": "Antes se guarda una copia del archivo a su lado. Después, cierra Claude Desktop por completo (también desde la bandeja del sistema o la barra de menús) y vuelve a abrirlo.",
+    "backupNote": "Primero se guarda una copia del archivo al lado. Claude Desktop debe estar cerrado por completo mientras Kasboek se añade (también desde la bandeja o la barra de menús); ábrelo de nuevo después.",
     "confirmAdd": "Añadir",
-    "addedDesktop": "Añadido. Cierra Claude Desktop por completo (también desde el icono de la bandeja del sistema o la barra de menús) y vuelve a abrirlo. Kasboek aparece entonces en Ajustes → Developer y en el menú de herramientas de un chat nuevo, no en Connectors.",
+    "addedDesktop": "Añadido. Vuelve a abrir Claude Desktop: Kasboek aparece en Conectores y en el menú de herramientas de un chat nuevo.",
     "removedDesktop": "Quitado de Claude Desktop. Reinícialo para aplicarlo.",
     "codeAdded": "Añadido a Claude Code. Abre una nueva sesión de Claude Code para usarlo.",
     "removedCode": "Quitado de Claude Code.",
@@ -645,7 +645,15 @@
     "waiting_other": "{{count}} solicitudes más en espera",
     "close": "Cerrar",
     "approveAll": "Aprobar las {{count}}",
-    "bridgeError": "La conexión para las apps de Claude no pudo iniciarse: {{error}}. Kasboek lo reintenta cada 30 segundos."
+    "bridgeError": "La conexión para las apps de Claude no pudo iniciarse: {{error}}. Kasboek lo reintenta cada 30 segundos.",
+    "seen": {
+      "never": "Aún sin conexión",
+      "now": "Conectado ahora",
+      "at": "Último uso a las {{time}}"
+    },
+    "desktopOpen": "Claude Desktop sigue abierto. Guarda sus propios ajustes al cerrarse y volvería a quitar Kasboek. Ciérralo primero por completo (también desde el icono de la bandeja o la barra de menús).",
+    "addAnyway": "Añadir de todos modos",
+    "overwritten": "Kasboek se quitó de los ajustes de Claude Desktop, probablemente cuando Claude Desktop se cerró. Ciérralo por completo y vuelve a añadir Kasboek."
   },
   "fx": {
     "title": "Monedas",
@@ -1101,7 +1109,7 @@
     "tour": "Enséñame la app",
     "claudeTitle": "Claude Desktop y Claude Code",
     "claudeBody": "¿Ya usas una app de Claude? Puede leer tu presupuesto y proponer cambios mientras Kasboek está abierto y desbloqueado. Sus cambios esperan tu aprobación en Kasboek. Opcional.",
-    "claudeNote": "Kasboek solo añade su propia entrada a los ajustes de la app de Claude y guarda antes una copia del archivo. Después reinicia Claude Desktop.",
+    "claudeNote": "Kasboek solo añade su propia entrada a los ajustes de la app de Claude y guarda antes una copia del archivo. Cierra Claude Desktop por completo antes de añadirlo y ábrelo de nuevo después.",
     "codeNotFound": "No se encontró Claude Code en este ordenador. Puedes configurarlo más tarde en Ajustes.",
     "formatLabel": "Números y fechas",
     "formatHint": "Cómo se ven los importes, las fechas y las horas. Cada parte se ajusta por separado en Ajustes.",

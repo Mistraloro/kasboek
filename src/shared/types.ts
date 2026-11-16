@@ -685,6 +685,14 @@ export interface BackupEntryInfo {
   tier: 'recent' | 'daily' | 'monthly'
 }
 
+/** When each Claude app last reached Kasboek over MCP (ms since 1970), or null. */
+export interface McpClientsSeen {
+  desktop: number | null
+  code: number | null
+  /** An app that didn't say which it is. */
+  other: number | null
+}
+
 export interface McpSetupStatus {
   entry: { command: string; args: string[] }
   helperFound: boolean

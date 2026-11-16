@@ -56,6 +56,19 @@ export function codeEntryState(ok: boolean, out: string, entry: ServerEntry): 'a
   return [entry.command, ...entry.args].every((part) => text.includes(norm(part))) ? 'current' : 'outdated'
 }
 
+/**
+ * Windows: whether a running claude.exe is Claude Desktop. Claude Code's own command is also called
+ * claude.exe, so the folder decides: Claude Code lives in ~\.local\bin (or an npm folder), Claude
+ * Desktop in its app folder (AnthropicClaude, the Store's WindowsApps, …). An unknown path (no
+ * permission to read it) counts as Claude Desktop: the person then gets a warning they can skip.
+ */
+export function isClaudeDesktopProcess(path: string | null): boolean {
+  if (!path) return true
+  const p = path.replace(/\//g, '\\').toLowerCase()
+  if (/\\\.local\\bin\\|\\npm\\|\\node_modules\\|\\\.claude\\/.test(p)) return false
+  return true
+}
+
 /** Returns the new file text with mcpServers.kasboek set; everything else is kept as it was. */
 export function withKasboek(text: string | null, entry: ServerEntry): string {
   const config = parse(text)

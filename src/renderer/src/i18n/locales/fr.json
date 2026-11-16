@@ -634,9 +634,9 @@
     "removeTitle": "Retirer Kasboek de Claude Desktop",
     "addBody": "Kasboek ajoute (ou met à jour) uniquement sa propre entrée dans ce fichier. Les autres serveurs et réglages restent inchangés.",
     "removeBody": "Kasboek retire uniquement sa propre entrée de ce fichier.",
-    "backupNote": "Une copie du fichier est d’abord enregistrée à côté. Ensuite, quittez complètement Claude Desktop (aussi depuis la zone de notification ou la barre des menus) et rouvrez-le.",
+    "backupNote": "Une copie du fichier est d’abord enregistrée à côté. Claude Desktop doit être complètement fermé pendant que Kasboek s’ajoute (aussi depuis la zone de notification ou la barre des menus) ; rouvrez-le ensuite.",
     "confirmAdd": "Ajouter",
-    "addedDesktop": "Ajouté. Quittez complètement Claude Desktop (aussi depuis l’icône de la zone de notification ou la barre des menus) puis rouvrez-le. Kasboek apparaît alors sous Réglages → Developer et dans le menu des outils d’une nouvelle discussion, pas sous Connectors.",
+    "addedDesktop": "Ajouté. Rouvrez Claude Desktop : Kasboek apparaît dans Connecteurs et dans le menu des outils d’une nouvelle conversation.",
     "removedDesktop": "Retiré de Claude Desktop. Redémarrez-le pour appliquer.",
     "codeAdded": "Ajouté à Claude Code. Démarrez une nouvelle session Claude Code pour l’utiliser.",
     "removedCode": "Retiré de Claude Code.",
@@ -645,7 +645,15 @@
     "waiting_other": "Encore {{count}} demandes en attente",
     "close": "Fermer",
     "approveAll": "Tout approuver ({{count}})",
-    "bridgeError": "La connexion pour les apps Claude n’a pas pu démarrer : {{error}}. Kasboek réessaie toutes les 30 secondes."
+    "bridgeError": "La connexion pour les apps Claude n’a pas pu démarrer : {{error}}. Kasboek réessaie toutes les 30 secondes.",
+    "seen": {
+      "never": "Pas encore connecté",
+      "now": "Connecté",
+      "at": "Dernière utilisation à {{time}}"
+    },
+    "desktopOpen": "Claude Desktop est encore ouvert. Il enregistre ses propres réglages en quittant et retirerait à nouveau Kasboek. Quittez-le d’abord complètement (aussi depuis l’icône de la zone de notification ou de la barre des menus).",
+    "addAnyway": "Ajouter quand même",
+    "overwritten": "Kasboek a été retiré des réglages de Claude Desktop, sans doute quand Claude Desktop s’est fermé. Quittez-le complètement, puis ajoutez à nouveau Kasboek."
   },
   "fx": {
     "title": "Devises",
@@ -1101,7 +1109,7 @@
     "tour": "Faire la visite",
     "claudeTitle": "Claude Desktop et Claude Code",
     "claudeBody": "Vous utilisez déjà une appli Claude ? Elle peut lire votre budget et proposer des changements tant que Kasboek est ouvert et déverrouillé. Ses changements attendent votre accord dans Kasboek. Facultatif.",
-    "claudeNote": "Kasboek ajoute uniquement sa propre entrée aux réglages de l’appli Claude et garde d’abord une copie du fichier. Redémarrez ensuite Claude Desktop.",
+    "claudeNote": "Kasboek ajoute uniquement sa propre entrée aux réglages de l’appli Claude et garde d’abord une copie du fichier. Fermez complètement Claude Desktop avant de l’ajouter, puis rouvrez-le.",
     "codeNotFound": "Claude Code est introuvable sur cet ordinateur. Vous pourrez le configurer plus tard dans les Réglages.",
     "formatLabel": "Nombres et dates",
     "formatHint": "L’aspect des montants, dates et heures. Chaque élément se règle séparément dans les Réglages.",

@@ -91,9 +91,11 @@
     "addCode": "Agregar a Claude Code",
     "addTitle": "Agregar Kasboek a Claude Desktop",
     "addBody": "Kasboek solo agregará (o actualizará) su propia entrada en este archivo. Los demás servidores y ajustes se quedan como están.",
+    "backupNote": "Primero se guarda una copia del archivo al lado. Claude Desktop debe estar cerrado por completo mientras Kasboek se agrega (también desde la bandeja o la barra de menús); ábrelo de nuevo después.",
     "confirmAdd": "Agregar",
-    "addedDesktop": "Agregado. Cierra Claude Desktop por completo (también desde el icono de la bandeja del sistema o la barra de menús) y vuelve a abrirlo. Kasboek aparece entonces en Configuración → Developer y en el menú de herramientas de un chat nuevo, no en Connectors.",
-    "codeAdded": "Agregado a Claude Code. Abre una nueva sesión de Claude Code para usarlo."
+    "addedDesktop": "Agregado. Vuelve a abrir Claude Desktop: Kasboek aparece en Conectores y en el menú de herramientas de un chat nuevo.",
+    "codeAdded": "Agregado a Claude Code. Abre una nueva sesión de Claude Code para usarlo.",
+    "addAnyway": "Agregar de todos modos"
   },
   "fx": {
     "noRate": "Aún no hay tipo de cambio: estos montos no cuentan en los totales. Descarga los tipos del BCE o agrega uno.",
@@ -173,7 +175,7 @@
     "introPrivateHint": "Tus datos están cifrados y se quedan en esta computadora. Sin cuenta, sin servidor de Kasboek.",
     "basicsBody": "Puedes cambiar todo esto más tarde en Configuración.",
     "safetyBody": "Los datos de Kasboek solo están en esta computadora, así que una copia de seguridad en otro sitio es importante.",
-    "claudeNote": "Kasboek solo agrega su propia entrada a los ajustes de la app de Claude y guarda antes una copia del archivo. Después reinicia Claude Desktop.",
+    "claudeNote": "Kasboek solo agrega su propia entrada a los ajustes de la app de Claude y guarda antes una copia del archivo. Cierra Claude Desktop por completo antes de agregarlo y ábrelo de nuevo después.",
     "codeNotFound": "No se encontró Claude Code en esta computadora. Puedes configurarlo más tarde en Configuración.",
     "formatHint": "Cómo se ven los importes, las fechas y las horas. Cada parte se ajusta por separado en Configuración."
   },

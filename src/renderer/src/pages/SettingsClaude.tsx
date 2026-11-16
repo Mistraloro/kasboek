@@ -6,6 +6,7 @@ import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/re
 import { BULK_LIMIT, PERMISSION_KINDS, PERMISSION_MODES, presetRules, type PermissionMode, type PermissionRule, type PermissionSettings } from '@shared/permissions'
 import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import { useAssistant } from '../components/AssistantPanel'
+import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopOverwritten, useDesktopRunning } from '../components/ClaudeApps'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -175,6 +176,9 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
   const [manual, setManual] = useState(false)
   const [busy, setBusy] = useState(false)
   const st = status.data
+  const seen = useClaudeClients()
+  const desktopOpen = useDesktopRunning(confirm === 'desktopAdd')
+  const overwritten = useDesktopOverwritten(st?.desktop?.state, status.reload)
   const entryJson = st ? JSON.stringify({ mcpServers: { kasboek: st.entry } }, null, 2) : ''
   const quote = (p: string): string => (/\s/.test(p) ? `"${p}"` : p)
   const command = st ? `claude mcp add --scope user kasboek -- ${[st.entry.command, ...st.entry.args].map(quote).join(' ')}` : ''
@@ -197,7 +201,11 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
         <>
           {!st.helperFound && <p className="px-5 pt-3 text-xs text-warning">{t('mcp.helperMissing')}</p>}
           {st.bridgeError && <p className="px-5 pt-3 text-xs text-warning">{t('mcp.bridgeError', { error: st.bridgeError })}</p>}
-          <Row label={t('mcp.desktopLabel')} hint={st.desktop ? <span className="selectable break-all">{st.desktop.configPath}</span> : t('mcp.desktopUnavailable')}>
+          {overwritten && <div className="px-5 pt-3"><DesktopRunningWarning text={t('mcp.overwritten')} /></div>}
+          <Row
+            label={t('mcp.desktopLabel')}
+            hint={st.desktop ? <span className="flex flex-col gap-0.5"><span className="selectable break-all">{st.desktop.configPath}</span>{(st.desktop.state !== 'absent' || !!seen?.desktop) && <SeenLine at={seen?.desktop ?? seen?.other} />}</span> : t('mcp.desktopUnavailable')}
+          >
             {st.desktop && (
               <>
                 <Badge tone={desktopTone}>{t(`mcp.state.${st.desktop.state}`)}</Badge>
@@ -206,7 +214,10 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
               </>
             )}
           </Row>
-          <Row label={t('mcp.codeLabel')} hint={st.code ? <span className="selectable break-all">{st.code.path}</span> : t('mcp.codeNotFound')}>
+          <Row
+            label={t('mcp.codeLabel')}
+            hint={st.code ? <span className="flex flex-col gap-0.5"><span className="selectable break-all">{st.code.path}</span>{(st.code.state !== 'absent' || !!seen?.code) && <SeenLine at={seen?.code} />}</span> : t('mcp.codeNotFound')}
+          >
             {st.code && (
               <>
                 <Badge tone={st.code.state === 'current' ? 'accent' : st.code.state === 'outdated' ? 'warning' : 'neutral'}>{t(`mcp.state.${st.code.state}`)}</Badge>
@@ -237,6 +248,7 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
               <p className="text-muted">{confirm === 'desktopRemove' ? t('mcp.removeBody') : t('mcp.addBody')}</p>
               <p className="selectable rounded-lg bg-surface-2 px-3 py-2 font-mono text-[12px] break-all">{st.desktop?.configPath}</p>
               {confirm === 'desktopAdd' && <pre className="selectable overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]">{JSON.stringify({ kasboek: st.entry }, null, 2)}</pre>}
+              {desktopOpen && <DesktopRunningWarning />}
               <p className="text-xs text-muted">{t('mcp.backupNote')}</p>
               <div className="flex justify-end gap-2">
                 <Button onClick={() => setConfirm(null)}>{t('settings.cancel')}</Button>
@@ -245,7 +257,7 @@ function McpRows({ enabled, onChange }: { enabled: boolean; onChange: (v: boolea
                   disabled={busy}
                   onClick={() => act(call(confirm === 'desktopRemove' ? 'mcp.desktopRemove' : 'mcp.desktopAdd'), confirm === 'desktopRemove' ? t('mcp.removedDesktop') : t('mcp.addedDesktop'))}
                 >
-                  {confirm === 'desktopRemove' ? t('mcp.remove') : t('mcp.confirmAdd')}
+                  {confirm === 'desktopRemove' ? t('mcp.remove') : desktopOpen ? t('mcp.addAnyway') : t('mcp.confirmAdd')}
                 </Button>
               </div>
             </div>

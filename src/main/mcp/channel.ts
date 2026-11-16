@@ -29,6 +29,8 @@ export interface BridgeRequest {
   call: 'list' | 'tool'
   name?: string
   input?: unknown
+  /** The Claude app's name from MCP initialize, e.g. "claude-ai" or "claude-code" (newer helpers). */
+  client?: string
 }
 
 export type BridgeResponse = { id: number; ok: true; result: unknown } | { id: number; ok: false; error: string }

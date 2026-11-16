@@ -634,9 +634,9 @@
     "removeTitle": "Kasboek aus Claude Desktop entfernen",
     "addBody": "Kasboek fügt in dieser Datei nur seinen eigenen Eintrag hinzu (oder aktualisiert ihn). Andere Server und Einstellungen bleiben, wie sie sind.",
     "removeBody": "Kasboek entfernt nur seinen eigenen Eintrag aus dieser Datei.",
-    "backupNote": "Zuerst wird eine Kopie der Datei daneben gespeichert. Beende Claude Desktop danach vollständig (auch über den Infobereich oder die Menüleiste) und öffne es wieder.",
+    "backupNote": "Vorher wird daneben eine Kopie der Datei gespeichert. Claude Desktop muss vollständig beendet sein, während Kasboek sich hinzufügt (auch über den Infobereich oder die Menüleiste); öffne es danach wieder.",
     "confirmAdd": "Hinzufügen",
-    "addedDesktop": "Hinzugefügt. Beende Claude Desktop vollständig (auch über das Symbol im Infobereich oder in der Menüleiste) und öffne es wieder. Kasboek erscheint dann unter Einstellungen → Developer und im Werkzeugmenü eines neuen Chats, nicht unter Connectors.",
+    "addedDesktop": "Hinzugefügt. Öffne Claude Desktop wieder: Kasboek erscheint unter Konnektoren und im Werkzeugmenü eines neuen Chats.",
     "removedDesktop": "Aus Claude Desktop entfernt. Starte es neu, damit es wirkt.",
     "codeAdded": "Zu Claude Code hinzugefügt. Starte eine neue Sitzung von Claude Code, um es zu nutzen.",
     "removedCode": "Aus Claude Code entfernt.",
@@ -645,7 +645,15 @@
     "waiting_other": "Noch {{count}} Anfragen warten",
     "close": "Schließen",
     "approveAll": "Alle {{count}} genehmigen",
-    "bridgeError": "Die Verbindung für Claude-Apps konnte nicht starten: {{error}}. Kasboek versucht es alle 30 Sekunden erneut."
+    "bridgeError": "Die Verbindung für Claude-Apps konnte nicht starten: {{error}}. Kasboek versucht es alle 30 Sekunden erneut.",
+    "seen": {
+      "never": "Noch nicht verbunden",
+      "now": "Jetzt verbunden",
+      "at": "Zuletzt genutzt um {{time}}"
+    },
+    "desktopOpen": "Claude Desktop ist noch geöffnet. Es speichert beim Beenden seine eigenen Einstellungen und würde Kasboek wieder entfernen. Beende es zuerst vollständig (auch über das Symbol im Infobereich oder in der Menüleiste).",
+    "addAnyway": "Trotzdem hinzufügen",
+    "overwritten": "Kasboek wurde aus den Einstellungen von Claude Desktop entfernt, vermutlich beim Beenden von Claude Desktop. Beende es vollständig und füge Kasboek dann erneut hinzu."
   },
   "fx": {
     "title": "Währungen",
@@ -1101,7 +1109,7 @@
     "tour": "Zeig mir alles",
     "claudeTitle": "Claude Desktop und Claude Code",
     "claudeBody": "Nutzt du schon eine Claude-App? Sie kann dein Budget lesen und Änderungen vorschlagen, solange Kasboek offen und entsperrt ist. Ihre Änderungen warten auf dein OK in Kasboek. Optional.",
-    "claudeNote": "Kasboek fügt nur seinen eigenen Eintrag zu den Einstellungen der Claude-App hinzu und legt vorher eine Kopie der Datei an. Starte Claude Desktop danach neu.",
+    "claudeNote": "Kasboek fügt nur seinen eigenen Eintrag zu den Einstellungen der Claude-App hinzu und legt vorher eine Kopie der Datei an. Beende Claude Desktop vollständig, bevor du es hinzufügst, und öffne es danach wieder.",
     "codeNotFound": "Claude Code wurde auf diesem Computer nicht gefunden. Du kannst es später in den Einstellungen einrichten.",
     "formatLabel": "Zahlen und Daten",
     "formatHint": "Wie Beträge, Daten und Uhrzeiten aussehen. Jeder Teil lässt sich in den Einstellungen einzeln festlegen.",

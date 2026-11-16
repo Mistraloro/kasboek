@@ -9,7 +9,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { AppError } from '@core/errors'
-import { claudeDesktopConfigPaths, codeEntryState, desktopEntryState, withKasboek, withoutKasboek, type ServerEntry } from '@core/mcp-config'
+import { claudeDesktopConfigPaths, codeEntryState, desktopEntryState, isClaudeDesktopProcess, withKasboek, withoutKasboek, type ServerEntry } from '@core/mcp-config'
 import type { McpSetupStatus } from '@shared/types'
 import { paths } from '../paths'
 import { stamp } from '../transfer/service'
@@ -64,6 +64,25 @@ export async function removeFromDesktop(): Promise<{ path: string; backup: strin
     if (i === 0) backup = b
   }
   return { path: all[0]!, backup }
+}
+
+function run(file: string, args: string[]): Promise<{ ok: boolean; out: string }> {
+  return new Promise((resolve) => execFile(file, args, { timeout: 8000, windowsHide: true }, (err, stdout) => resolve({ ok: !err, out: String(stdout) })))
+}
+
+/**
+ * Whether Claude Desktop is running. It keeps its settings in memory and writes the whole file back
+ * when it quits, which would undo Kasboek's change; so it has to be closed first.
+ */
+export async function claudeDesktopRunning(): Promise<boolean> {
+  if (process.platform === 'win32') {
+    const r = await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Get-Process -Name claude -ErrorAction SilentlyContinue | ForEach-Object { "P:" + $_.Path }'])
+    const paths = r.out.split(/\r?\n/).filter((l) => l.startsWith('P:')).map((l) => l.slice(2).trim() || null)
+    return paths.some(isClaudeDesktopProcess)
+  }
+  // The app's process is "Claude"; Claude Code's command is lowercase "claude".
+  if (process.platform === 'darwin') return (await run('pgrep', ['-x', 'Claude'])).ok
+  return false
 }
 
 /* ---------- Claude Code ---------- */

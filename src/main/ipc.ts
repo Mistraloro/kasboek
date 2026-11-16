@@ -24,7 +24,7 @@ import { checkProviderKey, listProviderModels } from './assistant/models'
 import { PROVIDERS } from '@shared/ai-providers'
 import { claudeEffort } from '@shared/reasoning'
 import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
-import { respondMcp } from './mcp/bridge'
+import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
 import { helperPath } from './mcp/channel'
 import { checkForUpdate, downloadUpdate, installUpdate, openReleasePage, updateStatus } from './update'
@@ -324,6 +324,8 @@ const desktopOps: OpTable = {
     }
   },
   'mcp.setupStatus': { mutates: false, assistant: false, handler: () => mcpSetup.setupStatus() },
+  'mcp.clients': { mutates: false, assistant: false, handler: () => mcpClientsSeen() },
+  'mcp.desktopRunning': { mutates: false, assistant: false, handler: async () => ({ running: await mcpSetup.claudeDesktopRunning() }) },
   'mcp.desktopAdd': { mutates: false, assistant: false, handler: () => mcpSetup.addToDesktop() },
   'mcp.desktopRemove': { mutates: false, assistant: false, handler: () => mcpSetup.removeFromDesktop() },
   'mcp.codeAdd': {

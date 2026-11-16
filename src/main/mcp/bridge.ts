@@ -9,6 +9,7 @@ import { createServer, type Server, type Socket } from 'node:net'
 import { getSettings } from '@core/settings'
 import { needsApproval } from '@shared/permissions'
 import type { OpName, OpResult } from '@shared/contract'
+import type { McpClientsSeen } from '@shared/types'
 import { compactResult, describeChange, mcpTools, precheck } from '../assistant/tools'
 import { broadcast, db, isUnlocked } from '../session'
 import { discoveryFile, socketPath, type BridgeRequest, type BridgeResponse } from './channel'
@@ -28,6 +29,22 @@ export function mcpBridgeError(): string | null {
 let lastUsed = 0
 export function mcpBridgeState(): { running: boolean; lastUsed: number } {
   return { running: !!server, lastUsed }
+}
+
+/**
+ * When each Claude app last reached Kasboek (ms). The helper checks the connection every few
+ * seconds while the app runs, so a recent time means "connected now". The app is known by the
+ * name it gives when it connects; older helpers don't pass it on ("other").
+ */
+const lastSeen: McpClientsSeen = { desktop: null, code: null, other: null }
+export function clientKind(name: unknown): keyof McpClientsSeen {
+  const n = String(name ?? '').toLowerCase()
+  if (n === 'claude-code' || n.startsWith('claude-code')) return 'code'
+  if (n === 'claude-ai' || n.includes('claude desktop') || n === 'claude') return 'desktop'
+  return 'other'
+}
+export function mcpClientsSeen(): McpClientsSeen {
+  return { ...lastSeen }
 }
 let token = ''
 const pending = new Map<string, (ok: boolean) => void>()
@@ -65,10 +82,11 @@ function askPerson(op: string, summary: string): Promise<boolean> {
 }
 
 async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
-  lastUsed = Date.now()
   const given = Buffer.from(String(req.token ?? ''))
   const expected = Buffer.from(token)
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { id: req.id, ok: false, error: 'Not authorised.' }
+  lastUsed = Date.now()
+  lastSeen[clientKind(req.client)] = lastUsed
   if (!isUnlocked()) return { id: req.id, ok: false, error: 'Kasboek is locked. Unlock it on your computer, then try again.' }
   if (!enabled()) return { id: req.id, ok: false, error: 'MCP access is switched off in Kasboek (Settings → Claude).' }
   if (req.call === 'list') return { id: req.id, ok: true, result: mcpTools().map(({ name, description, inputSchema, mutates }) => ({ name, description, inputSchema, mutates })) }

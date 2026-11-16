@@ -175,8 +175,7 @@
     "requestBody": "Um aplicativo Claude conectado via MCP quer fazer esta alteração:",
     "addBody": "O Kasboek só adiciona (ou atualiza) a sua própria entrada neste arquivo. Os outros servidores e definições ficam como estão.",
     "removeBody": "O Kasboek só remove a sua própria entrada deste arquivo.",
-    "backupNote": "Primeiro é salva uma cópia do arquivo ao lado. Depois, feche completamente o Claude Desktop (também pela área de notificação ou pela barra de menus) e volte a abri-lo.",
-    "addedDesktop": "Adicionado. Feche completamente o Claude Desktop (também pelo ícone na área de notificação ou na barra de menus) e volte a abri-lo. O Kasboek aparece depois em Configurações → Developer e no menu de ferramentas de uma nova conversa, não em Connectors."
+    "backupNote": "Primeiro é salva uma cópia do arquivo ao lado. O Claude Desktop tem de estar fechado por completo enquanto o Kasboek se adiciona (também na área de notificação ou na barra de menus); volte a abri-lo depois."
   },
   "fx": {
     "hint": "Cada conta mantém a sua própria moeda. Totais, orçamentos e patrimônio são mostrados na moeda principal, à taxa de câmbio da data de cada movimento.",
@@ -328,7 +327,7 @@
     "noTour": "Pular a visita",
     "tour": "Mostrar o aplicativo",
     "claudeBody": "Já usa um aplicativo Claude? Pode ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado. As alterações aguardam a sua aprovação no Kasboek. Opcional.",
-    "claudeNote": "O Kasboek só adiciona a sua própria entrada às definições do aplicativo Claude e guarda primeiro uma cópia do arquivo. Depois reinicie o Claude Desktop.",
+    "claudeNote": "O Kasboek só adiciona a sua própria entrada às definições do aplicativo Claude e guarda primeiro uma cópia do arquivo. Feche o Claude Desktop por completo antes de o adicionar e volte a abri-lo depois.",
     "codeNotFound": "O Claude Code não foi encontrado neste computador. Pode configurá-lo mais tarde nas Configurações.",
     "formatHint": "O aspeto dos valores, datas e horas. Cada parte é definida à parte nas Configurações.",
     "ecbHint": "Para contas ou pagamentos noutras moedas: as taxas de referência diárias do Banco Central Europeu, baixadas agora e mantidas atualizadas. Só as taxas são obtidas; nada sobre si é enviado."

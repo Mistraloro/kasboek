@@ -5,6 +5,7 @@ import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import type { LanguageCode } from '@shared/languages'
 import type { BackupStatus, McpSetupStatus, Settings } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
+import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopRunning } from '../components/ClaudeApps'
 import { CurrencySelect } from '../components/CurrencySelect'
 import { useToast } from '../components/Toast'
 import { startTour } from '../components/Tour'
@@ -35,6 +36,10 @@ function ClaudeApps({ enabled, onEnabled }: { enabled: boolean; onEnabled: (v: b
     })
   }
   const state = (s: 'absent' | 'current' | 'outdated'): ReactNode => <Badge tone={s === 'current' ? 'accent' : s === 'outdated' ? 'warning' : 'neutral'}>{t(`mcp.state.${s}`)}</Badge>
+  const seen = useClaudeClients()
+  // Claude Desktop rewrites its settings when it quits: add only while it is closed.
+  const desktopOpen = useDesktopRunning(enabled && !!st?.desktop && st.desktop.state !== 'current')
+  const addDesktop = (): void => act(call('mcp.desktopAdd'), t('mcp.addedDesktop'))
   return (
     <div className="flex flex-col gap-2.5">
       <Choice icon={<Plug size={16} />} title={t('mcp.title')} hint={t('mcp.hint')}>
@@ -43,19 +48,20 @@ function ClaudeApps({ enabled, onEnabled }: { enabled: boolean; onEnabled: (v: b
       {enabled && st && (
         <>
           {!st.helperFound && <p className="text-xs text-warning">{t('mcp.helperMissing')}</p>}
-          <Choice icon={<Monitor size={16} />} title={t('mcp.desktopLabel')} hint={st.desktop ? undefined : t('mcp.desktopUnavailable')}>
+          <Choice icon={<Monitor size={16} />} title={t('mcp.desktopLabel')} hint={st.desktop ? (st.desktop.state !== 'absent' || !!seen?.desktop) && <SeenLine at={seen?.desktop ?? seen?.other} /> : t('mcp.desktopUnavailable')}>
             {st.desktop && (
               <span className="flex items-center gap-2">
                 {state(st.desktop.state)}
                 {st.desktop.state !== 'current' && (
-                  <Button size="sm" variant="primary" disabled={busy} onClick={() => act(call('mcp.desktopAdd'), t('mcp.addedDesktop'))}>
+                  <Button size="sm" variant="primary" disabled={busy || desktopOpen} onClick={addDesktop}>
                     {st.desktop.state === 'outdated' ? t('mcp.update') : t('mcp.addDesktop')}
                   </Button>
                 )}
               </span>
             )}
           </Choice>
-          <Choice icon={<Terminal size={16} />} title={t('mcp.codeLabel')} hint={st.code ? undefined : t('welcome.codeNotFound')}>
+          {desktopOpen && <DesktopRunningWarning onAnyway={addDesktop} busy={busy} />}
+          <Choice icon={<Terminal size={16} />} title={t('mcp.codeLabel')} hint={st.code ? (st.code.state !== 'absent' || !!seen?.code) && <SeenLine at={seen?.code} /> : t('welcome.codeNotFound')}>
             {st.code && (
               <span className="flex items-center gap-2">
                 {state(st.code.state)}
