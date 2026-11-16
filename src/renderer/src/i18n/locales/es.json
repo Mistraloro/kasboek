@@ -30,7 +30,7 @@
     "stepBackupBody": "Cifradas, diarias, en la carpeta o unidad que elijas.",
     "stepAccounts": "Añade tus cuentas bancarias",
     "stepAccountsBody": "Ponle nombre a cada cuenta y, si quieres, el banco.",
-    "stepImport": "Importa un archivo CSV",
+    "stepImport": "Importa un archivo CSV o un extracto en PDF",
     "stepImportBody": "Kasboek lo lee y te muestra cada fila antes de guardar nada.",
     "open": "Abrir",
     "noBudgets": "No hay presupuestos para este mes",
@@ -49,8 +49,8 @@
     "subtitle": "Cada pago que entra y sale, en todas tus cuentas.",
     "search": "Buscar movimientos",
     "emptyTitle": "Aún no hay movimientos",
-    "emptyBody": "Importa un archivo CSV de tu banco para empezar.",
-    "goImport": "Importar un CSV",
+    "emptyBody": "Importa un archivo CSV o un extracto en PDF de tu banco para empezar.",
+    "goImport": "Importar un archivo",
     "add": "Añadir movimiento",
     "edit": "Movimiento",
     "account": "Cuenta",
@@ -152,13 +152,13 @@
   },
   "import": {
     "title": "Importar",
-    "subtitle": "Trae los archivos CSV de tu banco. No se guarda nada hasta que lo apruebes.",
-    "dropTitle": "Suelta aquí un archivo CSV",
+    "subtitle": "Trae archivos CSV o extractos en PDF de tu banco. No se guarda nada hasta que lo apruebes.",
+    "dropTitle": "Suelta aquí un archivo CSV o un extracto en PDF",
     "dropBody": "Kasboek lee el archivo, reconoce el formato, marca duplicados y problemas y sugiere categorías. Lo revisas todo antes de guardarlo.",
     "intoAccount": "Importar en",
     "needAccount": "Añade primero la cuenta bancaria, para que Kasboek sepa a dónde pertenecen estos movimientos.",
     "addAccount": "Añadir una cuenta",
-    "choose": "Elegir archivo CSV…",
+    "choose": "Elegir archivo CSV o PDF…",
     "recent": "Importaciones recientes",
     "rows_one": "{{count}} fila",
     "rows_other": "{{count}} filas",
@@ -237,7 +237,7 @@
     "checked": "{{ai}} ha revisado el archivo. Mira las notas encima de las filas.",
     "checkPrivacy": "Envía las filas de este archivo a {{aiCompany}}.",
     "claudeOff": "Configura un asistente en Ajustes para que revise los archivos.",
-    "anyBank": "Funciona con archivos CSV de cualquier banco: Kasboek lee los nombres de las columnas (neerlandés, francés, inglés o alemán) y recuerda cada formato tras la primera importación.",
+    "anyBank": "Funciona con archivos CSV de cualquier banco: Kasboek lee los nombres de las columnas (neerlandés, francés, inglés o alemán) y recuerda cada formato tras la primera importación. Los extractos en PDF con una tabla de movimientos se leen en este ordenador; no se envía nada a ninguna parte.",
     "layoutRecognised": "Formato reconocido",
     "checkPrivacyLocal": "Envía las filas de este archivo a {{ai}} en este ordenador o esta red.",
     "stopCheck": "Detener",
@@ -278,7 +278,25 @@
     "transfersPaired_one": "Se emparejó {{count}} traspaso entre tus cuentas.",
     "transfersPaired_other": "Se emparejaron {{count}} traspasos entre tus cuentas.",
     "transfersSuggested_one": "{{count}} posible traspaso para revisar en Movimientos → Traspasos.",
-    "transfersSuggested_other": "{{count}} posibles traspasos para revisar en Movimientos → Traspasos."
+    "transfersSuggested_other": "{{count}} posibles traspasos para revisar en Movimientos → Traspasos.",
+    "pdf": {
+      "reading": "Leyendo el PDF…",
+      "readingPage": "Leyendo el PDF… página {{page}} de {{pages}}",
+      "balanceOk": "Los importes suman el saldo final del extracto.",
+      "balanceMismatch": "Las filas no suman lo que indica el extracto: diferencia {{amount}}.",
+      "runningMismatch_one": "{{count}} fila no coincide con el saldo corriente.",
+      "runningMismatch_other": "{{count}} filas no coinciden con el saldo corriente.",
+      "flipHint": "Si es un extracto de tarjeta de crédito, prueba a invertir los signos.",
+      "flip": "Invertir signos",
+      "noTable": "Kasboek no ha encontrado la tabla de movimientos en este PDF.",
+      "chooseAnother": "Elegir otro archivo",
+      "note": {
+        "other_account": "Este extracto parece ser de {{iban}}, no de esta cuenta. Comprueba que has elegido la cuenta correcta.",
+        "dates_without_year": "El extracto muestra fechas sin año; Kasboek ha usado el periodo del extracto.",
+        "pages_without_text_one": "{{count}} página no tenía texto legible y se ha omitido.",
+        "pages_without_text_other": "{{count}} páginas no tenían texto legible y se han omitido."
+      }
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -1162,7 +1180,7 @@
     "introPrivate": "Privado desde el diseño",
     "introPrivateHint": "Tus datos están cifrados y se quedan en este ordenador. Sin cuenta, sin servidor de Kasboek.",
     "introImport": "Importa desde tu banco",
-    "introImportHint": "Suelta una exportación CSV de tu banco; Kasboek muestra cada fila antes de guardar nada.",
+    "introImportHint": "Suelta un archivo CSV o un extracto en PDF de tu banco; Kasboek muestra cada fila antes de guardar nada.",
     "introPlan": "Planifica y haz seguimiento",
     "introPlanHint": "Presupuestos, gastos fijos, metas de ahorro, una vista anual y tu patrimonio.",
     "introAssistant": "Un asistente, si lo quieres",
@@ -1205,7 +1223,7 @@
       "goals": "Ahorra para algo: un importe para una fecha, con lo que debes apartar cada mes.",
       "year": "Todo el año por mes y categoría, con exportación CSV y PDF para tus impuestos o tu gestor.",
       "networth": "Todas tus cuentas e inversiones juntas, a lo largo de meses o años.",
-      "import": "Trae una exportación CSV de tu banco. Deja que el asistente la revise antes de guardar.",
+      "import": "Trae un archivo CSV o un extracto en PDF de tu banco. Deja que el asistente lo revise antes de guardar.",
       "assistant": "Abre o cierra el asistente. Pregunta sobre tu dinero o deja que haga cambios que esperan tu aprobación.",
       "settings": "Cuentas, copias de seguridad, sincronización entre ordenadores, el asistente, formatos y más.",
       "lock": "Bloquea Kasboek cuando te ausentes. También se bloquea solo al cabo de un rato."
@@ -1237,6 +1255,13 @@
     "auth_device_not_configured": "Windows Hello no está configurado para tu cuenta de Windows. Configúralo primero en los ajustes de Windows.",
     "auth_device_disabled": "Windows Hello está desactivado por una directiva de este ordenador.",
     "auth_device_busy": "Windows Hello está ocupado. Inténtalo de nuevo en un momento.",
-    "auth_device_retries_exhausted": "Windows Hello se detuvo tras demasiados intentos fallidos. Inténtalo más tarde."
+    "auth_device_retries_exhausted": "Windows Hello se detuvo tras demasiados intentos fallidos. Inténtalo más tarde.",
+    "import_not_pdf": "Este archivo no es un PDF.",
+    "import_is_pdf": "Este es un archivo PDF. Ábrelo como extracto bancario.",
+    "import_pdf_password": "Este PDF está protegido con contraseña. Quita la contraseña en tu lector de PDF o en la app de tu banco e inténtalo de nuevo.",
+    "import_pdf_broken": "No se ha podido leer este PDF. Puede que el archivo esté dañado. Vuelve a descargarlo de tu banco.",
+    "import_pdf_too_large": "Este PDF es demasiado grande o complejo para leerlo. Prueba con un PDF de un solo extracto.",
+    "import_pdf_scanned": "Este PDF no tiene texto seleccionable (probablemente es un escaneo o una foto). Pide a tu banco un CSV o un PDF con texto.",
+    "import_pdf_busy": "Todavía se está leyendo otro PDF. Espera un momento e inténtalo de nuevo."
   }
 }

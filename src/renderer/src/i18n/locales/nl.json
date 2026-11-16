@@ -30,7 +30,7 @@
     "stepBackupBody": "Versleuteld, dagelijks, naar een map of schijf naar keuze.",
     "stepAccounts": "Voeg je bankrekeningen toe",
     "stepAccountsBody": "Geef elke rekening een naam, en als je wilt de bank.",
-    "stepImport": "Importeer een CSV-export",
+    "stepImport": "Importeer een CSV-export of pdf-afschrift",
     "stepImportBody": "Kasboek leest het bestand en toont elke regel voordat er iets bewaard wordt.",
     "open": "Openen",
     "noBudgets": "Geen budgetten voor deze maand",
@@ -49,8 +49,8 @@
     "subtitle": "Elke betaling in en uit, over al je rekeningen.",
     "search": "Verrichtingen zoeken",
     "emptyTitle": "Nog geen verrichtingen",
-    "emptyBody": "Importeer een CSV-export van je bank om te beginnen.",
-    "goImport": "CSV importeren",
+    "emptyBody": "Importeer een CSV-export of pdf-afschrift van je bank om te beginnen.",
+    "goImport": "Een bestand importeren",
     "add": "Verrichting toevoegen",
     "edit": "Verrichting",
     "account": "Rekening",
@@ -152,13 +152,13 @@
   },
   "import": {
     "title": "Importeren",
-    "subtitle": "Haal CSV-exports van je bank binnen. Er wordt niets bewaard tot jij het goedkeurt.",
-    "dropTitle": "Sleep een CSV-export hierheen",
+    "subtitle": "Haal CSV-exports of pdf-afschriften van je bank binnen. Er wordt niets bewaard tot jij het goedkeurt.",
+    "dropTitle": "Sleep een CSV-export of pdf-afschrift hierheen",
     "dropBody": "Kasboek leest het bestand, herkent de indeling, markeert dubbele en foute regels en stelt categorieën voor. Je kijkt alles na voordat het bewaard wordt.",
     "intoAccount": "Importeren in",
     "needAccount": "Voeg eerst de bankrekening toe, zodat Kasboek weet waar deze verrichtingen bij horen.",
     "addAccount": "Rekening toevoegen",
-    "choose": "CSV-bestand kiezen…",
+    "choose": "CSV- of pdf-bestand kiezen…",
     "recent": "Recente imports",
     "rows_one": "{{count}} regel",
     "rows_other": "{{count}} regels",
@@ -237,7 +237,7 @@
     "checked": "{{ai}} heeft het bestand nagekeken. Zie de notities boven de regels.",
     "checkPrivacy": "Stuurt de regels van dit bestand naar {{aiCompany}}.",
     "claudeOff": "Stel in Instellingen een assistent in om bestanden te laten nakijken.",
-    "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import.",
+    "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd.",
     "layoutRecognised": "Indeling herkend",
     "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk.",
     "stopCheck": "Stoppen",
@@ -278,7 +278,25 @@
     "transfersPaired_one": "{{count}} overboeking tussen je rekeningen is gekoppeld.",
     "transfersPaired_other": "{{count}} overboekingen tussen je rekeningen zijn gekoppeld.",
     "transfersSuggested_one": "{{count}} mogelijke overboeking om na te kijken bij Verrichtingen → Overboekingen.",
-    "transfersSuggested_other": "{{count}} mogelijke overboekingen om na te kijken bij Verrichtingen → Overboekingen."
+    "transfersSuggested_other": "{{count}} mogelijke overboekingen om na te kijken bij Verrichtingen → Overboekingen.",
+    "pdf": {
+      "reading": "De pdf wordt gelezen…",
+      "readingPage": "De pdf wordt gelezen… pagina {{page}} van {{pages}}",
+      "balanceOk": "De bedragen komen uit op het eindsaldo van het afschrift.",
+      "balanceMismatch": "De rijen komen niet uit op het afschrift: verschil {{amount}}.",
+      "runningMismatch_one": "{{count}} rij klopt niet met het lopende saldo.",
+      "runningMismatch_other": "{{count}} rijen kloppen niet met het lopende saldo.",
+      "flipHint": "Is dit een afschrift van een creditcard? Probeer dan de tekens om te draaien.",
+      "flip": "Tekens omdraaien",
+      "noTable": "Kasboek kon de tabel met transacties in deze pdf niet vinden.",
+      "chooseAnother": "Ander bestand kiezen",
+      "note": {
+        "other_account": "Dit afschrift lijkt voor {{iban}} te zijn, niet voor deze rekening. Controleer of je de juiste rekening hebt gekozen.",
+        "dates_without_year": "Het afschrift toont datums zonder jaar; Kasboek gebruikte de periode van het afschrift.",
+        "pages_without_text_one": "{{count}} pagina had geen leesbare tekst en is overgeslagen.",
+        "pages_without_text_other": "{{count}} pagina’s hadden geen leesbare tekst en zijn overgeslagen."
+      }
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -1162,7 +1180,7 @@
     "introPrivate": "Privé van bij het begin",
     "introPrivateHint": "Je gegevens zijn versleuteld en blijven op deze computer. Geen account, geen Kasboek-server.",
     "introImport": "Importeren van je bank",
-    "introImportHint": "Sleep een CSV-export van je bank erin; Kasboek toont elke rij voor er iets bewaard wordt.",
+    "introImportHint": "Sleep een CSV-export of pdf-afschrift van je bank erin; Kasboek toont elke rij voor er iets bewaard wordt.",
     "introPlan": "Plannen en opvolgen",
     "introPlanHint": "Budgetten, vaste kosten, spaardoelen, een jaaroverzicht en je vermogen.",
     "introAssistant": "Een assistent, als je wilt",
@@ -1205,7 +1223,7 @@
       "goals": "Spaar voor iets: een bedrag tegen een datum, met wat je elke maand opzij moet zetten.",
       "year": "Het hele jaar per maand en categorie, met CSV- en PDF-export voor je belastingen of boekhouder.",
       "networth": "Al je rekeningen en beleggingen samen, over maanden of jaren.",
-      "import": "Haal een CSV-export van je bank binnen. Laat de assistent ze nakijken voor je bewaart.",
+      "import": "Haal een CSV-export of pdf-afschrift van je bank binnen. Laat het de assistent nakijken voor je bewaart.",
       "assistant": "Open of sluit de assistent. Vraag iets over je geld, of laat hem wijzigingen maken die op je akkoord wachten.",
       "settings": "Rekeningen, back-ups, synchroniseren tussen computers, de assistent, notaties en meer.",
       "lock": "Vergrendel Kasboek als je even weggaat. Na een tijdje vergrendelt het ook vanzelf."
@@ -1237,6 +1255,13 @@
     "auth_device_not_configured": "Windows Hello is niet ingesteld voor je Windows-account. Stel het eerst in via de Windows-instellingen.",
     "auth_device_disabled": "Windows Hello is uitgeschakeld door een beleidsregel op deze computer.",
     "auth_device_busy": "Windows Hello is bezig. Probeer het zo meteen opnieuw.",
-    "auth_device_retries_exhausted": "Windows Hello is gestopt na te veel mislukte pogingen. Probeer het later opnieuw."
+    "auth_device_retries_exhausted": "Windows Hello is gestopt na te veel mislukte pogingen. Probeer het later opnieuw.",
+    "import_not_pdf": "Dit bestand is geen pdf.",
+    "import_is_pdf": "Dit is een pdf-bestand. Open het als bankafschrift.",
+    "import_pdf_password": "Deze pdf is beveiligd met een wachtwoord. Haal het wachtwoord weg in je pdf-lezer of bankapp en probeer opnieuw.",
+    "import_pdf_broken": "Deze pdf kon niet gelezen worden. Het bestand is mogelijk beschadigd. Download het opnieuw bij je bank.",
+    "import_pdf_too_large": "Deze pdf is te groot of te ingewikkeld om te lezen. Probeer een pdf met één afschrift.",
+    "import_pdf_scanned": "Deze pdf bevat geen selecteerbare tekst (waarschijnlijk een scan of foto). Vraag je bank om een CSV, of om een pdf met tekst.",
+    "import_pdf_busy": "Er wordt nog een andere pdf gelezen. Wacht even en probeer opnieuw."
   }
 }

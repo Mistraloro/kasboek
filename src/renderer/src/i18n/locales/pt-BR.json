@@ -28,10 +28,10 @@
     "reachOther_other": "{{count}} já estão em outra categoria e ficam lá."
   },
   "import": {
-    "subtitle": "Traga os arquivos CSV do seu banco. Nada é salvo sem a sua aprovação.",
-    "dropTitle": "Solte aqui um arquivo CSV",
+    "subtitle": "Traga arquivos CSV ou extratos em PDF do seu banco. Nada é salvo sem a sua aprovação.",
+    "dropTitle": "Solte aqui um arquivo CSV ou um extrato em PDF",
     "dropBody": "O Kasboek lê o arquivo, reconhece o formato, marca duplicados e problemas e sugere categorias. Você revisa tudo antes de ser salvo.",
-    "choose": "Escolher arquivo CSV…",
+    "choose": "Escolher arquivo CSV ou PDF…",
     "undo": "Desfazer",
     "reviewTitle": "Revisar importação",
     "source": {
@@ -341,7 +341,7 @@
     "introBody": "Um aplicativo de orçamento que guarda as suas finanças no seu próprio computador. Algumas escolhas e pronto.",
     "introPrivate": "Privado desde a origem",
     "introPrivateHint": "Os seus dados são criptografados e ficam neste computador. Sem conta, sem servidor do Kasboek.",
-    "introImportHint": "Solte uma exportação CSV do seu banco; o Kasboek mostra cada linha antes de salvar alguma coisa.",
+    "introImportHint": "Solte um arquivo CSV ou um extrato em PDF do seu banco; o Kasboek mostra cada linha antes de salvar alguma coisa.",
     "introPlan": "Planejar e acompanhar",
     "introPlanHint": "Orçamentos, custos fixos, metas de economia, uma visão anual e o seu patrimônio.",
     "basicsBody": "Você pode alterar tudo isso mais tarde nas Configurações.",
@@ -367,7 +367,7 @@
       "recurring": "Assinaturas, aluguel, seguros e salário, encontrados nos seus movimentos, com o que ainda falta pagar este mês.",
       "goals": "Economize para algo: um valor até uma data, com o que deve reservar por mês.",
       "year": "O ano inteiro por mês e categoria, com exportação CSV e PDF para os impostos ou o contador.",
-      "import": "Traga uma exportação CSV do seu banco. Deixe o assistente verificá-la antes de salvar.",
+      "import": "Traga um arquivo CSV ou um extrato em PDF do seu banco. Deixe o assistente verificá-lo antes de salvar.",
       "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo."
     }
   },

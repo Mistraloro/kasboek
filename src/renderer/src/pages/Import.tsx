@@ -6,6 +6,7 @@ import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
+import { SNIFF_BYTES, fileKindOf, isCancelledRead, reconciliationBanner } from '@shared/pdf-import'
 import { dateExample, datePlaceholder, parseDate } from '@shared/format'
 import { ApiError, call, useOp } from '../lib/api'
 import { openSettingsTab } from '../lib/settings-tab'
@@ -36,6 +37,9 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   const [done, setDone] = useState<(ImportCommitResult & { accountId: number; currency: string }) | null>(null)
   const [busy, setBusy] = useState(false)
   const [drag, setDrag] = useState(false)
+  // A PDF being read: the page the reader is on (0 before the first page is reported).
+  const [reading, setReading] = useState<{ page: number; pages: number } | null>(null)
+  const busyRef = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const account = accountId ?? accounts.data?.find((a) => !a.archived)?.id ?? null
   const assistant = useAssistant()
@@ -56,6 +60,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
     () =>
       window.kasboek.onEvent((e) => {
         // The chat assistant can change the open import too: refresh when it does.
+        if (e.type === 'import.pdfProgress') setReading((cur) => cur && { page: e.page, pages: e.pages })
         if (e.type === 'import.updated') void call('import.current').then((p) => p && setPreview(p))
         if (e.type === 'import.checkDone' && e.sessionId === sessionRef.current) {
           setAssisting(null)
@@ -71,15 +76,24 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   )
 
   const open = async (file: File): Promise<void> => {
-    if (!account) return
+    // A second file while one is being opened is ignored.
+    if (!account || busyRef.current) return
+    busyRef.current = true
     setBusy(true)
     try {
-      setPreview(await call('import.analyze', { fileName: file.name, contentBase64: toBase64(await file.arrayBuffer()), accountId: account }))
+      // PDF or text is decided by the file's first bytes, not by its name.
+      const isPdf = fileKindOf(new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer())) === 'pdf'
+      const input = { fileName: file.name, contentBase64: toBase64(await file.arrayBuffer()), accountId: account }
+      if (isPdf) setReading({ page: 0, pages: 0 })
+      setPreview(await call(isPdf ? 'import.analyzePdf' : 'import.analyze', input))
       setDone(null)
     } catch (e) {
-      toast(errText(e), 'error')
+      // Cancelling is the person's own choice: back to the drop zone without a message.
+      if (!(e instanceof ApiError && isCancelledRead(e.code))) toast(errText(e), 'error')
     } finally {
+      setReading(null)
       setBusy(false)
+      busyRef.current = false
     }
   }
 
@@ -160,8 +174,15 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
             <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent"><FileUp size={20} /></div>
             <h3 className="font-semibold">{t('import.dropTitle')}</h3>
             <p className="mt-1 max-w-md text-[13px] text-muted">{t('import.dropBody')}</p>
-            <Button className="mt-5" variant="primary" disabled={busy || !account} onClick={() => fileInput.current?.click()}>{busy ? t('auth.working') : t('import.choose')}</Button>
-            <input ref={fileInput} type="file" accept=".csv,.txt,text/csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void open(f) }} />
+            {reading ? (
+              <div className="mt-5 flex items-center gap-3 text-[13px]" role="status">
+                <span className="num">{reading.pages > 0 ? t('import.pdf.readingPage', { page: reading.page, pages: reading.pages }) : t('import.pdf.reading')}</span>
+                <Button size="sm" onClick={() => void call('import.pdfCancel')}>{t('settings.cancel')}</Button>
+              </div>
+            ) : (
+              <Button className="mt-5" variant="primary" disabled={busy || !account} onClick={() => fileInput.current?.click()}>{busy ? t('auth.working') : t('import.choose')}</Button>
+            )}
+            <input ref={fileInput} type="file" accept=".csv,.txt,.pdf,text/csv,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void open(f) }} />
           </div>
           <p className="mt-4 text-[13px] text-muted">{t('import.anyBank')}</p>
         </>
@@ -218,7 +239,10 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
   }, [assisting, preview.sessionId])
   const [filter, setFilter] = useState<Filter>(preview.stats.problems ? 'problem' : preview.stats.possibleDuplicates ? 'possible_duplicate' : 'all')
   const [limit, setLimit] = useState(300)
-  const [mappingOpen, setMappingOpen] = useState(!preview.mapping)
+  const pdf = preview.pdf
+  // A PDF without a table of transactions has no columns to choose from.
+  const noTable = pdf?.tableFound === false
+  const [mappingOpen, setMappingOpen] = useState(!preview.mapping && !noTable)
   const [saveProfile, setSaveProfile] = useState(true)
   const [busy, setBusy] = useState(false)
   const s = preview.stats
@@ -227,6 +251,26 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
   const allKnown = !!preview.mapping && s.total > 0 && s.ready === 0 && s.duplicates + s.possibleDuplicates + s.skipped === s.total && s.duplicates > 0
   const update = (changes: Parameters<typeof call<'import.updateRows'>>[1]['changes']): void =>
     void call('import.updateRows', { sessionId: preview.sessionId, changes }).then(onChange, (e) => toast(errText(e), 'error'))
+
+  const banner = reconciliationBanner(pdf?.reconciliation ?? null)
+  const running = pdf?.reconciliation?.runningMismatches ?? 0
+  const notes = [
+    ...preview.notes,
+    ...(pdf?.notes ?? []).map((n) => {
+      switch (n.code) {
+        case 'other_account':
+          return t('import.pdf.note.other_account', { iban: n.iban })
+        case 'dates_without_year':
+          return t('import.pdf.note.dates_without_year')
+        case 'pages_without_text':
+          return t('import.pdf.note.pages_without_text', { count: n.count })
+      }
+    })
+  ]
+  // "Flip signs" in the column editor, in one step.
+  const flipSigns = (): void => {
+    if (preview.mapping) void call('import.remap', { sessionId: preview.sessionId, mapping: { ...preview.mapping, invertSign: !preview.mapping.invertSign } }).then(onChange, (e) => toast(errText(e), 'error'))
+  }
 
   const chip = (f: Filter, label: string, n: number, tone?: string): ReactNode => (
     <button type="button" onClick={() => setFilter(f)} className={cx('rounded-full border px-3 py-1 text-[13px] font-medium transition-colors', filter === f ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-surface text-muted hover:text-text', tone)}>
@@ -242,7 +286,8 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           <span className="flex flex-wrap items-center gap-2">
             <span className="selectable font-medium text-text">{preview.fileName}</span> → {preview.accountName}
             {preview.layout && <Badge tone="accent">{t('import.layoutRecognised')}</Badge>}
-            <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>
+            {pdf && <Badge>PDF</Badge>}
+            {!noTable && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
           </span>
         }
         action={
@@ -264,7 +309,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           </span>
         </div>
       )}
-      <Card className="mb-4 px-5 py-4">
+      {!noTable && <Card className="mb-4 px-5 py-4">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px]">
           {!allKnown && (
             <>
@@ -293,16 +338,34 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
             <Button size="sm" icon={<Columns3 size={14} />} onClick={() => setMappingOpen(true)}>{t('import.columns')}</Button>
           </span>
         </div>
-        {preview.notes.length > 0 && (
+        {(banner.kind !== 'none' || running > 0) && (
+          <div className="mt-3 space-y-1 border-t border-border pt-3 text-[13px]">
+            {banner.kind === 'ok' && <p className="flex items-center gap-2 text-accent"><CheckCircle2 size={14} className="shrink-0" />{t('import.pdf.balanceOk')}</p>}
+            {(banner.kind === 'mismatch' || banner.kind === 'maybeFlip') && (
+              <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.balanceMismatch', { amount: money(banner.differenceCents, preview.currency) })}</p>
+            )}
+            {running > 0 && <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.runningMismatch', { count: running })}</p>}
+            {banner.kind === 'maybeFlip' && preview.mapping && (
+              <p className="flex items-center gap-2 text-muted">{t('import.pdf.flipHint')} <Button size="sm" onClick={flipSigns}>{t('import.pdf.flip')}</Button></p>
+            )}
+          </div>
+        )}
+        {notes.length > 0 && (
           <ul className="mt-3 list-disc space-y-0.5 border-t border-border pt-3 pl-5 text-[13px] text-muted">
-            {preview.notes.map((n, i) => <li key={i}>{n}</li>)}
+            {notes.map((n, i) => <li key={i}>{n}</li>)}
           </ul>
         )}
-      </Card>
+      </Card>}
 
       {preview.check && <CheckSummaryCard preview={preview} onChange={onChange} />}
 
-      {!preview.mapping ? (
+      {noTable ? (
+        <Card className="px-5 py-6 text-[13px] text-muted">
+          <p><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.pdf.noTable')}</p>
+          {notes.length > 0 && <ul className="mt-3 list-disc space-y-0.5 pl-5">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
+          <Button className="mt-4" variant="primary" onClick={onCancel}>{t('import.pdf.chooseAnother')}</Button>
+        </Card>
+      ) : !preview.mapping ? (
         <Card className="px-5 py-6 text-[13px] text-muted"><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.noMapping')}</Card>
       ) : (
         <>
@@ -384,7 +447,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           {rows.length > limit && <div className="mt-4 flex justify-center"><Button onClick={() => setLimit((l) => l + 500)}>{t('transactions.more')}</Button></div>}
         </>
       )}
-      <MappingModal open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />
+      {!noTable && <MappingModal key={JSON.stringify(preview.mapping)} open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />}
     </>
   )
 }

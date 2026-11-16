@@ -31,6 +31,12 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   bank reference, and "maybe imported" when the bank changed the text), applies your rules and the
   names you tidied before, and shows everything before saving. Undo per import. Export to CSV, and
   a year report as PDF.
+- **PDF statements**: drop a bank statement as PDF (one with selectable text; scans and photos are
+  not read). Kasboek finds the table of transactions on this computer, in a separate reader process;
+  the file is not sent anywhere. It checks the rows against the opening and closing balance printed
+  on the statement and says so when they don't add up (and suggests flipping the signs for a credit
+  card statement). Password-protected PDFs have to be unlocked first. Where no table is found, there
+  is nothing to import from that file: ask the bank for a CSV.
 - **Assistant**: ask questions about your money or let the assistant make changes. You choose which
   kinds of change it may make by itself and which wait for your OK (Settings → Assistant → "What
   the assistant may do by itself"), how much it reasons per model, and what it remembers between conversations

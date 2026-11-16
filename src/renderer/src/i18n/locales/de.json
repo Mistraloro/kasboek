@@ -30,7 +30,7 @@
     "stepBackupBody": "Verschlüsselt, täglich, in einen Ordner oder auf ein Laufwerk deiner Wahl.",
     "stepAccounts": "Bankkonten hinzufügen",
     "stepAccountsBody": "Gib jedem Konto einen Namen, und wenn du willst die Bank.",
-    "stepImport": "Einen CSV-Export importieren",
+    "stepImport": "Einen CSV-Export oder PDF-Kontoauszug importieren",
     "stepImportBody": "Kasboek liest ihn und zeigt jede Zeile, bevor etwas gespeichert wird.",
     "open": "Öffnen",
     "noBudgets": "Keine Budgets für diesen Monat",
@@ -49,8 +49,8 @@
     "subtitle": "Jede Zahlung rein und raus, über alle Konten.",
     "search": "Buchungen suchen",
     "emptyTitle": "Noch keine Buchungen",
-    "emptyBody": "Importiere einen CSV-Export deiner Bank, um loszulegen.",
-    "goImport": "CSV importieren",
+    "emptyBody": "Importiere einen CSV-Export oder PDF-Kontoauszug deiner Bank, um loszulegen.",
+    "goImport": "Datei importieren",
     "add": "Buchung hinzufügen",
     "edit": "Buchung",
     "account": "Konto",
@@ -152,13 +152,13 @@
   },
   "import": {
     "title": "Import",
-    "subtitle": "Hol CSV-Exporte deiner Bank herein. Nichts wird gespeichert, bevor du zustimmst.",
-    "dropTitle": "CSV-Export hierher ziehen",
+    "subtitle": "Hol CSV-Exporte oder PDF-Kontoauszüge deiner Bank herein. Nichts wird gespeichert, bevor du zustimmst.",
+    "dropTitle": "CSV-Export oder PDF-Kontoauszug hierher ziehen",
     "dropBody": "Kasboek liest die Datei, erkennt das Format, markiert Doppelte und Probleme und schlägt Kategorien vor. Du prüfst alles, bevor es gespeichert wird.",
     "intoAccount": "Importieren in",
     "needAccount": "Füge zuerst das Bankkonto hinzu, damit Kasboek weiß, wohin diese Buchungen gehören.",
     "addAccount": "Konto hinzufügen",
-    "choose": "CSV-Datei wählen…",
+    "choose": "CSV- oder PDF-Datei wählen…",
     "recent": "Letzte Importe",
     "rows_one": "{{count}} Zeile",
     "rows_other": "{{count}} Zeilen",
@@ -237,7 +237,7 @@
     "checked": "{{ai}} hat die Datei geprüft. Siehe die Hinweise über den Zeilen.",
     "checkPrivacy": "Sendet die Zeilen dieser Datei an {{aiCompany}}.",
     "claudeOff": "Richte in den Einstellungen einen Assistenten ein, um Dateien prüfen zu lassen.",
-    "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import.",
+    "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet.",
     "layoutRecognised": "Format erkannt",
     "checkPrivacyLocal": "Sendet die Zeilen dieser Datei an {{ai}} auf diesem Computer oder in diesem Netzwerk.",
     "stopCheck": "Stopp",
@@ -278,7 +278,25 @@
     "transfersPaired_one": "{{count}} Umbuchung zwischen deinen Konten wurde verknüpft.",
     "transfersPaired_other": "{{count}} Umbuchungen zwischen deinen Konten wurden verknüpft.",
     "transfersSuggested_one": "{{count}} mögliche Umbuchung zum Prüfen unter Buchungen → Umbuchungen.",
-    "transfersSuggested_other": "{{count}} mögliche Umbuchungen zum Prüfen unter Buchungen → Umbuchungen."
+    "transfersSuggested_other": "{{count}} mögliche Umbuchungen zum Prüfen unter Buchungen → Umbuchungen.",
+    "pdf": {
+      "reading": "PDF wird gelesen…",
+      "readingPage": "PDF wird gelesen… Seite {{page}} von {{pages}}",
+      "balanceOk": "Die Beträge ergeben den Schlusssaldo des Kontoauszugs.",
+      "balanceMismatch": "Die Zeilen ergeben nicht den Kontoauszug: Differenz {{amount}}.",
+      "runningMismatch_one": "{{count}} Zeile passt nicht zum laufenden Saldo.",
+      "runningMismatch_other": "{{count}} Zeilen passen nicht zum laufenden Saldo.",
+      "flipHint": "Falls das ein Kreditkartenauszug ist, versuche die Vorzeichen umzukehren.",
+      "flip": "Vorzeichen umkehren",
+      "noTable": "Kasboek konnte die Umsatztabelle in diesem PDF nicht finden.",
+      "chooseAnother": "Andere Datei wählen",
+      "note": {
+        "other_account": "Dieser Kontoauszug scheint zu {{iban}} zu gehören, nicht zu diesem Konto. Prüfe, ob du das richtige Konto gewählt hast.",
+        "dates_without_year": "Der Kontoauszug zeigt Daten ohne Jahr; Kasboek hat den Zeitraum des Auszugs verwendet.",
+        "pages_without_text_one": "{{count}} Seite hatte keinen lesbaren Text und wurde übersprungen.",
+        "pages_without_text_other": "{{count}} Seiten hatten keinen lesbaren Text und wurden übersprungen."
+      }
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -1162,7 +1180,7 @@
     "introPrivate": "Privat von Grund auf",
     "introPrivateHint": "Deine Daten sind verschlüsselt und bleiben auf diesem Computer. Kein Konto, kein Kasboek-Server.",
     "introImport": "Von deiner Bank importieren",
-    "introImportHint": "Zieh einen CSV-Export deiner Bank hinein; Kasboek zeigt jede Zeile, bevor etwas gespeichert wird.",
+    "introImportHint": "Zieh einen CSV-Export oder PDF-Kontoauszug deiner Bank hinein; Kasboek zeigt jede Zeile, bevor etwas gespeichert wird.",
     "introPlan": "Planen und verfolgen",
     "introPlanHint": "Budgets, Fixkosten, Sparziele, eine Jahresansicht und dein Vermögen.",
     "introAssistant": "Ein Assistent, wenn du willst",
@@ -1205,7 +1223,7 @@
       "goals": "Spar auf etwas hin: ein Betrag bis zu einem Datum, mit dem, was du jeden Monat zurücklegen solltest.",
       "year": "Das ganze Jahr nach Monat und Kategorie, mit CSV- und PDF-Export für die Steuer oder deine Steuerberatung.",
       "networth": "Alle deine Konten und Anlagen zusammen, über Monate oder Jahre.",
-      "import": "Hol einen CSV-Export deiner Bank herein. Lass ihn vom Assistenten prüfen, bevor du speicherst.",
+      "import": "Hol einen CSV-Export oder PDF-Kontoauszug deiner Bank herein. Lass ihn vom Assistenten prüfen, bevor du speicherst.",
       "assistant": "Öffne oder schließe den Assistenten. Frag etwas zu deinem Geld oder lass ihn Änderungen machen, die auf dein OK warten.",
       "settings": "Konten, Sicherungen, Synchronisieren zwischen Computern, der Assistent, Formate und mehr.",
       "lock": "Sperr Kasboek, wenn du kurz weggehst. Nach einer Weile sperrt es sich auch selbst."
@@ -1237,6 +1255,13 @@
     "auth_device_not_configured": "Windows Hello ist für dein Windows-Konto nicht eingerichtet. Richte es zuerst in den Windows-Einstellungen ein.",
     "auth_device_disabled": "Windows Hello ist durch eine Richtlinie auf diesem Computer deaktiviert.",
     "auth_device_busy": "Windows Hello ist beschäftigt. Versuche es gleich noch einmal.",
-    "auth_device_retries_exhausted": "Windows Hello wurde nach zu vielen fehlgeschlagenen Versuchen angehalten. Versuche es später erneut."
+    "auth_device_retries_exhausted": "Windows Hello wurde nach zu vielen fehlgeschlagenen Versuchen angehalten. Versuche es später erneut.",
+    "import_not_pdf": "Diese Datei ist kein PDF.",
+    "import_is_pdf": "Das ist eine PDF-Datei. Öffne sie stattdessen als Kontoauszug.",
+    "import_pdf_password": "Dieses PDF ist passwortgeschützt. Entferne das Passwort in deinem PDF-Programm oder deiner Banking-App und versuche es erneut.",
+    "import_pdf_broken": "Dieses PDF konnte nicht gelesen werden. Die Datei ist vielleicht beschädigt. Lade sie erneut bei deiner Bank herunter.",
+    "import_pdf_too_large": "Dieses PDF ist zu groß oder zu komplex zum Lesen. Versuche ein PDF mit einem einzelnen Kontoauszug.",
+    "import_pdf_scanned": "Dieses PDF enthält keinen markierbaren Text (wahrscheinlich ein Scan oder Foto). Bitte deine Bank um eine CSV-Datei oder ein PDF mit Text.",
+    "import_pdf_busy": "Ein anderes PDF wird noch gelesen. Warte einen Moment und versuche es erneut."
   }
 }

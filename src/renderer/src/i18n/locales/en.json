@@ -30,7 +30,7 @@
     "stepBackupBody": "Encrypted, daily, to a folder or drive you choose.",
     "stepAccounts": "Add your bank accounts",
     "stepAccountsBody": "Give each account a name, and the bank if you like.",
-    "stepImport": "Import a CSV export",
+    "stepImport": "Import a CSV export or PDF statement",
     "stepImportBody": "Kasboek reads it and shows every row before anything is saved.",
     "open": "Open",
     "noBudgets": "No budgets set for this month",
@@ -49,8 +49,8 @@
     "subtitle": "Every payment in and out, across all accounts.",
     "search": "Search transactions",
     "emptyTitle": "No transactions yet",
-    "emptyBody": "Import a CSV export from your bank to get started.",
-    "goImport": "Import a CSV",
+    "emptyBody": "Import a CSV export or PDF statement from your bank to get started.",
+    "goImport": "Import a file",
     "add": "Add transaction",
     "edit": "Transaction",
     "account": "Account",
@@ -152,13 +152,13 @@
   },
   "import": {
     "title": "Import",
-    "subtitle": "Bring in CSV exports from your bank. Nothing is saved until you approve.",
-    "dropTitle": "Drop a CSV export here",
+    "subtitle": "Bring in CSV exports or PDF statements from your bank. Nothing is saved until you approve.",
+    "dropTitle": "Drop a CSV export or PDF statement here",
     "dropBody": "Kasboek reads the file, recognises the bank, flags duplicates and problems, and suggests categories. You review everything before it’s saved.",
     "intoAccount": "Import into",
     "needAccount": "Add the bank account first, so Kasboek knows where these transactions belong.",
     "addAccount": "Add an account",
-    "choose": "Choose CSV file…",
+    "choose": "Choose CSV or PDF file…",
     "recent": "Recent imports",
     "rows_one": "{{count}} row",
     "rows_other": "{{count}} rows",
@@ -237,7 +237,7 @@
     "checked": "{{ai}} checked the file. See the notes above the rows.",
     "checkPrivacy": "Sends the rows of this file to {{aiCompany}}.",
     "claudeOff": "Set up an assistant in Settings to have it check files.",
-    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import.",
+    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere.",
     "layoutRecognised": "Layout recognised",
     "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network.",
     "stopCheck": "Stop",
@@ -278,7 +278,25 @@
     "transfersPaired_one": "{{count}} transfer between your accounts was paired.",
     "transfersPaired_other": "{{count}} transfers between your accounts were paired.",
     "transfersSuggested_one": "{{count}} possible transfer to check under Transactions → Transfers.",
-    "transfersSuggested_other": "{{count}} possible transfers to check under Transactions → Transfers."
+    "transfersSuggested_other": "{{count}} possible transfers to check under Transactions → Transfers.",
+    "pdf": {
+      "reading": "Reading the PDF…",
+      "readingPage": "Reading the PDF… page {{page}} of {{pages}}",
+      "balanceOk": "The amounts add up to the closing balance on the statement.",
+      "balanceMismatch": "The rows don’t add up to the statement: difference {{amount}}.",
+      "runningMismatch_one": "{{count}} row doesn’t match the running balance.",
+      "runningMismatch_other": "{{count}} rows don’t match the running balance.",
+      "flipHint": "If this is a credit card statement, try flipping the signs.",
+      "flip": "Flip signs",
+      "noTable": "Kasboek couldn’t find the transactions table in this PDF.",
+      "chooseAnother": "Choose another file",
+      "note": {
+        "other_account": "This statement seems to be for {{iban}}, not this account. Check that you chose the right account.",
+        "dates_without_year": "The statement shows dates without a year; Kasboek used the statement period.",
+        "pages_without_text_one": "{{count}} page had no readable text and was skipped.",
+        "pages_without_text_other": "{{count}} pages had no readable text and were skipped."
+      }
+    }
   },
   "assistant": {
     "title": "{{ai}}",
@@ -1162,7 +1180,7 @@
     "introPrivate": "Private by design",
     "introPrivateHint": "Your data is encrypted and stays on this computer. No account, no Kasboek server.",
     "introImport": "Import from your bank",
-    "introImportHint": "Drop a CSV export from your bank; Kasboek shows every row before it saves anything.",
+    "introImportHint": "Drop a CSV export or PDF statement from your bank; Kasboek shows every row before it saves anything.",
     "introPlan": "Plan and follow up",
     "introPlanHint": "Budgets, fixed costs, savings goals, a year view and your net worth.",
     "introAssistant": "An assistant, if you want one",
@@ -1205,7 +1223,7 @@
       "goals": "Save for something: an amount by a date, with what to put aside each month.",
       "year": "The whole year by month and category, with CSV and PDF export for your taxes or accountant.",
       "networth": "All your accounts and investments together, over months or years.",
-      "import": "Bring in a CSV export from your bank. Check it with the assistant before you save it.",
+      "import": "Bring in a CSV export or PDF statement from your bank. Check it with the assistant before you save it.",
       "assistant": "Open or close the assistant. Ask about your money, or let it make changes that wait for your OK.",
       "settings": "Accounts, backups, sync between computers, the assistant, formats and more.",
       "lock": "Lock Kasboek when you step away. It also locks by itself after a while."
@@ -1237,6 +1255,13 @@
     "auth_device_not_configured": "Windows Hello is not set up for your Windows account. Set it up in Windows settings first.",
     "auth_device_disabled": "Windows Hello is turned off by a policy on this computer.",
     "auth_device_busy": "Windows Hello is busy. Try again in a moment.",
-    "auth_device_retries_exhausted": "Windows Hello stopped after too many failed attempts. Try again later."
+    "auth_device_retries_exhausted": "Windows Hello stopped after too many failed attempts. Try again later.",
+    "import_not_pdf": "This file is not a PDF.",
+    "import_is_pdf": "This is a PDF file. Open it as a bank statement instead.",
+    "import_pdf_password": "This PDF is password protected. Remove the password in your PDF viewer or bank app and try again.",
+    "import_pdf_broken": "This PDF could not be read. The file may be damaged. Download it again from your bank.",
+    "import_pdf_too_large": "This PDF is too large or too complex to read. Try a PDF of a single statement.",
+    "import_pdf_scanned": "This PDF has no selectable text (probably a scan or photo). Ask your bank for a CSV, or for a PDF with text.",
+    "import_pdf_busy": "Another PDF is still being read. Wait a moment and try again."
   }
 }
