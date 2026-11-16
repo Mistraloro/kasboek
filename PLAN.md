@@ -304,6 +304,15 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    choices" (PIN) and whether another call (for example a `KeyCredentialManager` or the in-process
    `IUserConsentVerifierInterop` route from the long-term idea in the Windows Hello review) lets
    Windows remember the last method. If Windows cannot do it, record that here and leave it as is.
+23. **Updater: the app freezes for a moment after "Install and restart".** Seen testing the new
+   update window (0.16.0 to 0.16.1); the update itself worked perfectly. Likely cause (from
+   `install()` in `src/main/update.ts`, not measured): the button press first writes a safety backup
+   (`writeTransfer`, with key derivation and encryption), then copies the helper and waits up to 8 s
+   for it to confirm it started, and only then sets the state to `installing`; the window shows no
+   change meanwhile. Closing then makes another backup on quit. Fix: show "Preparing the update..."
+   with a spinner at once (set the state before the backup), keep the interface responsive during the
+   backup, and measure which step takes the time. Consider skipping the second backup on quit when a
+   safety backup was just made.
 
 ## Later, maybe
 
