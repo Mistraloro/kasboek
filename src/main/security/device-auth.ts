@@ -6,7 +6,7 @@
  */
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
-import { app, systemPreferences } from 'electron'
+import { app, BrowserWindow, systemPreferences } from 'electron'
 
 export type DeviceAuthKind = 'windows-hello' | 'touch-id' | null
 
@@ -79,11 +79,80 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
   }
   if (kind === 'windows-hello') {
     const safe = reason.replace(/'/g, "''")
-    const r = await powershell(
-      `$r = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::RequestVerificationAsync('${safe}')) ([Windows.Security.Credentials.UI.UserConsentVerificationResult]); Write-Output $r`,
-      120_000
-    )
+    const r = await powershell(helloScript(safe, kasboekWindowHandle()), 120_000)
     return r === 'Verified'
   }
   return false
+}
+
+/** Kasboek's window as a Win32 handle, so Windows Hello opens in front of it. 0 when there is none. */
+function kasboekWindowHandle(): bigint {
+  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows().find((w) => w.isVisible()) ?? null
+  if (!win) return 0n
+  const buf = win.getNativeWindowHandle()
+  return buf.length >= 8 ? buf.readBigUInt64LE(0) : BigInt(buf.readUInt32LE(0))
+}
+
+/**
+ * Windows Hello for a window. Started from PowerShell, the plain RequestVerificationAsync has no
+ * window of its own, so Windows opens the prompt behind Kasboek. The interop variant
+ * (IUserConsentVerifierInterop::RequestVerificationForWindowAsync) takes Kasboek's window as the
+ * owner and opens in front of it. If that isn't available, the plain call is used, and the prompt
+ * window ("Credential Dialog Xaml Host") is brought to the front once it appears.
+ */
+export function helloScript(reason: string, hwnd: bigint): string {
+  return `
+$reason = '${reason}'
+$hwnd = [IntPtr]::new([Int64]${hwnd.toString()})
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+public static class KasboekHello {
+  [ComImport, Guid("39E050C3-4E74-441A-8DC0-B81104DF949C"), InterfaceType(ComInterfaceType.InterfaceIsIInspectable)]
+  public interface IUserConsentVerifierInterop {
+    [return: MarshalAs(UnmanagedType.IInspectable)]
+    object RequestVerificationForWindowAsync(IntPtr appWindow, [MarshalAs(UnmanagedType.HString)] string message, [In] ref Guid riid);
+  }
+  // The cast asks the activation factory for the interop interface (QueryInterface), which a
+  // PowerShell cast doesn't do reliably.
+  public static object RequestForWindow(object factory, IntPtr hwnd, string message, Guid iid) {
+    return ((IUserConsentVerifierInterop)factory).RequestVerificationForWindowAsync(hwnd, message, ref iid);
+  }
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindow(string cls, string title);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+  // Brings the Windows Hello prompt to the front once it appears (a fallback; up to 5 seconds).
+  public static void BringPromptForward() {
+    new Thread(() => {
+      for (int i = 0; i < 50; i++) {
+        IntPtr h = FindWindow("Credential Dialog Xaml Host", null);
+        if (h != IntPtr.Zero) {
+          // A tap of Alt lets this process move another window to the front.
+          keybd_event(0x12, 0, 0, UIntPtr.Zero); keybd_event(0x12, 0, 2, UIntPtr.Zero);
+          SetForegroundWindow(h);
+          return;
+        }
+        Thread.Sleep(100);
+      }
+    }) { IsBackground = true }.Start();
+  }
+}
+"@
+$resultType = [Windows.Security.Credentials.UI.UserConsentVerificationResult]
+$op = $null
+if ($hwnd -ne [IntPtr]::Zero) {
+  try {
+    $factory = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeMarshal]::GetActivationFactory([Windows.Security.Credentials.UI.UserConsentVerifier])
+    $iid = [Windows.Foundation.IAsyncOperation[Windows.Security.Credentials.UI.UserConsentVerificationResult]].GUID
+    $op = [KasboekHello]::RequestForWindow($factory, $hwnd, $reason, $iid)
+  } catch { $op = $null }
+}
+if ($op -eq $null) {
+  [KasboekHello]::BringPromptForward()
+  $op = [Windows.Security.Credentials.UI.UserConsentVerifier]::RequestVerificationAsync($reason)
+}
+$r = Await $op $resultType
+Write-Output $r
+`
 }
