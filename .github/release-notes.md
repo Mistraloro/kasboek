@@ -1,6 +1,6 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.15 (0.15.0)
+## What’s new in 0.15 (0.15.1)
 
 **New**
 - **Erasing is recoverable.** Erased data, including its safety backups, is kept for 30 days. On the Setup screen you can restore it with the original password or recovery key. If your account is tied to this device, you must first pass Windows Hello or Touch ID before you can erase. A failed erase puts everything back.
@@ -8,6 +8,7 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 
 **Fixes and safety**
 - **Windows Hello during first setup:** three causes that could stop the Hello prompt from appearing, or leave the option greyed out, are fixed in the code: a failed helper no longer blocks the prompt, a failed availability check is retried instead of being remembered until restart, and quote characters in the prompt text no longer break it. This is not yet tested on a real Windows PC.
+- **0.15.1:** the Windows Hello prompt is now started in a different way, and both the availability check and the prompt record what happened in `startup.log`, so that a failure can be diagnosed. This is not yet tested on a real Windows PC.
 - **Passwordless mode** is only offered when your computer protects the key itself (its key store). Importing a passwordless export on a computer without that asks you for a new password.
 - **CSV export** neutralises text that a spreadsheet could read as a formula.
 - **Passwords and saving:** re-entering your password for sensitive actions has the same attempt limit as unlocking. A failed account save no longer leaves memory and disk out of step. A join file picked while locked is refused and its temporary file removed.

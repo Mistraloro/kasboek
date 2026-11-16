@@ -22,23 +22,73 @@ function Await($op, [Type]$t) { $task = $asTask.MakeGenericMethod($t).Invoke($nu
 $null = [Windows.Security.Credentials.UI.UserConsentVerifier, Windows.Security.Credentials.UI, ContentType = WindowsRuntime]
 `
 
-function powershell(script: string, timeoutMs: number): Promise<{ out: string; err: string }> {
+export interface PowerShellResult {
+  /** The last non-empty line of stdout, trimmed, so stray output cannot hide the result. */
+  out: string
+  err: string
+  code: number | null
+  signal: NodeJS.Signals | null
+  ms: number
+  /** True when our own timeout killed the process. */
+  timedOut: boolean
+}
+
+/** The last non-empty line of the text, trimmed. */
+export function lastLine(text: string): string {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '')
+  return lines[lines.length - 1] ?? ''
+}
+
+/** What -EncodedCommand expects: the whole script as base64 of UTF-16LE text. */
+export function encodeCommand(script: string): string {
+  return Buffer.from(PS_PRELUDE + script, 'utf16le').toString('base64')
+}
+
+function powershell(script: string, timeoutMs: number): Promise<PowerShellResult> {
   const exe = join(process.env['SystemRoot'] ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  const started = Date.now()
   return new Promise((resolve) => {
-    const child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', '-'], { windowsHide: true })
+    const child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodeCommand(script)], {
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
     let out = ''
     let err = ''
-    const timer = setTimeout(() => child.kill(), timeoutMs)
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      child.kill()
+    }, timeoutMs)
     child.stdout.on('data', (d) => (out += String(d)))
     child.stderr.on('data', (d) => (err += String(d)))
-    child.on('error', (e) => resolve({ out: '', err: e.message }))
-    child.on('close', () => {
+    child.on('error', (e) => {
       clearTimeout(timer)
-      resolve({ out: out.trim(), err: err.trim() })
+      resolve({ out: '', err: e.message, code: null, signal: null, ms: Date.now() - started, timedOut })
     })
-    child.stdin.end(PS_PRELUDE + script)
+    child.on('close', (code, signal) => {
+      clearTimeout(timer)
+      resolve({ out: lastLine(out), err: err.trim(), code, signal, ms: Date.now() - started, timedOut })
+    })
   })
 }
+
+/** One startup.log line describing how a PowerShell run ended. Only fixed text and PowerShell's own output. */
+export function describeRun(what: 'check' | 'prompt', r: PowerShellResult): string {
+  const err = r.err.slice(0, 600).replace(/\r?\n/g, ' | ')
+  return `windows hello: ${what} -> out='${r.out}' exit=${r.code ?? 'none'} signal=${r.signal ?? 'none'} ms=${r.ms}${r.timedOut ? ' timed out' : ''} err='${err}'`
+}
+
+/** Runs tasks one after another, so that two never overlap. */
+export function serialQueue(): <T>(task: () => Promise<T>) => Promise<T> {
+  let tail: Promise<unknown> = Promise.resolve()
+  return (task) => {
+    const run = tail.then(task)
+    tail = run.catch(() => undefined)
+    return run
+  }
+}
+
+const oneAtATime = serialQueue()
 
 let cached: DeviceAuthKind | undefined
 let cachedAt = 0
@@ -80,7 +130,7 @@ export async function deviceAuthKind(): Promise<DeviceAuthKind> {
       `$a = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()) ([Windows.Security.Credentials.UI.UserConsentVerifierAvailability]); Write-Output $a`,
       15_000
     )
-    startupLog(`windows hello: ${r.out || 'no answer'}${r.err ? ` (${r.err.slice(0, 300)})` : ''}`)
+    startupLog(describeRun('check', r))
     return remember(r.out === 'Available' ? 'windows-hello' : null)
   }
   return remember(null)
@@ -99,9 +149,15 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
     }
   }
   if (kind === 'windows-hello') {
-    const r = await powershell(helloScript(psQuote(reason)), 120_000)
-    startupLog(`windows hello: ${r.out || 'no answer'}${r.err ? ` (${r.err.slice(0, 300)})` : ''}`)
-    return r.out === 'Verified'
+    return oneAtATime(async () => {
+      startupLog('windows hello: asking')
+      const r = await powershell(helloScript(psQuote(reason)), 120_000)
+      startupLog(describeRun('prompt', r))
+      if (r.out === '' && (r.code !== 0 || r.signal !== null)) {
+        startupLog(`windows hello: prompt ended without an answer (exit=${r.code ?? 'none'} signal=${r.signal ?? 'none'})`)
+      }
+      return r.out === 'Verified'
+    })
   }
   return false
 }
@@ -109,8 +165,8 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
 /**
  * Text for inside a single-quoted PowerShell string. PowerShell also treats the typographic quotes
  * (U+2018 to U+201B) as quotes, so a reason such as "Confirm it's you" typed with one would end the
- * string early and the script would not parse. Anything else outside plain ASCII is dropped, since
- * the script travels over stdin in the console code page.
+ * string early and the script would not parse. Anything else outside plain ASCII is dropped, to keep
+ * the prompt text plain.
  */
 export function psQuote(text: string): string {
   return text
@@ -127,6 +183,7 @@ export function psQuote(text: string): string {
  */
 export function helloScript(reason: string): string {
   return `
+[Console]::Error.WriteLine('step: start')
 $reason = '${reason}'
 $bringForward = $true
 try {
@@ -158,11 +215,14 @@ public static class KasboekHello {
   }
 }
 "@
-} catch { $bringForward = $false }
+[Console]::Error.WriteLine('step: helper compiled')
+} catch { $bringForward = $false; [Console]::Error.WriteLine('step: helper skipped: ' + $_.Exception.Message) }
 # Bringing the prompt forward is only a convenience: if the helper cannot be compiled (security
 # software, a restricted language mode, an unwritable temp folder), still show the prompt.
 if ($bringForward) { try { [KasboekHello]::BringPromptForward() } catch { } }
+[Console]::Error.WriteLine('step: prompting')
 $r = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::RequestVerificationAsync($reason)) ([Windows.Security.Credentials.UI.UserConsentVerificationResult])
+[Console]::Error.WriteLine('step: result: ' + $r)
 Write-Output $r
 `
 }
