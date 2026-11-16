@@ -51,6 +51,14 @@ function UpdateModal({ status, open, onClose }: { status: UpdateStatus; open: bo
   const { t } = useTranslation()
   const toast = useToast()
   const act = (p: Promise<unknown>): void => void p.catch((e) => toast(errText(e), 'error'))
+  // Between the click and the update starting (a backup, then the helper) a second click must do nothing.
+  const [starting, setStarting] = useState(false)
+  const install = (): void => {
+    setStarting(true)
+    void call('update.install')
+      .catch((e) => toast(errText(e), 'error'))
+      .finally(() => setStarting(false))
+  }
   const percent = Math.round(status.progress * 100)
   const restart = status.kind === 'msi' || status.kind === 'appimage'
   return (
@@ -86,7 +94,7 @@ function UpdateModal({ status, open, onClose }: { status: UpdateStatus; open: bo
               </Button>
             )}
             {status.state === 'ready' && (
-              <Button variant="primary" onClick={() => act(call('update.install'))}>
+              <Button variant="primary" disabled={starting} onClick={install}>
                 {restart ? t('update.installRestart') : t('update.openInstaller')}
               </Button>
             )}

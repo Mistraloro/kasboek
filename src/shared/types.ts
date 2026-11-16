@@ -238,6 +238,8 @@ export interface Prefs {
   welcomeDone: boolean
   /** Draw with the graphics card: automatic, always or never. Takes effect at the next start. */
   graphics: GraphicsChoice
+  /** Closing the window keeps Kasboek running in the tray instead of quitting. Off unless chosen. */
+  keepInTray: boolean
   /** Set by Kasboek when the graphics card failed to show its window; "automatic" then draws in software. */
   graphicsFailed: boolean
 }

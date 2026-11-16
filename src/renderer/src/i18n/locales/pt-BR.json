@@ -105,6 +105,8 @@
     "recoveryHint": "Para uma senha esquecida ou um celular perdido. Criar uma nova faz a antiga deixar de funcionar neste computador.",
     "newRecoveryBody": "A chave de recuperação atual deixa de funcionar aqui. As exportações feitas antes continuam abrindo com a antiga.",
     "autoLockHint": "Também bloqueia quando a tela bloqueia ou o computador entra em suspensão.",
+    "keepInTray": "Manter o Kasboek na bandeja ao fechar a janela",
+    "keepInTrayHint": "Desativado: fechar a janela fecha o Kasboek. Ativado: o Kasboek continua na bandeja (a barra de menus no Mac) para o Claude poder continuar usando. Abra de novo pelo ícone ou pelo atalho.",
     "encryptionHint": "Os dados do seu orçamento estão criptografados no disco.",
     "keyStorageOsHint": "Os dados estão vinculados a este computador e a esta conta de usuário.",
     "rememberedHint": "Lembrado neste computador até {{date}}. Outros computadores, importações e exportações continuam pedindo o código.",
@@ -305,7 +307,16 @@
     "downloadingShort": "Baixando… {{percent}} %",
     "current": "Você tem a versão {{version}}.",
     "downloading": "Baixando… {{percent}} % de {{size}}",
-    "readyRestart": "Baixado e verificado. O Kasboek fecha, instala a atualização e volta a abrir. Demora cerca de um minuto.",
+    "readyRestart": "Baixado e verificado. O Kasboek fecha, mostra o progresso da instalação em uma janela própria e volta a abrir. Demora cerca de um minuto.",
+    "installing": "Instalando… O Kasboek fecha, mostra o progresso e volta a abrir em instantes.",
+    "helper": {
+      "waiting": "Aguardando o Kasboek fechar…",
+      "installing": "Instalando o Kasboek {{version}}…",
+      "starting": "Iniciando o Kasboek…",
+      "failed": "Não foi possível instalar a atualização. O Kasboek vai iniciar de novo.",
+      "cancelled": "A atualização foi cancelada. O Kasboek vai iniciar de novo.",
+      "notClosed": "O Kasboek não fechou a tempo, então a atualização não foi instalada. O Kasboek vai abrir de novo."
+    },
     "ready": {
       "dmg": "Baixado e verificado. O Kasboek abre a imagem de disco; arraste o Kasboek para Aplicações e substitua a versão antiga.",
       "deb": "Baixado e verificado. O Kasboek abre o pacote no instalador de software."

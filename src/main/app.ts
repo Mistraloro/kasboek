@@ -3,9 +3,10 @@ import { join } from 'node:path'
 import { app, BrowserWindow, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { dispatch, onAppReady, registerIpc } from './ipc'
-import { mcpClientsSeen, stopMcpBridge, syncMcpBridge } from './mcp/bridge'
+import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
-import { createTray, destroyTray, refreshTray } from './tray'
+import { hasTray, initTray, refreshTray, stopTray, syncTray } from './tray'
+import { quitWhenAllWindowsClosed, shouldHideOnClose } from '@shared/window-policy'
 import { startAlertChecks } from './notify'
 import { startUpdateChecks } from './update'
 import { isDevRendererUrl } from './trusted-url'
@@ -19,6 +20,13 @@ import { startSyncScheduler } from './sync/service'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT, trackOverlay } from './theme'
 
 paths.rendererDir = join(__dirname, '../renderer')
+
+let mainWindow: BrowserWindow | null = null
+let quitting = false
+/** The first screen is ready: from here on the window may be shown. */
+let revealed = false
+/** Someone launched Kasboek again before the window was ready (only matters when it started in the tray). */
+let showRequested = false
 
 function createWindow(hidden = false): BrowserWindow {
   const colors = THEME_COLORS[resolvedTheme()]
@@ -44,6 +52,14 @@ function createWindow(hidden = false): BrowserWindow {
       webSecurity: true,
       spellcheck: false
     }
+  })
+  mainWindow = win
+  win.on('closed', () => (mainWindow = null))
+  // Closing keeps Kasboek in the tray only when the person chose that; otherwise it quits (macOS keeps the app in the Dock).
+  win.on('close', (e) => {
+    if (!shouldHideOnClose({ keepInTray: getPrefs().keepInTray, quitting, hasTray: hasTray() })) return
+    e.preventDefault()
+    win.hide()
   })
   if (!isMac) trackOverlay(win)
   watchWindow(win, { hidden })
@@ -74,19 +90,35 @@ function harden(): void {
   })
 }
 
+/**
+ * Brings the main window to the front: opens it again if it was closed (macOS), shows it if it was
+ * hidden in the tray, restores it from the taskbar, focuses it. A window that is still starting
+ * shows itself when ready.
+ */
+export function showMainWindow(): void {
+  if (!revealed) {
+    showRequested = true
+    return
+  }
+  let win = mainWindow
+  if (!win || win.isDestroyed()) {
+    win = createWindow()
+    const w = win
+    w.once('ready-to-show', () => w.show())
+    return
+  }
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+}
+
 /** Everything after the launch window: loaded once Electron is ready (see index.ts). */
 export async function startApp({ background }: { background: boolean }): Promise<void> {
-writeAppCommand()
-app.on('second-instance', (_e, argv) => {
-  // The kasboek-mcp helper starting Kasboek "in the background" while it already runs: nothing to do.
-  if (argv.includes('--background')) return
-  const win = BrowserWindow.getAllWindows()[0]
-  if (win) {
-    if (win.isMinimized()) win.restore()
-    win.focus()
-  }
-})
-
+  writeAppCommand()
+  app.on('before-quit', () => {
+    quitting = true
+    stopTray()
+  })
   harden()
   watchGraphics()
   splashProgress(0.15, 'Starting…')
@@ -107,7 +139,8 @@ app.on('second-instance', (_e, argv) => {
     splashProgress(0.95, 'Almost ready…')
     void splashMinimumElapsed().then(() => {
       if (win.isDestroyed()) return
-      if (!background) win.show()
+      revealed = true
+      if (!background || showRequested) win.show()
       closeSplash()
     })
   }
@@ -123,29 +156,26 @@ app.on('second-instance', (_e, argv) => {
   startAlertChecks()
   startUpdateChecks()
   // Keep the MCP bridge in step with the lock state and the setting.
-  createTray()
-  keepInTrayForClaude(win)
-  setInterval(() => {
+  initTray({ startedInTray: background, open: showMainWindow })
+  const keepInStep = setInterval(() => {
+    if (quitting) return
     syncMcpBridge(dispatch)
+    syncTray()
     refreshTray()
   }, 2000)
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      const w = createWindow()
-      w.once('ready-to-show', () => w.show())
-    }
+  app.on('activate', showMainWindow)
+
+  app.on('window-all-closed', () => {
+    if (quitWhenAllWindowsClosed(process.platform)) app.quit()
   })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
-
-app.on('will-quit', () => {
-  destroyTray()
-  stopMcpBridge()
-  lock('user', true)
-})
+  app.on('will-quit', () => {
+    clearInterval(keepInStep)
+    stopTray()
+    stopMcpBridge()
+    lock('user', true)
+  })
 }
 
 /** How the kasboek-mcp helper can start Kasboek when a Claude app wants it (see tools/kasboek-mcp/launch.go). */
@@ -157,25 +187,4 @@ function writeAppCommand(): void {
   } catch {
     // Only needed for starting Kasboek from a Claude app.
   }
-}
-
-/** A Claude app checked the connection within this time: it is still running. */
-const CLAUDE_RECENT_MS = 30_000
-let quitting = false
-
-/**
- * Closing the window while a Claude app is connected keeps Kasboek in the tray (it still locks on
- * its own after the auto-lock time), so the Claude app keeps working and the tray icon shows it.
- * "Quit Kasboek" in the tray menu still quits.
- */
-function keepInTrayForClaude(win: BrowserWindow): void {
-  app.on('before-quit', () => (quitting = true))
-  win.on('close', (e) => {
-    if (quitting) return
-    const seen = Object.values(mcpClientsSeen()).filter((t): t is number => typeof t === 'number')
-    if (seen.some((t) => Date.now() - t < CLAUDE_RECENT_MS)) {
-      e.preventDefault()
-      win.hide()
-    }
-  })
 }

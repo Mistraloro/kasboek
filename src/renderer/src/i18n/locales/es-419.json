@@ -47,6 +47,8 @@
     "twoFactorHint": "Un código de 6 dígitos de tu celular, en cada desbloqueo e importación.",
     "recoveryHint": "Para una contraseña olvidada o un celular perdido. Crear una nueva hace que la anterior deje de funcionar en esta computadora.",
     "autoLockHint": "También bloquea cuando se bloquea la pantalla o la computadora entra en suspensión.",
+    "keepInTray": "Mantener Kasboek en la bandeja al cerrar la ventana",
+    "keepInTrayHint": "Desactivado: al cerrar la ventana se cierra Kasboek. Activado: Kasboek sigue en la bandeja (la barra de menús en una Mac) para que Claude pueda seguir usándolo. Ábrelo de nuevo desde el icono o su acceso directo.",
     "keyStorageOsHint": "Los datos están ligados a esta computadora y esta cuenta de usuario.",
     "rememberedHint": "Recordado en esta computadora hasta el {{date}}. Otras computadoras, importaciones y exportaciones siguen pidiendo el código.",
     "forgetComputer": "Olvidar esta computadora",

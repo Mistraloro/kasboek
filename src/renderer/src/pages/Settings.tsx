@@ -766,6 +766,9 @@ function AppearanceSection() {
           {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </Select>
       </Row>
+      <Row label={t('settings.keepInTray')} hint={t('settings.keepInTrayHint')}>
+        <Switch label={t('settings.keepInTray')} checked={prefs.keepInTray} onChange={(v) => void updatePrefs({ keepInTray: v })} />
+      </Row>
       <GraphicsRow />
     </Card>
   )

@@ -406,6 +406,8 @@
     "newRecoveryBody": "La clé de récupération actuelle ne fonctionnera plus ici. Les exports faits avant s’ouvrent encore avec l’ancienne.",
     "autoLock": "Verrouillage automatique",
     "autoLockHint": "Verrouille aussi quand l’écran se verrouille ou que l’ordinateur se met en veille.",
+    "keepInTray": "Laisser Kasboek actif dans la zone de notification quand je ferme la fenêtre",
+    "keepInTrayHint": "Désactivé : fermer la fenêtre quitte Kasboek. Activé : Kasboek reste dans la zone de notification (la barre des menus sur Mac) pour que Claude puisse continuer à l’utiliser. Rouvrez-le depuis l’icône ou son raccourci.",
     "minutes_one": "Après {{count}} minute",
     "minutes_other": "Après {{count}} minutes",
     "encryptionHint": "Les données de votre budget sont chiffrées sur le disque.",
@@ -1100,12 +1102,20 @@
     "title": "Kasboek {{version}} est disponible",
     "current": "Vous avez la version {{version}}.",
     "downloading": "Téléchargement… {{percent}} % de {{size}}",
-    "readyRestart": "Téléchargé et vérifié. Kasboek se ferme, installe la mise à jour et se rouvre. Cela prend environ une minute.",
+    "readyRestart": "Téléchargé et vérifié. Kasboek se ferme, affiche la progression de l’installation dans sa propre fenêtre et se rouvre. Cela prend environ une minute.",
     "ready": {
       "dmg": "Téléchargé et vérifié. Kasboek ouvre l’image disque ; faites glisser Kasboek dans Applications et remplacez l’ancienne version.",
       "deb": "Téléchargé et vérifié. Kasboek ouvre le paquet dans votre installateur de logiciels."
     },
-    "installing": "Installation… Kasboek se ferme et se rouvre dans un instant.",
+    "installing": "Installation… Kasboek se ferme, affiche la progression et se rouvre dans un instant.",
+    "helper": {
+      "waiting": "En attente de la fermeture de Kasboek…",
+      "installing": "Installation de Kasboek {{version}}…",
+      "starting": "Démarrage de Kasboek…",
+      "failed": "La mise à jour n’a pas pu être installée. Kasboek redémarre.",
+      "cancelled": "La mise à jour a été annulée. Kasboek redémarre.",
+      "notClosed": "Kasboek ne s’est pas fermé à temps, la mise à jour n’a donc pas été installée. Kasboek se rouvre."
+    },
     "opened": {
       "dmg": "Faites glisser Kasboek dans Applications et choisissez Remplacer. Puis quittez Kasboek et rouvrez-le.",
       "deb": "Terminez l’installation dans l’installateur de logiciels, puis quittez Kasboek et rouvrez-le."

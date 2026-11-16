@@ -406,6 +406,8 @@
     "newRecoveryBody": "Der aktuelle Wiederherstellungsschlüssel funktioniert hier dann nicht mehr. Frühere Exporte öffnen sich weiter mit dem alten.",
     "autoLock": "Automatisch sperren",
     "autoLockHint": "Sperrt auch, wenn der Bildschirm gesperrt wird oder der Computer schläft.",
+    "keepInTray": "Kasboek im Infobereich weiterlaufen lassen, wenn ich das Fenster schließe",
+    "keepInTrayHint": "Aus: Beim Schließen des Fensters wird Kasboek beendet. An: Kasboek bleibt im Infobereich (auf dem Mac in der Menüleiste), damit Claude es weiter nutzen kann. Öffne es wieder über das Symbol oder die Verknüpfung.",
     "minutes_one": "Nach {{count}} Minute",
     "minutes_other": "Nach {{count}} Minuten",
     "encryptionHint": "Deine Budgetdaten sind auf der Festplatte verschlüsselt.",
@@ -1100,12 +1102,20 @@
     "title": "Kasboek {{version}} ist verfügbar",
     "current": "Du hast {{version}}.",
     "downloading": "Wird geladen… {{percent}} % von {{size}}",
-    "readyRestart": "Geladen und geprüft. Kasboek schließt sich, installiert das Update und öffnet sich wieder. Das dauert etwa eine Minute.",
+    "readyRestart": "Geladen und geprüft. Kasboek schließt sich, zeigt den Fortschritt der Installation in einem eigenen Fenster und öffnet sich wieder. Das dauert etwa eine Minute.",
     "ready": {
       "dmg": "Geladen und geprüft. Kasboek öffnet das Disk-Image; zieh Kasboek in „Programme“ und ersetze die alte Version.",
       "deb": "Geladen und geprüft. Kasboek öffnet das Paket in deiner Softwareinstallation."
     },
-    "installing": "Wird installiert… Kasboek schließt sich gleich und öffnet sich wieder.",
+    "installing": "Wird installiert… Kasboek schließt sich gleich, zeigt den Fortschritt und öffnet sich wieder.",
+    "helper": {
+      "waiting": "Warten, bis Kasboek geschlossen ist…",
+      "installing": "Kasboek {{version}} wird installiert…",
+      "starting": "Kasboek wird gestartet…",
+      "failed": "Das Update konnte nicht installiert werden. Kasboek startet wieder.",
+      "cancelled": "Das Update wurde abgebrochen. Kasboek startet wieder.",
+      "notClosed": "Kasboek wurde nicht rechtzeitig geschlossen, daher wurde das Update nicht installiert. Kasboek wird wieder geöffnet."
+    },
     "opened": {
       "dmg": "Zieh Kasboek in „Programme“ und wähle „Ersetzen“. Beende Kasboek dann und öffne es wieder.",
       "deb": "Schließ die Installation in der Softwareinstallation ab, beende Kasboek dann und öffne es wieder."

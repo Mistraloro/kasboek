@@ -216,9 +216,17 @@ func main() {
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	cleanup := flag.Bool("uninstall-cleanup", false, "used by the uninstaller: remove Kasboek from the Claude apps' settings and delete caches")
 	removeData := flag.Bool("remove-data", false, "with --uninstall-cleanup: also delete Kasboek's data folder")
+	apply := flag.String("apply-update", "", "used by Kasboek's updater (Windows): install the update described by this plan file, then open Kasboek again")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version)
+		return
+	}
+	if *apply != "" {
+		if err := applyUpdate(*apply); err != nil {
+			fmt.Fprintln(os.Stderr, "kasboek-mcp:", err)
+			os.Exit(1)
+		}
 		return
 	}
 	if *dataDir == "" {
