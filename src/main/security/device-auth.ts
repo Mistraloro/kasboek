@@ -7,6 +7,7 @@
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { app, systemPreferences } from 'electron'
+import { AppError } from '@core/errors'
 import { startupLog } from '../graphics'
 
 export type DeviceAuthKind = 'windows-hello' | 'touch-id' | null
@@ -16,6 +17,7 @@ const fake = (): boolean => !app.isPackaged && process.env['KASBOEK_FAKE_DEVICE_
 
 const PS_PRELUDE = `
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 $asTask = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' })[0]
 function Await($op, [Type]$t) { $task = $asTask.MakeGenericMethod($t).Invoke($null, @($op)); $task.Wait(-1) | Out-Null; $task.Result }
@@ -90,6 +92,32 @@ export function serialQueue(): <T>(task: () => Promise<T>) => Promise<T> {
 
 const oneAtATime = serialQueue()
 
+/** Marks the result on stdout; a run that ends without it did not get as far as asking. */
+export const RESULT_MARKER = 'RESULT:'
+
+/** The value after the marker in a run's last stdout line, or null when the marker is missing. */
+export function markedResult(out: string): string | null {
+  return out.startsWith(RESULT_MARKER) ? out.slice(RESULT_MARKER.length).trim() : null
+}
+
+const HELLO_ERRORS: Record<string, [code: string, message: string]> = {
+  DeviceNotPresent: ['auth.device_not_present', 'Windows Hello is not set up on this computer: no camera, fingerprint reader or PIN is available.'],
+  NotConfiguredForUser: ['auth.device_not_configured', 'Windows Hello is not set up for your Windows account. Set it up in Windows settings first.'],
+  DisabledByPolicy: ['auth.device_disabled', 'Windows Hello is turned off by a policy on this computer.'],
+  DeviceBusy: ['auth.device_busy', 'Windows Hello is busy. Try again in a moment.'],
+  RetriesExhausted: ['auth.device_retries_exhausted', 'Windows Hello stopped after too many failed attempts. Try again later.']
+}
+
+/** True when verified, false for a cancel (or our own timeout); throws a specific error for everything else. */
+export function interpretHello(r: PowerShellResult): boolean {
+  const value = markedResult(r.out)
+  if (value === 'Verified') return true
+  if (value === 'Canceled' || r.timedOut) return false
+  const known = value === null ? undefined : HELLO_ERRORS[value]
+  if (known) throw new AppError(known[0], known[1])
+  throw new AppError('auth.device_unavailable', 'Windows Hello could not be started.')
+}
+
 let cached: DeviceAuthKind | undefined
 let cachedAt = 0
 let pending: Promise<DeviceAuthKind> | null = null
@@ -127,16 +155,16 @@ export async function deviceAuthKind(): Promise<DeviceAuthKind> {
   if (process.platform === 'darwin') return remember(systemPreferences.canPromptTouchID() ? 'touch-id' : null)
   if (process.platform === 'win32') {
     const r = await powershell(
-      `$a = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()) ([Windows.Security.Credentials.UI.UserConsentVerifierAvailability]); Write-Output $a`,
+      `$a = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()) ([Windows.Security.Credentials.UI.UserConsentVerifierAvailability]); Write-Output "RESULT:$a"`,
       15_000
     )
     startupLog(describeRun('check', r))
-    return remember(r.out === 'Available' ? 'windows-hello' : null)
+    return remember(markedResult(r.out) === 'Available' ? 'windows-hello' : null)
   }
   return remember(null)
 }
 
-/** Shows the system prompt. Resolves true only if the user was verified. */
+/** Shows the system prompt. Resolves true only if verified, false on a cancel; throws an AppError when Windows Hello cannot answer. */
 export async function verifyDeviceUser(reason: string): Promise<boolean> {
   if (fake()) return process.env['KASBOEK_FAKE_DEVICE_RESULT'] !== 'deny'
   const kind = await deviceAuthKind()
@@ -156,7 +184,7 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
       if (r.out === '' && (r.code !== 0 || r.signal !== null)) {
         startupLog(`windows hello: prompt ended without an answer (exit=${r.code ?? 'none'} signal=${r.signal ?? 'none'})`)
       }
-      return r.out === 'Verified'
+      return interpretHello(r)
     })
   }
   return false
@@ -165,13 +193,13 @@ export async function verifyDeviceUser(reason: string): Promise<boolean> {
 /**
  * Text for inside a single-quoted PowerShell string. PowerShell also treats the typographic quotes
  * (U+2018 to U+201B) as quotes, so a reason such as "Confirm it's you" typed with one would end the
- * string early and the script would not parse. Anything else outside plain ASCII is dropped, to keep
- * the prompt text plain.
+ * string early and the script would not parse. Control characters (line breaks) become spaces; other
+ * non-ASCII text is safe because the script travels base64-encoded.
  */
 export function psQuote(text: string): string {
   return text
     .replace(/[\u2018-\u201B]/g, "'")
-    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/[\x00-\x1F\x7F]/g, ' ')
     .replace(/'/g, "''")
 }
 
@@ -223,6 +251,6 @@ if ($bringForward) { try { [KasboekHello]::BringPromptForward() } catch { } }
 [Console]::Error.WriteLine('step: prompting')
 $r = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::RequestVerificationAsync($reason)) ([Windows.Security.Credentials.UI.UserConsentVerificationResult])
 [Console]::Error.WriteLine('step: result: ' + $r)
-Write-Output $r
+Write-Output "RESULT:$r"
 `
 }

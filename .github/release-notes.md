@@ -8,7 +8,7 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 
 **Fixes and safety**
 - **Windows Hello during first setup:** three causes that could stop the Hello prompt from appearing, or leave the option greyed out, are fixed in the code: a failed helper no longer blocks the prompt, a failed availability check is retried instead of being remembered until restart, and quote characters in the prompt text no longer break it. This is not yet tested on a real Windows PC.
-- **0.15.1:** the Windows Hello prompt is now started in a different way, and both the availability check and the prompt record what happened in `startup.log`, so that a failure can be diagnosed. This is not yet tested on a real Windows PC.
+- **0.15.1:** the Windows Hello prompt is now started in a different way, which removes a likely reason for it never appearing. Each Hello answer (such as “not set up” or “turned off by policy”) now has its own message, and both the check and the prompt record what happened in `startup.log` so a failure can be diagnosed. This is not yet tested on a real Windows PC.
 - **Passwordless mode** is only offered when your computer protects the key itself (its key store). Importing a passwordless export on a computer without that asks you for a new password.
 - **CSV export** neutralises text that a spreadsheet could read as a formula.
 - **Passwords and saving:** re-entering your password for sensitive actions has the same attempt limit as unlocking. A failed account save no longer leaves memory and disk out of step. A join file picked while locked is refused and its temporary file removed.

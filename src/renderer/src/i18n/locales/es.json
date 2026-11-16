@@ -1215,6 +1215,12 @@
     "auth_device_unprotected": "Windows Hello o Touch ID solo puede sustituir a la contraseña cuando este ordenador protege la clave de Kasboek (cuenta de Windows, Llavero de macOS o un llavero de Linux). Elige una contraseña en su lugar.",
     "auth_nothing_erased": "No hay datos borrados que restaurar.",
     "auth_restore_blocked": "Kasboek ya está configurado aquí. Los datos borrados solo se pueden restaurar en la primera pantalla.",
-    "auth_erase_failed": "Kasboek no pudo apartar los datos, así que se detuvo el borrado. No se eliminó nada."
+    "auth_erase_failed": "Kasboek no pudo apartar los datos, así que se detuvo el borrado. No se eliminó nada.",
+    "auth_device_unavailable": "No se pudo iniciar Windows Hello. Inténtalo de nuevo o reinicia Kasboek.",
+    "auth_device_not_present": "Windows Hello no está configurado en este ordenador: no hay cámara, lector de huellas ni PIN disponible.",
+    "auth_device_not_configured": "Windows Hello no está configurado para tu cuenta de Windows. Configúralo primero en los ajustes de Windows.",
+    "auth_device_disabled": "Windows Hello está desactivado por una directiva de este ordenador.",
+    "auth_device_busy": "Windows Hello está ocupado. Inténtalo de nuevo en un momento.",
+    "auth_device_retries_exhausted": "Windows Hello se detuvo tras demasiados intentos fallidos. Inténtalo más tarde."
   }
 }

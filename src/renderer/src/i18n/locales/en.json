@@ -1215,6 +1215,12 @@
     "auth_device_unprotected": "Windows Hello or Touch ID can only replace the password when this computer protects Kasboek’s key (Windows account, macOS Keychain or a Linux keyring). Choose a password instead.",
     "auth_nothing_erased": "There is no erased data to restore.",
     "auth_restore_blocked": "Kasboek is already set up here. Erased data can only be restored on the first screen.",
-    "auth_erase_failed": "Kasboek could not set the data aside, so erasing was stopped. Nothing was deleted."
+    "auth_erase_failed": "Kasboek could not set the data aside, so erasing was stopped. Nothing was deleted.",
+    "auth_device_unavailable": "Windows Hello could not be started. Try again, or restart Kasboek.",
+    "auth_device_not_present": "Windows Hello is not set up on this computer: there is no camera, fingerprint reader or PIN available.",
+    "auth_device_not_configured": "Windows Hello is not set up for your Windows account. Set it up in Windows settings first.",
+    "auth_device_disabled": "Windows Hello is turned off by a policy on this computer.",
+    "auth_device_busy": "Windows Hello is busy. Try again in a moment.",
+    "auth_device_retries_exhausted": "Windows Hello stopped after too many failed attempts. Try again later."
   }
 }

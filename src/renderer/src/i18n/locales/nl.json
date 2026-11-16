@@ -1215,6 +1215,12 @@
     "auth_device_unprotected": "Windows Hello of Touch ID kan het wachtwoord alleen vervangen als deze computer de sleutel van Kasboek beschermt (Windows-account, macOS-sleutelhanger of een Linux-sleutelbos). Kies in plaats daarvan een wachtwoord.",
     "auth_nothing_erased": "Er zijn geen gewiste gegevens om te herstellen.",
     "auth_restore_blocked": "Kasboek is hier al ingesteld. Gewiste gegevens kunnen alleen op het eerste scherm hersteld worden.",
-    "auth_erase_failed": "Kasboek kon de gegevens niet opzij zetten, dus het wissen is gestopt. Er is niets verwijderd."
+    "auth_erase_failed": "Kasboek kon de gegevens niet opzij zetten, dus het wissen is gestopt. Er is niets verwijderd.",
+    "auth_device_unavailable": "Windows Hello kon niet worden gestart. Probeer het opnieuw of start Kasboek opnieuw op.",
+    "auth_device_not_present": "Windows Hello is niet ingesteld op deze computer: er is geen camera, vingerafdrukscanner of pincode beschikbaar.",
+    "auth_device_not_configured": "Windows Hello is niet ingesteld voor je Windows-account. Stel het eerst in via de Windows-instellingen.",
+    "auth_device_disabled": "Windows Hello is uitgeschakeld door een beleidsregel op deze computer.",
+    "auth_device_busy": "Windows Hello is bezig. Probeer het zo meteen opnieuw.",
+    "auth_device_retries_exhausted": "Windows Hello is gestopt na te veel mislukte pogingen. Probeer het later opnieuw."
   }
 }

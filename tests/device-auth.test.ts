@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answerIsFresh, describeRun, encodeCommand, helloScript, lastLine, NEGATIVE_TTL_MS, psQuote, serialQueue } from '../src/main/security/device-auth'
+import { answerIsFresh, describeRun, encodeCommand, helloScript, interpretHello, lastLine, markedResult, NEGATIVE_TTL_MS, psQuote, serialQueue } from '../src/main/security/device-auth'
 
 describe('Windows Hello prompt', () => {
   it('asks with the plain call and brings the prompt forward', () => {
@@ -31,6 +31,7 @@ describe('Windows Hello step markers', () => {
     expect(s.indexOf("'step: prompting'")).toBeLessThan(s.indexOf('RequestVerificationAsync($reason)'))
     expect(s.indexOf("'step: result: '")).toBeGreaterThan(s.indexOf('RequestVerificationAsync($reason)'))
     expect(s.match(/Write-Output/g)).toHaveLength(1)
+    expect(s.trimEnd().endsWith('Write-Output "RESULT:$r"')).toBe(true)
   })
 })
 
@@ -40,6 +41,13 @@ describe('encoded command', () => {
     const decoded = Buffer.from(encodeCommand(script), 'base64').toString('utf16le')
     expect(decoded.endsWith(script)).toBe(true)
     expect(decoded).toContain('Add-Type -AssemblyName System.Runtime.WindowsRuntime')
+  })
+  it('round-trips the real script with the sentinel, and silences progress output', () => {
+    const script = helloScript(psQuote('Confirm it\u2019s you'))
+    const decoded = Buffer.from(encodeCommand(script), 'base64').toString('utf16le')
+    expect(decoded).toContain("$ProgressPreference = 'SilentlyContinue'")
+    expect(decoded).toContain('Write-Output "RESULT:$r"')
+    expect(decoded.endsWith(script)).toBe(true)
   })
   it('keeps non-ASCII text intact', () => {
     const decoded = Buffer.from(encodeCommand("Write-Output 'caf\u00e9 \u{1F600}'"), 'base64').toString('utf16le')
@@ -58,6 +66,37 @@ describe('result parsing', () => {
     expect(lastLine('noise\r\n  Verified  \r\n\r\n')).toBe('Verified')
     expect(lastLine('')).toBe('')
     expect(lastLine(' \n ')).toBe('')
+  })
+})
+
+describe('Windows Hello answers', () => {
+  const run = (out: string, extra = {}) => ({ out, err: '', code: 0, signal: null, ms: 1, timedOut: false, ...extra })
+  it('reads only the marked value', () => {
+    expect(markedResult('RESULT:Verified')).toBe('Verified')
+    expect(markedResult('Verified')).toBeNull()
+    expect(markedResult('')).toBeNull()
+  })
+  it('verifies, and treats a cancel or our own timeout as a plain false', () => {
+    expect(interpretHello(run('RESULT:Verified'))).toBe(true)
+    expect(interpretHello(run('RESULT:Canceled'))).toBe(false)
+    expect(interpretHello(run('', { code: null, signal: 'SIGTERM', timedOut: true }))).toBe(false)
+  })
+  it('gives each other answer its own error', () => {
+    const codes: Record<string, string> = {
+      DeviceNotPresent: 'auth.device_not_present',
+      NotConfiguredForUser: 'auth.device_not_configured',
+      DisabledByPolicy: 'auth.device_disabled',
+      DeviceBusy: 'auth.device_busy',
+      RetriesExhausted: 'auth.device_retries_exhausted'
+    }
+    for (const [value, code] of Object.entries(codes)) {
+      expect(() => interpretHello(run(`RESULT:${value}`))).toThrowError(expect.objectContaining({ code }))
+    }
+  })
+  it('says Windows Hello could not be started when the marker is missing or the value is unknown', () => {
+    expect(() => interpretHello(run('', { code: 0 }))).toThrowError(expect.objectContaining({ code: 'auth.device_unavailable' }))
+    expect(() => interpretHello(run('Verified'))).toThrowError(expect.objectContaining({ code: 'auth.device_unavailable' }))
+    expect(() => interpretHello(run('RESULT:Surprise'))).toThrowError(expect.objectContaining({ code: 'auth.device_unavailable' }))
   })
 })
 
@@ -108,8 +147,8 @@ describe('psQuote', () => {
     expect(psQuote('it\u2019s')).toBe("it''s")
     expect(psQuote('\u2018a\u201B')).toBe("''a''")
   })
-  it('drops line breaks and non-ASCII so the string literal cannot end early', () => {
-    expect(psQuote('a\nb\r\u00e9')).toBe('a b  ')
+  it('turns line breaks into spaces and keeps other text, since the script is sent encoded', () => {
+    expect(psQuote('a\nb\r\u00e9')).toBe('a b \u00e9')
   })
 })
 
