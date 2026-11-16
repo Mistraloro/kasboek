@@ -6,3 +6,6 @@ Before starting the "Build installers" workflow, raise the version and commit it
   Patch for fixes only, minor when there are new features.
 - Update `.github/release-notes.md` for that version.
 - Commit, push, then start the build. Never build twice under the same version number.
+
+## Coding work
+Send every coding request and every question about the code to the `dev-team:project-manager` agent, which assigns the right specialist. Don't do coding work directly in the main conversation.
