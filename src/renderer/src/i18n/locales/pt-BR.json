@@ -51,7 +51,7 @@
     },
     "invert": "Inverter sinais (as saídas são positivas neste arquivo)",
     "reset": "Redefinir",
-    "fixDate": "Digite a data (DD/MM/AAAA)",
+    "fixDate": "Digite a data ({{format}})",
     "fixAmount": "Digite o valor, negativo para uma saída (ex.: -12,50)",
     "checking": "{{ai}} está revisando…",
     "checked": "{{ai}} revisou o arquivo. Veja as notas por cima das linhas.",

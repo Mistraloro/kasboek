@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DATE_PATTERNS, DEFAULT_FORMATS, checkDateText, formatDate, parseDate, type DatePattern, type FormatPrefs } from '@shared/format'
+import { DATE_PATTERNS, DEFAULT_FORMATS, checkDateText, dateExample, datePlaceholder, formatDate, parseDate, type DatePattern, type FormatPrefs } from '@shared/format'
 
 const f = (date: DatePattern): FormatPrefs => ({ ...DEFAULT_FORMATS, date })
 
@@ -70,5 +70,19 @@ describe('checkDateText', () => {
   it('flags dates after the latest allowed day', () => {
     expect(checkDateText('06/01/2026', f('DD/MM/YYYY'), 'en', '2026-01-05')).toEqual({ iso: '', problem: 'tooLate' })
     expect(checkDateText('05/01/2026', f('DD/MM/YYYY'), 'en', '2026-01-05')).toEqual({ iso: '2026-01-05', problem: null })
+  })
+})
+
+describe('datePlaceholder and dateExample', () => {
+  it('show the chosen pattern and a matching example', () => {
+    expect(datePlaceholder(f('DD.MM.YYYY'))).toBe('DD.MM.YYYY')
+    expect(dateExample(f('DD.MM.YYYY'))).toBe('31.12.2026')
+    expect(dateExample(f('MM/DD/YYYY'))).toBe('12/31/2026')
+    expect(dateExample(f('YYYY-MM-DD'))).toBe('2026-12-31')
+    expect(dateExample(f('D MMM YYYY'), 'en')).toBe('31 Dec 2026')
+  })
+
+  it('gives an example that reads back as the same day for every pattern', () => {
+    for (const pattern of DATE_PATTERNS) expect(parseDate(dateExample(f(pattern)), f(pattern)), pattern).toBe('2026-12-31')
   })
 })

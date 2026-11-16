@@ -6,6 +6,7 @@ import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
+import { dateExample, datePlaceholder, parseDate } from '@shared/format'
 import { ApiError, call, useOp } from '../lib/api'
 import { openSettingsTab } from '../lib/settings-tab'
 import { formatDate, formatDateTime } from '../lib/format'
@@ -344,10 +345,10 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
                     <td className="num px-2 py-2 text-[13px] whitespace-nowrap">
                       {r.bookingDate ? formatDate(r.bookingDate, fmt) : (
                         <button type="button" className="font-medium text-negative underline decoration-dotted" onClick={() => {
-                          const v = window.prompt(t('import.fixDate'), '')
-                          const m = v?.trim().match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/)
-                          if (m) update([{ index: r.index, bookingDate: `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}` }])
-                          else if (v) toast(t('import.fixDateInvalid'), 'error')
+                          const v = window.prompt(t('import.fixDate', { format: datePlaceholder(fmt.formats) }), '')
+                          const iso = v ? parseDate(v, fmt.formats, fmt.language) : null
+                          if (iso) update([{ index: r.index, bookingDate: iso }])
+                          else if (v) toast(t('dateInput.invalid', { format: datePlaceholder(fmt.formats), example: dateExample(fmt.formats, fmt.language) }), 'error')
                         }}>{t('import.badDate')}</button>
                       )}
                     </td>

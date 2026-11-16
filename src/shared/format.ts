@@ -308,6 +308,16 @@ export function checkDateText(text: string, f: FormatPrefs, language = 'en', max
   return { iso, problem: null }
 }
 
+/** The pattern to show as a hint or placeholder for the chosen date format, e.g. "DD/MM/YYYY". */
+export function datePlaceholder(f: FormatPrefs): string {
+  return f.date
+}
+
+/** An example date written in the chosen format, e.g. "31/12/2026". 31 December reads the same in no other order. */
+export function dateExample(f: FormatPrefs, language = 'en'): string {
+  return formatDate('2026-12-31', f, language)
+}
+
 export function formatTime(input: string | Date, f: FormatPrefs): string {
   const p = parts(input)
   if (f.time === '24h') return `${pad(p.h)}:${pad(p.min)}`

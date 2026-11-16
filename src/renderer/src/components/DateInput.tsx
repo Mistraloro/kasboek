@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { checkDateText } from '@shared/format'
-import { localToday } from '@shared/month'
+import { checkDateText, dateExample, datePlaceholder } from '@shared/format'
 import { formatDate } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { Input } from './ui'
@@ -30,7 +29,7 @@ export function DateInput({ id, value, onChange, max, required }: { id?: string;
         id={id}
         value={text}
         required={required}
-        placeholder={fmt.formats.date}
+        placeholder={datePlaceholder(fmt.formats)}
         aria-invalid={shown ? true : undefined}
         className={shown ? 'num border-negative!' : 'num'}
         onChange={(e) => {
@@ -43,7 +42,7 @@ export function DateInput({ id, value, onChange, max, required }: { id?: string;
       />
       {shown && (
         <p className="text-xs text-negative">
-          {check.problem === 'tooLate' ? t('dateInput.tooLate', { date: formatDate(max!, fmt) }) : t('dateInput.invalid', { format: fmt.formats.date, example: formatDate(localToday(), fmt) })}
+          {check.problem === 'tooLate' ? t('dateInput.tooLate', { date: formatDate(max!, fmt) }) : t('dateInput.invalid', { format: datePlaceholder(fmt.formats), example: dateExample(fmt.formats, fmt.language) })}
         </p>
       )}
     </>
