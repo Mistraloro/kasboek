@@ -8,29 +8,39 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
 ## What it does
 
 - **Budget**: accounts, transactions (search, filter, edit, bulk categorise or rename, saved
-  searches, split one payment over categories), categories, rules ("Delhaize → Groceries", on text,
+  searches, split one payment over categories), categories, rules ("Supermarket → Groceries", on text,
   whole words or the counterparty's IBAN), monthly budgets, and an overview with income, spending,
   budget left, warnings and a 6-month chart; a year view per category; net worth over time with
   investments and loans; savings goals; fixed costs and subscriptions found from your transactions.
   Refunds lower spending; transfers between your own accounts are paired and left out.
   Dark and light mode, eight languages, number and date formats chosen part by part.
+- **First start**: a welcome window sets the language, number and date style, exchange rates, the
+  assistant, Claude Desktop / Claude Code and update checks, then offers a short tour of the app.
 - **Bank balance**: enter what your bank shows (or let a CSV balance column do it); the balance is
   counted from there, and a later balance that doesn't match shows the difference.
 - **Currencies**: each account in its own currency; totals in a main currency at the rate of each
-  transaction's date (ECB reference rates, downloaded on request, or your own).
-- **CSV import**: drop a bank export. Kasboek recognises Argenta, Hello bank! and Keytrade Bank
-  (and most other layouts), flags duplicates (also by bank reference, and "maybe imported" when the
-  bank changed the text), applies your rules and the names you tidied before, and shows everything
-  before saving. Undo per import. Export to CSV, and a year report as PDF.
+  transaction's date (ECB reference rates, on by default in the welcome window, or your own rates).
+  A transfer between your accounts in different currencies is paired at that day's rate; what the
+  bank kept on the conversion counts as a fee. Give an account its usual "Exchange cost (%)", or
+  change the cost per transfer to the amount on your statement.
+- **CSV import**: drop a bank export. Kasboek reads the CSV exports of most large banks and payment
+  apps in Europe, the UK, the Americas and beyond, with headers in many languages: dates with the
+  day or month first or with month names, decimal commas or points, currency signs, separate
+  debit and credit columns or a debit/credit column. Anything it can't place you choose yourself,
+  and "Remember this format" keeps your choice for the next file. It flags duplicates (also by
+  bank reference, and "maybe imported" when the bank changed the text), applies your rules and the
+  names you tidied before, and shows everything before saving. Undo per import. Export to CSV, and
+  a year report as PDF.
 - **Assistant**: ask questions about your money or let the assistant make changes. You choose which
-  kinds of change it may make by itself and which wait for your OK (Settings → "What the assistant
-  may do by itself"), how much it reasons per model, and what it remembers between conversations
+  kinds of change it may make by itself and which wait for your OK (Settings → Assistant → "What
+  the assistant may do by itself"), how much it reasons per model, and what it remembers between conversations
   (kept encrypted on this computer only). "Check with …" categorises a CSV, makes names readable, suggests rules and
   sorts older uncategorised transactions, showing its reasoning in the assistant panel; a monthly
   review on the Overview. Claude, Mistral, Groq,
   DeepSeek, Gemini, OpenRouter, Together, Fireworks, Ollama, LM Studio or any OpenAI-compatible server.
-- **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (Settings → Assistant);
-  a tray icon shows the connection and can stop it.
+- **MCP**: use Kasboek from Claude Desktop or Claude Code, added with one click (welcome window or
+  Settings → Assistant). Settings shows whether each app is connected now or when it last used
+  Kasboek; a tray icon shows the connection and can stop it.
 - **Sync**: keep several computers in step through a cloud folder you already use; only encrypted
   files go there, and changes merge per field.
 - **Same everywhere**: Windows, macOS and Linux use the same encrypted database and the same export
@@ -40,6 +50,8 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   computer. Moving computers only works through an encrypted **export** that opens with your login.
 - **Backups**: automatic and encrypted, after important changes and daily, kept by age (24 hours,
   30 days, a year), to a folder you choose.
+- **Updates**: a button at the top when a new release is out; Kasboek downloads, checks and
+  installs it. The version you run is shown at the bottom of the menu.
 
 ## Run it
 
@@ -73,14 +85,20 @@ SHA-256 GitHub reports for the file (or the release's `SHA256SUMS.txt`), the dat
 itself; a `.deb` or `.dmg` is opened for you to finish. Only published releases count: test builds
 on the Actions page are not offered.
 
-**Publish a new version**: set `version` in `package.json`, commit, then push a matching tag
-(`git tag v0.9.1 && git push origin v0.9.1`), or run the workflow with “Publish as a release” ticked. The **Build installers** workflow builds every OS on a
-real machine of that OS and attaches the files to a new Release. Running the workflow by hand
-without ticking “Publish as a release” makes a test build whose files stay under the run's Artifacts for 90 days.
+**Publish a new version**: raise the version (`npm version patch --no-git-tag-version`, or `minor`
+for new features), update `.github/release-notes.md`, commit and push. Then run the **Build
+installers** workflow with “Publish as a release” ticked (or push a matching tag, `v0.13.1`). It
+builds every OS on a real machine of that OS and attaches the files, with `SHA256SUMS.txt`, to a
+new Release. Without “Publish as a release” it makes a test build whose files stay under the run's
+Artifacts for 90 days.
 
 Locally, each OS builds its own installers: `npm run dist:win`, `npm run dist:mac`,
 `npm run dist:linux`. (The Linux packages can also be built on other systems; the `.msi` needs
 Windows.)
+
+**Uninstalling** removes the program, its shortcuts, registry entries, caches and Kasboek's
+entries in Claude Desktop and Claude Code. Your data stays, so a reinstall picks up where you left
+off. To delete it too, run the same installer again, choose Remove and tick “Also delete my Kasboek data”. Sync and backup folders are never touched.
 
 **Signing.** Without certificates, Windows SmartScreen shows “Windows protected your PC” on first
 install (More info → Run anyway), and macOS shows “cannot verify the developer” (right-click the
@@ -90,7 +108,7 @@ code-signing certificate).
 
 ## Assistant
 
-1. Settings → Assistant → choose a provider. For Claude, create an API key at
+1. In the welcome window or Settings → Assistant, choose a provider. For Claude, create an API key at
    console.anthropic.com (billed by Anthropic, separately from Claude.ai); other providers have
    their own key page, linked there. Ollama and LM Studio run on your computer and need no key.
 2. Add the key. It is stored inside your encrypted data, separately per provider.
@@ -105,7 +123,7 @@ choice per kind of change. Balances, deleting rules, new accounts, imports and r
 ask unless you allow them; changes to more than 100 transactions always ask, except in "Decide by
 itself". Changes made without asking show in the chat.
 
-**Memory**: say "remember that …", or add items in Settings → "What the assistant remembers". Up to
+**Memory**: say "remember that …", or add items in Settings → Assistant → "What the assistant remembers". Up to
 50 short items, stored in the encrypted database, not synced and not offered to Claude apps over
 MCP. Account and card numbers are refused. Switch it off to stop sending it.
 
@@ -115,7 +133,7 @@ Kasboek is running and unlocked; changes wait for your approval in Kasboek.
 
 ## Sync
 
-Settings → Sync between computers → Choose folder (a folder your cloud app syncs). On the other
+Settings → Backups & sync → Sync between computers → Choose folder (a folder your cloud app syncs). On the other
 computer: Join a sync folder, then your password and 2FA code (or recovery key). Kasboek writes
 encrypted change files there; the key never leaves your encrypted data except inside an
 encrypted snapshot. Passwordless sign-in is set up per computer.
@@ -141,10 +159,13 @@ npm run test:mcp    # the Go MCP helper
 - `account.json`: login key slots, sealed by the operating system (only opens on this computer and account)
 - `prefs.json`: theme, language, formats, auto-lock (nothing sensitive)
 - `sync.json`: this computer's sync id and folder, when syncing
-- `safety-backups/`: copies made automatically before an import
+- `safety-backups/`: copies made automatically before an import and before an update
+- `updates/`: a downloaded update while it installs
 
-Copying this folder to another computer does **not** work, by design. Use Settings → Move to
-another computer → Export, then Import on the new computer with your password and 2FA code (or
+The assistant's memory, settings that sync and everything you enter live inside `kasboek.db`.
+
+Copying this folder to another computer does **not** work, by design. Use Settings → Backups & sync
+→ Move to another computer → Export, then Import on the new computer with your password and 2FA code (or
 your recovery key).
 
 ## Project layout
@@ -159,7 +180,7 @@ tools/kasboek-mcp/  the small Go helper Claude apps start for MCP
 src/preload/      the small bridge exposed to the page
 src/renderer/     React UI, theme tokens, i18n strings (src/renderer/src/i18n/locales)
 assets/brand/     logo and icon sources;  npm run icons  regenerates build/ icons
-tests/            unit tests and CSV fixtures
+tests/            unit tests, CSV fixtures and bank samples (tests/banks.test.ts)
 ```
 
 ## Adding a language

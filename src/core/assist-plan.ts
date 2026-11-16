@@ -18,6 +18,7 @@ const MappingPart = z.object({
     amount: col,
     debit: col,
     credit: col,
+    direction: col,
     currency: col,
     counterpartyName: col,
     counterpartyIban: col,

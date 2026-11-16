@@ -1,12 +1,22 @@
 /**
- * Parses a money amount as people and Belgian banks write it:
- * "12,50", "-1.234,56", "1 234,56", "+12.00", "12,50-", "€ 3,20", "(4,00)". Returns cents or null.
+ * Parses a money amount as people and banks write it:
+ * "12,50", "-1.234,56", "1 234,56", "+12.00", "12,50-", "€ 3,20", "(4,00)", "USD 12.50", "12.50 DR". Returns cents or null.
  * `decimal` forces the decimal separator; 'auto' guesses from the last separator.
  */
 export function parseAmount(input: string, decimal: ',' | '.' | 'auto' = 'auto', prefer: ',' | '.' = ','): number | null {
-  let s = input.trim().replace(/[€$£\s  ]|EUR/gi, '')
-  if (!s) return null
+  let s = input.trim()
+  // "12.50 DR" / "12.50 CR" (UK statements): debit is money out.
   let negative = false
+  const side = /\s*\b(DR|CR)\.?$/i.exec(s)
+  if (side) {
+    negative = side[1]!.toUpperCase() === 'DR'
+    s = s.slice(0, side.index)
+  }
+  // Currency signs and codes before or after the number: "€ 3,20", "USD 12.50", "12,50 CHF", "R$ 9,90", "kr 100".
+  s = s
+    .replace(/^[A-Za-z]{1,3}\$|^[A-Z]{3}\s*|\s*[A-Z]{3}$|\s*(kr|zł|zl|Fr|fr|Kč)\.?$|^(kr|Fr)\.?\s*/g, '')
+    .replace(/[€$£¥₹₩₺₽₴₫฿₪\s\u00a0\u202f]/g, '')
+  if (!s) return null
   if (/^\(.*\)$/.test(s)) {
     negative = true
     s = s.slice(1, -1)

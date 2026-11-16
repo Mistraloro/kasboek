@@ -214,6 +214,7 @@
       "amount": "Montant (+/−)",
       "debit": "Sorties (débit)",
       "credit": "Entrées (crédit)",
+      "direction": "Sortie ou entrée (p. ex. Débit/Crédit)",
       "counterpartyName": "Nom de la contrepartie",
       "counterpartyIban": "Compte de la contrepartie",
       "communication": "Communication",

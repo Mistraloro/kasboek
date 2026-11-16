@@ -214,6 +214,7 @@
       "amount": "Amount (+/−)",
       "debit": "Money out (debit)",
       "credit": "Money in (credit)",
+      "direction": "Out or in (e.g. Af/Bij, Debit/Credit)",
       "counterpartyName": "Counterparty name",
       "counterpartyIban": "Counterparty account",
       "communication": "Communication",

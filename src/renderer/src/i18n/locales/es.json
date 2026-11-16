@@ -214,6 +214,7 @@
       "amount": "Importe (+/−)",
       "debit": "Salidas (cargo)",
       "credit": "Entradas (abono)",
+      "direction": "Salida o entrada (p. ej. Cargo/Abono)",
       "counterpartyName": "Nombre de la contraparte",
       "counterpartyIban": "Cuenta de la contraparte",
       "communication": "Referencia",

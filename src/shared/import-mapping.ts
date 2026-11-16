@@ -15,6 +15,7 @@ export const mappingSchema = z
         amount: z.number().int().min(0).optional(),
         debit: z.number().int().min(0).optional(),
         credit: z.number().int().min(0).optional(),
+        direction: z.number().int().min(0).optional(),
         currency: z.number().int().min(0).optional(),
         counterpartyName: z.number().int().min(0).optional(),
         counterpartyIban: z.number().int().min(0).optional(),

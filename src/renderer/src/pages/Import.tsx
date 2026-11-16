@@ -493,7 +493,7 @@ function CheckSummaryCard({ preview, onChange }: { preview: ImportPreview; onCha
   )
 }
 
-const FIELDS: (keyof Omit<ImportColumns, 'description'>)[] = ['bookingDate', 'amount', 'debit', 'credit', 'counterpartyName', 'counterpartyIban', 'communication', 'valueDate', 'currency', 'bankReference', 'status', 'balance']
+const FIELDS: (keyof Omit<ImportColumns, 'description'>)[] = ['bookingDate', 'amount', 'debit', 'credit', 'direction', 'counterpartyName', 'counterpartyIban', 'communication', 'valueDate', 'currency', 'bankReference', 'status', 'balance']
 
 function MappingModal({ open, preview, onClose, onApplied }: { open: boolean; preview: ImportPreview; onClose: () => void; onApplied: (p: ImportPreview) => void }) {
   const { t } = useTranslation()

@@ -124,7 +124,7 @@ export function remap(db: Db, id: string, mapping: unknown, source: ImportPrevie
   const parsed = mappingSchema.parse(mapping)
   const width = Math.max(...s.rows.map((r) => r.length))
   const cols = parsed.columns
-  const all = [cols.bookingDate, cols.valueDate, cols.amount, cols.debit, cols.credit, cols.currency, cols.counterpartyName, cols.counterpartyIban, cols.communication, cols.bankReference, cols.status, ...cols.description]
+  const all = [cols.bookingDate, cols.valueDate, cols.amount, cols.debit, cols.credit, cols.direction, cols.currency, cols.counterpartyName, cols.counterpartyIban, cols.communication, cols.bankReference, cols.status, ...cols.description]
   if (all.some((c) => c !== undefined && c >= width) || parsed.headerRow >= s.rows.length - 1) throw new AppError('import.bad_mapping', 'That column doesn’t exist in this file.')
   s.mapping = parsed
   s.mappingSource = source

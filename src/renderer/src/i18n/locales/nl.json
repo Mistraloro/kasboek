@@ -214,6 +214,7 @@
       "amount": "Bedrag (+/−)",
       "debit": "Geld uit (debet)",
       "credit": "Geld in (credit)",
+      "direction": "Af of bij (bv. Af/Bij, Debet/Credit)",
       "counterpartyName": "Naam tegenpartij",
       "counterpartyIban": "Rekening tegenpartij",
       "communication": "Mededeling",

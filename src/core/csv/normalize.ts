@@ -1,6 +1,6 @@
 /** Turns mapped CSV rows into clean transactions, recording every problem instead of guessing silently. */
 import { parseAmount } from '@shared/amount'
-import type { CsvMapping } from './mapping'
+import { directionOf, type CsvMapping } from './mapping'
 
 export type RowIssue = 'date_invalid' | 'amount_invalid' | 'amount_zero' | 'status_refused' | 'currency_other'
 
@@ -23,10 +23,48 @@ export interface CleanRow {
   raw: string[]
 }
 
+/** Month names and abbreviations in Kasboek's languages (accents removed), January = 1. */
+const MONTHS: Record<string, number> = {}
+;[
+  ['jan', 'january', 'januari', 'janvier', 'januar', 'jänner', 'enero', 'ene', 'janeiro', 'gennaio', 'gen', 'janv'],
+  ['feb', 'february', 'februari', 'fevrier', 'februar', 'febrero', 'fevereiro', 'fev', 'febbraio', 'fevr'],
+  ['mar', 'march', 'maart', 'mars', 'marz', 'maerz', 'marzo', 'marco', 'mrt'],
+  ['apr', 'april', 'avril', 'abril', 'aprile', 'abr', 'avr'],
+  ['may', 'mei', 'mai', 'mayo', 'maio', 'maggio', 'mag'],
+  ['jun', 'june', 'juni', 'juin', 'junio', 'junho', 'giugno', 'giu'],
+  ['jul', 'july', 'juli', 'juillet', 'julio', 'julho', 'luglio', 'lug', 'juil'],
+  ['aug', 'august', 'augustus', 'aout', 'agosto', 'ago'],
+  ['sep', 'sept', 'september', 'septembre', 'septiembre', 'setembro', 'settembre', 'set'],
+  ['oct', 'october', 'oktober', 'octobre', 'octubre', 'outubro', 'ottobre', 'okt', 'out', 'ott'],
+  ['nov', 'november', 'novembre', 'noviembre', 'novembro'],
+  ['dec', 'december', 'decembre', 'dezember', 'diciembre', 'dezembro', 'dicembre', 'dic', 'dez']
+].forEach((names, i) => names.forEach((n) => (MONTHS[n] = i + 1)))
+
+/** "16 Nov 2026", "16-nov-26", "Nov 16, 2026", "16. November 2026": day, month name, year in any of these orders. */
+function parseNamedDate(text: string): [number, number, number] | null {
+  const words = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[.,]/g, ' ')
+    .split(/[\s/-]+/)
+    .filter(Boolean)
+  const month = words.map((w) => MONTHS[w]).find((m) => m !== undefined)
+  const nums = words.filter((w) => /^\d+$/.test(w)).map(Number)
+  if (!month || nums.length < 2) return null
+  const year = nums.find((n) => n > 31) ?? nums[1]!
+  const day = nums.find((n) => n !== year && n <= 31)
+  return day === undefined ? null : [year, month, day]
+}
+
 export function parseDate(text: string, order: CsvMapping['dateOrder']): string | null {
   const s = text.trim().split(/[ T]/)[0] ?? ''
   let y: number, m: number, d: number
-  if (/^\d{8}$/.test(s)) [y, m, d] = [Number(s.slice(0, 4)), Number(s.slice(4, 6)), Number(s.slice(6))]
+  if (/\p{L}{3}/u.test(text) && !/^\d{4}-\d{2}-\d{2}T/.test(text.trim())) {
+    const named = parseNamedDate(text)
+    if (!named) return null
+    ;[y, m, d] = named
+  } else if (/^\d{8}$/.test(s)) [y, m, d] = [Number(s.slice(0, 4)), Number(s.slice(4, 6)), Number(s.slice(6))]
   else {
     const parts = s.split(/[-/.]/).map(Number)
     if (parts.length !== 3 || parts.some((n) => !Number.isInteger(n))) return null
@@ -79,11 +117,17 @@ export function normalizeRows(rawRows: string[][], mapping: CsvMapping, accountC
     const valueDate = c.valueDate !== undefined ? parseDate(get(c.valueDate), mapping.dateOrder) : null
 
     let amountCents: number | null
-    if (c.amount !== undefined) amountCents = parseAmount(get(c.amount), mapping.decimal)
+    // An empty amount cell with debit/credit columns next to it (Deutsche Bank: "Betrag" empty, "Soll"/"Haben" filled).
+    if (c.amount !== undefined && (get(c.amount) || (c.debit === undefined && c.credit === undefined))) amountCents = parseAmount(get(c.amount), mapping.decimal)
     else {
       const debit = get(c.debit) ? parseAmount(get(c.debit), mapping.decimal) : 0
       const credit = get(c.credit) ? parseAmount(get(c.credit), mapping.decimal) : 0
       amountCents = debit === null || credit === null ? null : (credit ?? 0) - Math.abs(debit ?? 0)
+    }
+    // A separate column says out or in ("Af"/"Bij", "S"/"H"); the amount itself is then usually without sign.
+    if (amountCents !== null && c.direction !== undefined) {
+      const dir = directionOf(get(c.direction))
+      if (dir !== null) amountCents = dir * Math.abs(amountCents)
     }
     if (amountCents !== null && mapping.invertSign) amountCents = -amountCents
     if (amountCents === null) issues.push('amount_invalid')

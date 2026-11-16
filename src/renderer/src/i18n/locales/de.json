@@ -214,6 +214,7 @@
       "amount": "Betrag (+/−)",
       "debit": "Abgang (Soll)",
       "credit": "Eingang (Haben)",
+      "direction": "Ausgang oder Eingang (z. B. S/H, Soll/Haben)",
       "counterpartyName": "Name der Gegenpartei",
       "counterpartyIban": "Konto der Gegenpartei",
       "communication": "Verwendungszweck",

@@ -46,7 +46,8 @@
     },
     "remember": "Lembrar este formato",
     "field": {
-      "amount": "Valor (+/−)"
+      "amount": "Valor (+/−)",
+      "direction": "Saída ou entrada (ex.: Débito/Crédito)"
     },
     "invert": "Inverter sinais (as saídas são positivas neste arquivo)",
     "reset": "Redefinir",

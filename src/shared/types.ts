@@ -622,6 +622,8 @@ export interface ImportColumns {
   amount?: number
   debit?: number
   credit?: number
+  /** Whether the amount is money out or in, as its own column ("Af/Bij", "S/H", "Debit/Credit"). */
+  direction?: number
   currency?: number
   counterpartyName?: number
   counterpartyIban?: number
