@@ -6,6 +6,7 @@ import { Mark } from './components/Mark'
 import { McpRequests } from './components/McpRequests'
 import { UpdateButton } from './components/Update'
 import { Tour } from './components/Tour'
+import { openSettingsTab } from './lib/settings-tab'
 import { Welcome } from './pages/Welcome'
 import { ToastProvider, useToast } from './components/Toast'
 import { cx } from './components/ui'
@@ -141,6 +142,18 @@ function Shell() {
             <LockIcon size={17} />
             {t('nav.lock')}
           </button>
+          {/* The version, quietly; a click opens "About Kasboek" in Settings. */}
+          <button
+            type="button"
+            title={t('settings.about')}
+            onClick={() => {
+              openSettingsTab('general')
+              setPage('settings')
+            }}
+            className="num mt-2 self-start rounded px-3 text-[11px] text-muted/70 transition-colors hover:text-text"
+          >
+            {t('app.versionShort', { version: info.version })}
+          </button>
         </div>
       </aside>
 
@@ -173,7 +186,7 @@ function Shell() {
               {page === 'recurring' && <RecurringPage key={navKey} />}
               {page === 'goals' && <GoalsPage key={navKey} />}
               {page === 'import' && <ImportPage go={setPage} />}
-              {page === 'settings' && <SettingsPage />}
+              {page === 'settings' && <SettingsPage key={navKey} />}
             </div>
           </main>
           {assistantOpen && <AssistantPanel go={setPage} />}

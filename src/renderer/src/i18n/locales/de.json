@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "Kasboek"
+    "name": "Kasboek",
+    "versionShort": "Version {{version}}"
   },
   "nav": {
     "overview": "Übersicht",
