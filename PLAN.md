@@ -291,6 +291,14 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    `msiexec /i <product> ` instead of `/x`), that Repair keeps the data, and that a silent
    uninstall (`msiexec /x ... /qn`, used by updates and IT tools) still works without the dialog
    and keeps the data. Never touch sync and backup folders.
+21. **Fix: the recovery key check is skipped (found testing 0.15.1 on Windows, with Windows Hello).**
+   On the recovery key screen, ticking "I have saved it" jumps straight to the next page. The field
+   that asks for the last 4 characters of the key, which proves the key was copied, never appears.
+   `RecoveryKeyPanel` in `src/renderer/src/pages/auth/parts.tsx` does show that field and keeps
+   Continue disabled until it matches, so the screen in use is probably another path (check the
+   Setup flow for passwordless / Windows Hello, and the screens that show a new key: Settings and
+   the recovery-key unlock), or something calls `onDone` early. Not reproduced yet. Fix it so every
+   place that shows a recovery key asks for the last 4 characters before continuing, and add a test.
 
 ## Later, maybe
 
