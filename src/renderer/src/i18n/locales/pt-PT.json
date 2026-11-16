@@ -1107,6 +1107,7 @@
       "dmg": "Descarregado e verificado. O Kasboek abre a imagem de disco; arraste o Kasboek para Aplicações e substitua a versão antiga.",
       "deb": "Descarregado e verificado. O Kasboek abre o pacote no instalador de software."
     },
+    "preparing": "A preparar a atualização… Primeiro uma cópia de segurança dos seus dados.",
     "installing": "A instalar… O Kasboek fecha, mostra o progresso e volta a abrir dentro de momentos.",
     "helper": {
       "waiting": "A aguardar que o Kasboek feche…",

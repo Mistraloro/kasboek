@@ -308,6 +308,7 @@
     "current": "Você tem a versão {{version}}.",
     "downloading": "Baixando… {{percent}} % de {{size}}",
     "readyRestart": "Baixado e verificado. O Kasboek fecha, mostra o progresso da instalação em uma janela própria e volta a abrir. Demora cerca de um minuto.",
+    "preparing": "Preparando a atualização… Primeiro uma cópia de segurança dos seus dados.",
     "installing": "Instalando… O Kasboek fecha, mostra o progresso e volta a abrir em instantes.",
     "helper": {
       "waiting": "Aguardando o Kasboek fechar…",

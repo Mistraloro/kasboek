@@ -304,15 +304,18 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    choices" (PIN) and whether another call (for example a `KeyCredentialManager` or the in-process
    `IUserConsentVerifierInterop` route from the long-term idea in the Windows Hello review) lets
    Windows remember the last method. If Windows cannot do it, record that here and leave it as is.
-23. **Updater: the app freezes for a moment after "Install and restart".** Seen testing the new
-   update window (0.16.0 to 0.16.1); the update itself worked perfectly. Likely cause (from
-   `install()` in `src/main/update.ts`, not measured): the button press first writes a safety backup
-   (`writeTransfer`, with key derivation and encryption), then copies the helper and waits up to 8 s
-   for it to confirm it started, and only then sets the state to `installing`; the window shows no
-   change meanwhile. Closing then makes another backup on quit. Fix: show "Preparing the update..."
-   with a spinner at once (set the state before the backup), keep the interface responsive during the
-   backup, and measure which step takes the time. Consider skipping the second backup on quit when a
-   safety backup was just made.
+23. **Updater: the app freezes for a moment after "Install and restart".** Fixed, not released yet.
+   Found by reading the code (not measured on Windows): the press first made the safety backup,
+   `writeTransfer` in `src/main/transfer/service.ts`. That has no key derivation (the key is in memory),
+   but `VACUUM INTO` (`snapshotEncrypted`, better-sqlite3) and the AES-GCM encoding of the whole file
+   (`encodeTransfer`) run synchronously on the main process, so it cannot repaint or answer the window.
+   The state only became `installing` after the backup and the helper start (up to 8 s), so nothing
+   showed. Fixed: `install()` sets the new state `preparing` first ("Preparing the update..." with a
+   spinner, button disabled, window not dismissible), waits 100 ms so it is drawn, and goes back to
+   `ready` with the error if anything fails (`installStep` in `src/core/update.ts`). The export itself
+   is still synchronous, so a short stall remains, but the window now says why. Not changed: the backup
+   on quit. It is a different backup (the automatic backup folder, only when the data changed and
+   automatic backups are on), so the safety copy in `safety/` can't replace it.
 
 ## Later, maybe
 

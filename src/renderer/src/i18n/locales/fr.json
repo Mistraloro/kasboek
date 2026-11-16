@@ -1107,6 +1107,7 @@
       "dmg": "Téléchargé et vérifié. Kasboek ouvre l’image disque ; faites glisser Kasboek dans Applications et remplacez l’ancienne version.",
       "deb": "Téléchargé et vérifié. Kasboek ouvre le paquet dans votre installateur de logiciels."
     },
+    "preparing": "Préparation de la mise à jour… D’abord une copie de sécurité de vos données.",
     "installing": "Installation… Kasboek se ferme, affiche la progression et se rouvre dans un instant.",
     "helper": {
       "waiting": "En attente de la fermeture de Kasboek…",

@@ -248,7 +248,7 @@ export interface Prefs {
 export type UpdateKind = 'msi' | 'appimage' | 'deb' | 'dmg'
 
 export interface UpdateStatus {
-  state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'installing' | 'opened' | 'error'
+  state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'preparing' | 'installing' | 'opened' | 'error'
   /** This version and the newest release. */
   current: string
   latest: string | null

@@ -1107,6 +1107,7 @@
       "dmg": "Gedownload en gecontroleerd. Kasboek opent de schijfkopie; sleep Kasboek naar Apps en vervang de oude.",
       "deb": "Gedownload en gecontroleerd. Kasboek opent het pakket in je software-installatie."
     },
+    "preparing": "De update wordt voorbereid… Eerst een veiligheidskopie van je gegevens.",
     "installing": "Installeren… Kasboek sluit zo, toont de voortgang en opent dan opnieuw.",
     "helper": {
       "waiting": "Wachten tot Kasboek gesloten is…",

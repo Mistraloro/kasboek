@@ -1107,6 +1107,7 @@
       "dmg": "Geladen und geprüft. Kasboek öffnet das Disk-Image; zieh Kasboek in „Programme“ und ersetze die alte Version.",
       "deb": "Geladen und geprüft. Kasboek öffnet das Paket in deiner Softwareinstallation."
     },
+    "preparing": "Das Update wird vorbereitet… Zuerst eine Sicherheitskopie deiner Daten.",
     "installing": "Wird installiert… Kasboek schließt sich gleich, zeigt den Fortschritt und öffnet sich wieder.",
     "helper": {
       "waiting": "Warten, bis Kasboek geschlossen ist…",

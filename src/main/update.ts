@@ -14,7 +14,7 @@ import { basename, dirname, join } from 'node:path'
 import { app, nativeTheme, net, shell } from 'electron'
 import { AppError } from '@core/errors'
 import type { UpdateStatus } from '@shared/types'
-import { buildUpdatePlan, checksumFromSums, failedUpdateMessage, installKind, newer, oneAtATime, pickAsset, safeAssetName, updateMayStillBeRunning, waitForHelperStart, type UpdatePlan } from '@core/update'
+import { buildUpdatePlan, checksumFromSums, failedUpdateMessage, installKind, installStep, newer, oneAtATime, pickAsset, safeAssetName, updateMayStillBeRunning, waitForHelperStart, type UpdatePlan } from '@core/update'
 import { helperPath } from './mcp/channel'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
@@ -88,7 +88,7 @@ async function checksum(assets: { name: string; browser_download_url: string; di
 
 export async function checkForUpdate(): Promise<UpdateStatus> {
   if (!supported()) return set({ state: 'idle', supported: false })
-  if (busy || status.state === 'downloading' || status.state === 'installing') return status
+  if (busy || status.state === 'downloading' || status.state === 'preparing' || status.state === 'installing') return status
   busy = true
   set({ state: 'checking', error: failedInstall })
   try {
@@ -224,31 +224,44 @@ function installAppImage(downloaded: string): void {
   spawn(current, [], { detached: true, stdio: 'ignore' }).unref()
 }
 
+/** Gives the window time to show the new state before the backup holds the main process (the database export and encryption run synchronously). */
+const letWindowPaint = (): Promise<void> => new Promise((r) => setTimeout(r, 100))
+
 async function install(): Promise<UpdateStatus> {
   if (status.state !== 'ready' || !file || !existsSync(file) || !status.kind) throw new AppError('update.not_ready', 'Download the update first.')
+  set(installStep('prepare'))
+  await letWindowPaint()
+  try {
+    return await prepareAndClose(file)
+  } catch (err) {
+    set(installStep('fail', err instanceof AppError ? err.message : 'The update couldn’t be started.'))
+    throw err
+  }
+}
+
+async function prepareAndClose(downloaded: string): Promise<UpdateStatus> {
   // A copy of the data as it is now, in case the new version needs to be undone.
   if (isUnlocked()) {
     mkdirSync(paths.safetyDir, { recursive: true })
     await writeTransfer(join(paths.safetyDir, `before-update-${stamp()}.${TRANSFER_EXTENSION}`), 'backup')
   }
   if (status.kind === 'dmg' || status.kind === 'deb') {
-    const err = await shell.openPath(file)
+    const err = await shell.openPath(downloaded)
     if (err) throw new AppError('update.open', `The update was downloaded but couldn’t be opened: ${err}`)
-    return set({ state: 'opened' })
+    return set(installStep('opened'))
   }
   if (status.kind === 'msi' && !asset?.sha256) throw new AppError('update.no_checksum', 'The release has no checksum for this file, so Kasboek won’t install it. Download it from the release page instead.')
   // The note lets the next start tell whether the update went in.
   writeFileSync(pendingFile(), JSON.stringify({ version: status.latest, at: new Date().toISOString() }))
   try {
-    if (status.kind === 'msi') await startUpdateHelper(file, asset!.sha256!)
-    else installAppImage(file)
+    if (status.kind === 'msi') await startUpdateHelper(downloaded, asset!.sha256!)
+    else installAppImage(downloaded)
   } catch (err) {
     rmSync(pendingFile(), { force: true })
     rmSync(join(updatesDir(), 'apply.json'), { force: true })
-    set({ error: err instanceof AppError ? err.message : 'The update couldn’t be started.' })
     throw err
   }
-  set({ state: 'installing' })
+  set(installStep('close'))
   // Closing locks Kasboek (and makes the usual backup on quit).
   setTimeout(() => app.quit(), 300)
   return status
