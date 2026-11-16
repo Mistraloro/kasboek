@@ -32,6 +32,7 @@ import { newTotpSecret, otpauthUri, verifyTotp } from '@core/totp'
 import type { AppEvent } from '@shared/contract'
 import { checkPassword } from '@shared/password'
 import type { AuthStatus, ErasedCopy } from '@shared/types'
+import { startupLog } from './graphics'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { accountExists, keyProtection, loadAccount, readLegacyDbKey, removeLegacyKeystore, saveAccount } from './security/account-store'
@@ -234,10 +235,10 @@ export async function erase(): Promise<void> {
   if (account?.mode === 'device') await requireDevice('Erase Kasboek')
   lock('user')
   try {
-    await quarantineData(paths)
+    await quarantineData(paths, Date.now(), startupLog)
   } catch (err) {
     // quarantineData puts back what it moved; reading the account again makes memory match whatever is on disk.
-    await initSession()
+    await initSession().catch((e: unknown) => startupLog(`erase failed, and the data could not be read again: ${e instanceof Error ? e.message : String(e)}`))
     throw new AppError('auth.erase_failed', `Could not set the data aside, so erasing was stopped: ${err instanceof Error ? err.message : String(err)}`)
   }
   account = null
@@ -247,8 +248,12 @@ export async function erase(): Promise<void> {
 /** Brings back one erased copy, by the name from status().erased. It needs the original password or recovery key to open. */
 export async function restoreErasedData(name: string): Promise<void> {
   if (account || loadError || accountExists()) throw new AppError('auth.restore_blocked', 'Kasboek is already set up. Restoring erased data is only possible on the first screen.')
-  await restoreErased(paths, name)
-  await initSession()
+  try {
+    await restoreErased(paths, name)
+  } finally {
+    // Also after a failure: memory has to match what is on disk, or the first screen is stuck on the old state.
+    await initSession()
+  }
 }
 
 /** Re-checks who is at the keyboard before a sensitive change. Wrong passwords count and slow down, as at unlock. */

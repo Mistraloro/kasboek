@@ -9,6 +9,7 @@ import { openDatabase } from '@core/database'
 import { insertTransaction, transactionsCsv } from '@core/finance'
 import { DEFAULT_SETTINGS, getSettings, resetImportedSettings, updateSettings } from '@core/settings'
 import { setSecret, getSecret } from '@core/secrets'
+import * as sync from '@core/sync'
 import { contract, PUBLIC_OPS, type OpName } from '@shared/contract'
 import { checksumFromSums, safeAssetName } from '@core/update'
 import { lockedRefusal } from '../src/main/lock-guard'
@@ -123,6 +124,56 @@ describe('imported settings', () => {
     expect(getSecret(d, 'syncKey')).toBe('abcd')
     expect(getSecret(d, 'webdavPassword')).toBeNull()
     expect(getSecret(d, 'anthropicApiKey')).toBeNull()
+  })
+
+  const syncOn = (d: ReturnType<typeof openDb>): void => {
+    d.prepare('UPDATE sync_flags SET enabled = 1').run()
+    sync.setMeta(d, 'groupId', 'g1')
+    sync.setMeta(d, 'deviceId', 'device0001')
+    sync.setMeta(d, 'seq', '4')
+    sync.setMeta(d, 'cursors', '{"other":2}')
+    d.prepare("INSERT INTO sync_pending (device, change) VALUES ('other', '{}')").run()
+  }
+
+  it('switches sync off, as stopSync does, when the key is dropped', () => {
+    const d = openDb()
+    dirty(d)
+    syncOn(d)
+    expect(resetImportedSettings(d)).toContain('sync')
+    expect(sync.isEnabled(d)).toBe(false)
+    expect(d.prepare('SELECT COUNT(*) AS n FROM sync_meta').get()).toEqual({ n: 0 })
+    expect(d.prepare('SELECT COUNT(*) AS n FROM sync_pending').get()).toEqual({ n: 0 })
+    expect(d.prepare('SELECT COUNT(*) AS n FROM sync_rows').get()).toEqual({ n: 0 })
+    expect(getSecret(d, 'syncKey')).toBeNull()
+  })
+
+  it('reports sync as reset when it was on but the file had no key', () => {
+    const d = openDb()
+    syncOn(d)
+    expect(resetImportedSettings(d)).toEqual(['sync'])
+    expect(sync.isEnabled(d)).toBe(false)
+  })
+
+  it('leaves sync on and its state alone for a join', () => {
+    const d = openDb()
+    dirty(d)
+    syncOn(d)
+    resetImportedSettings(d, { keepSyncKey: true })
+    expect(sync.isEnabled(d)).toBe(true)
+    expect(sync.getMeta(d, 'groupId')).toBe('g1')
+    expect(sync.getMeta(d, 'deviceId')).toBe('device0001')
+    expect(getSecret(d, 'syncKey')).toBe('abcd')
+  })
+
+  it('copes with a file from an older version that has no secrets, memory or sync tables', () => {
+    const d = openDb()
+    updateSettings(d, { currency: 'USD', aiBaseUrl: 'https://evil.example/v1' })
+    // An older file has no sync triggers either.
+    for (const t of d.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger'").all() as { name: string }[]) d.exec(`DROP TRIGGER ${t.name}`)
+    for (const t of ['secrets', 'memories', 'sync_flags', 'sync_rows', 'sync_pending', 'sync_meta', 'sync_outbox']) d.exec(`DROP TABLE IF EXISTS ${t}`)
+    expect(resetImportedSettings(d)).toEqual(['aiEndpoint'])
+    expect(getSettings(d).aiBaseUrl).toBeNull()
+    expect(getSettings(d).currency).toBe('USD')
   })
 
   it('changes nothing when it fails half-way', () => {
@@ -276,6 +327,74 @@ describe('erase quarantine', () => {
     expect(readFileSync(l.dbFile, 'utf8')).toBe('db')
     expect(readFileSync(join(l.safetyDir, 'before-import-1.kasboek'), 'utf8')).toBe('safe')
     expect(existsSync(join(l.dataDir, 'erased'))).toBe(false)
+  })
+
+  it('refuses to restore, and does not list, an entry that cannot be opened again', async () => {
+    const l = layout()
+    const entry = (name: number, files: Record<string, string>): string => {
+      const dir = join(l.dataDir, 'erased', String(name))
+      mkdirSync(dir, { recursive: true })
+      for (const [f, text] of Object.entries(files)) writeFileSync(join(dir, f), text)
+      return String(name)
+    }
+    const noDb = entry(T1, { 'account.json': 'a' })
+    const noAccount = entry(T2, { 'kasboek.db': 'd' })
+    const empty = entry(T2 + 1, {})
+    const ok = entry(T2 + 2, { 'kasboek.db': 'd', 'keystore.json': 'k' })
+    expect((await listErased(l)).map((e) => e.name)).toEqual([ok])
+    expect(existsSync(join(l.dataDir, 'erased', empty))).toBe(false)
+    for (const bad of [noDb, noAccount]) {
+      await expect(restoreErased(l, bad)).rejects.toMatchObject({ code: 'auth.nothing_erased' })
+      expect(existsSync(l.accountFile) || existsSync(l.dbFile)).toBe(false)
+    }
+    // Still purged when old, listed or not.
+    expect(await purgeErased(l, { now: T2 + 365 * DAY })).toBe(3)
+    expect(readdirSync(join(l.dataDir, 'erased'))).toEqual([])
+  })
+
+  it('gives two erases in the same millisecond two entries', async () => {
+    const l = layout()
+    fill(l, '-a')
+    const first = await quarantineData(l, T1)
+    fill(l, '-b')
+    const second = await quarantineData(l, T1)
+    expect(second).not.toBe(first)
+    expect(readFileSync(join(l.dataDir, 'erased', first!, 'kasboek.db'), 'utf8')).toBe('db-a')
+    expect(readFileSync(join(l.dataDir, 'erased', second!, 'kasboek.db'), 'utf8')).toBe('db-b')
+    expect(await listErased(l)).toHaveLength(2)
+  })
+
+  it('says which files could not be moved back when the rollback fails too', async () => {
+    const l = layout()
+    fill(l)
+    // Moving into the entry fails for the safety folder; moving the database back fails as well.
+    mocks.failRename.mockImplementation((_from, to) => to.endsWith('safety-backups') || to === l.dbFile)
+    const log = vi.fn()
+    await expect(quarantineData(l, T1, log)).rejects.toThrow('simulated')
+    mocks.failRename.mockReset().mockReturnValue(false)
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(log.mock.calls[0]![0]).toContain(l.dbFile)
+    expect(readFileSync(join(l.dataDir, 'erased', String(T1), 'kasboek.db'), 'utf8')).toBe('db')
+    expect(readFileSync(l.accountFile, 'utf8')).toBe('account')
+  })
+
+  it('leaves no live account when the safety copies fail to come back, and a second try works', async () => {
+    const l = layout()
+    fill(l)
+    writeFileSync(join(l.safetyDir, 'second.kasboek'), 'two')
+    const name = await quarantineData(l, T1)
+    mocks.failRename.mockImplementation((from) => from.endsWith('second.kasboek'))
+    await expect(restoreErased(l, name!)).rejects.toThrow('simulated')
+    mocks.failRename.mockReset().mockReturnValue(false)
+    expect(existsSync(l.accountFile)).toBe(false)
+    expect(existsSync(l.dbFile)).toBe(false)
+    expect((await listErased(l)).map((e) => e.name)).toEqual([name])
+
+    await restoreErased(l, name!)
+    expect(readFileSync(l.accountFile, 'utf8')).toBe('account')
+    expect(readFileSync(join(l.safetyDir, 'before-import-1.kasboek'), 'utf8')).toBe('safe')
+    expect(readFileSync(join(l.safetyDir, 'second.kasboek'), 'utf8')).toBe('two')
+    expect(await listErased(l)).toEqual([])
   })
 
   it('purges a copy after 30 days, whole: nothing goes back to the live safety folder', async () => {
@@ -496,6 +615,23 @@ describe('session', () => {
     expect(session.isUnlocked()).toBe(true)
   })
 
+  it('reloads the session when a restore fails, so the first screen matches the disk', async () => {
+    await session.setup('password', PASSWORD)
+    mkdirSync(join(mocks.dataDir, 'safety-backups'))
+    writeFileSync(join(mocks.dataDir, 'safety-backups', 'before-import-1.kasboek'), 'safe')
+    await session.erase()
+    const entry = (await session.status()).erased[0]!
+    mocks.failRename.mockImplementation((from) => from.endsWith('before-import-1.kasboek'))
+    await expect(session.restoreErasedData(entry.name)).rejects.toThrow('simulated')
+    mocks.failRename.mockReturnValue(false)
+    expect(existsSync(join(mocks.dataDir, 'account.json'))).toBe(false)
+    const status = await session.status()
+    expect(status.state).toBe('setup')
+    expect(status.erased).toHaveLength(1)
+    await session.restoreErasedData(entry.name)
+    expect((await session.status()).state).toBe('locked')
+  })
+
   /* ----- import ----- */
 
   describe('import', () => {
@@ -558,6 +694,18 @@ describe('session', () => {
       expect((d.prepare('SELECT COUNT(*) AS n FROM memories').get() as { n: number }).n).toBe(0)
     })
 
+    it('switches sync off after an import that is not a join, and keeps it on for a join', async () => {
+      await session.setup('password', PASSWORD)
+      seedForeignSettings()
+      sync.setMeta(session.db(), 'groupId', 'g1')
+      session.db().prepare('UPDATE sync_flags SET enabled = 1').run()
+      const file = await exportFile()
+      const picked = await transfer.describeTransfer(file)
+      expect(await transfer.importTransfer({ token: picked.token, password: PASSWORD })).toContain('sync')
+      expect(sync.isEnabled(session.db())).toBe(false)
+      expect(sync.getMeta(session.db(), 'groupId')).toBeNull()
+    })
+
     it('fails the whole import, changing nothing, when the reset fails', async () => {
       await session.setup('password', PASSWORD)
       const file = await exportFile()
@@ -596,6 +744,21 @@ describe('session', () => {
       // The password of the other computer's server is not taken over (the join stores the one just entered).
       expect(getSecret(d, 'webdavPassword')).toBeNull()
       expect(getSecret(d, 'anthropicApiKey')).toBeNull()
+    })
+  })
+
+  describe('a missing sync key', () => {
+    it('does not make runSync reject: it shows up as the sync problem', async () => {
+      const syncService = await import('../src/main/sync/service')
+      await session.setup('password', PASSWORD)
+      const d = session.db()
+      d.prepare('UPDATE sync_flags SET enabled = 1').run()
+      sync.setMeta(d, 'groupId', 'g1')
+      writeFileSync(join(mocks.dataDir, 'sync.json'), JSON.stringify({ deviceId: 'device0001', folder: join(mocks.dataDir, 'cloud'), webdav: null }))
+      expect(getSecret(d, 'syncKey')).toBeNull()
+      await expect(syncService.runSync()).resolves.toBeUndefined()
+      expect(syncService.syncStatus().error).toContain('sync key')
+      expect(syncService.syncStatus().busy).toBe(false)
     })
   })
 

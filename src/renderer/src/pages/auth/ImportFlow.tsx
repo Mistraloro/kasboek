@@ -11,7 +11,20 @@ import { usePrefsFmt } from '../../lib/settings'
 import { CodeInput, errText, PasswordFields, passwordsOk } from './parts'
 
 /** Pick a .kasboek file and open it with the login details it was made with. */
-export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s: AuthStatus) => void; onCancel: () => void; replacing?: boolean; preset?: PickedTransfer }) {
+export function ImportFlow({
+  onDone,
+  onCancel,
+  onNotice,
+  replacing,
+  preset
+}: {
+  onDone: (s: AuthStatus) => void
+  onCancel: () => void
+  /** Called when the reset notice appears: the data is replaced by then, so only "Continue" may close the dialog. */
+  onNotice?: (shown: boolean) => void
+  replacing?: boolean
+  preset?: PickedTransfer
+}) {
   const { t } = useTranslation()
   const toast = useToast()
   const fmt = usePrefsFmt()
@@ -122,7 +135,10 @@ export function ImportFlow({ onDone, onCancel, replacing, preset }: { onDone: (s
         })
           .then(({ status, reset }) => {
             toast(t('transfer.imported'))
-            if (reset.length) setDone({ status, reset })
+            if (reset.length) {
+              onNotice?.(true)
+              setDone({ status, reset })
+            }
             else onDone(status)
           })
           .catch((err) => toast(errText(err), 'error'))

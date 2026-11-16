@@ -453,9 +453,20 @@ export function onRemoteChanges(fn: () => void): void {
   onApplied = fn
 }
 
+const syncFailure = (err: unknown): string =>
+  err instanceof AppError ? err.message : `Sync failed: ${err instanceof Error ? err.message : String(err)}. Kasboek will try again.`
+
 export async function runSync(opts: { forceSnapshot?: boolean } = {}): Promise<void> {
   if (busy) return
-  const ctx = localContext()
+  let ctx: ReturnType<typeof localContext>
+  try {
+    ctx = localContext()
+  } catch (err) {
+    // E.g. the sync key is missing: show it as the sync problem, never as an unhandled rejection.
+    lastError = syncFailure(err)
+    publish()
+    return
+  }
   if (!ctx) return
   busy = true
   publish()
@@ -572,7 +583,7 @@ export async function runSync(opts: { forceSnapshot?: boolean } = {}): Promise<v
     lastSyncAt = state.lastSeen
     lastError = problems[0] ?? null
   } catch (err) {
-    lastError = err instanceof AppError ? err.message : `Sync failed: ${err instanceof Error ? err.message : String(err)}. Kasboek will try again.`
+    lastError = syncFailure(err)
   } finally {
     busy = false
     publish()
