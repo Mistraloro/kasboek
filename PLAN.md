@@ -323,6 +323,14 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    the file's columns when the bank gives them, or typed in), show it next to the billed amount
    ("EUR 45.00 (USD 49.20)"), keep it through CSV and PDF import, sync and export, and keep the
    overviews using the billed amount in the account's currency.
+25. **More statement formats for the import, after the PDF import has proven itself.** In this order:
+   (1) CAMT.053 (ISO 20022 XML) and MT940, the standard statement exports of European banks, plus
+   CODA (Belgian), structured so they read exactly: no layout guessing, opening and closing balances
+   included for the same totals check as PDF; (2) OFX, QFX and QIF, the usual export of UK, US and
+   Australian banks and apps; (3) Excel (.xlsx and .xls), through the same column mapping as CSV;
+   (4) photos and screenshots of statements, and scanned PDFs, which need text recognition or sending
+   the image to an AI after consent: only if people ask for it. Each format opens the same import
+   session as CSV and PDF (preview, duplicates, remembered layouts, undo).
 
 ## Later, maybe
 
