@@ -7,7 +7,7 @@ import { Button, Field, Input, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import i18n from '../../i18n'
 import { ApiError, call } from '../../lib/api'
-import { recoveryKeyConfirmed } from '@shared/setup-rules'
+import { recoveryKeyConfirmed, totpStepView } from '@shared/setup-rules'
 
 /** Errors from the main process come in English; the ones with a translation here are shown in the chosen language. */
 export const errText = (e: unknown): string => {
@@ -145,9 +145,29 @@ export function TotpSetup({ onDone, onCancel }: { onDone: () => void; onCancel?:
   const [data, setData] = useState<{ secret: string; qrSvg: string } | null>(null)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
+  const [failure, setFailure] = useState<string | null>(null)
   useEffect(() => {
-    void call('auth.totpBegin').then(setData, (e) => toast(errText(e), 'error'))
+    void call('auth.totpBegin').then(setData, (e) => {
+      const text = errText(e)
+      setFailure(text)
+      toast(text, 'error')
+    })
   }, [toast])
+  const view = totpStepView(data ? 'ready' : failure !== null ? 'failed' : 'loading')
+  if (view.error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p role="alert" className="rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-warning">
+          {failure}
+        </p>
+        {onCancel && (
+          <div className="flex justify-end">
+            <Button onClick={onCancel}>{t('auth.notNow')}</Button>
+          </div>
+        )}
+      </div>
+    )
+  }
   if (!data) return null
   return (
     <form

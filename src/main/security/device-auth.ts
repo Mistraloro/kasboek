@@ -46,32 +46,49 @@ export function encodeCommand(script: string): string {
   return Buffer.from(PS_PRELUDE + script, 'utf16le').toString('base64')
 }
 
-function powershell(script: string, timeoutMs: number): Promise<PowerShellResult> {
-  const exe = join(process.env['SystemRoot'] ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+/** How long after kill() we wait for the process to close before giving up on its pipes. */
+export const KILL_GRACE_MS = 2_000
+
+/**
+ * Runs a process and always settles. After our timeout kills it, a grandchild that inherited the
+ * pipes (the compiler started by Add-Type) can keep them open, so `close` never fires: after a short
+ * grace period the streams are destroyed and the run ends as timed out. A late `close` or `error` is ignored.
+ */
+export function runProcess(spawnFn: typeof spawn, exe: string, args: string[], timeoutMs: number, killGraceMs = KILL_GRACE_MS): Promise<PowerShellResult> {
   const started = Date.now()
   return new Promise((resolve) => {
-    const child = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodeCommand(script)], {
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
+    const child = spawnFn(exe, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
     let out = ''
     let err = ''
     let timedOut = false
+    let settled = false
+    let killTimer: NodeJS.Timeout | undefined
+    const finish = (code: number | null, signal: NodeJS.Signals | null, errorText?: string): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      clearTimeout(killTimer)
+      resolve({ out: errorText === undefined ? lastLine(out) : '', err: errorText ?? err.trim(), code, signal, ms: Date.now() - started, timedOut })
+    }
     const timer = setTimeout(() => {
       timedOut = true
       child.kill()
+      killTimer = setTimeout(() => {
+        child.stdout?.destroy()
+        child.stderr?.destroy()
+        finish(null, null)
+      }, killGraceMs)
     }, timeoutMs)
-    child.stdout.on('data', (d) => (out += String(d)))
-    child.stderr.on('data', (d) => (err += String(d)))
-    child.on('error', (e) => {
-      clearTimeout(timer)
-      resolve({ out: '', err: e.message, code: null, signal: null, ms: Date.now() - started, timedOut })
-    })
-    child.on('close', (code, signal) => {
-      clearTimeout(timer)
-      resolve({ out: lastLine(out), err: err.trim(), code, signal, ms: Date.now() - started, timedOut })
-    })
+    child.stdout?.on('data', (d) => (out += String(d)))
+    child.stderr?.on('data', (d) => (err += String(d)))
+    child.on('error', (e) => finish(null, null, e.message))
+    child.on('close', (code, signal) => finish(code, signal))
   })
+}
+
+function powershell(script: string, timeoutMs: number): Promise<PowerShellResult> {
+  const exe = join(process.env['SystemRoot'] ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+  return runProcess(spawn, exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encodeCommand(script)], timeoutMs)
 }
 
 /** One startup.log line describing how a PowerShell run ended. Only fixed text and PowerShell's own output. */
@@ -119,6 +136,8 @@ export function interpretHello(r: PowerShellResult): boolean {
 }
 
 let cached: DeviceAuthKind | undefined
+// The outcome of the last availability check that was logged: repeats are not logged again.
+let lastLoggedCheck: string | undefined
 let cachedAt = 0
 let pending: Promise<DeviceAuthKind> | null = null
 
@@ -158,7 +177,10 @@ export async function deviceAuthKind(): Promise<DeviceAuthKind> {
       `$a = Await ([Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()) ([Windows.Security.Credentials.UI.UserConsentVerifierAvailability]); Write-Output "RESULT:$a"`,
       15_000
     )
-    startupLog(describeRun('check', r))
+    if (r.out !== lastLoggedCheck) {
+      lastLoggedCheck = r.out
+      startupLog(describeRun('check', r))
+    }
     return remember(markedResult(r.out) === 'Available' ? 'windows-hello' : null)
   }
   return remember(null)

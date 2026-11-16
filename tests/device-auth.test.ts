@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { answerIsFresh, describeRun, encodeCommand, helloScript, interpretHello, lastLine, markedResult, NEGATIVE_TTL_MS, psQuote, serialQueue } from '../src/main/security/device-auth'
+import { EventEmitter } from 'node:events'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { answerIsFresh, describeRun, encodeCommand, helloScript, interpretHello, lastLine, markedResult, NEGATIVE_TTL_MS, psQuote, runProcess, serialQueue } from '../src/main/security/device-auth'
 
 describe('Windows Hello prompt', () => {
   it('asks with the plain call and brings the prompt forward', () => {
@@ -158,5 +159,63 @@ describe('answer cache', () => {
     expect(answerIsFresh('windows-hello', 0, 10 * NEGATIVE_TTL_MS)).toBe(true)
     expect(answerIsFresh(null, 0, NEGATIVE_TTL_MS - 1)).toBe(true)
     expect(answerIsFresh(null, 0, NEGATIVE_TTL_MS)).toBe(false)
+  })
+})
+
+describe('running a process', () => {
+  afterEach(() => vi.useRealTimers())
+
+  function fakeChild() {
+    const child = Object.assign(new EventEmitter(), {
+      stdout: Object.assign(new EventEmitter(), { destroy: vi.fn() }),
+      stderr: Object.assign(new EventEmitter(), { destroy: vi.fn() }),
+      kill: vi.fn()
+    })
+    return child
+  }
+  const run = (child: ReturnType<typeof fakeChild>, timeoutMs: number) =>
+    runProcess((() => child) as never, 'x', [], timeoutMs, 2_000)
+
+  it('collects the last stdout line when the process closes', async () => {
+    const child = fakeChild()
+    const p = run(child, 1_000)
+    child.stdout.emit('data', 'noise\nRESULT:Verified\n')
+    child.emit('close', 0, null)
+    expect(await p).toMatchObject({ out: 'RESULT:Verified', code: 0, timedOut: false })
+  })
+
+  it('gives up on pipes held open after the kill and ignores a late close or error', async () => {
+    vi.useFakeTimers()
+    const child = fakeChild()
+    const p = run(child, 1_000)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(child.kill).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(2_000)
+    const r = await p
+    expect(r).toMatchObject({ out: '', code: null, signal: null, timedOut: true })
+    expect(child.stdout.destroy).toHaveBeenCalled()
+    expect(child.stderr.destroy).toHaveBeenCalled()
+    expect(() => {
+      child.emit('close', 1, null)
+      child.emit('error', new Error('late'))
+    }).not.toThrow()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('settles on close after the kill without waiting for the grace period', async () => {
+    vi.useFakeTimers()
+    const child = fakeChild()
+    const p = run(child, 1_000)
+    await vi.advanceTimersByTimeAsync(1_000)
+    child.emit('close', null, 'SIGTERM')
+    expect(await p).toMatchObject({ signal: 'SIGTERM', timedOut: true })
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('reports a spawn error', async () => {
+    const child = fakeChild()
+    const p = run(child, 1_000)
+    child.emit('error', new Error('ENOENT'))
+    expect(await p).toMatchObject({ out: '', err: 'ENOENT', code: null })
   })
 })

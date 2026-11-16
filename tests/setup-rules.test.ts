@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mayRefreshOnFocus, recoveryKeyConfirmed, recoveryKeyTail, showSetup, type SetupStep } from '@shared/setup-rules'
+import { mayRefreshOnFocus, recoveryKeyConfirmed, recoveryKeyTail, showSetup, totpStepView, type SetupStep } from '@shared/setup-rules'
 
 const KEY = 'ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567'
 
@@ -40,5 +40,11 @@ describe('first-run screen', () => {
 
   it('never confirms without a key', () => {
     expect(recoveryKeyConfirmed('', true, '')).toBe(false)
+  })
+
+  it('shows the two-factor form once ready, nothing while loading, and an error when it failed', () => {
+    expect(totpStepView('loading')).toEqual({ form: false, error: false })
+    expect(totpStepView('ready')).toEqual({ form: true, error: false })
+    expect(totpStepView('failed')).toEqual({ form: false, error: true })
   })
 })

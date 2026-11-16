@@ -27,3 +27,14 @@ export function recoveryKeyConfirmed(recoveryKey: string, saved: boolean, typed:
   const tail = recoveryKeyTail(recoveryKey)
   return saved && tail !== '' && typed === tail
 }
+
+/** What the two-factor step shows, given how asking for a new secret went. */
+export type TotpBegin = 'loading' | 'ready' | 'failed'
+
+/**
+ * The two-factor step must never be a dead end (Kasboek can lock while the person is on the recovery
+ * key screen, which makes the request fail): a failure shows an error and still allows "Not now".
+ */
+export function totpStepView(begin: TotpBegin): { form: boolean; error: boolean } {
+  return { form: begin === 'ready', error: begin === 'failed' }
+}

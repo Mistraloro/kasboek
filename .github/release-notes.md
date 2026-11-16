@@ -7,7 +7,8 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **Importing a file or restoring a backup starts from safe settings.** AI settings and keys, permissions, MCP, auto-backup, assistant memory and sync are reset, and Kasboek tells you what was reset. Joining a sync keeps its sync key.
 
 **Fixes and safety**
-- **Windows Hello during first setup now works.** The Hello prompt was silently never shown. Each Hello answer (such as “not set up” or “turned off by policy”) now has its own message, and `startup.log` records how Hello went.
+- **Windows Hello now works** (setup, unlock, and the checks before erasing or changing settings). On some computers the prompt was silently never shown. Each Hello answer (not set up, turned off by a policy, busy, too many failed attempts) has its own message, and `startup.log` records how Hello went.
+- **The recovery key check is no longer skipped** when you set up with Windows Hello: the setup screen stays until you have typed the last group of the key (and finished or skipped two-factor).
 - **Passwordless mode** is only offered when your computer protects the key itself. Importing a passwordless export on a computer without that asks you for a new password.
 - **CSV export** is safe against text that a spreadsheet could read as a formula.
 - **Passwords:** re-entering your password for sensitive actions has the same attempt limit as unlocking.
@@ -32,9 +33,9 @@ All builds are 64-bit. Installing over an earlier version keeps your data. Kasbo
 
 These builds are not yet signed with a certificate:
 - **Windows** shows “Windows protected your PC”: click **More info → Run anyway**.
-- **macOS** says it can’t verify the developer: **right-click Kasboek → Open**, once.
+- **macOS** says it can’t verify the developer: **right-click Kasboek → Open**, once. On macOS 15 and later that shortcut no longer works: open **System Settings → Privacy & Security** and click **Open Anyway**.
 
 ## Good to know
 
 - **Updating from 0.12 or 0.13**: their update window can’t be clicked, so download the installer from this page once. From 0.14 on, the "Update to …" button works.
-- Windows Hello and Touch ID were only tested in simulation; please report anything odd.
+- **Windows Hello** has been tested on a real Windows 11 computer. **Touch ID** has only been tested in simulation, not yet on a real Mac; please report anything odd.

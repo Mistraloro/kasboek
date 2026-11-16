@@ -67,7 +67,10 @@ export function Setup() {
   }
 
   // The flow is over: let the app take over once the status is current.
-  const finish = (): void => void refresh().finally(() => setSetupFlowActive(false))
+  const finish = (): void => void refresh().then(
+      () => setSetupFlowActive(false),
+      () => window.location.reload()
+    )
 
   const back = (
     <button type="button" onClick={() => setStep('choose')} className="mb-3 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text">
