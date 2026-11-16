@@ -460,7 +460,15 @@
     "accountCurrency": "Moneda",
     "accountCurrencyChange": "Sus movimientos en {{from}} contarán como {{to}}. Úsalo para corregir una moneda equivocada.",
     "accountKind": "Tipo",
-    "accountKindInvestment": "Anota su valor de vez en cuando en la página Patrimonio; las aportaciones y retiradas salen de sus movimientos."
+    "accountKindInvestment": "Anota su valor de vez en cuando en la página Patrimonio; las aportaciones y retiradas salen de sus movimientos.",
+    "tab": {
+      "general": "General",
+      "accounts": "Cuentas",
+      "security": "Seguridad",
+      "data": "Copias y sincronización",
+      "assistant": "Asistente"
+    },
+    "about": "Acerca de Kasboek"
   },
   "auth": {
     "welcome": "Te damos la bienvenida a Kasboek",

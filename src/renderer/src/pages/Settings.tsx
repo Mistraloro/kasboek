@@ -2,7 +2,7 @@ import { Download, FolderInput, FolderOpen, FolderSync, Monitor, Moon, Plus, Shi
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance, type PickedTransfer, type SyncStatus } from '@shared/types'
-import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch } from '../components/ui'
+import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { LANGUAGES } from '../i18n'
 import type { LanguageCode } from '@shared/languages'
@@ -16,6 +16,7 @@ import { CurrencySelect } from '../components/CurrencySelect'
 import { ClaudeSection, PermissionsSection } from './SettingsClaude'
 import { MemorySection } from './SettingsMemory'
 import { useUpdate } from '../components/Update'
+import { SETTINGS_TABS, openSettingsTab, settingsTab, type SettingsTab } from '../lib/settings-tab'
 import { startTour } from '../components/Tour'
 import { CodeInput, DeviceIcon, errText, PasswordFields, passwordsOk, RecoveryKeyPanel, TotpSetup, useDeviceName } from './auth/parts'
 import { BalanceFields, BankBalanceModal } from '../components/BankBalance'
@@ -36,21 +37,56 @@ export function Row({ label, hint, children }: { label: ReactNode; hint?: ReactN
 
 export function SettingsPage() {
   const { t } = useTranslation()
+  const [tab, setTabState] = useState<SettingsTab>(settingsTab())
+  const setTab = (next: SettingsTab): void => {
+    openSettingsTab(next)
+    setTabState(next)
+  }
   return (
     <>
       <PageHeader title={t('settings.title')} />
-      <div className="flex flex-col gap-6">
-        <SecuritySection />
-        <ClaudeSection />
-        <PermissionsSection />
-        <MemorySection />
-        <SyncSection />
-        <TransferSection />
-        <BackupSection />
-        <AccountsSection />
-        <CurrenciesSection />
-        <AppearanceSection />
-        <FormatsSection />
+      <div role="tablist" aria-label={t('settings.title')} className="mb-6 flex gap-1 border-b border-border">
+        {SETTINGS_TABS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cx(
+              '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              tab === id ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-text'
+            )}
+          >
+            {t(`settings.tab.${id}`)}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" className="flex flex-col gap-6">
+        {tab === 'general' && (
+          <>
+            <AppearanceSection />
+            <FormatsSection />
+            <CurrenciesSection />
+            <AboutSection />
+          </>
+        )}
+        {tab === 'accounts' && <AccountsSection />}
+        {tab === 'security' && <SecuritySection />}
+        {tab === 'data' && (
+          <>
+            <BackupSection />
+            <SyncSection />
+            <TransferSection />
+          </>
+        )}
+        {tab === 'assistant' && (
+          <>
+            <ClaudeSection />
+            <PermissionsSection />
+            <MemorySection />
+          </>
+        )}
       </div>
     </>
   )
@@ -59,6 +95,24 @@ export function SettingsPage() {
 /* ---------- Security ---------- */
 
 type SecurityModal = null | 'password' | 'passwordless' | 'totp-on' | 'totp-off' | 'recovery'
+
+/** Version, data folder, updates and the tour. */
+function AboutSection() {
+  const { t } = useTranslation()
+  const { info } = useSettings()
+  return (
+    <Card>
+      <CardHeader title={t('settings.about')} />
+      <Row label={t('settings.dataFolder')} hint={<span className="selectable break-all">{info.dataDir}</span>}>
+        <span className="text-[13px] text-muted">{t('settings.version', { version: info.commit ? `${info.version} (${info.commit})` : info.version })}</span>
+      </Row>
+      <UpdateRow />
+      <Row label={t('tour.settingsLabel')} hint={t('tour.settingsHint')}>
+        <Button size="sm" onClick={startTour}>{t('tour.show')}</Button>
+      </Row>
+    </Card>
+  )
+}
 
 /** Whether Kasboek looks for new releases, and a manual check. */
 function UpdateRow() {
@@ -92,7 +146,7 @@ function SecuritySection() {
   const { t } = useTranslation()
   const toast = useToast()
   const { status, set } = useAuth()
-  const { prefs, updatePrefs, info } = useSettings()
+  const { prefs, updatePrefs } = useSettings()
   const deviceName = useDeviceName(status.device)
   const [modal, setModal] = useState<SecurityModal>(null)
   const [current, setCurrent] = useState('')
@@ -174,14 +228,6 @@ function SecuritySection() {
           {status.keyProtection === 'weak' ? t('settings.keyStorageWeak') : t('settings.keyStorageOs')}
         </Badge>
       </Row>
-      <Row label={t('settings.dataFolder')} hint={<span className="selectable break-all">{info.dataDir}</span>}>
-        <span className="text-[13px] text-muted">{t('settings.version', { version: info.commit ? `${info.version} (${info.commit})` : info.version })}</span>
-      </Row>
-      <UpdateRow />
-      <Row label={t('tour.settingsLabel')} hint={t('tour.settingsHint')}>
-        <Button size="sm" onClick={startTour}>{t('tour.show')}</Button>
-      </Row>
-
       <Modal open={modal === 'password'} title={device ? t('settings.usePassword') : t('settings.changePassword')} onClose={close}>
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); run(call('auth.changePassword', { current: device ? undefined : current, next: pw.a }), t('auth.passwordChanged')) }}>
           {currentField}

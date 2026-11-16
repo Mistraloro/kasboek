@@ -6,6 +6,7 @@ import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatM
 import { PROVIDERS, type ProviderId } from '@shared/ai-providers'
 import type { Page } from '../App'
 import { call } from '../lib/api'
+import { openSettingsTab } from '../lib/settings-tab'
 import { setAiName } from '../i18n'
 import { errText } from '../pages/auth/parts'
 import { useToast } from './Toast'
@@ -224,7 +225,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
       {!status ? null : !status.configured ? (
         <div className="flex-1 px-5">
           <p className="text-[13px] text-muted">{t('assistant.setupBody')}</p>
-          <Button className="mt-4" variant="primary" onClick={() => go('settings')}>{t('assistant.setupButton')}</Button>
+          <Button className="mt-4" variant="primary" onClick={() => { openSettingsTab('assistant'); go('settings') }}>{t('assistant.setupButton')}</Button>
           <p className="mt-4 text-xs text-muted">{t(status?.company === null ? 'assistant.privacyLocal' : 'assistant.privacy')}</p>
         </div>
       ) : (

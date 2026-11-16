@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast'
 import { errText } from './auth/parts'
 import { formatDate, monthLabel, monthShort } from '../lib/format'
 import { useSettings } from '../lib/settings'
+import { openSettingsTab, type SettingsTab } from '../lib/settings-tab'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 
@@ -27,10 +28,10 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
   const s = summary.data
   const hasTx = (accounts.data ?? []).some((a) => a.transactionCount > 0)
 
-  const steps: { done: boolean; title: string; body: string; page: Page }[] = [
-    { done: (accounts.data?.length ?? 0) > 0, title: t('overview.stepAccounts'), body: t('overview.stepAccountsBody'), page: 'settings' },
+  const steps: { done: boolean; title: string; body: string; page: Page; tab?: SettingsTab }[] = [
+    { done: (accounts.data?.length ?? 0) > 0, title: t('overview.stepAccounts'), body: t('overview.stepAccountsBody'), page: 'settings', tab: 'accounts' },
     { done: hasTx, title: t('overview.stepImport'), body: t('overview.stepImportBody'), page: 'import' },
-    { done: !!backup.data?.autoEnabled, title: t('overview.stepBackup'), body: t('overview.stepBackupBody'), page: 'settings' }
+    { done: !!backup.data?.autoEnabled, title: t('overview.stepBackup'), body: t('overview.stepBackupBody'), page: 'settings', tab: 'data' }
   ]
   const allDone = steps.every((x) => x.done)
 
@@ -93,7 +94,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
       </div>
 
       {s && s.unconverted > 0 && (
-        <button type="button" onClick={() => go('settings')} className="mt-4 flex w-full items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-left text-[13px] hover:bg-surface-2">
+        <button type="button" onClick={() => { openSettingsTab('general'); go('settings') }} className="mt-4 flex w-full items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-left text-[13px] hover:bg-surface-2">
           <span className="font-medium text-warning">{t('fx.unconverted', { count: s.unconverted })}</span>
           <span className="text-muted">{t('fx.unconvertedHint')}</span>
         </button>
@@ -135,7 +136,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
                     <p className={cx('text-[13px] font-medium', st.done && 'text-muted line-through decoration-border-strong')}>{st.title}</p>
                     <p className="text-xs text-muted">{st.body}</p>
                   </div>
-                  {!st.done && <Button size="sm" variant="ghost" onClick={() => go(st.page)}>{t('overview.open')}</Button>}
+                  {!st.done && <Button size="sm" variant="ghost" onClick={() => { if (st.tab) openSettingsTab(st.tab); go(st.page) }}>{t('overview.open')}</Button>}
                 </li>
               ))}
             </ol>

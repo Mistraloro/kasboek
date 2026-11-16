@@ -460,7 +460,15 @@
     "accountCurrency": "Moeda",
     "accountCurrencyChange": "Os movimentos em {{from}} passam a contar como {{to}}. Use isto para corrigir uma moeda errada.",
     "accountKind": "Tipo",
-    "accountKindInvestment": "Registe o valor de vez em quando na página Património; os reforços e levantamentos vêm dos movimentos."
+    "accountKindInvestment": "Registe o valor de vez em quando na página Património; os reforços e levantamentos vêm dos movimentos.",
+    "tab": {
+      "general": "Geral",
+      "accounts": "Contas",
+      "security": "Segurança",
+      "data": "Cópias e sincronização",
+      "assistant": "Assistente"
+    },
+    "about": "Sobre o Kasboek"
   },
   "auth": {
     "welcome": "Bem-vindo ao Kasboek",

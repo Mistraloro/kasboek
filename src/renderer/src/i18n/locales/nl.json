@@ -460,7 +460,15 @@
     "accountCurrency": "Munt",
     "accountCurrencyChange": "De verrichtingen in {{from}} tellen dan als {{to}}. Gebruik dit om een verkeerde munt te verbeteren.",
     "accountKind": "Soort",
-    "accountKindInvestment": "Vul af en toe de waarde in op de pagina Vermogen; stortingen en opnames komen uit de verrichtingen."
+    "accountKindInvestment": "Vul af en toe de waarde in op de pagina Vermogen; stortingen en opnames komen uit de verrichtingen.",
+    "tab": {
+      "general": "Algemeen",
+      "accounts": "Rekeningen",
+      "security": "Beveiliging",
+      "data": "Back-ups en sync",
+      "assistant": "Assistent"
+    },
+    "about": "Over Kasboek"
   },
   "auth": {
     "welcome": "Welkom bij Kasboek",

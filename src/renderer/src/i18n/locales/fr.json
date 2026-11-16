@@ -460,7 +460,15 @@
     "accountCurrency": "Devise",
     "accountCurrencyChange": "Ses opérations en {{from}} compteront en {{to}}. Utilisez ceci pour corriger une mauvaise devise.",
     "accountKind": "Type",
-    "accountKindInvestment": "Saisissez sa valeur de temps en temps sur la page Patrimoine ; les versements et retraits viennent de ses opérations."
+    "accountKindInvestment": "Saisissez sa valeur de temps en temps sur la page Patrimoine ; les versements et retraits viennent de ses opérations.",
+    "tab": {
+      "general": "Général",
+      "accounts": "Comptes",
+      "security": "Sécurité",
+      "data": "Sauvegardes et synchro",
+      "assistant": "Assistant"
+    },
+    "about": "À propos de Kasboek"
   },
   "auth": {
     "welcome": "Bienvenue dans Kasboek",

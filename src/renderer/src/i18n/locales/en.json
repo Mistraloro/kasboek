@@ -460,7 +460,15 @@
     "accountCurrency": "Currency",
     "accountCurrencyChange": "Its {{from}} transactions will count as {{to}}. Use this to correct a wrong currency.",
     "accountKind": "Type",
-    "accountKindInvestment": "Record its value now and then on the Net worth page; deposits and withdrawals come from its transactions."
+    "accountKindInvestment": "Record its value now and then on the Net worth page; deposits and withdrawals come from its transactions.",
+    "tab": {
+      "general": "General",
+      "accounts": "Accounts",
+      "security": "Security",
+      "data": "Backups & sync",
+      "assistant": "Assistant"
+    },
+    "about": "About Kasboek"
   },
   "auth": {
     "welcome": "Welcome to Kasboek",

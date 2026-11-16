@@ -460,7 +460,15 @@
     "accountCurrency": "Währung",
     "accountCurrencyChange": "Seine Buchungen in {{from}} zählen dann als {{to}}. Damit korrigierst du eine falsche Währung.",
     "accountKind": "Art",
-    "accountKindInvestment": "Trag ab und zu seinen Wert auf der Seite Vermögen ein; Ein- und Auszahlungen kommen aus seinen Buchungen."
+    "accountKindInvestment": "Trag ab und zu seinen Wert auf der Seite Vermögen ein; Ein- und Auszahlungen kommen aus seinen Buchungen.",
+    "tab": {
+      "general": "Allgemein",
+      "accounts": "Konten",
+      "security": "Sicherheit",
+      "data": "Sicherungen & Sync",
+      "assistant": "Assistent"
+    },
+    "about": "Über Kasboek"
   },
   "auth": {
     "welcome": "Willkommen bei Kasboek",

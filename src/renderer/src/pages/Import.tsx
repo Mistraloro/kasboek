@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Swit
 import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
 import { ApiError, call, useOp } from '../lib/api'
+import { openSettingsTab } from '../lib/settings-tab'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
@@ -139,7 +140,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
       )}
       {accounts.data && accounts.data.length === 0 ? (
         <Card className="px-5 py-6 text-center text-[13px] text-muted">
-          {t('import.needAccount')} <button type="button" className="font-medium text-accent hover:underline" onClick={() => go('settings')}>{t('import.addAccount')}</button>
+          {t('import.needAccount')} <button type="button" className="font-medium text-accent hover:underline" onClick={() => { openSettingsTab('accounts'); go('settings') }}>{t('import.addAccount')}</button>
         </Card>
       ) : (
         <>
