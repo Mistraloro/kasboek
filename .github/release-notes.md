@@ -1,13 +1,16 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.16 (0.16.1)
+## What’s new in 0.17 (0.17.0)
 
 **New**
-- **Keep Kasboek running in the tray when you close the window** is now a setting (Settings → General), off by default. With it off, closing the window quits Kasboek (on a Mac it stays in the Dock until you quit). With it on, closing hides it in the tray. If Claude Desktop starts Kasboek’s connection while Kasboek isn’t running, Kasboek still starts in the tray, locked. Closing its window with the setting off quits it, and Claude Desktop starts it again the next time it needs it.
-- **Opening Kasboek from its shortcut, the Start menu or the taskbar while it is already running brings the window to the front**, also when it was hidden in the tray or minimised.
-- **A new update window on Windows.** Updating no longer flashes terminal windows: Kasboek closes, a small Kasboek window shows the installation progress, and Kasboek opens again by itself. If the update cannot start, Kasboek stays open and tells you. If it cannot install, Kasboek opens again at the old version and says why.
+- **Import bank statements as PDF.** Drop or choose a PDF on the Import page. Kasboek reads it on your computer (nothing is sent anywhere), finds the transactions table and shows the same preview as a CSV. It checks that the amounts add up to the closing balance of the statement, and for credit card statements it offers a one-click “Flip signs” hint. Scanned PDFs (photos without text) and password-protected PDFs are not supported; Kasboek tells you so. This has only been tried on synthetic statements so far: please report layouts that don’t read well.
+- **A hold-to-show eye** in every password field.
 
-Everything that came in 0.15 (recoverable erase, import and restore starting from safe settings, Windows Hello fixes and more) is listed on the 0.15.2 release.
+**Fixes**
+- Dates you type now follow your date format setting everywhere (add account, bank balance, exchange rate, net worth valuation, goals, transactions), and hints show today’s date in your format.
+- “Install and restart” shows “Preparing the update…” right away instead of looking frozen.
+
+Everything that came in 0.16 (the tray option, opening from the shortcut, the new update window) is listed on the 0.16.1 release.
 
 ## Download
 
@@ -31,5 +34,6 @@ These builds are not yet signed with a certificate:
 
 - **Updating from 0.12 or 0.13**: their update window can’t be clicked, so download the installer from this page once. From 0.14 on, the "Update to …" button works.
 - **Windows Hello** has been tested on a real Windows 11 computer. **Touch ID** has only been tested in simulation, not yet on a real Mac; please report anything odd.
-- **Updating from 0.15.x** still uses the old update screen once (terminal windows may flash); the new update window appears from the update after 0.16.1.
-- The **tray option** and the **shortcut behaviour** have been tried on Windows 11. The **new update window** has not yet been seen in a real update by anyone; please report anything odd.
+- **Updating from 0.15.x** still uses the old update screen once (terminal windows may flash). From 0.16.1 on, the new update window is used.
+- The **new update window** has been tried in a real update on Windows 11; please report anything odd.
+- **PDF import** has only been tried on synthetic statements, not yet on a wide range of real bank PDFs.
