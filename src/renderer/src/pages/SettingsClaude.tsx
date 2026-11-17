@@ -1,5 +1,5 @@
 import { Copy, KeyRound, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
 import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
@@ -132,10 +132,14 @@ export function ClaudeSection() {
         <>
           <Row label={t('claude.chat')} hint={t('claude.chatHint')}>
             {modelSelect(s.chatModel, (chatModel) => configure({ chatModel }), t('claude.chat'))}
+          </Row>
+          <Row label={<Sub>{t('claude.effortLabel')}</Sub>}>
             {effortSelect(s.chatModel, s.chatEffort, (chatEffort) => configure({ chatEffort }), t('claude.effortLabel'))}
           </Row>
           <Row label={t('claude.csv')} hint={t('claude.csvHint')}>
             {modelSelect(s.csvModel, (csvModel) => configure({ csvModel }), t('claude.csv'))}
+          </Row>
+          <Row label={<Sub>{t('claude.effortLabel')}</Sub>}>
             {effortSelect(s.csvModel, s.csvEffort, (csvEffort) => configure({ csvEffort }), t('claude.effortLabel'))}
           </Row>
           {pdfRow}
@@ -146,14 +150,17 @@ export function ClaudeSection() {
         <>
           <Row label={t('ai.chatTitle')} hint={<>{t('ai.chatDesc')}{warn('model')}</>}>
             {modelInput(s.aiChatModel, 'aiChatModel', t('ai.chatTitle'), preset.suggestedModels[0])}
+          </Row>
+          <Row label={<Sub>{t('assistant.reasoningLabel')}</Sub>} hint={t('assistant.reasoningHint')}>
             {reasoningSelect(s.aiReasoning, (aiReasoning) => configure({ aiReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           <Row label={t('ai.fileTitle')} hint={t('ai.fileDesc')}>
             {modelInput(s.aiCsvModel, 'aiCsvModel', t('ai.fileTitle'), undefined, t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
+          </Row>
+          <Row label={<Sub>{t('assistant.reasoningLabel')}</Sub>} hint={t('assistant.reasoningHint')}>
             {reasoningSelect(s.aiCsvReasoning, (aiCsvReasoning) => configure({ aiCsvReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           {pdfRow}
-          <div className="border-b border-border px-5 py-3 text-xs text-muted">{t('assistant.reasoningHint')}</div>
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
         </>
       )}
@@ -216,6 +223,9 @@ export function ClaudeSection() {
 }
 
 const ADD_PROVIDER = '__add__'
+
+/** The label of a setting that belongs to the row above it (the reasoning of a model), set in a little. */
+const Sub = ({ children }: { children: ReactNode }) => <span className="pl-4 font-normal text-muted">{children}</span>
 
 /** A new OpenAI-compatible provider: name, address, key (optional for a local server) and models. */
 function AddProviderModal({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded: () => void }) {
