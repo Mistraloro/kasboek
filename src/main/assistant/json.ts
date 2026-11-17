@@ -9,7 +9,7 @@ import type { Db } from '@core/database'
 import { AppError, TruncatedError } from '@core/errors'
 import { getSettings } from '@core/settings'
 import { lowerClaudeEffort, lowerReasoning, reasoningParams, type Effort, type ReasoningLevel } from '@shared/reasoning'
-import { client, explainError, modelParams } from './claude'
+import { claudeFailure, client, explainError, modelParams } from './claude'
 import * as openai from './openai'
 import { limitMs, withTimeLimit } from './jobs'
 import type { ActiveProvider } from './provider'
@@ -50,7 +50,7 @@ export async function callJson(
       return await openai.json(provider, { system, user: context, schema: z.toJSONSchema(schema) as Record<string, unknown>, maxTokens: MAX_TOKENS, signal, model, onThinking, reasoning: reasoningParams(provider.preset.id, level.other) })
     } catch (err) {
       if (signal.aborted) throw err
-      throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
+      throw openai.providerError(err, name)
     }
   }
   const settings = getSettings(db)
@@ -74,7 +74,7 @@ export async function callJson(
     if (message.stop_reason === 'max_tokens') throw new TruncatedError('This part of the file was too large for one answer. Try again, or a shorter export.', text.trim().length > 0)
   } catch (err) {
     if (signal.aborted) throw err
-    throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
+    throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err), claudeFailure(err))
   }
   return text
 }

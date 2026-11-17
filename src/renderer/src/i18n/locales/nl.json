@@ -840,8 +840,13 @@
     "removeTitle": "{{name}} verwijderen?",
     "removeConfirm": "Het adres, de modellen en de API-sleutel worden van deze computer verwijderd. Dit kan niet ongedaan worden gemaakt.",
     "removeButton": "Verwijderen",
-    "gap": {"key": "Voeg een API-sleutel toe om {{name}} af te ronden.", "url": "Vul een geldig adres in om {{name}} af te ronden.", "model": "Vul een chatmodel in om {{name}} af te ronden."},
-    "sameAsChat": "Zelfde als het chatmodel ({{model}})"
+    "gap": {
+      "key": "Voeg een API-sleutel toe om {{name}} af te ronden.",
+      "url": "Vul een geldig adres in om {{name}} af te ronden.",
+      "model": "Vul een chatmodel in om {{name}} af te ronden."
+    },
+    "sameAsChat": "Zelfde als het chatmodel ({{model}})",
+    "neutralName": "de assistent"
   },
   "accountKind": {
     "current": "Zichtrekening",
@@ -1357,7 +1362,14 @@
     "assistant_pdf_not_pdf": "Deze import is geen pdf-afschrift.",
     "assistant_pdf_empty": "Deze pdf bevat geen tekst om te lezen.",
     "assistant_pdf_too_long": "Dit afschrift heeft te veel pagina’s voor de assistent (de limiet is 40 pagina’s). Probeer een afschrift van een kortere periode.",
-    "assistant_pdf_no_rows": "{{ai}} vond geen transacties die bij de tekst van dit afschrift pasten. Er is niets gewijzigd."
+    "assistant_pdf_no_rows": "{{ai}} vond geen transacties die bij de tekst van dit afschrift pasten. Er is niets gewijzigd.",
+    "assistant_failed_network": "{{ai}} is niet bereikbaar{{detail}}. Controleer het adres en je verbinding, en of de dienst draait.",
+    "assistant_failed_auth": "{{ai}} accepteerde de API-sleutel niet{{detail}}. Controleer hem in Instellingen → Assistent. Mogelijk heeft de sleutel ook geen toegang tot dit model.",
+    "assistant_failed_rate_limit": "{{ai}} beperkt deze sleutel op dit moment{{detail}}. Probeer het over een minuut opnieuw.",
+    "assistant_failed_server": "{{ai}} gaf een fout terug ({{status}}){{detail}}. Probeer het opnieuw.",
+    "assistant_failed_model_not_found": "{{ai}} kent dit model of adres niet{{detail}}. Controleer ze in Instellingen → Assistent.",
+    "assistant_failed_bad_request": "{{ai}} weigerde het verzoek{{detail}}. Dit model ondersteunt mogelijk niet wat nodig is; probeer een ander model.",
+    "assistant_failed_unknown": "Er ging iets mis bij het praten met {{ai}}{{detail}}. Probeer het opnieuw."
   },
   "insights": {
     "title": "Suggesties",
@@ -1451,6 +1463,8 @@
       "title_one": "{{count}} abonnement, {{amount}} per maand",
       "title_other": "{{count}} abonnementen, {{amount}} per maand",
       "body": "Controleer af en toe of je ze nog allemaal gebruikt."
-    }
+    },
+    "pastMonthNote": "Tips over vaste kosten en saldo’s worden getoond voor de huidige maand.",
+    "runningOther": "{{ai}} schrijft tips voor {{month}}. Wacht tot het klaar is, of stop het daar."
   }
 }

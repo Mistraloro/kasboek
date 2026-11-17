@@ -11,6 +11,7 @@ import { getPrefs, updatePrefs } from './prefs'
 import { syncTray } from './tray'
 import { defaultCategoryNames } from './i18n-categories'
 import { localizeDefaultCategories } from '@core/finance'
+import { forgetFacts } from '@core/insights'
 import * as session from './session'
 import { applyTheme } from './theme'
 import { lockedRefusal } from './lock-guard'
@@ -31,7 +32,7 @@ import { claudeEffort } from '@shared/reasoning'
 import { assistImport } from './assistant/csv'
 import { assistPdf, pdfAssistPreview } from './assistant/pdf'
 import { assistStatus, cancelAssist } from './assistant/jobs'
-import { cancelInsights, insightsPreview, runInsights } from './assistant/insights'
+import { cancelInsights, insightsPreview, insightsStatus, runInsights } from './assistant/insights'
 import { insightsView } from '@core/insights'
 import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
@@ -386,6 +387,7 @@ const desktopOps: OpTable = {
   'insights.preview': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsPreview(db, month) },
   'insights.run': { mutates: false, assistant: false, handler: ({ db }, { month, consent }) => runInsights(db, month, { consent }) },
   'insights.cancel': { mutates: false, assistant: false, handler: () => cancelInsights() },
+  'insights.status': { mutates: false, assistant: false, handler: () => insightsStatus() },
   'export.csv': { mutates: false, assistant: false, handler: (_c, { filter, labels, defaultName }) => exportCsv(filter, labels, defaultName) },
   'export.pdf': { mutates: false, assistant: false, handler: (_c, { html, defaultName }) => exportPdf(html, defaultName) },
   'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => assistStatus(sessionId) },
@@ -565,6 +567,7 @@ onRemoteChanges(() => notifyChanged('system'))
 
 let changeTimer: NodeJS.Timeout | null = null
 function notifyChanged(actor: OpContext['actor']): void {
+  if (session.isUnlocked()) forgetFacts(session.db())
   if (changeTimer) clearTimeout(changeTimer)
   changeTimer = setTimeout(() => session.broadcast({ type: 'data.changed', actor }), 50)
 }

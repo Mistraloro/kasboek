@@ -1,5 +1,6 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
+import type { ErrorProvider } from '@shared/error-text'
 import { FALLBACKS, LANGUAGE_CODES } from '@shared/languages'
 import de from './locales/de.json'
 import en from './locales/en.json'
@@ -25,8 +26,14 @@ void i18n.use(initReactI18next).init({
   returnNull: false
 })
 
+let provider: ErrorProvider | null = null
+
+/** The AI provider in use, or null until it is known. */
+export const aiProvider = (): ErrorProvider | null => provider
+
 /** The assistant's name in texts; follows the chosen AI provider. */
 export function setAiName(name: string, company: string | null): void {
+  provider = { name, company }
   const vars = i18n.options.interpolation?.defaultVariables as Record<string, string> | undefined
   if (vars) {
     vars['ai'] = name

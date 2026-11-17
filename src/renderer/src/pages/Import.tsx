@@ -8,8 +8,8 @@ import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
 import { SNIFF_BYTES, fileKindOf, isCancelledRead, reconciliationBanner } from '@shared/pdf-import'
 import { dateExample, datePlaceholder, parseDate } from '@shared/format'
-import i18n from '../i18n'
 import { ApiError, call, useOp } from '../lib/api'
+import { errorMessage } from '../lib/error-message'
 import { openSettingsTab } from '../lib/settings-tab'
 import { formatDate, formatDateTime } from '../lib/format'
 import { useSettings } from '../lib/settings'
@@ -20,12 +20,6 @@ import { ImportBalanceCheck } from '../components/BankBalance'
 
 type Filter = 'all' | ImportRow['status']
 type AssistKind = 'check' | 'pdf'
-
-/** An error that arrives as an event: in the person's language when there is a translation. */
-const eventError = (e: { code: string; message: string }): string => {
-  const key = `errors.${e.code.replace(/\./g, '_')}`
-  return i18n.exists(key) ? i18n.t(key) : e.message
-}
 
 function toBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf)
@@ -79,7 +73,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
         if (e.type === 'import.checkDone' && e.sessionId === sessionRef.current) {
           setAssisting(null)
           if (e.error) {
-            if (e.error.code !== 'assistant.cancelled') toast(eventError(e.error), 'error')
+            if (e.error.code !== 'assistant.cancelled') toast(errorMessage(e.error), 'error')
           } else {
             void call('import.preview', { sessionId: e.sessionId }).then(setPreview)
             toast(t(kindRef.current === 'pdf' ? 'import.pdf.ai.done' : 'import.checked'))

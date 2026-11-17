@@ -840,8 +840,13 @@
     "removeTitle": "Supprimer {{name}} ?",
     "removeConfirm": "Son adresse, ses modèles et sa clé API sont effacés de cet ordinateur. Cette action est irréversible.",
     "removeButton": "Supprimer",
-    "gap": {"key": "Ajoutez une clé API pour terminer la configuration de {{name}}.", "url": "Saisissez une adresse valide pour terminer la configuration de {{name}}.", "model": "Saisissez un modèle de chat pour terminer la configuration de {{name}}."},
-    "sameAsChat": "Comme le modèle du chat ({{model}})"
+    "gap": {
+      "key": "Ajoutez une clé API pour terminer la configuration de {{name}}.",
+      "url": "Saisissez une adresse valide pour terminer la configuration de {{name}}.",
+      "model": "Saisissez un modèle de chat pour terminer la configuration de {{name}}."
+    },
+    "sameAsChat": "Comme le modèle du chat ({{model}})",
+    "neutralName": "l’assistant"
   },
   "accountKind": {
     "current": "Compte courant",
@@ -1357,7 +1362,14 @@
     "assistant_pdf_not_pdf": "Cet import n’est pas un relevé PDF.",
     "assistant_pdf_empty": "Ce PDF ne contient pas de texte à lire.",
     "assistant_pdf_too_long": "Ce relevé a trop de pages pour l’assistant (la limite est de 40 pages). Essayez un relevé couvrant une période plus courte.",
-    "assistant_pdf_no_rows": "{{ai}} n’a trouvé aucune opération correspondant au texte de ce relevé. Rien n’a été modifié."
+    "assistant_pdf_no_rows": "{{ai}} n’a trouvé aucune opération correspondant au texte de ce relevé. Rien n’a été modifié.",
+    "assistant_failed_network": "Impossible de joindre {{ai}}{{detail}}. Vérifiez l’adresse et votre connexion, et que le service est démarré.",
+    "assistant_failed_auth": "{{ai}} n’a pas accepté la clé API{{detail}}. Vérifiez-la dans Réglages → Assistant. La clé n’a peut-être pas accès à ce modèle.",
+    "assistant_failed_rate_limit": "{{ai}} limite cette clé pour le moment{{detail}}. Réessayez dans une minute.",
+    "assistant_failed_server": "{{ai}} a renvoyé une erreur ({{status}}){{detail}}. Réessayez.",
+    "assistant_failed_model_not_found": "{{ai}} ne connaît pas ce modèle ou cette adresse{{detail}}. Vérifiez-les dans Réglages → Assistant.",
+    "assistant_failed_bad_request": "{{ai}} a refusé la demande{{detail}}. Ce modèle ne prend peut-être pas en charge ce qu’il faut ; essayez un autre modèle.",
+    "assistant_failed_unknown": "Un problème est survenu lors de l’échange avec {{ai}}{{detail}}. Réessayez."
   },
   "insights": {
     "title": "Suggestions",
@@ -1451,6 +1463,8 @@
       "title_one": "{{count}} abonnement, {{amount}} par mois",
       "title_other": "{{count}} abonnements, {{amount}} par mois",
       "body": "Vérifiez de temps en temps que vous les utilisez encore tous."
-    }
+    },
+    "pastMonthNote": "Les conseils sur les charges fixes et les soldes sont affichés pour le mois en cours.",
+    "runningOther": "{{ai}} rédige des conseils pour {{month}}. Attendez qu’il ait fini, ou arrêtez-le là-bas."
   }
 }

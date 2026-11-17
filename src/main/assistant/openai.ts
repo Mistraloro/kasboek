@@ -6,6 +6,7 @@
 import { net } from 'electron'
 import type Anthropic from '@anthropic-ai/sdk'
 import { AppError, TruncatedError } from '@core/errors'
+import type { ErrorDetails, ProviderFailureKind } from '@shared/error-text'
 import type { ActiveProvider } from './provider'
 
 type MessageParam = Anthropic.Beta.Messages.BetaMessageParam
@@ -493,6 +494,22 @@ export function chatModels(body: { data?: ModelEntry[]; models?: ModelEntry[] })
 export async function listModels(p: ActiveProvider): Promise<string[]> {
   const open = await request(p, '/models', {}, undefined, { timeoutMs: MODELS_TIMEOUT_MS })
   return chatModels(await readJson<{ data?: ModelEntry[]; models?: ModelEntry[] }>(open))
+}
+
+/** What went wrong with a call to the provider, as a kind with the status and the provider's own short message. */
+export function providerFailure(err: unknown): ErrorDetails {
+  if (err instanceof ProviderError) {
+    const { status } = err
+    const kind: ProviderFailureKind =
+      status === 0 ? 'network' : status === 401 || status === 403 ? 'auth' : status === 404 ? 'model_not_found' : status === 429 ? 'rate_limit' : status === 400 || status === 422 ? 'bad_request' : status >= 500 ? 'server' : 'unknown'
+    return { kind, status, message: err.message }
+  }
+  return { kind: 'unknown', status: 0, message: err instanceof ToolArgumentsError || err instanceof AppError ? err.message : '' }
+}
+
+/** The error for a failed call to the provider: the code and details the screen words in the person's language, and an English text for the log. */
+export function providerError(err: unknown, name: string): AppError {
+  return err instanceof AppError ? err : new AppError('assistant.failed', explainProviderError(err, name), providerFailure(err))
 }
 
 /** Plain-language errors for the person. */

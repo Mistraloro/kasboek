@@ -6,6 +6,7 @@
  */
 import { z } from 'zod'
 import { ASSISTANT_MODELS } from './types'
+import type { ErrorDetails } from './error-text'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
 import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS } from './format'
@@ -522,6 +523,11 @@ export const contract = {
     input: empty,
     output: out<{ ok: true }>()
   },
+  'insights.status': {
+    description: 'Whether the assistant is writing tips now, for which month and since when. Not offered to the assistant.',
+    input: empty,
+    output: out<{ running: boolean; month: string | null; startedAt: string | null }>()
+  },
   'insights.restoreDismissed': {
     description: 'Show the tips the person hid on this computer again.',
     input: empty,
@@ -709,7 +715,7 @@ export const PUBLIC_OPS: readonly OpName[] = [
 ]
 
 /** Result sent back over IPC. Errors are values, not thrown across the bridge. */
-export type OpResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
+export type OpResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string; details?: ErrorDetails } }
 
 export interface KasboekBridge {
   invoke<K extends OpName>(op: K, input: OpInput<K>): Promise<OpResult<OpOutput<K>>>
@@ -728,7 +734,7 @@ export type AppEvent =
   | { type: 'update.changed'; status: UpdateStatus }
   | { type: 'import.checkProgress'; sessionId: string; groupsDone: number; groupsTotal: number; partsTotal: number }
   | { type: 'import.pdfProgress'; page: number; pages: number }
-  | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string } | null }
+  | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string; details?: ErrorDetails } | null }
   | { type: 'sync.updated'; status: SyncStatus }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
   | { type: 'mcp.request'; id: string; op: string; summary: string }

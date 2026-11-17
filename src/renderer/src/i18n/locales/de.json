@@ -840,8 +840,13 @@
     "removeTitle": "{{name}} entfernen?",
     "removeConfirm": "Adresse, Modelle und API-Schlüssel werden von diesem Computer gelöscht. Das lässt sich nicht rückgängig machen.",
     "removeButton": "Entfernen",
-    "gap": {"key": "Füge einen API-Schlüssel hinzu, um {{name}} einzurichten.", "url": "Gib eine gültige Adresse ein, um {{name}} einzurichten.", "model": "Gib ein Chat-Modell ein, um {{name}} einzurichten."},
-    "sameAsChat": "Wie das Chat-Modell ({{model}})"
+    "gap": {
+      "key": "Füge einen API-Schlüssel hinzu, um {{name}} einzurichten.",
+      "url": "Gib eine gültige Adresse ein, um {{name}} einzurichten.",
+      "model": "Gib ein Chat-Modell ein, um {{name}} einzurichten."
+    },
+    "sameAsChat": "Wie das Chat-Modell ({{model}})",
+    "neutralName": "der Assistent"
   },
   "accountKind": {
     "current": "Girokonto",
@@ -1357,7 +1362,14 @@
     "assistant_pdf_not_pdf": "Dieser Import ist kein PDF-Kontoauszug.",
     "assistant_pdf_empty": "Dieses PDF enthält keinen lesbaren Text.",
     "assistant_pdf_too_long": "Dieser Kontoauszug hat zu viele Seiten für den Assistenten (Grenze: 40 Seiten). Versuche einen Kontoauszug für einen kürzeren Zeitraum.",
-    "assistant_pdf_no_rows": "{{ai}} hat keine Umsätze gefunden, die zum Text dieses Kontoauszugs passen. Es wurde nichts geändert."
+    "assistant_pdf_no_rows": "{{ai}} hat keine Umsätze gefunden, die zum Text dieses Kontoauszugs passen. Es wurde nichts geändert.",
+    "assistant_failed_network": "{{ai}} ist nicht erreichbar{{detail}}. Prüfe die Adresse und deine Verbindung und ob der Dienst läuft.",
+    "assistant_failed_auth": "{{ai}} hat den API-Schlüssel nicht akzeptiert{{detail}}. Prüfe ihn unter Einstellungen → Assistent. Möglicherweise hat der Schlüssel auch keinen Zugriff auf dieses Modell.",
+    "assistant_failed_rate_limit": "{{ai}} begrenzt diesen Schlüssel gerade{{detail}}. Versuche es in einer Minute erneut.",
+    "assistant_failed_server": "{{ai}} hat einen Fehler gemeldet ({{status}}){{detail}}. Versuche es erneut.",
+    "assistant_failed_model_not_found": "{{ai}} kennt dieses Modell oder diese Adresse nicht{{detail}}. Prüfe beides unter Einstellungen → Assistent.",
+    "assistant_failed_bad_request": "{{ai}} hat die Anfrage abgelehnt{{detail}}. Dieses Modell unterstützt möglicherweise nicht, was nötig ist; versuche ein anderes Modell.",
+    "assistant_failed_unknown": "Bei der Kommunikation mit {{ai}} ist etwas schiefgelaufen{{detail}}. Versuche es erneut."
   },
   "insights": {
     "title": "Vorschläge",
@@ -1451,6 +1463,8 @@
       "title_one": "{{count}} Abo, {{amount}} im Monat",
       "title_other": "{{count}} Abos, {{amount}} im Monat",
       "body": "Prüfe ab und zu, ob du alle noch nutzt."
-    }
+    },
+    "pastMonthNote": "Tipps zu Fixkosten und Kontoständen werden für den aktuellen Monat angezeigt.",
+    "runningOther": "{{ai}} schreibt gerade Tipps für {{month}}. Warte, bis er fertig ist, oder stoppe ihn dort."
   }
 }

@@ -4,6 +4,7 @@ import { app } from 'electron'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
+import type { ErrorDetails, ProviderFailureKind } from '@shared/error-text'
 import { claudeEffort, type Effort } from '@shared/reasoning'
 
 export const API_KEY = 'anthropicApiKey'
@@ -50,6 +51,18 @@ export function explainError(err: unknown): string {
   if (err instanceof Anthropic.APIError) return `Anthropic returned an error (${err.status ?? '?'}). Try again.`
   if (err instanceof AppError) return err.message
   return 'Something went wrong talking to Claude.'
+}
+
+/** What went wrong with a call to Anthropic, as a kind with the status and the short message. */
+export function claudeFailure(err: unknown): ErrorDetails {
+  if (err instanceof Anthropic.APIConnectionError) return { kind: 'network', status: 0, message: '' }
+  if (err instanceof Anthropic.APIError) {
+    const status = err.status ?? 0
+    const kind: ProviderFailureKind =
+      status === 401 || status === 403 ? 'auth' : status === 404 ? 'model_not_found' : status === 429 ? 'rate_limit' : status === 400 || status === 422 ? 'bad_request' : status >= 500 ? 'server' : 'unknown'
+    return { kind, status, message: kind === 'bad_request' ? err.message.slice(0, 300) : '' }
+  }
+  return { kind: 'unknown', status: 0, message: '' }
 }
 
 export async function checkKey(apiKey: string): Promise<void> {

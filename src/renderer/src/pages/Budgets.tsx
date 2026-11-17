@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, Copy, ListChecks, Tags, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
 import { centsToInput } from '@shared/format'
@@ -16,7 +16,10 @@ import { CategorySelect } from './Transactions'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 
-export function Budgets({ initial }: { initial?: { month?: string } }) {
+/** How long the category a tip pointed to stays highlighted. */
+const HIGHLIGHT_MS = 2500
+
+export function Budgets({ initial }: { initial?: { month?: string; categoryId?: number | 'none' } }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { fmt, money } = useSettings()
@@ -25,6 +28,18 @@ export function Budgets({ initial }: { initial?: { month?: string } }) {
   const [modal, setModal] = useState<null | 'categories' | 'rules'>(null)
   const load = (): void => void call('budgets.list', { month }).then(setRows)
   useEffect(load, [month])
+
+  // The category a tip pointed to is scrolled into view once the rows are there, and marked for a moment.
+  const [marked, setMarked] = useState<number | null>(typeof initial?.categoryId === 'number' ? initial.categoryId : null)
+  const markedRow = useRef<HTMLTableRowElement | null>(null)
+  const found = rows?.some((r) => r.categoryId === marked) ?? false
+  useEffect(() => {
+    if (marked === null || !found) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    markedRow.current?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' })
+    const timer = setTimeout(() => setMarked(null), HIGHLIGHT_MS)
+    return () => clearTimeout(timer)
+  }, [marked, found])
 
   const budgeted = (rows ?? []).filter((r) => r.budgetCents !== null)
   const totalBudget = budgeted.reduce((s, r) => s + (r.budgetCents ?? 0), 0)
@@ -62,7 +77,7 @@ export function Budgets({ initial }: { initial?: { month?: string } }) {
           </thead>
           <tbody>
             {(rows ?? []).map((r) => (
-              <BudgetLine key={`${month}-${r.categoryId}`} row={r} month={month} money={money} onSaved={setRows} />
+              <BudgetLine key={`${month}-${r.categoryId}`} row={r} month={month} money={money} onSaved={setRows} marked={r.categoryId === marked} rowRef={markedRow} />
             ))}
           </tbody>
           {rows && (
@@ -84,7 +99,7 @@ export function Budgets({ initial }: { initial?: { month?: string } }) {
   )
 }
 
-function BudgetLine({ row, month, money, onSaved }: { row: BudgetRow; month: string; money: (c: number) => string; onSaved: (r: BudgetRow[]) => void }) {
+function BudgetLine({ row, month, money, onSaved, marked, rowRef }: { row: BudgetRow; month: string; money: (c: number) => string; onSaved: (r: BudgetRow[]) => void; marked: boolean; rowRef: RefObject<HTMLTableRowElement | null> }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { fmt } = useSettings()
@@ -99,7 +114,7 @@ function BudgetLine({ row, month, money, onSaved }: { row: BudgetRow; month: str
   }
   const left = row.budgetCents === null ? null : row.budgetCents - row.spentCents
   return (
-    <tr className="border-b border-border last:border-b-0">
+    <tr ref={marked ? rowRef : undefined} className={cx('border-b border-border transition-colors last:border-b-0', marked && 'bg-accent-soft')}>
       <td className="px-5 py-2.5 font-medium">{row.name}</td>
       <td className="px-3 py-1.5">
         <Input

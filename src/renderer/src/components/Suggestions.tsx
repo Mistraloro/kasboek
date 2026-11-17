@@ -1,12 +1,12 @@
 import { AlertTriangle, ChevronDown, ChevronUp, Info, Lightbulb, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { monthOf } from '@shared/month'
 import { actionOf, bodyKey, renderInsightText, severityOf, textVars, titleKey, type InsightSeverity } from '@shared/insights'
 import type { InsightFact, InsightSuggestion, InsightsPreview, InsightsView } from '@shared/types'
 import type { Page } from '../App'
-import i18n from '../i18n'
 import { ApiError, call } from '../lib/api'
-import { formatDate } from '../lib/format'
+import { formatDate, monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { openSettingsTab } from '../lib/settings-tab'
 import { errText } from '../pages/auth/parts'
@@ -37,13 +37,6 @@ const ICONS: Record<InsightSeverity, ReactNode> = {
   info: <Info size={16} className="text-muted" />
 }
 
-/** An error of the run in the person's language; the ones that name the assistant are filled in with its name. */
-const runError = (e: unknown, ai: string): string => {
-  if (!(e instanceof ApiError)) return errText(e)
-  const key = `errors.${e.code.replace(/\./g, '_')}`
-  return i18n.exists(key) ? i18n.t(key, { ai }) : e.message
-}
-
 interface Tip {
   key: string
   severity: InsightSeverity
@@ -63,10 +56,14 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
   const [view, setView] = useState<InsightsView | null>(null)
   const [failed, setFailed] = useState(false)
   const [all, setAll] = useState(false)
-  const [writing, setWriting] = useState(false)
+  // The run in progress in the main process, which goes on when this card is left or the month changes.
+  const [run, setRun] = useState<{ running: boolean; month: string | null; startedAt: string | null } | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
   const [consent, setConsent] = useState(false)
   const latest = useRef(0)
+  const latestStatus = useRef(0)
+  const monthRef = useRef(month)
+  monthRef.current = month
 
   const load = useCallback(() => {
     const run = ++latest.current
@@ -75,6 +72,19 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
       .then((v) => run === latest.current && setView(v))
       .catch(() => run === latest.current && setFailed(true))
   }, [month])
+
+  const refreshStatus = useCallback(() => {
+    const asked = ++latestStatus.current
+    call('insights.status')
+      .then((st) => asked === latestStatus.current && setRun(st))
+      .catch(() => undefined)
+  }, [])
+  // When the card shows, the month changes or the window comes back: a run may have started or ended meanwhile.
+  useEffect(() => {
+    refreshStatus()
+    window.addEventListener('focus', refreshStatus)
+    return () => window.removeEventListener('focus', refreshStatus)
+  }, [refreshStatus, month])
 
   // After the first paint, and only while open: the facts take a moment to work out.
   useEffect(() => {
@@ -86,9 +96,10 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
   useEffect(
     () =>
       window.kasboek.onEvent((e) => {
+        if (e.type === 'insights.updated') refreshStatus()
         if ((e.type === 'data.changed' || (e.type === 'insights.updated' && e.month === month)) && !collapsed) load()
       }),
-    [collapsed, load, month]
+    [collapsed, load, month, refreshStatus]
   )
 
   const toggle = (): void => {
@@ -105,15 +116,16 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
   // Asks for the tips; without the person's agreement for this provider the dialog opens first.
   const write = (agreed?: true): void => {
     const asked = month
-    setWriting(true)
+    setRun({ running: true, month, startedAt: new Date().toISOString() })
     setAiError(null)
     call('insights.run', agreed ? { month, consent: agreed } : { month })
-      .then((v) => asked === month && setView(v))
+      .then((v) => asked === monthRef.current && setView(v))
       .catch((e: unknown) => {
         if (e instanceof ApiError && e.code === 'insights.consent_needed') setConsent(true)
-        else if (!(e instanceof ApiError && e.code === 'insights.cancelled')) setAiError(runError(e, aiName))
+        // Another run is on: the status below shows it, no error.
+        else if (!(e instanceof ApiError && (e.code === 'insights.cancelled' || e.code === 'insights.busy')) && asked === monthRef.current) setAiError(errText(e))
       })
-      .finally(() => setWriting(false))
+      .finally(refreshStatus)
   }
   const ask = (tip: Tip): void => {
     window.dispatchEvent(new Event('kasboek:open-assistant'))
@@ -121,6 +133,10 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
   }
 
   const ai = view?.ai ?? null
+  const writing = !!run?.running && run.month === month
+  const writingOther = !!run?.running && run.month !== month
+  const otherReason = writingOther && run?.month ? t('insights.runningOther', { ai: aiName, month: monthLabel(new Date(Number(run.month.slice(0, 4)), Number(run.month.slice(5)) - 1, 1), fmt) }) : undefined
+  const pastMonth = month < monthOf()
   const writeMoney = (cents: number, currency: string): string => money(cents, currency)
   const writeDate = (iso: string): string => formatDate(iso, fmt)
   const aiTips: Tip[] = (ai?.suggestions ?? []).flatMap((s: InsightSuggestion) => {
@@ -164,7 +180,7 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
         action={
           <div className="flex items-center gap-2">
             {!collapsed && assistant?.configured && hasFacts && !ai && !writing && (
-              <Button size="sm" icon={<Sparkles size={14} />} onClick={() => write()}>{t('insights.get', { ai: aiName })}</Button>
+              <Button size="sm" icon={<Sparkles size={14} />} disabled={writingOther} title={otherReason} onClick={() => write()}>{t('insights.get', { ai: aiName })}</Button>
             )}
             <Button size="sm" variant="ghost" aria-expanded={!collapsed} aria-label={t(collapsed ? 'insights.expand' : 'insights.collapse')} icon={collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />} onClick={toggle} />
           </div>
@@ -187,10 +203,13 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
                   <Button size="sm" onClick={() => void call('insights.cancel')}>{t('insights.stop')}</Button>
                 </div>
               )}
+              {otherReason && (
+                <p className="border-b border-border px-5 py-3 text-[13px] text-muted" role="status">{otherReason}</p>
+              )}
               {aiError && (
                 <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3 text-[13px]" role="alert">
                   <span className="text-negative">{aiError}</span>
-                  <Button size="sm" onClick={() => write()}>{t('insights.retry')}</Button>
+                  <Button size="sm" disabled={writing || writingOther} title={otherReason} onClick={() => write()}>{t('insights.retry')}</Button>
                 </div>
               )}
               {ai && (
@@ -201,7 +220,7 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
                       {t('insights.writtenBy', { ai: ai.providerName, date: formatDate(new Date(ai.createdAt), fmt) })}
                       {ai.stale && <> · {t(ai.stale === 'data' ? 'insights.staleData' : 'insights.staleLanguage')}</>}
                     </span>
-                    <Button size="sm" variant="ghost" disabled={writing || !assistant?.configured} onClick={() => write()}>{t('insights.refresh')}</Button>
+                    <Button size="sm" variant="ghost" disabled={writing || writingOther || !assistant?.configured} title={otherReason} onClick={() => write()}>{t('insights.refresh')}</Button>
                   </div>
                 </>
               )}
@@ -219,6 +238,7 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
                   </>
                 )
               )}
+              {pastMonth && <p className="border-t border-border px-5 py-2.5 text-xs text-muted">{t('insights.pastMonthNote')}</p>}
               {hasFacts && assistant?.configured && <SentText month={month} />}
               {hasFacts && assistant && !assistant.configured && (
                 <p className="border-t border-border px-5 py-2.5 text-xs text-muted">

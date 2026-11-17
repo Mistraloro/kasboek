@@ -11,13 +11,13 @@
 import { createHash } from 'node:crypto'
 import { addMonths, localToday, monthOf } from '@shared/month'
 import { presetFor, type ProviderId } from '@shared/ai-providers'
-import type { InsightFact, InsightKind, InsightSuggestion, InsightValue, InsightsView, MonthReview, RecurringItem } from '@shared/types'
+import type { InsightFact, InsightKind, InsightSuggestion, InsightValue, InsightsView, RecurringItem } from '@shared/types'
 import { NEAR, listAlerts } from './alerts'
 import type { Db } from './database'
 import { convert } from './fx'
 import { listBudgets } from './finance'
 import { findRecurring } from './recurring'
-import { monthReview } from './review'
+import { categoryTrend, monthReview } from './review'
 import { getSettings } from './settings'
 
 /** Limits for the first version; to be tuned with use. Amounts are cents, shares are fractions. */
@@ -80,15 +80,40 @@ export function dismissedKeys(db: Db): Set<string> {
   return new Set((db.prepare(`SELECT key FROM insight_feedback WHERE verdict IN (${DISMISSED.map(() => '?').join(',')})`).all(...DISMISSED) as { key: string }[]).map((r) => r.key))
 }
 
+/**
+ * The facts found for a month, kept per database while nothing in it changed (SQLite counts the rows this
+ * connection changed). Working them out takes a moment on a big file, and the card asks again each time it opens.
+ */
+const cache = new WeakMap<Db, Map<string, Draft[]>>()
+
+/** Forgets the kept facts, e.g. on a `data.changed` event. */
+export function forgetFacts(db: Db): void {
+  cache.delete(db)
+}
+
+const dataVersion = (db: Db): number => (db.prepare('SELECT total_changes() AS n').get() as { n: number }).n
+
 /** Facts for `month` ('YYYY-MM'): the biggest first, without the ones the person hid. */
 export function buildFacts(db: Db, month: string, today = localToday()): InsightFact[] {
+  const key = `${month}|${today}|${dataVersion(db)}`
+  const kept = cache.get(db)?.get(key)
+  const drafts = kept ?? draftFacts(db, month, today)
+  // Only the latest version is kept.
+  if (!kept) cache.set(db, new Map([[key, drafts]]))
+  const hidden = dismissedKeys(db)
+  return drafts
+    .filter((d) => !hidden.has(d.key))
+    .sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key))
+    .slice(0, INSIGHT_LIMITS.maxFacts)
+    .map((d, n) => ({ id: `f${n + 1}`, ...d }))
+}
+
+function draftFacts(db: Db, month: string, today: string): Draft[] {
   const L = INSIGHT_LIMITS
   const main = getSettings(db).currency
   const currentMonth = monthOf(new Date(`${today}T12:00:00`))
   const currencyOf = new Map((db.prepare('SELECT id, currency FROM accounts').all() as { id: number; currency: string }[]).map((a) => [a.id, a.currency]))
   const inMain = (cents: number, currency: string): number | null => convert(db, cents, currency, today, main)
-  const reviews = new Map<string, MonthReview>()
-  const review = (m: string): MonthReview => reviews.get(m) ?? reviews.set(m, monthReview(db, m)).get(m)!
   const drafts: Draft[] = []
   const add = (kind: InsightKind, key: string, values: Record<string, InsightValue>, weight: number, extra: Partial<Pick<Draft, 'categoryId' | 'recurringKey' | 'transactionIds'>> = {}): void => {
     drafts.push({ key: `${kind}:${key}`, kind, values, categoryId: extra.categoryId ?? null, recurringKey: extra.recurringKey ?? null, transactionIds: (extra.transactionIds ?? []).slice(0, L.maxTransactionIds), weight: Math.max(0, Math.round(weight)) })
@@ -155,21 +180,18 @@ export function buildFacts(db: Db, month: string, today = localToday()): Insight
 
   // Against the three months before, only for a finished month: the one shown, or else the month before.
   const finished = month < currentMonth ? month : addMonths(currentMonth, -1)
-  for (const c of review(finished).categories) {
+  // The full review is only needed for the month shown (payments that stand out); the month before needs the category totals only.
+  const shown = monthReview(db, month)
+  for (const c of finished === month ? shown.categories : categoryTrend(db, finished)) {
     if (c.categoryId === null || c.averageCents <= 0 || c.changeCents < c.averageCents * L.categoryUpShare || c.changeCents < L.categoryUpCents) continue
     add('category_up', `${finished}:${c.categoryId}`, { name: { text: c.name }, amount: { money: c.cents, currency: main }, average: { money: c.averageCents, currency: main }, change: { money: c.changeCents, currency: main }, percent: { count: Math.round((c.changeCents / c.averageCents) * 100) }, month: { text: finished } }, c.changeCents, { categoryId: c.categoryId })
   }
 
   // Payments that stand out in the month shown.
-  for (const u of review(month).unusual)
+  for (const u of shown.unusual)
     add('unusual', String(u.id), { name: { text: u.name }, amount: { money: u.cents, currency: main }, ...(u.usualCents !== null ? { usual: { money: u.usualCents, currency: main } } : {}), date: { date: u.date }, reason: { text: u.reason } }, u.cents, { transactionIds: [u.id] })
 
-  const hidden = dismissedKeys(db)
   return drafts
-    .filter((d) => !hidden.has(d.key))
-    .sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key))
-    .slice(0, L.maxFacts)
-    .map((d, n) => ({ id: `f${n + 1}`, ...d }))
 }
 
 /**

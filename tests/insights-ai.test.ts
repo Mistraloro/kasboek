@@ -206,15 +206,22 @@ describe('writing tips', () => {
   })
 
   it('stops at once with Stop, and a new run can start after', async () => {
-    const { runInsights, cancelInsights } = await import('../src/main/assistant/insights')
+    const { runInsights, cancelInsights, insightsStatus } = await import('../src/main/assistant/insights')
     const { db } = setup()
+    expect(insightsStatus()).toEqual({ running: false, month: null, startedAt: null })
     await mockFetch((_b, _n, signal) => new Promise<Response>((_, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))))
     const run = runInsights(db, MONTH, { consent: true, today: TODAY })
+    // The status tells a card that was left and opened again which run is going on.
+    expect(insightsStatus()).toEqual({ running: true, month: MONTH, startedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/) })
     const second = runInsights(db, MONTH, { today: TODAY })
     expect(await code(second)).toBe('insights.busy')
     await vi.waitFor(() => expect(requests).toHaveLength(1))
+    sent.length = 0
     expect(cancelInsights()).toEqual({ ok: true })
     expect(await code(run)).toBe('insights.cancelled')
+    expect(insightsStatus().running).toBe(false)
+    // Whatever way a run ends, the card is told, so it stops showing it as running.
+    expect(sent).toContainEqual({ type: 'insights.updated', month: MONTH })
     expect(row(db)).toBeUndefined()
     await mockFetch((b) => tip(b))
     expect((await runInsights(db, MONTH, { today: TODAY })).ai).not.toBeNull()
@@ -234,8 +241,7 @@ describe('writing tips', () => {
     const before = row(db)
     await mockFetch(() => Promise.reject(new TypeError('fetch failed')))
     const err = await runInsights(db, MONTH, { today: TODAY }).catch((e: unknown) => e as { code: string; message: string })
-    expect(err).toMatchObject({ code: 'assistant.failed' })
-    expect((err as { message: string }).message).toMatch(/Can’t reach Mistral/)
+    expect(err).toMatchObject({ code: 'assistant.failed', details: { kind: 'network', status: 0 } })
     expect(row(db)).toEqual(before)
     expect(insightsView(db, MONTH, 'en', TODAY).ai!.suggestions).toHaveLength(1)
   })

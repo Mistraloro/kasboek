@@ -9,6 +9,7 @@ import { AppError, TruncatedError } from '@core/errors'
 import { INSIGHTS_CONSENT_VERSION, SuggestionsPlan, factsPayload, insightsSystem, parseSuggestions, verifySuggestions } from '@core/insight-plan'
 import { buildFacts, dismissedKeys, insightsView, saveInsights } from '@core/insights'
 import { getSettings, updateSettings } from '@core/settings'
+import { unknownFailure } from '@shared/error-text'
 import { localToday } from '@shared/month'
 import type { InsightsPreview, InsightsView } from '@shared/types'
 import { startupLog } from '../graphics'
@@ -21,8 +22,13 @@ import { activeProvider, requireConfigured } from './provider'
 /** Roughly how many characters a token is, for the estimate shown before anything is sent. */
 const CHARS_PER_TOKEN = 3
 
-/** The run in progress: one at a time. */
-let running: AbortController | null = null
+/** The run in progress: one at a time. It goes on when the card is left; the card asks `insightsStatus` when it comes back. */
+let running: { controller: AbortController; month: string; startedAt: string } | null = null
+
+/** Whether tips are being written, for which month and since when. */
+export function insightsStatus(): { running: boolean; month: string | null; startedAt: string | null } {
+  return { running: !!running, month: running?.month ?? null, startedAt: running?.startedAt ?? null }
+}
 
 const agreed = (db: Db, provider: string): boolean => {
   const consent = getSettings(db).aiInsightsConsent
@@ -41,7 +47,7 @@ export function insightsPreview(db: Db, month: string, today = localToday()): In
 
 /** Stops the run in progress (the Stop button); nothing happens when none runs. */
 export function cancelInsights(): { ok: true } {
-  running?.abort('cancelled')
+  running?.controller.abort('cancelled')
   return { ok: true }
 }
 
@@ -61,7 +67,8 @@ export async function runInsights(db: Db, month: string, opts: { consent?: true;
   }
 
   const controller = new AbortController()
-  running = controller
+  const mine = { controller, month, startedAt: new Date().toISOString() }
+  running = mine
   try {
     const context = factsPayload(facts, { currency: getSettings(db).currency, month, today }).text
     const system = insightsSystem(language)
@@ -90,12 +97,13 @@ export async function runInsights(db: Db, month: string, opts: { consent?: true;
     }
     startupLog(`insights: ${checked.suggestions.length} tips kept, ${checked.rejected} rejected`)
     saveInsights(db, month, { provider: provider.preset.id, model: provider.insightsModel, language, facts, suggestions: checked.suggestions })
-    broadcast({ type: 'insights.updated', month })
     return insightsView(db, month, language, today)
   } catch (err) {
     if (controller.signal.aborted) throw new AppError('insights.cancelled', 'Stopped.')
-    throw err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The assistant failed.')
+    throw err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The assistant failed.', unknownFailure(err))
   } finally {
-    if (running === controller) running = null
+    if (running === mine) running = null
+    // However it ended, so a card that was left and came back stops showing it as running.
+    broadcast({ type: 'insights.updated', month })
   }
 }

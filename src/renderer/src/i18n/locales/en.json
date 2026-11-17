@@ -840,8 +840,13 @@
     "removeTitle": "Remove {{name}}?",
     "removeConfirm": "Its address, models and API key are deleted from this computer. This cannot be undone.",
     "removeButton": "Remove",
-    "gap": {"key": "Add an API key to finish setting up {{name}}.", "url": "Enter a valid address to finish setting up {{name}}.", "model": "Enter a chat model to finish setting up {{name}}."},
-    "sameAsChat": "Same as the chat model ({{model}})"
+    "gap": {
+      "key": "Add an API key to finish setting up {{name}}.",
+      "url": "Enter a valid address to finish setting up {{name}}.",
+      "model": "Enter a chat model to finish setting up {{name}}."
+    },
+    "sameAsChat": "Same as the chat model ({{model}})",
+    "neutralName": "the assistant"
   },
   "accountKind": {
     "current": "Current account",
@@ -1357,7 +1362,14 @@
     "assistant_pdf_not_pdf": "This import is not a PDF statement.",
     "assistant_pdf_empty": "This PDF has no text to read.",
     "assistant_pdf_too_long": "This statement has too many pages for the assistant to read (the limit is 40 pages). Try a statement for a shorter period.",
-    "assistant_pdf_no_rows": "{{ai}} didn’t find transactions that could be matched to the text of this statement. Nothing was changed."
+    "assistant_pdf_no_rows": "{{ai}} didn’t find transactions that could be matched to the text of this statement. Nothing was changed.",
+    "assistant_failed_network": "Can’t reach {{ai}}{{detail}}. Check the address and your connection, and that the service is running.",
+    "assistant_failed_auth": "{{ai}} did not accept the API key{{detail}}. Check it in Settings → Assistant. The key may also not have access to this model.",
+    "assistant_failed_rate_limit": "{{ai}} is rate-limiting this key right now{{detail}}. Try again in a minute.",
+    "assistant_failed_server": "{{ai}} returned an error ({{status}}){{detail}}. Try again.",
+    "assistant_failed_model_not_found": "{{ai}} doesn’t know this model or address{{detail}}. Check them in Settings → Assistant.",
+    "assistant_failed_bad_request": "{{ai}} rejected the request{{detail}}. This model may not support what is needed; try another model.",
+    "assistant_failed_unknown": "Something went wrong talking to {{ai}}{{detail}}. Try again."
   },
   "insights": {
     "title": "Suggestions",
@@ -1451,6 +1463,8 @@
       "title_one": "{{count}} subscription, {{amount}} a month",
       "title_other": "{{count}} subscriptions, {{amount}} a month",
       "body": "Worth checking now and then whether you still use them all."
-    }
+    },
+    "pastMonthNote": "Tips about fixed costs and balances are shown for the current month.",
+    "runningOther": "{{ai}} is writing tips for {{month}}. Wait until it is done, or stop it there."
   }
 }

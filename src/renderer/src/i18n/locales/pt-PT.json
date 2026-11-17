@@ -840,8 +840,13 @@
     "removeTitle": "Remover {{name}}?",
     "removeConfirm": "O endereço, os modelos e a chave de API são apagados deste computador. Não é possível anular.",
     "removeButton": "Remover",
-    "gap": {"key": "Adicione uma chave de API para concluir a configuração de {{name}}.", "url": "Introduza um endereço válido para concluir a configuração de {{name}}.", "model": "Introduza um modelo de chat para concluir a configuração de {{name}}."},
-    "sameAsChat": "Igual ao modelo do chat ({{model}})"
+    "gap": {
+      "key": "Adicione uma chave de API para concluir a configuração de {{name}}.",
+      "url": "Introduza um endereço válido para concluir a configuração de {{name}}.",
+      "model": "Introduza um modelo de chat para concluir a configuração de {{name}}."
+    },
+    "sameAsChat": "Igual ao modelo do chat ({{model}})",
+    "neutralName": "o assistente"
   },
   "accountKind": {
     "current": "Conta à ordem",
@@ -1357,7 +1362,14 @@
     "assistant_pdf_not_pdf": "Esta importação não é um extrato em PDF.",
     "assistant_pdf_empty": "Este PDF não tem texto para ler.",
     "assistant_pdf_too_long": "Este extrato tem demasiadas páginas para o assistente (o limite é de 40 páginas). Tente um extrato de um período mais curto.",
-    "assistant_pdf_no_rows": "{{ai}} não encontrou movimentos que correspondam ao texto deste extrato. Nada foi alterado."
+    "assistant_pdf_no_rows": "{{ai}} não encontrou movimentos que correspondam ao texto deste extrato. Nada foi alterado.",
+    "assistant_failed_network": "Não é possível contactar {{ai}}{{detail}}. Verifique o endereço e a sua ligação, e se o serviço está a funcionar.",
+    "assistant_failed_auth": "{{ai}} não aceitou a chave de API{{detail}}. Verifique-a em Definições → Assistente. A chave também pode não ter acesso a este modelo.",
+    "assistant_failed_rate_limit": "{{ai}} está a limitar esta chave neste momento{{detail}}. Tente novamente dentro de um minuto.",
+    "assistant_failed_server": "{{ai}} devolveu um erro ({{status}}){{detail}}. Tente novamente.",
+    "assistant_failed_model_not_found": "{{ai}} não conhece este modelo ou endereço{{detail}}. Verifique-os em Definições → Assistente.",
+    "assistant_failed_bad_request": "{{ai}} recusou o pedido{{detail}}. Este modelo pode não suportar o que é necessário; tente outro modelo.",
+    "assistant_failed_unknown": "Algo correu mal ao comunicar com {{ai}}{{detail}}. Tente novamente."
   },
   "insights": {
     "title": "Sugestões",
@@ -1451,6 +1463,8 @@
       "title_one": "{{count}} subscrição, {{amount}} por mês",
       "title_other": "{{count}} subscrições, {{amount}} por mês",
       "body": "Vale a pena verificar de vez em quando se ainda usa todas."
-    }
+    },
+    "pastMonthNote": "As dicas sobre custos fixos e saldos são mostradas para o mês atual.",
+    "runningOther": "{{ai}} está a escrever dicas para {{month}}. Aguarde que termine, ou pare-o lá."
   }
 }

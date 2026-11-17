@@ -53,6 +53,7 @@ describe('upgrading a 0.10.0 database (build 14, schema 7)', () => {
     migrate(db)
     expect(schemaVersion(db)).toBe(MIGRATIONS.length)
   })
+})
 
 describe('upgrading from the schema before fixed-cost marks', () => {
   it('keeps the data, adds the table and records its changes for sync', () => {
@@ -106,7 +107,6 @@ describe('upgrading from the schema before suggestion feedback', () => {
     expect(db.prepare('SELECT count(*) AS n FROM sync_outbox').get()).toEqual({ n: 0 })
     expect(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'insight_feedback'").get()).toEqual({ n: 0 })
   })
-})
 })
 
 describe('upgrading from the schema before the assistant’s tips', () => {

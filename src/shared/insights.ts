@@ -40,9 +40,11 @@ export function actionOf(f: InsightFact): InsightAction {
   switch (f.kind) {
     case 'over_budget':
     case 'near_budget':
-      return { label: 'budgets', page: 'budgets', params: month ? { month } : undefined }
-    case 'no_budget':
-      return { label: 'setBudget', page: 'budgets', params: month ? { month } : undefined }
+    case 'no_budget': {
+      // The category is highlighted on the Budgets page.
+      const params = { ...(f.categoryId !== null ? { categoryId: f.categoryId } : {}), ...(month ? { month } : {}) }
+      return { label: f.kind === 'no_budget' ? 'setBudget' : 'budgets', page: 'budgets', params: Object.keys(params).length ? params : undefined }
+    }
     case 'category_up':
       return { label: 'category', page: 'transactions', params: { ...(f.categoryId !== null ? { categoryId: f.categoryId } : {}), ...(month ? { month } : {}) } }
     case 'charged_twice':

@@ -380,7 +380,7 @@ export async function runOp<K extends OpName>(
     }
     return { ok: true, data }
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, error: { code: err.code, message: err.message } }
+    if (err instanceof AppError) return { ok: false, error: { code: err.code, message: err.message, ...(err.details && { details: err.details }) } }
     console.error(`[op ${String(name)}]`, err)
     return { ok: false, error: { code: 'op.failed', message: 'Something went wrong. Details are in the log.' } }
   }

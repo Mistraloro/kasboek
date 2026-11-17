@@ -1,7 +1,11 @@
+import type { ErrorDetails } from '@shared/error-text'
+
 export class AppError extends Error {
   constructor(
     public readonly code: string,
-    message: string
+    message: string,
+    /** Structured facts about the failure, for a text in the person's language. */
+    public readonly details?: ErrorDetails
   ) {
     super(message)
     this.name = 'AppError'

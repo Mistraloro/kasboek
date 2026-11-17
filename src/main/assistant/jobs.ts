@@ -4,6 +4,7 @@
  * import screen, and is cut short when a part takes too long.
  */
 import { app } from 'electron'
+import { unknownFailure } from '@shared/error-text'
 import type { ImportPreview } from '@shared/types'
 import { AppError } from '@core/errors'
 import { broadcast } from '../session'
@@ -53,13 +54,13 @@ export async function runJob(sessionId: string, kind: AssistState['kind'], work:
   try {
     return await work(controller.signal, state)
   } catch (err) {
-    error = controller.signal.aborted ? new AppError('assistant.cancelled', 'Check stopped.') : err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The check failed.')
+    error = controller.signal.aborted ? new AppError('assistant.cancelled', 'Check stopped.') : err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The check failed.', unknownFailure(err))
     throw error
   } finally {
     if (running.get(sessionId) === controller) running.delete(sessionId)
     state.running = false
     state.error = error?.message ?? null
-    broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message } : null })
+    broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message, ...(error.details && { details: error.details }) } : null })
   }
 }
 
