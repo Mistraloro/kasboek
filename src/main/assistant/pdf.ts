@@ -15,6 +15,7 @@ import {
   pagesOf,
   parsePdfPlan,
   partText,
+  splitPart,
   splitParts,
   tableStart,
   type MaskedLine,
@@ -25,8 +26,8 @@ import type { ImportPreview, PdfAssistPreview } from '@shared/types'
 import { z } from 'zod'
 import { getPrefs } from '../prefs'
 import { broadcast } from '../session'
-import { PARALLEL, TIME_LIMIT_MS, pool, runJob, withTimeLimit, type AssistState } from './jobs'
-import { callJson } from './json'
+import { PARALLEL, TIME_LIMIT_MS, pool, runJob, type AssistState } from './jobs'
+import { callJsonSplit } from './json'
 import { activeProvider, requireConfigured } from './provider'
 
 const SCHEMA_TEXT = JSON.stringify(z.toJSONSchema(PdfRowsPlan))
@@ -49,10 +50,13 @@ How to fill it in:
 - amount is the amount of the transaction itself, not the running balance. If the statement has separate Debit and Credit columns, copy the amount from the column it is in and set direction to "out" for the debit column or "in" for the credit column. If the amount has a sign or DR/CR in the text, set direction to null: the text decides.
 - counterparty: the name of the shop, company or person paid or paying, as written; null if there is none.
 - openingBalance and closingBalance: the statement's own balances, copied exactly, or null if they are not in the text you were given.
-- notes: at most 3 short remarks for the person, only about things they should know, such as lines you could not place.`
+- notes: at most 3 short remarks for the person, only about things they should know, such as lines you could not place. Your answer has a length limit and is cut off when it is too long, so write nothing outside the fields.`
 
 /** Roughly how many characters a token is, for the estimate shown before anything is sent. */
 const CHARS_PER_TOKEN = 3
+
+/** Where a part is, for the message when it can't be read. */
+const describePart = (part: PdfPart): string => `lines ${part.own[0]!.id} to ${part.own.at(-1)!.id} (page ${part.own[0]!.page}${part.own.at(-1)!.page !== part.own[0]!.page ? ` to ${part.own.at(-1)!.page}` : ''})`
 
 /** The lines to send, split in parts, or a clear error. */
 function prepare(sessionId: string): { data: NonNullable<ReturnType<typeof imp.pdfData>>; masked: MaskedLine[]; preambleLeftOut: boolean } {
@@ -87,28 +91,39 @@ async function read(db: Db, sessionId: string, signal: AbortSignal, state: Assis
   const totalPages = pagesOf(masked)
   const system = `${PDF_INSTRUCTIONS}\n\nWrite the notes in ${LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English'}.`
 
-  let donePages = 0
+  // A page cut between two halves counts once, so the progress only goes up and ends at the total.
+  const donePages = new Set<number>()
   const progress = (): void => {
-    Object.assign(state, { groupsDone: donePages, groupsTotal: totalPages, partsTotal: parts.length })
-    broadcast({ type: 'import.checkProgress', sessionId, groupsDone: donePages, groupsTotal: totalPages, partsTotal: parts.length })
+    Object.assign(state, { groupsDone: donePages.size, groupsTotal: totalPages, partsTotal: parts.length })
+    broadcast({ type: 'import.checkProgress', sessionId, groupsDone: donePages.size, groupsTotal: totalPages, partsTotal: parts.length })
   }
   progress()
-  const results = await pool(parts, PARALLEL, (part: PdfPart) =>
-    withTimeLimit(
-      signal,
-      () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${part.n} and was stopped. Try again, or pick a faster model for reading PDF statements in Settings → Assistant.`),
-      async (partSignal) => {
-        const text = await callJson(db, provider, { system, schema: PdfRowsPlan, context: partText(part), signal: partSignal, model: provider.pdfModel })
-        const plan = parsePdfPlan(text, name)
-        donePages += pagesOf(part.own)
-        progress()
-        return { part, plan }
+  const results = await pool(parts, PARALLEL, (top: PdfPart) =>
+    callJsonSplit(
+      db,
+      provider,
+      { system, schema: PdfRowsPlan, signal, model: provider.pdfModel },
+      {
+        part: top,
+        context: partText,
+        parse: (text) => parsePdfPlan(text, name),
+        split: splitPart,
+        describe: describePart,
+        done: (part) => {
+          for (const m of part.own) donePages.add(m.page)
+          progress()
+        },
+        timedOut: () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${top.n} and was stopped. Try again, or pick a faster model for reading PDF statements in Settings → Assistant.`)
       }
     )
   )
   if (signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
-  const finished = results.flatMap((r) => (r.ok ? [r.value] : []))
-  if (!finished.length) throw (results.find((r) => !r.ok) as { ok: false; error: unknown }).error
+  const errors = results.flatMap((r) => (r.ok ? [] : [r.error]))
+  if (errors.length) throw errors[0]
+  const outcomes = results.flatMap((r) => (r.ok ? [r.value] : []))
+  const finished = outcomes.flatMap((o) => o.answered.map((a) => ({ part: a.part, plan: a.value })))
+  const failed = outcomes.flatMap((o) => o.failed)
+  if (!finished.length) throw failed[0]!.error
 
   const account = db.prepare('SELECT iban FROM accounts WHERE id = ?').get(preview.accountId) as { iban: string | null } | undefined
   const outcome = applyRowsPlan(
@@ -129,9 +144,12 @@ async function read(db: Db, sessionId: string, signal: AbortSignal, state: Assis
   })
   if (outcome.rejected.length) imp.updateRows(db, sessionId, outcome.rejected.map((r) => ({ index: r.row, note: r.reason.slice(0, 200) })))
 
-  const lost = parts.filter((p) => !finished.some((f) => f.part === p)).map((p) => p.n)
   const notes = [
-    ...(lost.length ? [`${lost.length} of ${parts.length} parts couldn’t be read (part ${lost.join(', ')}); the transactions in them are missing. Read again to try them.`] : []),
+    ...(failed.length
+      ? [
+          `${new Set(failed.map((f) => f.part.n)).size} of ${parts.length} parts couldn’t be read (part ${[...new Set(failed.map((f) => f.part.n))].join(', ')}); the transactions in ${failed.map((f) => describePart(f.part)).join(', ')} are missing. Read again to try them.${failed.some((f) => f.error instanceof AppError && f.error.code === 'assistant.too_long') ? ' A model with a bigger output limit avoids this.' : ''}`
+        ]
+      : []),
     ...(outcome.rejected.length ? [`${outcome.rejected.length} row${outcome.rejected.length === 1 ? '' : 's'} couldn’t be matched to the statement’s text and ${outcome.rejected.length === 1 ? 'is' : 'are'} shown as problems: fix or skip ${outcome.rejected.length === 1 ? 'it' : 'them'}.`] : []),
     ...[...new Set(finished.flatMap((f) => f.plan.notes))].slice(0, 5)
   ]

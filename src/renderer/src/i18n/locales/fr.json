@@ -1323,7 +1323,7 @@
     "assistant_no_key": "Ajoutez d’abord votre clé API dans Réglages → Assistant.",
     "assistant_no_model": "Choisissez d’abord un modèle dans Réglages → Assistant.",
     "assistant_refused": "{{ai}} a refusé de lire ceci.",
-    "assistant_too_long": "C’était trop volumineux pour une seule réponse. Réessayez, ou essayez un relevé plus court.",
+    "assistant_too_long": "Une partie était trop volumineuse pour l’assistant, même en morceaux plus petits. Réessayez, choisissez un modèle avec une limite de sortie plus grande dans Réglages → Assistant, ou divisez le fichier.",
     "assistant_timeout": "{{ai}} a mis trop de temps et a été arrêté. Réessayez, ou choisissez un modèle plus rapide pour les vérifications CSV dans Réglages → Assistant.",
     "assistant_bad_plan": "La réponse de {{ai}} n’a pas pu être lue. Réessayez, ou essayez un autre modèle.",
     "assistant_pdf_not_pdf": "Cet import n’est pas un relevé PDF.",

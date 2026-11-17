@@ -16,8 +16,8 @@ import type { ActiveProvider } from './provider'
 
 /**
  * The longest answer asked for. Reasoning counts against it, so a part's expected answer is kept far
- * below this (see the sizes in csv.ts and core/pdf-plan.ts). Servers that allow less are stepped down
- * to in openai.ts.
+ * below this (see the sizes in csv.ts and core/pdf-plan.ts). Servers that allow less are lowered to
+ * 8192 in openai.ts.
  */
 const MAX_TOKENS = 32000
 
@@ -103,6 +103,7 @@ export interface SplitResult<P, R> {
 
 /** Whether the text is JSON that stops half way, which is what a cut-off answer looks like. */
 const cutOff = (text: string): boolean => {
+  if (!text.trim()) return false
   try {
     JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''))
     return false

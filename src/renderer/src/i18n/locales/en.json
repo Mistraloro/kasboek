@@ -1323,7 +1323,7 @@
     "assistant_no_key": "Add your API key in Settings → Assistant first.",
     "assistant_no_model": "Choose a model in Settings → Assistant first.",
     "assistant_refused": "{{ai}} declined to read this.",
-    "assistant_too_long": "This was too large for one answer. Try again, or try a shorter statement.",
+    "assistant_too_long": "Part of this was too large for the assistant to answer, even in smaller pieces. Try again, pick a model with a bigger output limit in Settings → Assistant, or split the file.",
     "assistant_timeout": "{{ai}} took too long and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.",
     "assistant_bad_plan": "{{ai}}’s answer couldn’t be read. Try again, or try another model.",
     "assistant_pdf_not_pdf": "This import is not a PDF statement.",

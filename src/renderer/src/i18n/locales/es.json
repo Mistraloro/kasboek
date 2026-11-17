@@ -1323,7 +1323,7 @@
     "assistant_no_key": "Añade primero tu clave de API en Ajustes → Asistente.",
     "assistant_no_model": "Elige primero un modelo en Ajustes → Asistente.",
     "assistant_refused": "{{ai}} se negó a leer esto.",
-    "assistant_too_long": "Era demasiado grande para una sola respuesta. Inténtalo de nuevo, o prueba con un extracto más corto.",
+    "assistant_too_long": "Una parte era demasiado grande para que el asistente respondiera, incluso en trozos más pequeños. Inténtalo de nuevo, elige un modelo con un límite de salida mayor en Ajustes → Asistente, o divide el archivo.",
     "assistant_timeout": "{{ai}} tardó demasiado y se detuvo. Inténtalo de nuevo, o elige un modelo más rápido para las revisiones de CSV en Ajustes → Asistente.",
     "assistant_bad_plan": "No se pudo leer la respuesta de {{ai}}. Inténtalo de nuevo, o prueba con otro modelo.",
     "assistant_pdf_not_pdf": "Esta importación no es un extracto en PDF.",

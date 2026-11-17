@@ -1323,7 +1323,7 @@
     "assistant_no_key": "Adicione primeiro a sua chave de API em Definições → Assistente.",
     "assistant_no_model": "Escolha primeiro um modelo em Definições → Assistente.",
     "assistant_refused": "{{ai}} recusou-se a ler isto.",
-    "assistant_too_long": "Era demasiado grande para uma só resposta. Tente novamente, ou tente um extrato mais curto.",
+    "assistant_too_long": "Uma parte era demasiado grande para o assistente responder, mesmo em partes mais pequenas. Tente novamente, escolha um modelo com um limite de saída maior em Definições → Assistente, ou divida o ficheiro.",
     "assistant_timeout": "{{ai}} demorou demasiado e foi parado. Tente novamente, ou escolha um modelo mais rápido para as verificações de CSV em Definições → Assistente.",
     "assistant_bad_plan": "Não foi possível ler a resposta de {{ai}}. Tente novamente, ou tente outro modelo.",
     "assistant_pdf_not_pdf": "Esta importação não é um extrato em PDF.",

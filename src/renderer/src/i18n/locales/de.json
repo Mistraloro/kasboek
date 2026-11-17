@@ -1323,7 +1323,7 @@
     "assistant_no_key": "Füge zuerst deinen API-Schlüssel unter Einstellungen → Assistent hinzu.",
     "assistant_no_model": "Wähle zuerst ein Modell unter Einstellungen → Assistent.",
     "assistant_refused": "{{ai}} hat sich geweigert, das zu lesen.",
-    "assistant_too_long": "Das war für eine Antwort zu groß. Versuche es erneut oder mit einem kürzeren Kontoauszug.",
+    "assistant_too_long": "Ein Teil davon war für den Assistenten zu groß, auch in kleineren Stücken. Versuche es erneut, wähle in Einstellungen → Assistent ein Modell mit größerem Ausgabelimit oder teile die Datei auf.",
     "assistant_timeout": "{{ai}} hat zu lange gebraucht und wurde gestoppt. Versuche es erneut oder wähle unter Einstellungen → Assistent ein schnelleres Modell für CSV-Prüfungen.",
     "assistant_bad_plan": "Die Antwort von {{ai}} konnte nicht gelesen werden. Versuche es erneut oder mit einem anderen Modell.",
     "assistant_pdf_not_pdf": "Dieser Import ist kein PDF-Kontoauszug.",

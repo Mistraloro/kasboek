@@ -1323,7 +1323,7 @@
     "assistant_no_key": "Voeg eerst je API-sleutel toe in Instellingen → Assistent.",
     "assistant_no_model": "Kies eerst een model in Instellingen → Assistent.",
     "assistant_refused": "{{ai}} weigerde dit te lezen.",
-    "assistant_too_long": "Dit was te groot voor één antwoord. Probeer opnieuw, of probeer een korter afschrift.",
+    "assistant_too_long": "Een deel hiervan was te groot voor de assistent om te beantwoorden, ook in kleinere stukken. Probeer opnieuw, kies een model met een grotere uitvoerlimiet in Instellingen → Assistent, of splits het bestand.",
     "assistant_timeout": "{{ai}} deed er te lang over en is gestopt. Probeer opnieuw, of kies een sneller model voor CSV-controles in Instellingen → Assistent.",
     "assistant_bad_plan": "Het antwoord van {{ai}} kon niet worden gelezen. Probeer opnieuw, of probeer een ander model.",
     "assistant_pdf_not_pdf": "Deze import is geen pdf-afschrift.",

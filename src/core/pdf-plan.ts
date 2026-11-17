@@ -119,6 +119,10 @@ export function maskedLines(lines: PdfLine[], opts: { skipBefore?: number | null
 /** At most this many pages and characters go to the assistant in one call. */
 export const MAX_PART_PAGES = 4
 export const MAX_PART_CHARS = 40_000
+/** And this many lines: a transaction takes about 30 tokens of answer, and one answer must fit in about 6000. */
+export const MAX_PART_LINES = 180
+/** A part of this many lines or fewer (about 5 transactions) is not split further. */
+export const MIN_SPLIT_LINES = 10
 /** The last lines of the part before are repeated, marked as context, so a transaction cut by a part boundary can be understood. */
 export const CONTEXT_LINES = 3
 /** Longer statements are not read by the assistant. */
@@ -141,7 +145,7 @@ export function splitParts(masked: MaskedLine[]): PdfPart[] {
   let chars = 0
   for (const m of masked) {
     const size = m.text.length + 1
-    if (current.length && (chars + size > MAX_PART_CHARS || (!pages.has(m.page) && pages.size >= MAX_PART_PAGES))) {
+    if (current.length && (chars + size > MAX_PART_CHARS || current.length >= MAX_PART_LINES || (!pages.has(m.page) && pages.size >= MAX_PART_PAGES))) {
       groups.push(current)
       current = []
       pages = new Set()
@@ -153,6 +157,30 @@ export function splitParts(masked: MaskedLine[]): PdfPart[] {
   }
   if (current.length) groups.push(current)
   return groups.map((own, i) => ({ n: i + 1, of: groups.length, context: i > 0 ? groups[i - 1]!.slice(-CONTEXT_LINES) : [], own }))
+}
+
+/**
+ * A part in two halves, for when its answer did not fit; null when it is small enough. The cut is
+ * made at the line nearest the middle that starts with a date, so a transaction stays in one half;
+ * the second half gets the last lines of the first as context.
+ */
+export function splitPart(part: PdfPart): [PdfPart, PdfPart] | null {
+  const lines = part.own
+  if (lines.length <= MIN_SPLIT_LINES) return null
+  const mid = Math.floor(lines.length / 2)
+  const starts = (i: number): boolean => /\|\s*x\d+ \d{1,2}[/.-]\d{1,2}/.test(lines[i]!.text)
+  let cut = mid
+  for (let d = 0; d < mid - MIN_SPLIT_LINES / 2; d++) {
+    if (starts(mid + d)) cut = mid + d
+    else if (starts(mid - d)) cut = mid - d
+    else continue
+    break
+  }
+  const first = lines.slice(0, cut)
+  return [
+    { ...part, own: first },
+    { ...part, context: first.slice(-CONTEXT_LINES), own: lines.slice(cut) }
+  ]
 }
 
 /** The text a part is sent as. */

@@ -85,6 +85,8 @@ interface Batch {
   of: number
   /** Indexes of the flagged rows (see flaggedRows) this part answers; the part may be one of several. */
   flagged: number[]
+  /** Set when this is half of a part that was too big for one answer. */
+  split?: true
 }
 
 /** Flagged rows sent for fixes at most (spread over the file). */
@@ -108,6 +110,7 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
     ...(r.match ? { inKasboek: { date: r.match.bookingDate, counterparty: r.match.counterpartyName, description: maskIban(r.match.description.slice(0, 300)) } } : {})
   }))
   const catName = new Map((db.prepare('SELECT id, name FROM categories').all() as { id: number; name: string }[]).map((c) => [c.id, c.name]))
+  const label = batch.of > 1 ? `Part ${batch.n} of ${batch.of}` : 'Part of the file'
   const lines = groups.map((g, i) => {
     const cat = g.example.categoryId === null ? 'uncategorised' : (catName.get(g.example.categoryId) ?? 'categorised')
     const comm = g.example.communication ? ` | communication: ${maskIban(g.example.communication.slice(0, 120))}` : ''
@@ -119,11 +122,11 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
   const memory = (({ enabled, items }) => (enabled ? items.map((m) => m.text) : []))(memoryState(db))
   return JSON.stringify(
     {
-      ...(batch.of > 1
+      ...(batch.of > 1 || batch.split
         ? {
             batch: batch.first
-              ? `Part ${batch.n} of ${batch.of}: check the columns, the flagged rows listed below and the groups below. The other groups and flagged rows are checked separately.`
-              : `Part ${batch.n} of ${batch.of}: only the groups and flagged rows listed below. Return mapping null; give fixes only for the flaggedRows listed here. The columns are checked in part 1.`
+              ? `${label}: check the columns, the flagged rows listed below and the groups below. The other groups and flagged rows are checked separately.`
+              : `${label}: only the groups and flagged rows listed below. Return mapping null; give fixes only for the flaggedRows listed here. The columns are checked in part 1.`
           }
         : {}),
       noteLanguage: LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English',
@@ -401,12 +404,12 @@ export function splitBatch<B extends Omit<Batch, 'of'>>(b: B): [B, B] | null {
   const g = Math.ceil(b.groups.length / 2)
   const f = Math.ceil(b.flagged.length / 2)
   return [
-    { ...b, groups: b.groups.slice(0, g), flagged: b.flagged.slice(0, f) },
-    { ...b, first: false, from: b.from + g, groups: b.groups.slice(g), flagged: b.flagged.slice(f) }
+    { ...b, split: true, groups: b.groups.slice(0, g), flagged: b.flagged.slice(0, f) },
+    { ...b, split: true, first: false, from: b.from + g, groups: b.groups.slice(g), flagged: b.flagged.slice(f) }
   ]
 }
 
-/** Which part this is, in words for the person: the flagged rows and the payees in it. */
+/** What is in a part, in words for the person: the flagged rows and the payees in it. */
 function describeBatch(b: Batch): string {
   const some = (items: string[]): string => `${items.slice(0, 3).join(', ')}${items.length > 3 ? ', …' : ''}`
   const names = b.groups.map((g) => `“${(g.example.counterpartyName || g.example.description).slice(0, 30)}”`)
@@ -416,7 +419,7 @@ function describeBatch(b: Batch): string {
     ...(names.length ? [`${names.length} group${names.length === 1 ? '' : 's'} of transactions (${some(names)})`] : []),
     ...(b.first ? ['the column check'] : [])
   ]
-  return `part ${b.n}: ${bits.join(' and ')}`
+  return bits.join(' and ')
 }
 
 /**
@@ -513,7 +516,8 @@ async function runParts(
   // Parts that failed are left out; what the others found is kept.
   if (failed.length) {
     const hint = failed.some((f) => f.error instanceof AppError && f.error.code === 'assistant.too_long') ? ' A model with a bigger output limit, or a smaller file, avoids this.' : ''
-    plan.notes.unshift(`Couldn’t check ${failed.map((f) => describeBatch(f.part)).join('; ')}; the rest was checked. Run Check again to try again.${hint}`)
+    const lost = [...new Set(failed.map((f) => f.part.n))]
+    plan.notes.unshift(`${lost.length} of ${parts.length} parts couldn’t be checked (part ${lost.join(', ')}): ${failed.map((f) => describeBatch(f.part)).join('; ')}. Run Check again to try them.${hint}`)
   }
   return applyPlan(db, preview, groups, plan, name)
 }
