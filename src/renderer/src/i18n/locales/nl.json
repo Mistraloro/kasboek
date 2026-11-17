@@ -358,6 +358,11 @@
     "autoDone": "Gedaan zonder te vragen:",
     "autoFailed": "Zonder te vragen geprobeerd, maar het lukte niet:"
   },
+  "modal": {
+    "discardAsk": "Wat je hebt ingevuld weggooien?",
+    "keepEditing": "Verder bewerken",
+    "discard": "Weggooien"
+  },
   "settings": {
     "title": "Instellingen",
     "accounts": "Rekeningen",

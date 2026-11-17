@@ -358,6 +358,11 @@
     "autoDone": "Fait sans demander :",
     "autoFailed": "Essayé sans demander, mais sans succès :"
   },
+  "modal": {
+    "discardAsk": "Abandonner ce que vous avez saisi ?",
+    "keepEditing": "Continuer à modifier",
+    "discard": "Abandonner"
+  },
   "settings": {
     "title": "Réglages",
     "accounts": "Comptes",

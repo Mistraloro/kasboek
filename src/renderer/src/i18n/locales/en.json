@@ -358,6 +358,11 @@
     "autoDone": "Done without asking:",
     "autoFailed": "Tried without asking, but it didn’t work:"
   },
+  "modal": {
+    "discardAsk": "Discard what you typed?",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
+  },
   "settings": {
     "title": "Settings",
     "accounts": "Accounts",

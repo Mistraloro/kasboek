@@ -73,7 +73,7 @@ export function BankBalanceModal({ account, onClose, onSaved }: { account: { id:
       .catch((e) => toast(errText(e), 'error'))
   }
   return (
-    <Modal open title={t('balance.title', { name: account.name })} onClose={onClose}>
+    <Modal open title={t('balance.title', { name: account.name })} onClose={onClose} dirty={form.value.trim() !== ''}>
       <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); save() }}>
         <p className="text-[13px] text-muted">{t('balance.help')}</p>
         <BalanceFields value={form.value} date={form.date} currency={account.currency} onValue={(value) => setForm({ ...form, value })} onDate={(date) => setForm({ ...form, date })} />

@@ -81,6 +81,12 @@ function GoalModal({ goal, onClose, onSaved }: { goal: Goal | 'new' | null; onCl
     })
   }, [goal]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!goal) return null
+  const dirty =
+    form.name !== (base?.name ?? '') ||
+    form.target !== (base ? centsToInput(base.targetCents, fmt.formats) : '') ||
+    form.date !== (base?.targetDate ?? '') ||
+    form.accountId !== (base?.accountId ? String(base.accountId) : '') ||
+    form.saved !== (base?.savedCents ? centsToInput(base.savedCents, fmt.formats) : '')
   const target = parseAmount(form.target, 'auto', fmt.formats.decimal)
   const saved = form.saved.trim() ? parseAmount(form.saved, 'auto', fmt.formats.decimal) : 0
   const valid = !dateBad && !!form.name.trim() && target !== null && target > 0 && (form.accountId !== '' || (saved !== null && saved >= 0))
@@ -90,7 +96,7 @@ function GoalModal({ goal, onClose, onSaved }: { goal: Goal | 'new' | null; onCl
     p.then(onSaved, (e) => toast(errText(e), 'error'))
   }
   return (
-    <Modal open title={base ? t('goals.edit') : t('goals.add')} onClose={onClose}>
+    <Modal open title={base ? t('goals.edit') : t('goals.add')} onClose={onClose} dirty={dirty}>
       <form className="grid grid-cols-2 gap-4" onSubmit={(e) => { e.preventDefault(); if (valid) save() }}>
         <div className="col-span-2"><Field label={t('goals.name')}>{(id) => <Input id={id} value={form.name} maxLength={80} placeholder={t('goals.namePlaceholder')} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />}</Field></div>
         <Field label={t('goals.target')}>{(id) => <Input id={id} className="num" inputMode="decimal" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} />}</Field>

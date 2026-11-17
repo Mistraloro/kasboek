@@ -171,7 +171,7 @@ function ValuationModal({ account, onClose, onSaved }: { account: NetWorthAccoun
       .catch((e) => toast(errText(e), 'error'))
   }
   return (
-    <Modal open title={t('networth.valueTitle', { name: account.name })} onClose={onClose}>
+    <Modal open title={t('networth.valueTitle', { name: account.name })} onClose={onClose} dirty={form.note.trim() !== '' || form.value !== centsToInput(account.valueCents, fmt.formats)}>
       <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); save() }}>
         <p className="text-[13px] text-muted">{t('networth.valueHelp')}</p>
         <div className="grid grid-cols-2 gap-3">

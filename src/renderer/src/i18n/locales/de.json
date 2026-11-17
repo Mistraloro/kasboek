@@ -358,6 +358,11 @@
     "autoDone": "Ohne Nachfrage erledigt:",
     "autoFailed": "Ohne Nachfrage versucht, aber es hat nicht geklappt:"
   },
+  "modal": {
+    "discardAsk": "Eingegebenes verwerfen?",
+    "keepEditing": "Weiter bearbeiten",
+    "discard": "Verwerfen"
+  },
   "settings": {
     "title": "Einstellungen",
     "accounts": "Konten",

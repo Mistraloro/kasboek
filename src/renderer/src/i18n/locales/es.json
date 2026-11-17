@@ -358,6 +358,11 @@
     "autoDone": "Hecho sin preguntar:",
     "autoFailed": "Intentado sin preguntar, pero no funcionó:"
   },
+  "modal": {
+    "discardAsk": "¿Descartar lo que has escrito?",
+    "keepEditing": "Seguir editando",
+    "discard": "Descartar"
+  },
   "settings": {
     "title": "Ajustes",
     "accounts": "Cuentas",

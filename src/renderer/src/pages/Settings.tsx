@@ -410,7 +410,7 @@ function SyncSection() {
           <Button variant="danger" onClick={() => { setConfirmStop(false); run(call('sync.stop')) }}>{t('sync.stopButton')}</Button>
         </div>
       </Modal>
-      <Modal open={showConflicts} title={t('sync.conflictsTitle')} onClose={() => setShowConflicts(false)}>
+      <Modal open={showConflicts} title={t('sync.conflictsTitle')} onClose={() => setShowConflicts(false)} closeOnBackdrop>
         <ul className="flex max-h-80 flex-col gap-2 overflow-y-auto text-[13px]">
           {status.conflicts.map((c) => (
             <li key={c.id} className="rounded-lg bg-surface-2 px-3 py-2">
@@ -605,12 +605,15 @@ function AccountsSection() {
   const today = localToday()
   const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind, balance: '', balanceDate: today, fxCost: '' })
   const [balanceOf, setBalanceOf] = useState<AccountWithBalance | null>(null)
+  const [initialForm, setInitialForm] = useState(form)
+  const formDirty = (Object.keys(form) as (keyof typeof form)[]).some((k) => form[k] !== initialForm[k])
   const open = (a: AccountWithBalance | 'new'): void => {
-    setForm(
+    const next: typeof form =
       a === 'new'
         ? { name: '', bank: '', iban: '', currency: settings.currency, kind: 'current', balance: '', balanceDate: today, fxCost: '' }
         : { name: a.name, bank: a.bank, iban: a.iban ?? '', currency: a.currency, kind: a.kind, balance: '', balanceDate: today, fxCost: a.fxCostPct === null ? '' : formatNumber(a.fxCostPct, fmt, 2).replace(/[.,]?0+$/, '') }
-    )
+    setForm(next)
+    setInitialForm(next)
     setEditing(a)
   }
   const balanceCents = form.balance.trim() ? parseAmount(form.balance, 'auto', fmt.formats.decimal) : null
@@ -663,7 +666,7 @@ function AccountsSection() {
         </Row>
       ))}
       {accounts.data?.length === 0 && <p className="px-5 py-4 text-[13px] text-muted">{t('settings.noAccounts')}</p>}
-      <Modal open={!!editing} title={editing === 'new' ? t('settings.addAccount') : t('settings.editAccount')} onClose={() => setEditing(null)}>
+      <Modal open={!!editing} title={editing === 'new' ? t('settings.addAccount') : t('settings.editAccount')} onClose={() => setEditing(null)} dirty={formDirty}>
         <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>
           <Field label={t('settings.accountName')}>{(id) => <Input id={id} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('settings.accountNamePlaceholder')} autoFocus required />}</Field>
           <Field label={t('settings.bankName')} hint={t('settings.bankNameHint')}>{(id) => <Input id={id} value={form.bank} maxLength={60} onChange={(e) => setForm({ ...form, bank: e.target.value })} />}</Field>
