@@ -6,64 +6,109 @@
  * after the graphics card failed to show the window. The log (startup.log in the data folder) holds
  * only technical facts (version, system, graphics, start-up steps), never your data.
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { release } from 'node:os'
 import { join } from 'node:path'
 import { app, type BrowserWindow } from 'electron'
 import { decideGraphics, isGpuFailure, type GraphicsChoice, type GraphicsStatus } from '@shared/graphics'
 import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
+import { formatLogLine, isFirstStartOfVersion, LogBuffer, rotateLog, startGap } from './startup-plan'
 
 /** The main window must report its first screen within this time, or the graphics card gets the blame. */
 const PAINT_TIMEOUT_MS = 15_000
-const MAX_LOG_LINES = 200
 
 let status: GraphicsStatus = { hardware: true, reason: null }
-let lines = 0
 let painted = false
 let fallingBack = false
 let gpuFailures = 0
 
 const logFile = (): string => join(paths.dataDir, 'startup.log')
+const prevLogFile = (): string => join(paths.dataDir, 'startup.prev.log')
+/** The version that last started, to tell the first start after an update (cold caches, new files to scan). */
+const versionMarker = (): string => join(paths.dataDir, 'startup.version')
 
-/** One line in startup.log, with the time since start. */
+const logBuffer = new LogBuffer((text) => appendFileSync(logFile(), text))
+
+/** One line in startup.log, with the time since start. Written in batches; see flushStartupLog. */
 export function startupLog(text: string): void {
-  if (lines >= MAX_LOG_LINES) return
-  lines++
-  try {
-    appendFileSync(logFile(), `${(process.uptime() * 1000).toFixed(0).padStart(6)} ms  ${text}\n`)
-  } catch {
-    // The log is a convenience; never let it stop the app.
-  }
+  logBuffer.add(formatLogLine(process.uptime(), text))
 }
 
-/** Read the choice straight from prefs.json: this runs before the app is ready. */
-function storedChoice(): { choice: GraphicsChoice; failedBefore: boolean } {
+/** Writes the waiting lines to the file now (before the app quits or restarts). */
+export function flushStartupLog(): void {
+  logBuffer.flush()
+}
+
+interface StoredPrefs {
+  choice: GraphicsChoice
+  failedBefore: boolean
+  theme: 'system' | 'light' | 'dark'
+}
+let stored: StoredPrefs = { choice: 'auto', failedBefore: false, theme: 'system' }
+
+/** Read once straight from prefs.json: this runs before the app is ready, and the launch window reuses the theme. */
+function readStoredPrefs(): StoredPrefs {
   try {
     if (existsSync(paths.prefsFile)) {
-      const raw = JSON.parse(readFileSync(paths.prefsFile, 'utf8')) as { graphics?: unknown; graphicsFailed?: unknown }
-      const choice = raw.graphics === 'on' || raw.graphics === 'off' ? raw.graphics : 'auto'
-      return { choice, failedBefore: raw.graphicsFailed === true }
+      const raw = JSON.parse(readFileSync(paths.prefsFile, 'utf8')) as { graphics?: unknown; graphicsFailed?: unknown; theme?: unknown }
+      return {
+        choice: raw.graphics === 'on' || raw.graphics === 'off' ? raw.graphics : 'auto',
+        failedBefore: raw.graphicsFailed === true,
+        theme: raw.theme === 'light' || raw.theme === 'dark' ? raw.theme : 'system'
+      }
     }
   } catch {
     // Unreadable prefs: the automatic choice.
   }
-  return { choice: 'auto', failedBefore: false }
+  return { choice: 'auto', failedBefore: false, theme: 'system' }
+}
+
+/** The saved theme, for the launch window (valid after applyGraphicsChoice). */
+export function storedTheme(): StoredPrefs['theme'] {
+  return stored.theme
+}
+
+/** Whether this is the first start of this version; remembers the version for the next start. */
+function firstStartOfThisVersion(): boolean {
+  let previous: string | null = null
+  try {
+    previous = readFileSync(versionMarker(), 'utf8')
+  } catch {
+    // No marker yet: a first start.
+  }
+  const first = isFirstStartOfVersion(previous, app.getVersion())
+  if (first) {
+    try {
+      writeFileSync(versionMarker(), app.getVersion())
+    } catch {
+      // Only used for the log.
+    }
+  }
+  return first
 }
 
 /** Call at the top of the main process, before the app is ready. */
 export function applyGraphicsChoice(): void {
-  const stored = storedChoice()
-  status = decideGraphics({ ...stored, platform: process.platform, arch: process.arch, disableGpuFlag: app.commandLine.hasSwitch('disable-gpu') })
+  stored = readStoredPrefs()
+  status = decideGraphics({ choice: stored.choice, failedBefore: stored.failedBefore, platform: process.platform, arch: process.arch, disableGpuFlag: app.commandLine.hasSwitch('disable-gpu') })
   if (!status.hardware) app.disableHardwareAcceleration()
   try {
     mkdirSync(paths.dataDir, { recursive: true })
-    writeFileSync(logFile(), '')
   } catch {
     // The log is a convenience.
   }
+  rotateLog({ exists: existsSync, rename: renameSync, write: writeFileSync }, logFile(), prevLogFile())
+  process.on('exit', flushStartupLog)
   startupLog(`Kasboek ${app.getVersion()} on ${process.platform} ${process.arch} (${release()}), Electron ${process.versions.electron}`)
-  startupLog(`graphics: choice ${stored.choice}${stored.failedBefore ? ', failed before' : ''} -> ${status.hardware ? 'graphics card' : `software (${status.reason})`}`)
+  startupLog(`started ${new Date().toISOString()}; ${firstStartOfThisVersion() ? 'first start of this version' : 'not the first start of this version'}`)
+  startupLog(`graphics: choice ${stored.choice}${stored.failedBefore ? ', failed before' : ''} -> ${graphicsText()}`)
+  startupLog('main script started')
+}
+
+/** "graphics card" or "software (why)", for the log. */
+function graphicsText(): string {
+  return status.hardware ? 'graphics card' : `software (${status.reason})`
 }
 
 export function graphicsStatus(): GraphicsStatus {
@@ -77,6 +122,7 @@ function fallBack(why: string): void {
   if (!app.isPackaged) return startupLog(`graphics card failed (${why}); a packaged build would restart without it`)
   fallingBack = true
   startupLog(`graphics card failed (${why}): restarting without it`)
+  flushStartupLog()
   // A forced "on" that leaves the window white is no use either; go back to the automatic choice.
   updatePrefs({ graphicsFailed: true, ...(getPrefs().graphics === 'on' ? { graphics: 'auto' as const } : {}) })
   app.relaunch()
@@ -126,6 +172,7 @@ export function watchWindow(win: BrowserWindow, { hidden = false } = {}): void {
   }, PAINT_TIMEOUT_MS)
   const wc = win.webContents
   wc.on('did-finish-load', () => startupLog('interface loaded'))
+  wc.once('dom-ready', () => startupLog(`interface script run (dom-ready), process id ${wc.getOSProcessId()}`))
   wc.on('did-fail-load', (_e, code, description) => startupLog(`interface failed to load: ${code} ${description}`))
   wc.on('preload-error', (_e, _path, err) => startupLog(`preload error: ${err.message}`))
   // Errors before the first screen explain a blank window; later ones may mention your data, so they stay out.
@@ -149,5 +196,13 @@ export function watchWindow(win: BrowserWindow, { hidden = false } = {}): void {
 export function markPainted(): void {
   if (painted) return
   painted = true
-  startupLog('first screen shown')
+  startupLog(`first screen shown (drawing with ${graphicsText()})`)
+  try {
+    // What the operating system says about when this program was created: the time before our script is otherwise invisible.
+    const created = app.getAppMetrics().find((m) => m.type === 'Browser')?.creationTime
+    const gap = startGap(created, Date.now(), process.uptime())
+    if (gap) startupLog(`before the log: the program started ${gap.beforeScriptMs} ms before the main script; first screen ${gap.sinceCreatedMs} ms after the program started`)
+  } catch {
+    // Only a measurement.
+  }
 }
