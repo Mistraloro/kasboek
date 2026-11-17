@@ -1131,17 +1131,6 @@
       "custom": "Choisissez par type ci-dessous. Les changements sur plus de {{limit}} opérations demandent toujours."
     },
     "trustNote": "Demande toujours d’abord : l’enregistrement d’un import lu depuis un PDF, et les changements demandés via Claude Desktop ou Claude Code (sauf si vous le désactivez ci-dessous). L’assistant ne peut jamais modifier les réglages, les clés, les adresses ni ses propres autorisations.",
-    "ask": "Toujours demander",
-      "smart": "Demander pour les changements importants",
-      "trust": "Décider seul",
-      "custom": "Choisir par type"
-    },
-    "modeHint": {
-      "ask": "Chaque changement attend votre accord.",
-      "smart": "Classer, noms, répartitions, virements, règles, catégories, budgets et objectifs se font seuls ; soldes, suppression de règles, nouveaux comptes, imports et mémorisation demandent. Les changements sur plus de {{limit}} opérations demandent toujours.",
-      "trust": "Chaque changement se fait seul, même les gros. Seulement si vous vérifiez les résultats ensuite.",
-      "custom": "Choisissez ci-dessous pour chaque type de changement. Les changements sur plus de {{limit}} opérations demandent toujours."
-    },
     "ask": "Demander d’abord",
     "allow": "Autorisé",
     "kind": {

@@ -1131,17 +1131,6 @@
       "custom": "Wähle unten pro Art. Änderungen an mehr als {{limit}} Buchungen fragen immer."
     },
     "trustNote": "Fragt weiterhin zuerst: das Speichern eines aus einer PDF gelesenen Imports und Änderungen, die über Claude Desktop oder Claude Code angefragt werden (außer du schaltest das unten aus). Der Assistent kann nie Einstellungen, Schlüssel, Adressen oder seine eigenen Berechtigungen ändern.",
-    "ask": "Immer fragen",
-      "smart": "Bei wichtigen Änderungen fragen",
-      "trust": "Selbst entscheiden",
-      "custom": "Pro Art wählen"
-    },
-    "modeHint": {
-      "ask": "Jede Änderung wartet auf dein OK.",
-      "smart": "Einordnen, Namen, Aufteilungen, Umbuchungen, Regeln, Kategorien, Budgets und Ziele passieren von selbst; Kontostände, Regeln löschen, neue Konten, Importe und Merken fragen. Änderungen an mehr als {{limit}} Buchungen fragen immer.",
-      "trust": "Jede Änderung passiert von selbst, auch große. Nur wenn du die Ergebnisse danach prüfst.",
-      "custom": "Wähle unten für jede Art von Änderung. Änderungen an mehr als {{limit}} Buchungen fragen immer."
-    },
     "ask": "Erst fragen",
     "allow": "Erlaubt",
     "kind": {

@@ -1131,17 +1131,6 @@
       "custom": "Kies hieronder per soort. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd."
     },
     "trustNote": "Vraagt nog altijd eerst: een import opslaan die uit een pdf is gelezen, en wijzigingen die via Claude Desktop of Claude Code worden gevraagd (tenzij je dat hieronder uitzet). De assistent kan nooit instellingen, sleutels, adressen of zijn eigen rechten wijzigen.",
-    "ask": "Altijd vragen",
-      "smart": "Vragen bij belangrijke wijzigingen",
-      "trust": "Zelf beslissen",
-      "custom": "Per soort kiezen"
-    },
-    "modeHint": {
-      "ask": "Elke wijziging wacht op je akkoord.",
-      "smart": "Categoriseren, namen, verdelen, overboekingen, regels, categorieën, budgetten en doelen gebeuren vanzelf; saldi, regels verwijderen, nieuwe rekeningen, imports en dingen onthouden vragen eerst. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd.",
-      "trust": "Elke wijziging gebeurt vanzelf, ook grote. Alleen als je de resultaten achteraf nakijkt.",
-      "custom": "Kies hieronder per soort wijziging. Wijzigingen aan meer dan {{limit}} verrichtingen vragen altijd."
-    },
     "ask": "Eerst vragen",
     "allow": "Toegestaan",
     "kind": {

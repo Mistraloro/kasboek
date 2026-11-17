@@ -1131,17 +1131,6 @@
       "custom": "Elige abajo por tipo. Los cambios en más de {{limit}} movimientos siempre preguntan."
     },
     "trustNote": "Sigue preguntando primero: guardar una importación leída de un PDF y los cambios pedidos desde Claude Desktop o Claude Code (salvo que lo desactives abajo). El asistente nunca puede cambiar ajustes, claves, direcciones ni sus propios permisos.",
-    "ask": "Preguntar siempre",
-      "smart": "Preguntar en cambios importantes",
-      "trust": "Decidir solo",
-      "custom": "Elegir por tipo"
-    },
-    "modeHint": {
-      "ask": "Cada cambio espera tu aprobación.",
-      "smart": "Clasificar, nombres, repartos, traspasos, reglas, categorías, presupuestos y metas se hacen solos; saldos, borrar reglas, cuentas nuevas, importaciones y recordar cosas preguntan. Los cambios en más de {{limit}} movimientos siempre preguntan.",
-      "trust": "Cada cambio se hace solo, también los grandes. Solo si revisas los resultados después.",
-      "custom": "Elige abajo para cada tipo de cambio. Los cambios en más de {{limit}} movimientos siempre preguntan."
-    },
     "ask": "Preguntar antes",
     "allow": "Permitido",
     "kind": {

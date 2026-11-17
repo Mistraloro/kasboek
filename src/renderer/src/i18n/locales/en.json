@@ -1131,17 +1131,6 @@
       "custom": "Choose per kind below. Changes to more than {{limit}} transactions always ask."
     },
     "trustNote": "Still asks first: saving an import read from a PDF, and changes asked for through Claude Desktop or Claude Code (unless you switch that off below). The assistant can never change settings, keys, addresses or its own permissions.",
-    "ask": "Always ask",
-      "smart": "Ask for important changes",
-      "trust": "Decide by itself",
-      "custom": "Choose per kind"
-    },
-    "modeHint": {
-      "ask": "Every change waits for your OK.",
-      "smart": "Categorising, names, splits, transfers, rules, categories, budgets and goals happen by themselves; balances, deleting rules, new accounts, imports and remembering things ask. Changes to more than {{limit}} transactions always ask.",
-      "trust": "Every change happens by itself, large ones too. Only when you check the results afterwards.",
-      "custom": "Choose below for each kind of change. Changes to more than {{limit}} transactions always ask."
-    },
     "ask": "Ask first",
     "allow": "Allowed",
     "kind": {
