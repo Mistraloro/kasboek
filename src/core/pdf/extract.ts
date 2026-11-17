@@ -48,7 +48,9 @@ export async function extractText(bytes: Uint8Array, onPage?: (n: number, of: nu
     let chars = 0
     for (let n = 1; n <= doc.numPages; n++) {
       const page = await doc.getPage(n)
-      const [x0 = 0, y0 = 0, x1 = 595, y1 = 842] = page.view
+      // Positions as the page is shown: a page turned a quarter (or text drawn turned) reads upright.
+      const view = page.getViewport({ scale: 1 })
+      const [va = 1, vb = 0, vc = 0, vd = -1, ve = 0, vf = 0] = view.transform
       const found: PdfTextItem[] = []
       const reader = page.streamTextContent().getReader()
       for (;;) {
@@ -60,11 +62,14 @@ export async function extractText(bytes: Uint8Array, onPage?: (n: number, of: nu
           chars += item.str.length
           if (items > limits.maxItems || chars > limits.maxChars) throw tooLarge()
           const [a = 0, b = 0, , , e = 0, f = 0] = item.transform as number[]
-          found.push({ str: item.str, x: e, y: f, w: item.width, h: item.height || Math.hypot(a, b) })
+          const shownX = va * e + vc * f + ve
+          const shownY = view.height - (vb * e + vd * f + vf)
+          const leftward = va * a + vc * b < 0
+          found.push({ str: item.str, x: leftward ? shownX - item.width : shownX, y: shownY, w: item.width, h: item.height || Math.hypot(a, b) })
         }
       }
       page.cleanup()
-      pages.push({ n, width: x1 - x0, height: y1 - y0, items: found })
+      pages.push({ n, width: view.width, height: view.height, items: found })
       onPage?.(n, doc.numPages)
     }
     if (chars === 0 || chars / doc.numPages < MIN_CHARS_PER_PAGE) {
