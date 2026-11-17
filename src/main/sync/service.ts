@@ -542,10 +542,10 @@ export async function runSync(opts: { forceSnapshot?: boolean } = {}): Promise<v
     const seq = Number(sync.getMeta(db, 'seq') ?? '0')
     const snapAt = sync.getMeta(db, 'snapshotAt')
     if (opts.forceSnapshot || !snapAt || Date.now() - Date.parse(snapAt) > SNAPSHOT_EVERY_MS) {
-      // The assistant's memory and the hidden tips stay on this computer: a computer that joins starts without them.
+      // The assistant’s memory, the hidden tips and the tips the assistant wrote stay on this computer: a computer that joins starts without them.
       const tmp = join(paths.dataDir, `sync-snapshot-${randomUUID()}.kasboek`)
       try {
-        await writeTransfer(tmp, 'export', { leaveOut: ['memories', 'insight_feedback'] })
+        await writeTransfer(tmp, 'export', { leaveOut: ['memories', 'insight_feedback', 'insights'] })
         await store.write(`${me}/snapshot.kasboek`, readFileSync(tmp))
       } finally {
         rmSync(tmp, { force: true })

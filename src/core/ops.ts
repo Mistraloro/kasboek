@@ -13,7 +13,7 @@ import { findTransfers, pairTransfers, setTransferCost, transferCostInfo, unpair
 import { findRecurring, setRecurringHidden } from './recurring'
 import { monthReview } from './review'
 import { listAlerts } from './alerts'
-import { buildFacts, giveFeedback, restoreDismissed } from './insights'
+import { giveFeedback, insightsView, restoreDismissed } from './insights'
 import { createGoal, deleteGoal, listGoals, updateGoal } from './goals'
 import { forget, forgetAll, memoryState, remember, setMemoryEnabled, updateMemory } from './memory'
 
@@ -264,7 +264,8 @@ export const coreOps: OpTable = {
   'alerts.list': { mutates: false, assistant: true, handler: ({ db }) => listAlerts(db) },
   'summary.review': { mutates: false, assistant: true, handler: ({ db }, { month }) => monthReview(db, month) },
   // Tips for the Overview: found locally, never offered to the assistant; feedback stays on this computer.
-  'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => ({ facts: buildFacts(db, month), ai: null }) },
+  // The desktop app replaces insights.get with one that also knows the interface language; preview, run and cancel are desktop operations.
+  'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsView(db, month, null) },
   'insights.feedback': { mutates: true, assistant: false, handler: ({ db }, { key, verdict }) => giveFeedback(db, key, verdict) },
   'insights.restoreDismissed': { mutates: true, assistant: false, handler: ({ db }) => restoreDismissed(db) },
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },

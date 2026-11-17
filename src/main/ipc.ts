@@ -31,6 +31,8 @@ import { claudeEffort } from '@shared/reasoning'
 import { assistImport } from './assistant/csv'
 import { assistPdf, pdfAssistPreview } from './assistant/pdf'
 import { assistStatus, cancelAssist } from './assistant/jobs'
+import { cancelInsights, insightsPreview, runInsights } from './assistant/insights'
+import { insightsView } from '@core/insights'
 import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
 import { openPdfSession } from './pdf/open'
@@ -379,6 +381,11 @@ const desktopOps: OpTable = {
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
   'import.pdfAssistPreview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => pdfAssistPreview(db, sessionId) },
   'import.pdfAssist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistPdf(db, sessionId) },
+  // Tips on the Overview: the cached ones need the interface language, and the assistant writes them only when asked.
+  'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsView(db, month, getPrefs().language) },
+  'insights.preview': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsPreview(db, month) },
+  'insights.run': { mutates: false, assistant: false, handler: ({ db }, { month, consent }) => runInsights(db, month, { consent }) },
+  'insights.cancel': { mutates: false, assistant: false, handler: () => cancelInsights() },
   'export.csv': { mutates: false, assistant: false, handler: (_c, { filter, labels, defaultName }) => exportCsv(filter, labels, defaultName) },
   'export.pdf': { mutates: false, assistant: false, handler: (_c, { html, defaultName }) => exportPdf(html, defaultName) },
   'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => assistStatus(sessionId) },

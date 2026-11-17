@@ -33,11 +33,14 @@ function levels(db: Db, model: string | undefined, steps: number): { claude: Eff
   return { claude, other }
 }
 
-/** The model's answer as JSON text, from the given model, else the one chosen for CSV checks. */
+/**
+ * The model's answer as JSON text, from the given model, else the one chosen for CSV checks. `what` names
+ * what is being read in the message when the model declines ("this file" when left out).
+ */
 export async function callJson(
   db: Db,
   provider: ActiveProvider,
-  opts: { system: string; schema: z.ZodType; context: string; signal: AbortSignal; model?: string; onThinking?: (t: string) => void; lower?: number }
+  opts: { system: string; schema: z.ZodType; context: string; signal: AbortSignal; model?: string; onThinking?: (t: string) => void; lower?: number; what?: string }
 ): Promise<string> {
   const name = provider.preset.assistantName
   const { system, schema, context, signal, model, onThinking } = opts
@@ -66,7 +69,7 @@ export async function callJson(
     )
     if (onThinking) stream.on('thinking', (delta) => onThinking(delta))
     const message = await stream.finalMessage()
-    if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
+    if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check ${opts.what ?? 'this file'}.`)
     for (const b of message.content) if (b.type === 'text') text += b.text
     if (message.stop_reason === 'max_tokens') throw new TruncatedError('This part of the file was too large for one answer. Try again, or a shorter export.', text.trim().length > 0)
   } catch (err) {

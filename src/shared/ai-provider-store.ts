@@ -20,6 +20,8 @@ export interface ResolvedProvider {
   csvModel: string
   /** The model that reads PDF statements. */
   pdfModel: string
+  /** The model that words the tips on the Overview: the cheapest for Claude, else the model for reading files. No setting of its own. */
+  insightsModel: string
 }
 
 export interface CustomProvider {
@@ -50,7 +52,7 @@ const pdfModelOf = (id: ProviderId, v: { chatModel: string; csvModel: string; pd
 export function resolveProvider(s: AiSettings, id: ProviderId = s.aiProvider): ResolvedProvider {
   const preset = presetFor(id, s.aiProviders[id]?.name)
   const v = valuesOf(s, id)
-  return { preset, baseUrl: (preset.editableUrl && v.baseUrl) || preset.baseUrl, chatModel: v.chatModel, csvModel: v.csvModel || v.chatModel, pdfModel: pdfModelOf(id, v) }
+  return { preset, baseUrl: (preset.editableUrl && v.baseUrl) || preset.baseUrl, chatModel: v.chatModel, csvModel: v.csvModel || v.chatModel, pdfModel: pdfModelOf(id, v), insightsModel: id === 'anthropic' ? CLAUDE_PDF_MODEL : v.csvModel || v.chatModel }
 }
 
 /** What is still missing before a provider can answer; null when it is ready. Checked in this order. */

@@ -266,7 +266,7 @@ describe('assistant plumbing', () => {
     fetch.mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'm1' }] }), { status: 200 }))
     const { listModels } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const models = await listModels({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm' })
+    const models = await listModels({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm', insightsModel: 'm' })
     expect(models).toEqual(['m1'])
     expect(fetch).toHaveBeenCalledTimes(2)
   })
@@ -342,7 +342,7 @@ describe('review 14, medium items', () => {
     })
     const { request } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const open = await request({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm' }, '/x', {}, undefined, { timeoutMs: 1000, idleMs: 50 })
+    const open = await request({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm', insightsModel: 'm' }, '/x', {}, undefined, { timeoutMs: 1000, idleMs: 50 })
     const reader = open.res.body!.getReader()
     await reader.read()
     await expect(reader.read()).rejects.toThrow()
@@ -354,7 +354,7 @@ describe('review 14, medium items', () => {
     const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
     const { json, listModels } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm' }
+    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm', insightsModel: 'm' }
     fetch.mockReset()
     fetch.mockResolvedValueOnce(new Response('{"message":"rate limited"}', { status: 429, headers: { 'retry-after': '120' } }))
     await expect(listModels(p)).rejects.toThrow()
@@ -407,7 +407,7 @@ describe('reasoning settings', () => {
     const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
     const { json, reasoningIgnored } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'magistral-x', csvModel: 'magistral-x', pdfModel: 'magistral-x' }
+    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'magistral-x', csvModel: 'magistral-x', pdfModel: 'magistral-x', insightsModel: 'magistral-x' }
     fetch.mockReset()
     const sent: Record<string, unknown>[] = []
     fetch.mockImplementation(async (_u: string, init: { body: string }) => {

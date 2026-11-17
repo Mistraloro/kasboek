@@ -26,7 +26,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiReasoning: 'default',
   aiCsvReasoning: 'default',
   permissions: DEFAULT_PERMISSIONS,
-  memoryEnabled: true
+  memoryEnabled: true,
+  aiInsightsConsent: null
 }
 
 export function getSettings(db: Db): Settings {
@@ -59,12 +60,12 @@ export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
   return getSettings(db)
 }
 
-/** Settings that decide where data is sent, what Claude may do and where files are written. */
-const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled'] as const
+/** Settings that decide where data is sent, what Claude may do and where files are written, plus the agreement to send tips data to a provider. */
+const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled', 'aiInsightsConsent'] as const
 
 /**
  * After an import or a sync join: a file from elsewhere must not bring its own AI address, permissions,
- * backup folder, assistant memory or API keys. These go back to their defaults; everything else (currency, …) stays.
+ * backup folder, assistant memory, agreement to send tips data or API keys. These go back to their defaults; everything else (currency, …) stays.
  * The sync key and WebDAV password go too, unless this import is a sync join: it needs the key that came with
  * the snapshot, and its caller stores the WebDAV password right afterwards. Otherwise sync is switched off and its
  * state cleared too, as stopSync does: sync without its key can't run. Runs in one transaction, so a failure
@@ -105,6 +106,8 @@ export function resetImportedSettings(db: Db, opts: { keepSyncKey?: boolean } = 
       for (const table of ['sync_outbox', 'sync_rows', 'sync_pending', 'sync_meta']) if (hasTable(table)) db.prepare(`DELETE FROM ${table}`).run()
     }
     if (hasMemoryTable) db.prepare('DELETE FROM memories').run()
+    // Tips written for another computer's data are not shown here.
+    if (hasTable('insights')) db.prepare('DELETE FROM insights').run()
     return reset
   })()
 }

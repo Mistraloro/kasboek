@@ -66,3 +66,19 @@ export function textVars(values: Record<string, InsightValue>, write: { money: (
     Object.entries(values).map(([k, v]) => [k, 'money' in v ? write.money(v.money, v.currency) : 'date' in v ? write.date(v.date) : 'count' in v ? v.count : v.text])
   )
 }
+
+/** Placeholders in the texts the assistant writes: a fact id and one of its fields, like {f3.amount}. */
+export const PLACEHOLDER = /\{(f\d+)\.([A-Za-z_]+)\}/g
+
+/**
+ * An assistant's text with its placeholders filled in from the facts, in the money and date formats the
+ * person has now (so tips written earlier follow a changed setting). A placeholder that names no fact
+ * or field is left as it is; the checks in core/insight-plan.ts keep such texts from being stored.
+ */
+export function renderInsightText(text: string, facts: InsightFact[], formatMoney: (cents: number, currency: string) => string, formatDate: (iso: string) => string): string {
+  return text.replace(PLACEHOLDER, (whole, id: string, field: string) => {
+    const v = facts.find((f) => f.id === id)?.values[field]
+    if (!v) return whole
+    return 'money' in v ? formatMoney(v.money, v.currency) : 'date' in v ? formatDate(v.date) : 'count' in v ? String(v.count) : v.text
+  })
+}

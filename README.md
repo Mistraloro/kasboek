@@ -16,8 +16,10 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   Dark and light mode, eight languages, number and date formats chosen part by part.
 - **Suggestions**: a card on the Overview with tips found from your own data (a price rise, a payment
   taken twice, a late or coming fixed cost, a budget nearly used up, a category that grew, an unusual
-  payment). Worked out on your computer; nothing is sent anywhere. Hide a tip or mark it not useful; turn
-  the card off, or show hidden tips again, in Settings → General.
+  payment). Worked out on your computer: these local tips send nothing anywhere. With an assistant set
+  up, "Get tips from …" has it word the best ones as short personal tips, only when you press the button
+  (see the Assistant section below). Hide a tip or mark it not useful; turn the card off, or show
+  hidden tips again, in Settings → General.
 - **First start**: a welcome window sets the language, number and date style, exchange rates, the
   assistant, Claude Desktop / Claude Code and update checks, then offers a short tour of the app.
 - **Bank balance**: enter what your bank shows (or let a CSV balance column do it); the balance is
@@ -149,7 +151,15 @@ Messages, the data the assistant looks up and what it remembers go to the chosen
 stay on your computer for local models). Nothing is sent until you ask. "Check with …" on a CSV
 sends the rows of that file (account numbers shortened). "Read with …" on a PDF statement sends
 only the statement's extracted text, masked as described under PDF statements, and only after you
-agree in a dialog every time (there is no "don't ask again"). Text inside imported files is treated
+agree in a dialog every time (there is no "don't ask again"). "Get tips from …" on the Overview's
+Suggestions card sends a short summary made on your computer: the kind of each finding (a price rise,
+a budget over its limit, …), payee or category names (account and card numbers hidden, cut to 40
+characters) and amounts rounded to whole units. Never sent: account names, balances, income, your
+transactions or their descriptions. It only runs when you press the button, after you agreed once
+for that provider (asked again if you switch provider or if what is sent changes), and the dialog
+shows exactly what is sent. The assistant only picks and words the tips: it can't write numbers,
+Kasboek fills in every amount and date from your own data and drops any tip that doesn't check out.
+Tips are kept on this computer only (not synced). Text inside imported files is treated
 as data from the bank, never as instructions, and saving a PDF import always waits for your OK, also
 when the assistant may otherwise import by itself.
 

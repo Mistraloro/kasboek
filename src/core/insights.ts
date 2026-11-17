@@ -5,10 +5,13 @@
  * Every money value carries its currency (fixed costs stay in their account's currency); a fact that
  * mixes currencies is worked out in the main currency, and left out when a rate is missing.
  * Income is never a fact. What the person hid is kept in `insight_feedback` (this computer only).
+ * Tips the assistant wrote from these facts (core/insight-plan.ts) are kept in `insights`, also on this
+ * computer only, together with the facts that were sent.
  */
 import { createHash } from 'node:crypto'
 import { addMonths, localToday, monthOf } from '@shared/month'
-import type { InsightFact, InsightKind, InsightValue, MonthReview, RecurringItem } from '@shared/types'
+import { presetFor, type ProviderId } from '@shared/ai-providers'
+import type { InsightFact, InsightKind, InsightSuggestion, InsightValue, InsightsView, MonthReview, RecurringItem } from '@shared/types'
 import { NEAR, listAlerts } from './alerts'
 import type { Db } from './database'
 import { convert } from './fx'
@@ -70,6 +73,11 @@ function chargedTwice(db: Db, item: RecurringItem, today: string): { month: stri
   }
   const twice = [...byMonth].filter(([, list]) => list.length >= 2).at(-1)
   return twice ? { month: twice[0], list: twice[1], last: twice[1].at(-1)! } : null
+}
+
+/** The keys of the tips the person hid or called not useful. */
+export function dismissedKeys(db: Db): Set<string> {
+  return new Set((db.prepare(`SELECT key FROM insight_feedback WHERE verdict IN (${DISMISSED.map(() => '?').join(',')})`).all(...DISMISSED) as { key: string }[]).map((r) => r.key))
 }
 
 /** Facts for `month` ('YYYY-MM'): the biggest first, without the ones the person hid. */
@@ -156,7 +164,7 @@ export function buildFacts(db: Db, month: string, today = localToday()): Insight
   for (const u of review(month).unusual)
     add('unusual', String(u.id), { name: { text: u.name }, amount: { money: u.cents, currency: main }, ...(u.usualCents !== null ? { usual: { money: u.usualCents, currency: main } } : {}), date: { date: u.date }, reason: { text: u.reason } }, u.cents, { transactionIds: [u.id] })
 
-  const hidden = new Set((db.prepare(`SELECT key FROM insight_feedback WHERE verdict IN (${DISMISSED.map(() => '?').join(',')})`).all(...DISMISSED) as { key: string }[]).map((r) => r.key))
+  const hidden = dismissedKeys(db)
   return drafts
     .filter((d) => !hidden.has(d.key))
     .sort((a, b) => b.weight - a.weight || a.key.localeCompare(b.key))
@@ -187,4 +195,59 @@ export function giveFeedback(db: Db, key: string, verdict: 'dismissed' | 'not_us
 /** Brings back the hidden and "not useful" tips. */
 export function restoreDismissed(db: Db): { restored: number } {
   return { restored: db.prepare(`DELETE FROM insight_feedback WHERE verdict IN (${DISMISSED.map(() => '?').join(',')})`).run(...DISMISSED).changes }
+}
+
+/** The tips the assistant wrote for a month, with who wrote them and the facts they were written from. */
+export interface StoredInsights {
+  provider: string
+  model: string
+  language: string
+  facts: InsightFact[]
+  suggestions: InsightSuggestion[]
+}
+
+/** Keeps these tips for the month, replacing the ones before. */
+export function saveInsights(db: Db, month: string, stored: StoredInsights, createdAt = new Date().toISOString()): void {
+  db.prepare(
+    `INSERT INTO insights (month, created_at, provider, model, language, facts_hash, facts_json, suggestions_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(month) DO UPDATE SET created_at = excluded.created_at, provider = excluded.provider, model = excluded.model, language = excluded.language,
+       facts_hash = excluded.facts_hash, facts_json = excluded.facts_json, suggestions_json = excluded.suggestions_json`
+  ).run(month, createdAt, stored.provider, stored.model, stored.language, hashFacts(stored.facts), JSON.stringify(stored.facts), JSON.stringify(stored.suggestions))
+}
+
+/**
+ * The local facts for a month and, when the assistant wrote tips for it, those tips: without what the
+ * person hid since, and marked when the facts or the interface language are not the ones they were written for
+ * (`language` null: not known here, so only the facts are compared).
+ */
+export function insightsView(db: Db, month: string, language: string | null, today = localToday()): InsightsView {
+  const facts = buildFacts(db, month, today)
+  const row = db.prepare('SELECT created_at, provider, model, language, facts_hash, facts_json, suggestions_json FROM insights WHERE month = ?').get(month) as
+    | { created_at: string; provider: string; model: string; language: string; facts_hash: string; facts_json: string; suggestions_json: string }
+    | undefined
+  if (!row) return { facts, ai: null }
+  let sent: InsightFact[]
+  let suggestions: InsightSuggestion[]
+  try {
+    sent = JSON.parse(row.facts_json) as InsightFact[]
+    suggestions = JSON.parse(row.suggestions_json) as InsightSuggestion[]
+  } catch {
+    return { facts, ai: null }
+  }
+  const hidden = dismissedKeys(db)
+  const now = hashFacts(facts)
+  // What was hidden after the tips were written is no change in the data.
+  const sameData = now === row.facts_hash || now === hashFacts(sent.filter((f) => !hidden.has(f.key)))
+  return {
+    facts,
+    ai: {
+      createdAt: row.created_at,
+      providerName: presetFor(row.provider as ProviderId, getSettings(db).aiProviders[row.provider]?.name).assistantName,
+      model: row.model,
+      language: row.language,
+      stale: !sameData ? 'data' : language !== null && row.language !== language ? 'language' : null,
+      suggestions: suggestions.filter((s) => !s.factKeys.some((k) => hidden.has(k))),
+      facts: sent
+    }
+  }
 }

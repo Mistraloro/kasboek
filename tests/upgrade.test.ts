@@ -108,3 +108,34 @@ describe('upgrading from the schema before suggestion feedback', () => {
   })
 })
 })
+
+describe('upgrading from the schema before the assistant’s tips', () => {
+  it('keeps the data and adds a local table for the tips that sync does not record', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'kb-up-')), 'k.db')
+    const key = randomBytes(32).toString('hex')
+    const previous = 14 // the schema just before migration 15, which added insights
+    expect(MIGRATIONS).toHaveLength(15)
+    const old = openDatabase(file, key, { migrate: false })
+    old.transaction(() => {
+      MIGRATIONS.slice(0, previous).forEach((m) => m(old))
+      old.pragma(`user_version = ${previous}`)
+    })()
+    old.prepare("INSERT INTO accounts (name) VALUES ('Zicht')").run()
+    old.prepare("INSERT INTO insight_feedback (key, verdict) VALUES ('late:out:streamly:2026-11-05', 'dismissed')").run()
+    old.prepare('UPDATE sync_flags SET enabled = 1').run()
+    expect(old.prepare("SELECT 1 FROM sqlite_master WHERE name = 'insights'").get()).toBeUndefined()
+    old.close()
+
+    const db = openDatabase(file, key)
+    expect(schemaVersion(db)).toBe(MIGRATIONS.length)
+    expect(db.prepare('SELECT name FROM accounts').all()).toEqual([{ name: 'Zicht' }])
+    expect(db.prepare('SELECT key FROM insight_feedback').all()).toEqual([{ key: 'late:out:streamly:2026-11-05' }])
+    db.prepare('DELETE FROM sync_outbox').run()
+    db.prepare("INSERT INTO insights (month, created_at, provider, model, language, facts_hash, facts_json, suggestions_json) VALUES ('2026-11', '2026-11-17T10:00:00.000Z', 'mistral', 'm', 'en', 'h', '[]', '[]')").run()
+    expect(db.prepare('SELECT month, provider, language FROM insights').all()).toEqual([{ month: '2026-11', provider: 'mistral', language: 'en' }])
+    // One set of tips per month.
+    expect(() => db.prepare("INSERT INTO insights (month, created_at, provider, model, language, facts_hash, facts_json, suggestions_json) VALUES ('2026-11', 'x', 'p', 'm', 'en', 'h', '[]', '[]')").run()).toThrow()
+    expect(db.prepare('SELECT count(*) AS n FROM sync_outbox').get()).toEqual({ n: 0 })
+    expect(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'insights'").get()).toEqual({ n: 0 })
+  })
+})

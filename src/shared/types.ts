@@ -173,6 +173,8 @@ export interface Settings {
   permissions: PermissionSettings
   /** The assistant remembers facts and preferences between conversations (this computer only). */
   memoryEnabled: boolean
+  /** The person agreed to send the tips summary to this AI provider (see core/insight-plan.ts for what is sent); null = not asked yet. */
+  aiInsightsConsent: { provider: string; version: number; at: string } | null
 }
 
 /** Something the assistant remembers between conversations. */
@@ -464,10 +466,42 @@ export interface InsightFact {
   weight: number
 }
 
+/** A tip written by the assistant and checked by Kasboek. Numbers and dates in the texts are placeholders like {f3.amount}, filled in at display time. */
+export interface InsightSuggestion {
+  kind: InsightKind
+  severity: 'warning' | 'tip' | 'info'
+  /** Keys (not ids) of the facts it is about; the first decides the button. */
+  factKeys: string[]
+  title: string
+  body: string
+}
+
+/** The tips last written by the assistant for a month, kept on this computer. */
+export interface InsightsAi {
+  createdAt: string
+  providerName: string
+  model: string
+  language: string
+  /** The data changed, or the interface language did, since the tips were written. */
+  stale: 'data' | 'language' | null
+  suggestions: InsightSuggestion[]
+  /** The facts that were sent (the ids in the placeholders refer to them). */
+  facts: InsightFact[]
+}
+
 export interface InsightsView {
   facts: InsightFact[]
-  /** Tips written by the assistant: not part of this version. */
-  ai: null
+  ai: InsightsAi | null
+}
+
+/** Exactly what would be sent to the assistant to write tips. */
+export interface InsightsPreview {
+  text: string
+  approxTokens: number
+  facts: number
+  providerName: string
+  /** Who receives it; null when the model runs on this computer or network. */
+  company: string | null
 }
 
 export interface RecurringSummary {
