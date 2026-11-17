@@ -41,3 +41,17 @@ export function reasoningParams(provider: string, level: ReasoningLevel): Record
       return { reasoning_effort: level === 'off' ? 'none' : level }
   }
 }
+
+/** One step less reasoning, for a retry after the reasoning left too little room for the answer. */
+export function lowerClaudeEffort(model: string, effort: Effort): Effort {
+  const levels = claudeEfforts(model)
+  const at = levels.indexOf(claudeEffort(model, effort))
+  return levels[Math.max(0, at - 1)]!
+}
+
+/** The same for other providers: "default" counts as medium and goes to low, then off. */
+export function lowerReasoning(level: ReasoningLevel): ReasoningLevel {
+  const ladder: ReasoningLevel[] = ['off', 'low', 'medium', 'high']
+  const at = level === 'default' ? 2 : ladder.indexOf(level)
+  return ladder[Math.max(0, at - 1)]!
+}

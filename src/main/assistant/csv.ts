@@ -12,8 +12,8 @@ import { mappingSchema } from '@shared/import-mapping'
 import { maskIban, maskNumbers } from '@shared/iban'
 import type { ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
 import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type RowGroup } from '@core/assist-plan'
-import { callJson } from './json'
-import { PARALLEL, TIME_LIMIT_MS, pool, runJob, withTimeLimit, type AssistState } from './jobs'
+import { callJsonSplit } from './json'
+import { PARALLEL, TIME_LIMIT_MS, pool, runJob, type AssistState } from './jobs'
 import { activeProvider, requireConfigured } from './provider'
 import { LANGUAGES } from '@shared/languages'
 import { getPrefs } from '../prefs'
@@ -26,13 +26,14 @@ const INSTRUCTIONS = `You check a bank CSV export before it is imported into a p
 
 You get the raw cells, the column mapping the app detected, the rows it couldn't read or flagged, groups of similar transactions and the categories. Rows that are exactly the same as transactions already in Kasboek are left out (the stats say how many). Return a plan:
 - mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines. Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
-- fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: a few words.
-- groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group; the app applies it to every row in the group. Banks write these texts differently, so read them carefully:
+- fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: at most 6 words.
+- groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group where you set a categoryId, a name or a description, and leave out the groups where all three would be null; the app applies an entry to every row in the group. Banks write these texts differently, so read them carefully:
   - categoryId: for groups marked "uncategorised", a category id from the list. Most have an obvious category (supermarkets, bakeries, energy, telecom, rent, salary, restaurants, fuel, insurance, …): categorise every group where one fits; null only if you really can't tell. Transfers between the person's own accounts (savings, own accounts) go in a transfer category, not spending. Use only the category ids given. null for groups that already have a category.
-  - name: who the money went to or came from, short and readable, as people would say it: the shop, company or person (e.g. "Tesco", "Bakkerij De Roos", "Netflix", "Jan Peeters"), found in the counterparty or inside the bank text (card payments often put the shop and its address after the card number). Use normal capitalisation, not all caps. null if the text gives no name.
-  - description: a short, readable description without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Card payment, Brugge", "Kartenzahlung, Berlin", "Automatisch sparen"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
+  - name: who the money went to or came from, short and readable, as people would say it: the shop, company or person (e.g. "Tesco", "Bakkerij De Roos", "Netflix", "Jan Peeters"), found in the counterparty or inside the bank text (card payments often put the shop and its address after the card number). Use normal capitalisation, not all caps, at most 40 characters. null if the text gives no name.
+  - description: a short, readable description (at most 80 characters) without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Card payment, Brugge", "Kartenzahlung, Berlin", "Automatisch sparen"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
 - rules: rules make future imports categorise themselves. Suggest one only for a payee that comes back (a group with 2 or more transactions, or a known shop, employer, utility or subscription). field: where the text is ("counterparty" if the counterparty column holds the name, else "description"). pattern: a distinctive piece of the bank's own text (as written in the counterparty or bank text column, not your readable name), at least 4 characters, that is in every transaction of the group and wouldn't appear in unrelated payments: the shop or company name, not a city, card number, date or generic word like "BETALING". match: "word" for a name that must stand alone, else "contains". categoryId: the category for the group. Don't suggest rules that already exist.
-- notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
+- notes: 1 to 3 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
+Your answer has a length limit and is cut off when it is too long, so be brief: no explanations outside the fields, and no entries that change nothing.
 personNotes, when given, are things the person told the assistant to remember (e.g. which category a payee belongs in): follow them.
 Never invent amounts or dates that are not supported by the raw cells.`
 
@@ -82,14 +83,24 @@ interface Batch {
   first: boolean
   n: number
   of: number
+  /** Indexes of the flagged rows (see flaggedRows) this part answers; the part may be one of several. */
+  flagged: number[]
+}
+
+/** Flagged rows sent for fixes at most (spread over the file). */
+const MAX_FLAGGED = 150
+
+/** Rows the app couldn't read or isn't sure of; exact duplicates are already in Kasboek and not sent again. */
+function flaggedRows(preview: ImportPreview): ImportPreview['rows'] {
+  return spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), MAX_FLAGGED)
 }
 
 function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
   const groups = batch.groups
   const raw = imp.rawWindow(preview.sessionId, 0, 25)
   const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(maskIban)
-  // Exact duplicates are already in Kasboek: not sent again.
-  const flagged = spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), 150).map((r) => ({
+  const own = new Set(batch.flagged)
+  const flagged = flaggedRows(preview).filter((r) => own.has(r.index)).map((r) => ({
     index: r.index,
     status: r.status,
     issues: r.issues,
@@ -111,8 +122,8 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
       ...(batch.of > 1
         ? {
             batch: batch.first
-              ? `Part ${batch.n} of ${batch.of}: check the columns and flagged rows, and the groups below. The other groups are checked separately.`
-              : `Part ${batch.n} of ${batch.of}: only the groups below. Return mapping null and no fixes; the columns and flagged rows are checked in part 1.`
+              ? `Part ${batch.n} of ${batch.of}: check the columns, the flagged rows listed below and the groups below. The other groups and flagged rows are checked separately.`
+              : `Part ${batch.n} of ${batch.of}: only the groups and flagged rows listed below. Return mapping null; give fixes only for the flaggedRows listed here. The columns are checked in part 1.`
           }
         : {}),
       noteLanguage: LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English',
@@ -125,7 +136,7 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
       linesAboveHeader: raw.preamble.map((r) => r.map(maskIban)),
       header: raw.header.map((h, i) => `${i}: ${h}`),
       firstRows: batch.first ? raw.rows.map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })) : raw.rows.slice(0, 5).map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })),
-      flaggedRows: batch.first ? flagged : [],
+      flaggedRows: flagged,
       groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
       rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`),
@@ -345,28 +356,83 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
   return out
 }
 
-/** Groups per model call: a big file is checked in parts. */
+/** Groups per model call at most: a big file is checked in parts. */
 const BATCH_GROUPS = 80
+/**
+ * What a part's answer is expected to take, in tokens, so that a typical part fits in one answer
+ * (reasoning shares the same limit, and some servers allow only 8192 in total).
+ */
+const ANSWER_TOKENS = 6000
+const OVERHEAD_TOKENS = 600
+const GROUP_TOKENS = 60
+const FIX_TOKENS = 55
+/** A part of this many groups and flagged rows or fewer is not split further. */
+const MIN_UNITS = 5
 
 export function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
   return runJob(sessionId, 'check', (signal, state) => check(db, sessionId, signal, state))
 }
 
-/** Splits the groups into parts; the first part also carries the columns and flagged rows. */
-export function batches(groups: RowGroup[], size = BATCH_GROUPS): Omit<Batch, 'of'>[] {
+/**
+ * Splits the groups and flagged rows into parts, each sized so that its expected answer fits; the
+ * first part also carries the columns.
+ */
+export function batches(groups: RowGroup[], size = BATCH_GROUPS, flagged: number[] = []): Omit<Batch, 'of'>[] {
   const out: Omit<Batch, 'of'>[] = []
-  for (let from = 0; from < Math.max(groups.length, 1); from += size) out.push({ from, groups: groups.slice(from, from + size), first: from === 0, n: out.length + 1 })
+  let from = 0
+  let f = 0
+  do {
+    const rows: number[] = []
+    let cost = OVERHEAD_TOKENS
+    while (f < flagged.length && cost + FIX_TOKENS <= ANSWER_TOKENS) {
+      rows.push(flagged[f++]!)
+      cost += FIX_TOKENS
+    }
+    const n = Math.min(size, Math.floor((ANSWER_TOKENS - cost) / GROUP_TOKENS), groups.length - from)
+    out.push({ from, groups: groups.slice(from, from + n), first: from === 0 && out.length === 0, n: out.length + 1, flagged: rows })
+    from += n
+  } while (from < groups.length || f < flagged.length)
   return out
 }
 
-/** Puts the parts' answers together: columns and row fixes come only from the first part. */
-export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { groups: unknown[] }; plan: Plan }[]): Plan {
+/** A part in two halves (the first keeps the column check), or null when it is small enough. */
+export function splitBatch<B extends Omit<Batch, 'of'>>(b: B): [B, B] | null {
+  if (b.groups.length + b.flagged.length <= MIN_UNITS) return null
+  const g = Math.ceil(b.groups.length / 2)
+  const f = Math.ceil(b.flagged.length / 2)
+  return [
+    { ...b, groups: b.groups.slice(0, g), flagged: b.flagged.slice(0, f) },
+    { ...b, first: false, from: b.from + g, groups: b.groups.slice(g), flagged: b.flagged.slice(f) }
+  ]
+}
+
+/** Which part this is, in words for the person: the flagged rows and the payees in it. */
+function describeBatch(b: Batch): string {
+  const some = (items: string[]): string => `${items.slice(0, 3).join(', ')}${items.length > 3 ? ', …' : ''}`
+  const names = b.groups.map((g) => `“${(g.example.counterpartyName || g.example.description).slice(0, 30)}”`)
+  const rows = b.flagged.map((i) => String(i + 1))
+  const bits = [
+    ...(rows.length ? [`${rows.length} flagged row${rows.length === 1 ? '' : 's'} (rows ${some(rows)})`] : []),
+    ...(names.length ? [`${names.length} group${names.length === 1 ? '' : 's'} of transactions (${some(names)})`] : []),
+    ...(b.first ? ['the column check'] : [])
+  ]
+  return `part ${b.n}: ${bits.join(' and ')}`
+}
+
+/**
+ * Puts the parts' answers together: columns come only from the first part, fixes from it and for
+ * the flagged rows of the others.
+ */
+export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { groups: unknown[]; flagged?: number[] }; plan: Plan }[]): Plan {
   const first = parts.find((p) => p.batch.first)?.plan
+  const fixes = new Map<number, Plan['fixes'][number]>()
+  for (const p of [...parts.filter((x) => x.batch.first), ...parts.filter((x) => !x.batch.first)])
+    for (const f of p.plan.fixes) if (!fixes.has(f.index) && (p.batch.first || p.batch.flagged?.includes(f.index))) fixes.set(f.index, f)
   // Only answers about the part's own groups count (a model may renumber them from 0).
   const own = <T extends { group: number }>(p: (typeof parts)[number], list: T[]): T[] => list.filter((g) => g.group >= p.batch.from && g.group < p.batch.from + p.batch.groups.length)
   return {
     mapping: first?.mapping ?? null,
-    fixes: first?.fixes ?? [],
+    fixes: [...fixes.values()],
     groups: parts.flatMap((p) => own(p, p.plan.groups)),
     rules: parts.flatMap((p) => own(p, p.plan.rules)),
     notes: [...new Set(parts.flatMap((p) => p.plan.notes))].slice(0, 6)
@@ -383,7 +449,7 @@ async function check(db: Db, sessionId: string, signal: AbortSignal, state: Assi
   const provider = activeProvider(db)
   requireConfigured(provider)
   const name = provider.preset.assistantName
-  const parts = batches(groups).map((b, _i, all) => ({ ...b, of: all.length }))
+  const parts = batches(groups, BATCH_GROUPS, flaggedRows(preview).map((r) => r.index)).map((b, _i, all) => ({ ...b, of: all.length }))
   // Shown in the assistant panel too: the reasoning as it comes, and the notes at the end.
   const activity = checkActivity(preview.fileName)
   try {
@@ -417,28 +483,37 @@ async function runParts(
   }
   progress()
   const results = await pool(parts, PARALLEL, (batch) =>
-    withTimeLimit(
-      signal,
-      () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`),
-      async (partSignal) => {
-        const text = await callJson(db, provider, { system: INSTRUCTIONS, schema: Plan, context: buildContext(db, preview, batch), signal: partSignal, onThinking: (t) => activity.thinking(batch.n, batch.of, t) })
-        const plan = parsePlan(text, name)
-        done += batch.groups.length
-        progress()
-        return { batch, plan }
+    callJsonSplit(
+      db,
+      provider,
+      { system: INSTRUCTIONS, schema: Plan, signal, onThinking: (t) => activity.thinking(batch.n, batch.of, t) },
+      {
+        part: batch,
+        context: (b) => buildContext(db, preview, b),
+        parse: (text) => parsePlan(text, name),
+        split: splitBatch,
+        describe: describeBatch,
+        done: (b) => {
+          // The parts that were answered never overlap, so this only goes up.
+          done += b.groups.length
+          progress()
+        },
+        timedOut: () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
       }
     )
   )
   if (signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
-  const finished = results.flatMap((r) => (r.ok ? [r.value] : []))
-  const failed = parts.filter((_, i) => !results[i]!.ok)
-  if (!finished.length) {
-    const first = results.find((r) => !r.ok) as { ok: false; error: unknown }
-    throw first.error
-  }
+  const errors = results.flatMap((r) => (r.ok ? [] : [r.error]))
+  if (errors.length) throw errors[0]
+  const outcomes = results.flatMap((r) => (r.ok ? [r.value] : []))
+  const finished = outcomes.flatMap((o) => o.answered.map((a) => ({ batch: a.part, plan: a.value })))
+  const failed = outcomes.flatMap((o) => o.failed)
+  if (!finished.length) throw failed[0]!.error
   const plan = mergePlans(finished)
   // Parts that failed are left out; what the others found is kept.
-  const lost = failed.map((b) => (b.first ? `part ${b.n} (with the column check)` : `part ${b.n}`))
-  if (lost.length) plan.notes.unshift(`${lost.length} of ${parts.length} parts couldn’t be checked (${lost.join(', ')}); run Check again to try them.`)
+  if (failed.length) {
+    const hint = failed.some((f) => f.error instanceof AppError && f.error.code === 'assistant.too_long') ? ' A model with a bigger output limit, or a smaller file, avoids this.' : ''
+    plan.notes.unshift(`Couldn’t check ${failed.map((f) => describeBatch(f.part)).join('; ')}; the rest was checked. Run Check again to try again.${hint}`)
+  }
   return applyPlan(db, preview, groups, plan, name)
 }

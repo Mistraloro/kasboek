@@ -5,7 +5,7 @@
  */
 import { net } from 'electron'
 import type Anthropic from '@anthropic-ai/sdk'
-import { AppError } from '@core/errors'
+import { AppError, TruncatedError } from '@core/errors'
 import type { ActiveProvider } from './provider'
 
 type MessageParam = Anthropic.Beta.Messages.BetaMessageParam
@@ -241,8 +241,9 @@ async function withFallbacks(p: ActiveProvider, model: string, body: Record<stri
       return open
     } catch (err) {
       const refused = err instanceof ProviderError && (err.status === 400 || err.status === 422) && !signal?.aborted
-      if (!refused || attempt >= 2) throw err
-      if (/token/i.test(err.message) && maxTokens > 8192) maxTokens = 8192
+      if (!refused || attempt >= 4) throw err
+      // Servers differ in the longest answer they allow: step down until one is accepted.
+      if (/token/i.test(err.message) && maxTokens > 8192) maxTokens = maxTokens > 16384 ? 16384 : 8192
       // Only when the refusal is about the reasoning fields (or unknown fields), not the schema.
       else if (Object.keys(extra).length && !/schema|response_format/i.test(err.message) && /reason|think|effort|extra|unrecogni|unknown|not (permitted|supported|allowed)|unsupported|invalid/i.test(err.message)) {
         dropped = true
@@ -460,7 +461,7 @@ export async function json(
     finish = choice?.finish_reason
     text = contentText(choice?.message?.content)
   }
-  if (finish === 'length') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')
+  if (finish === 'length') throw new TruncatedError('This part of the file was too large for one answer. Try again, or a shorter export.', text.trim().length > 0)
   // Some models wrap JSON in a code fence.
   return text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')
 }
