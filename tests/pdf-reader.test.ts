@@ -196,7 +196,7 @@ describe('openPdfSession', () => {
     const { d, acc } = db()
     const lines = [{ x: 40, y: 700, text: 'A letter from the bank that is not a statement at all' }]
     const p = await openPdfSession(d, { fileName: 'a.pdf', accountId: acc, contentBase64: b64(makePdf([{ texts: lines }, {}])), read: (b) => extractText(b) })
-    expect(p.pdf).toMatchObject({ tableFound: false, reconciliation: null, notes: [{ code: 'pages_without_text', count: 1 }] })
+    expect(p.pdf).toMatchObject({ tableFound: false, reconciliation: null, notes: [{ code: 'pages_without_text', count: 1 }, { code: 'no_table', pages: 2, lines: 1 }] })
     expect(p.rows).toEqual([])
   })
 

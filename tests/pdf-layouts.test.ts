@@ -37,7 +37,9 @@ interface Tx {
   amount: string
 }
 
-const FAKE_IBAN = 'BE00 0000 0000 0000'
+/** Example IBANs that pass the check digits. */
+const FAKE_IBAN = 'BE71 0961 2345 6769'
+const OTHER_IBAN = 'BE68 5390 0754 7034'
 const PRINT_DATE = '17.11.2026'
 /** An amount whose right end is at x = 556, as far as Helvetica goes. */
 const right = (text: string, size = 10.5): number => 556 - text.length * size * 0.52
@@ -107,7 +109,7 @@ const TXS: Tx[] = Array.from({ length: 26 }, (_, i) => {
   const credit = i % 6 === 5
   return {
     ...date,
-    lines: [`Voorbeeld Winkel ${i + 1}`, `Betaling testplein ${i + 1}`, ...(i % 3 === 0 ? [FAKE_IBAN.replace('0000 0000 0000', `0000 0000 ${String(1000 + i)}`)] : [])],
+    lines: [`Voorbeeld Winkel ${i + 1}`, `Betaling testplein ${i + 1}`, ...(i % 3 === 0 ? [OTHER_IBAN] : [])],
     amount: `${credit ? '' : '-'}${i + 1},${String(i * 7 % 100).padStart(2, '0')} EUR`
   }
 })
@@ -126,7 +128,7 @@ describe('block layout without a header', () => {
     read.grid.slice(1).forEach((row, i) => {
       const tx = TXS[i]!
       expect(row.slice(0, 3)).toEqual([`${tx.day} ${tx.month} ${tx.month === 'DEC' ? 2025 : 2026}`, tx.lines.join(' '), tx.amount])
-      expect(row[3]).toBe(tx.lines.find((l) => l.startsWith('BE')) ?? '')
+      expect(row[3]).toBe(tx.lines.includes(OTHER_IBAN) ? OTHER_IBAN.replace(/ /g, '') : '')
     })
     // The page margins and the balance block are neither rows nor part of one.
     expect(read.grid.flat().join(' ')).not.toMatch(/Transacties|bank\.example|08:36|Zichtrekening| of /)
@@ -216,7 +218,7 @@ function turnedPages(count: number, rowsPerPage = PAGE_ROWS): { pages: PdfPageSp
         rows.push(row)
         ;[0, 1, 2, 3, 4, 5, 6].forEach((c) => row[c] && shown(texts, HEADER_XS[c]!, y, row[c]!))
         shown(texts, 184, y - 7, FAKE_IBAN)
-        shown(texts, 335, y - 7, FAKE_IBAN.replace('0000 0000 0000', '0000 0000 1111'))
+        shown(texts, 335, y - 7, OTHER_IBAN)
       }
     }
     pages.push({ width: 595, height: 842, rotate: 90, texts })

@@ -213,7 +213,7 @@ const MARGIN = 0.12
 
 /**
  * Lines that the pages repeat in their margins at the same height (a title, an address, "page 2 of 7",
- * the print date): the text is the same once its digits are ignored. Lines with an amount never count.
+ * the print date): the text is the same once its numbers are ignored (page 2 of 7, page 12 of 71). Lines with an amount never count.
  */
 function marginLines(lines: PdfLine[]): Set<number> {
   const pages = new Set(lines.map((l) => l.page)).size
@@ -221,7 +221,7 @@ function marginLines(lines: PdfLine[]): Set<number> {
   for (const line of lines) {
     const height = line.pageHeight
     if (!height || Math.min(line.y, height - line.y) > height * MARGIN || line.cells.some((c) => isAmountText(c.text))) continue
-    const key = `${Math.round(line.y)}|${line.cells.map((c) => c.text.replace(/\d/g, '0')).join('|')}`
+    const key = `${Math.round(line.y)}|${line.cells.map((c) => c.text.replace(/\d+/g, '0')).join('|')}`
     const entry = seen.get(key) ?? { pages: new Set<number>(), ids: [] }
     entry.pages.add(line.page)
     entry.ids.push(line.id)
