@@ -157,9 +157,27 @@ function remember(kind: DeviceAuthKind): DeviceAuthKind {
   return kind
 }
 
-/** The answer if the check has finished, otherwise undefined (and the check is started). */
-export function peekDeviceAuthKind(onDone?: () => void): DeviceAuthKind | undefined {
-  if (!answerIsFresh(cached, cachedAt, Date.now()) && !pending) {
+/**
+ * Until the first screen is shown, the background availability check (a PowerShell process on Windows)
+ * is held back: it only competes with the start-up. The Lock screen of a passwordless account needs
+ * the answer at once, so for that account the check starts anyway.
+ */
+let held = true
+
+/** May the background check start now? */
+export function mayCheckNow(o: { held: boolean; deviceMode: boolean }): boolean {
+  return !o.held || o.deviceMode
+}
+
+/** After the first screen: the held-back check may start (on the next peekDeviceAuthKind). */
+export function releaseDeviceCheck(): void {
+  held = false
+}
+
+/** The answer if the check has finished, otherwise undefined (and the check is started, unless it is held back). */
+export function peekDeviceAuthKind(onDone?: () => void, o: { deviceMode?: boolean } = {}): DeviceAuthKind | undefined {
+  if (!answerIsFresh(cached, cachedAt, Date.now()) && !pending && mayCheckNow({ held, deviceMode: o.deviceMode === true })) {
+    startupLog('windows hello: availability check starting')
     pending = deviceAuthKind().finally(() => {
       pending = null
       onDone?.()

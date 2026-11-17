@@ -5,6 +5,7 @@ import { parseAmount } from '@shared/amount'
 import { centsToInput, currencySymbol } from '@shared/format'
 import type { AccountKind, NetWorthAccount } from '@shared/types'
 import { TrendLine } from '../components/charts'
+import { DateInput } from '../components/DateInput'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PageHeader, Segmented, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -170,11 +171,11 @@ function ValuationModal({ account, onClose, onSaved }: { account: NetWorthAccoun
       .catch((e) => toast(errText(e), 'error'))
   }
   return (
-    <Modal open title={t('networth.valueTitle', { name: account.name })} onClose={onClose}>
+    <Modal open title={t('networth.valueTitle', { name: account.name })} onClose={onClose} dirty={form.note.trim() !== '' || form.value !== centsToInput(account.valueCents, fmt.formats)}>
       <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); save() }}>
         <p className="text-[13px] text-muted">{t('networth.valueHelp')}</p>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('fx.date')}>{(id) => <Input id={id} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />}</Field>
+          <Field label={t('fx.date')}>{(id) => <DateInput id={id} value={form.date} onChange={(date) => setForm({ ...form, date })} required />}</Field>
           <Field label={t('networth.value', { currency: account.currency })}>{(id) => <Input id={id} inputMode="decimal" className="num" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} required />}</Field>
         </div>
         <Field label={t('networth.note')}>{(id) => <Input id={id} value={form.note} maxLength={200} onChange={(e) => setForm({ ...form, note: e.target.value })} />}</Field>

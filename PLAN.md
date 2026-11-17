@@ -304,6 +304,146 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    choices" (PIN) and whether another call (for example a `KeyCredentialManager` or the in-process
    `IUserConsentVerifierInterop` route from the long-term idea in the Windows Hello review) lets
    Windows remember the last method. If Windows cannot do it, record that here and leave it as is.
+23. **Updater: the app freezes for a moment after "Install and restart".** Fixed, not released yet.
+   Found by reading the code (not measured on Windows): the press first made the safety backup,
+   `writeTransfer` in `src/main/transfer/service.ts`. That has no key derivation (the key is in memory),
+   but `VACUUM INTO` (`snapshotEncrypted`, better-sqlite3) and the AES-GCM encoding of the whole file
+   (`encodeTransfer`) run synchronously on the main process, so it cannot repaint or answer the window.
+   The state only became `installing` after the backup and the helper start (up to 8 s), so nothing
+   showed. Fixed: `install()` sets the new state `preparing` first ("Preparing the update..." with a
+   spinner, button disabled, window not dismissible), waits 100 ms so it is drawn, and goes back to
+   `ready` with the error if anything fails (`installStep` in `src/core/update.ts`). The export itself
+   is still synchronous, so a short stall remains, but the window now says why. Not changed: the backup
+   on quit. It is a different backup (the automatic backup folder, only when the data changed and
+   automatic backups are on), so the safety copy in `safety/` can't replace it.
+24. **Keep the original amount and currency of foreign payments.** Asked about card payments in a
+   currency other than the account's: today the amount is stored in the account's currency and the
+   foreign amount and its currency are not kept (an import only flags the row as "other currency").
+   Build after the PDF import: store the original amount, currency and rate on the transaction (from
+   the file's columns when the bank gives them, or typed in), show it next to the billed amount
+   ("EUR 45.00 (USD 49.20)"), keep it through CSV and PDF import, sync and export, and keep the
+   overviews using the billed amount in the account's currency.
+25. **More statement formats for the import, after the PDF import has proven itself.** In this order:
+   (1) CAMT.053 (ISO 20022 XML) and MT940, the standard statement exports of European banks, plus
+   CODA (Belgian), structured so they read exactly: no layout guessing, opening and closing balances
+   included for the same totals check as PDF; (2) OFX, QFX and QIF, the usual export of UK, US and
+   Australian banks and apps; (3) Excel (.xlsx and .xls), through the same column mapping as CSV;
+   (4) photos and screenshots of statements, and scanned PDFs, which need text recognition or sending
+   the image to an AI after consent: only if people ask for it. Each format opens the same import
+   session as CSV and PDF (preview, duplicates, remembered layouts, undo).
+26. **Fixed, not released yet: the add-account window closes when you click next to it.** An accidental click on the
+   dimmed background closes the dialog and everything typed so far is lost. Make the add-account
+   dialog (and any other dialog with a form: edit account, bank balance, goals, rules, import
+   mapping) ignore clicks on the background, so it only closes with Cancel, the close button, or
+   Escape; if there are unsaved changes, ask before closing with Escape or the close button too.
+   Fixed in the shared `Modal`: a click on the background no longer closes any dialog (opt-in
+   `closeOnBackdrop`, used only by the sync conflicts list). Escape and the close button ask "Discard
+   what you typed?" when `dirty` is set (add/edit account, goal, bank balance, net worth value).
+27. **Faster start and a launch window that is visible and not blank.** Owner report: the first start
+   (after an install or update) takes long before anything shows, the launch window appears late and
+   blank, and a second start is faster. Investigated by reading the code and bundles (no changes yet).
+   *Confirmed:* the launch window is shown before it has content (`show: true` in `src/main/splash.ts`);
+   its page and script are two cold file reads from `app.asar.unpacked`; right after creating it the
+   main thread runs the whole 1.7 MB app bundle synchronously (`await import('./app')`,
+   `src/main/index.ts:47`), which includes a module-level `z.toJSONSchema` in `src/main/assistant/pdf.ts:32`;
+   progress calls made before the page has loaded are queued, so a late splash jumps straight to the end;
+   the log line "launch window shown" really means "created"; in dark mode the page starts light and
+   switches when its script runs. *Suspected:* several processes start in the same second (splash
+   renderer, main renderer, GPU, the PowerShell Windows Hello check); the splash may share a renderer
+   process with the main window (both `file://`); the slow first start is mostly outside our code:
+   Defender scanning the new unsigned files, cold disk cache, rebuilt GPU caches; the time before Node
+   starts is not in `startup.log`. Nothing Kasboek-specific runs on the first start (no migrations,
+   backups or network calls before 15 s).
+   *Fix order:* (0) a measurement build first: keep the previous `startup.log` as `startup.prev.log`, log
+   first-start-of-this-version, time before the log starts (`app.getAppMetrics()` creation times), "electron
+   ready", "launch window created / loaded / painted", the process ids of both windows, the main window's
+   `dom-ready`, renderer milestones, and the Hello check start; (1) splash as an inline `data:` page with
+   the theme baked in and progress set directly (no file reads, no flash, likely its own process); (2) let
+   the splash paint before importing the app bundle (cap about 300 ms); (3) start the Windows Hello check
+   after the first screen, except for device-mode accounts; (4) progress that follows real steps and
+   creeps during the long phase; (5) dynamic imports for the assistant SDK, qrcode, pdf assist, update
+   and sync in `src/main/ipc.ts`; (6) lazy-load locales and pages in the renderer (1.65 MB bundle, about
+   4 s to "interface loaded"); (7) register IPC and create the main window before `initSession`;
+   (8) only if numbers point there: Node compile cache, renderer code cache; (9) Windows code signing.
+   Rejected: bytenode or snapshots, a native launcher, `ImageView`, `ready-to-show` for the splash.
+   *More from the owner's testing:* on an x86 PC only the small launch window is blank. On a friend's
+   Windows on ARM PC the LARGE main window is also blank for a while, longer than on x86, so the app
+   looks broken while it boots. Likely contributors (not measured): Windows on ARM draws in software by
+   default (`src/shared/graphics.ts:34`), which makes painting the 1.65 MB renderer slower; and the main
+   window is shown as soon as it exists, before the interface has painted. Add to the fix list: keep
+   the launch window on screen until the main window has really painted its first screen (create the
+   main window hidden, show it on the renderer's first-screen signal, then close the launch window),
+   and if a window must be visible earlier give it a theme-coloured background and a simple "Starting..."
+   content instead of white; on ARM measure first how long compositing in software mode takes
+   (the measurement build covers it: log the graphics mode next to the timings) and consider lazy
+   loading to shrink the first bundle (steps 5 and 6).
+   *Owner can check now:* copy `%APPDATA%\Kasboek\startup.log` after the first start following an
+   install, before starting again, then after the second start; time it with a phone video from
+   double-click to blank window, logo and main window; reboot without reinstalling and see if it is
+   slow again (cold disk cache) or fast (something tied to the install, such as Defender); watch
+   "Antimalware Service Executable" during the first start; note whether the PC is Windows on ARM.
+   *Done in 0.21.0 (not released), measured values pending:* (0) `startup.log` now has timings (main script,
+   Electron ready, launch window created / loaded / painted, app code loaded, main window created and
+   `dom-ready`, renderer milestones through the new `app.milestone` op, first screen), the process ids of both
+   windows, the time before the log starts, the graphics mode, first-start-of-this-version, and the previous
+   log as `startup.prev.log`; (1) the launch window is an inline `data:` page with the theme baked in and
+   progress set from the main process (`resources/splash.html` and `splash.js` stay only as a fallback if
+   the data page fails to load); (2) the app code starts loading when the launch window has painted or after
+   300 ms; (3) the Windows Hello check starts after the first screen, except for passwordless accounts;
+   (4) the main window stays hidden until the page reports its first screen (safety timeout 8 s), and the
+   bar follows the real steps and creeps between them; (5) the assistant, update, sync, export, PDF reader
+   and `qrcode` load on first use (`app-*.js` 1,825 kB -> 257 kB); (7) the account is read while the main
+   window is created, and operations other than `app.*` and `prefs.*` wait for it. Steps 6 (lazy renderer),
+   8 and 9 are not done. Still to confirm on real Windows (x64 and ARM): the timings in `startup.log`, that
+   the `data:` launch window has its own process, that the window never stays blank, the tray and second
+   launch behaviour, and the Hello check after the first screen.
+28. **Two bugs found while adding "Not a fixed cost" (not fixed yet).** (a) Fixed-cost amounts stay in
+    each account's own currency but are added up across accounts and shown in the main currency
+    (`src/core/recurring.ts` where the totals are summed, `src/renderer/src/pages/Recurring.tsx`
+    where `money()` formats the amounts): convert with the rate of the day.
+    (b) Suspected sync bug: a budget's sync id comes from category + month (`src/core/sync-schema.ts`)
+    and `setBudget(null)` deletes the row (`src/core/finance.ts`). Deletion is final for a sync id
+    (`flush` skips a row whose last synced state is deleted), so a budget removed and later set again
+    for the same month and category may never reach the other computer. Check with a test across two
+    computers; a fix is probably to store "no budget" as a row instead of deleting it (as fixed-cost
+    marks do).
+29. **Code review of everything since 0.16.1 (static review, HEAD 6ff68d4; verdict: request changes).** Fix first, in
+   this order: (1) PDF AI read can drop an amount's sign and the check still passes (`src/core/pdf-plan.ts:222-232,348`):
+   take the sign from the matched text (extend over `-`, `+`, `(`, `)`, `CR`, `DR`) and reject the row if the text has a sign
+   the model's string lacks, plus a test; (2) the CSV "Check with AI" sends raw rows, descriptions, rules and the assistant's
+   memory notes with only a tooltip (`src/main/assistant/csv.ts:97-138`): add the preview-and-consent dialog like the PDF
+   read and apply `maskNumbers`; (3) tips consent is stored per provider id only (`insights.ts` `agreed()`, `insight-plan.ts:20`):
+   also store and compare the provider's address (and model), so editing a custom provider's address asks again; (4) lock
+   only clears import sessions (`src/main/app.ts:131`): abort running PDF reads, CSV checks and tips runs on lock
+   (`cancelAssist`, `cancelInsights`, `pdfRead.abort()`); (5) `window.prompt` is used in `Import.tsx:490,510`, `Budgets.tsx:143`,
+   `Transactions.tsx:162,214` and Electron does not implement it (it throws; to be confirmed on a build): replace by small
+   modals; (6) memoise `findRecurring` per (data version, day) and debounce `insights.get` on `data.changed`.
+   *Other bugs and risks:* an IBAN glued to preceding letters is not masked (`src/shared/iban.ts:7` lookbehind); when no table
+   header is found the PDF first-page header (holder name, address) is sent whole (`pdf-plan.ts:100`, `pdf.ts:62-70`);
+   restarting a job for the same session broadcasts a stale `import.checkDone` that resets the screen (`jobs.ts:383-400`);
+   a refused second `import.analyzePdf` clears the cancel handle of the first (`ipc.ts:403-418`); an AI read replaces the grid
+   and silently drops edits made during the run (`pdf.ts:128-145`); `CLAUDE_PDF_MODEL` is hard-coded and PDF/tips calls reuse the
+   CSV effort setting: check the model id exists and accepts that effort; older synced computers skip `recurring_marks`
+   changes (`sync.ts:293`): check the cursor logic and say "update all computers" in the notes; Change category on Fixed costs
+   does not reload when the rule step fails and uses the derived item name as pattern (`Recurring.tsx`); `loadModels` has no
+   staleness guard when switching provider (`SettingsClaude.tsx`); `aria-label="Close"` is English and only 5 of 32 modals set
+   `dirty` (`ui.tsx:293`); pdf.js runs in a utility process that is isolated but not OS-sandboxed (keep it updated).
+   *Optimisations:* `findRecurring` runs several times per Overview refresh (buildFacts, listAlerts, alerts.list, recurring.list;
+   each scans about 430 days), `insights.get` reruns on every `data.changed` with 4 budget queries and 2 reviews; `chargedTwice`
+   does one query per fixed cost; zod validates up to 300k PDF items on the main thread (cap lower); PDF bytes are copied
+   about 4 times; main chunk `app-*.js` is 1.8 MB (lazy `import()` for assistant and pdf; measure first); "Install and restart"
+   still exports and encrypts the backup on the main thread (move to a worker); model lists are re-fetched on every reload click.
+   *Clean-up:* fence-stripping and JSON parsing is duplicated 5 times (`parsePlan`, `parsePdfPlan`, `parseSuggestions`,
+   `json.ts` `cutOff`, `openai.ts:464`: one `parseJsonAnswer`); duplicated `CHARS_PER_TOKEN`, `median`, `addDays` and the
+   language-label lookup; two different `parseDate` functions (`shared/format.ts` and `core/csv/normalize.ts:60`: rename one);
+   unused parameter in `pdfAssistPreview`, pointless `export { PDF_LIMITS }`, overlapping `READER_ERROR_CODES` and `PDF_ERROR_CODES`,
+   comments still saying "Settings -> Claude"; English-only messages from the main process (`pdf.ts:135-155`, notes in `csv.ts`);
+   long files to split (`Settings.tsx` 826 lines, `Import.tsx` 746, `core/import.ts` 710, `ipc.ts` 590, `SettingsClaude.tsx` 439);
+   a fixed cost shows twice for 8 s after a hide (`Recurring.tsx`); 13 `eslint-disable` comments, mostly exhaustive-deps.
+   *Tests:* `tests/extract.test.ts:77-85` accepts any outcome and only fails on time; `tests/pdf-assist.test.ts:124` does not prove
+   the parts run side by side; missing tests for a dropped sign, a job restart, lock during a job; no component tests (node
+   environment); nothing tests `reader-process.ts` against the real utility process and packaged path (only an installer
+   build shows a packaging mistake).
 
 ## Later, maybe
 

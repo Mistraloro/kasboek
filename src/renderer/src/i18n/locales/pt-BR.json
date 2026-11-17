@@ -28,10 +28,10 @@
     "reachOther_other": "{{count}} já estão em outra categoria e ficam lá."
   },
   "import": {
-    "subtitle": "Traga os arquivos CSV do seu banco. Nada é salvo sem a sua aprovação.",
-    "dropTitle": "Solte aqui um arquivo CSV",
+    "subtitle": "Traga arquivos CSV ou extratos em PDF do seu banco. Nada é salvo sem a sua aprovação.",
+    "dropTitle": "Solte aqui um arquivo CSV ou um extrato em PDF",
     "dropBody": "O Kasboek lê o arquivo, reconhece o formato, marca duplicados e problemas e sugere categorias. Você revisa tudo antes de ser salvo.",
-    "choose": "Escolher arquivo CSV…",
+    "choose": "Escolher arquivo CSV ou PDF…",
     "undo": "Desfazer",
     "reviewTitle": "Revisar importação",
     "source": {
@@ -51,14 +51,14 @@
     },
     "invert": "Inverter sinais (as saídas são positivas neste arquivo)",
     "reset": "Redefinir",
-    "fixDate": "Digite a data (DD/MM/AAAA)",
+    "fixDate": "Digite a data ({{format}})",
     "fixAmount": "Digite o valor, negativo para uma saída (ex.: -12,50)",
     "checking": "{{ai}} está revisando…",
     "checked": "{{ai}} revisou o arquivo. Veja as notas por cima das linhas.",
-    "checkPrivacy": "Envia as linhas deste arquivo para {{aiCompany}}.",
+    "checkPrivacy": "Mostra o que é enviado para {{aiCompany}} e pergunta antes da primeira verificação.",
     "claudeOff": "Configure um assistente nas Configurações para revisar arquivos.",
     "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação.",
-    "checkPrivacyLocal": "Envia as linhas deste arquivo para {{ai}} neste computador ou nesta rede.",
+    "checkPrivacyLocal": "Mostra o que é enviado para {{ai}} neste computador ou nesta rede e pergunta antes da primeira verificação.",
     "checkSlowHint": "Os arquivos grandes são revistos por partes, algumas de cada vez. Cada parte para sozinha ao fim de 4 minutos.",
     "allKnown": "Tudo neste arquivo já está no Kasboek ({{from}} – {{to}}).",
     "undoPart": "Desfazer",
@@ -66,17 +66,41 @@
       "nothingChanged": "Nada neste arquivo precisava de mudar.",
       "saved": "Salvo: {{rules}} regra(s) e {{count}} movimento(s) classificado(s). Anular a verificação não os anula; altere-os em Regras ou Movimentos."
     },
-    "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…"
+    "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…",
+    "lockedWhileAssisting": "{{ai}} está trabalhando nestas linhas. Alterações feitas agora seriam perdidas, então a edição fica desativada até terminar.",
+    "pdf": {
+      "ai": {
+        "replaces": "As alterações que você fez até agora nas linhas são substituídas pela leitura do assistente.",
+        "edited_one": "{{count}} linha que você editou será substituída.",
+        "edited_many": "{{count}} linhas que você editou serão substituídas.",
+        "edited_other": "{{count}} linhas que você editou serão substituídas."
+      }
+    },
+    "consent": {
+      "title": "Verificar este arquivo com {{ai}}",
+      "intro": "{{ai}} pode verificar este arquivo: ler as colunas, apontar linhas que parecem erradas e sugerir categorias, nomes legíveis e regras.",
+      "sendsRemote": "Isto envia para {{aiCompany}} os nomes e descrições dos pagamentos deste arquivo e das suas transações ainda sem categoria, as primeiras linhas do arquivo como estão escritas, a lista das suas categorias e regras, e as anotações que o assistente memorizou. Os números de conta e de cartão ficam ocultos.",
+      "sendsLocal": "Isto envia para {{ai}} neste computador ou nesta rede os nomes e descrições dos pagamentos deste arquivo e das suas transações ainda sem categoria, as primeiras linhas do arquivo como estão escritas, a lista das suas categorias e regras, e as anotações que o assistente memorizou. Os números de conta e de cartão ficam ocultos. Nada vai para um serviço online.",
+      "notSent": "Não é enviado: o resto do arquivo, as transações que já têm categoria, as suas outras contas.",
+      "again": "Perguntamos de novo se você trocar de provedor, endereço ou modelo. Nada é salvo antes de você ver o resultado.",
+      "stats": "Linhas: {{rows}} · cerca de {{tokens}} tokens · solicitações: {{parts}} · {{address}} · {{model}}",
+      "show": "Mostrar exatamente o que é enviado",
+      "send": "Enviar para {{aiCompany}}",
+      "sendLocal": "Enviar para {{ai}}"
+    }
   },
   "assistant": {
     "example3": "Coloque meus movimentos sem categoria na categoria certa.",
     "setupBody": "Conecte um assistente de IA (Claude, Mistral, Gemini, um modelo local e outros) para fazer perguntas sobre o seu orçamento, definir orçamentos, classificar movimentos e revisar arquivos CSV.",
     "thinking": "{{ai}} está trabalhando…",
+    "thinkingTool": "{{ai}} está trabalhando… ({{tool}})",
+    "waitingApproval": "Aguardando a sua aprovação acima.",
     "tool": {
       "settings_get": "Configurações",
       "import_raw": "Arquivo CSV"
     },
     "thinkingLive": "Pensando…",
+    "thinkingJump": "Ir para o mais recente",
     "checkRunning": "Revisando {{file}}…",
     "checkRunningGroups": "Revisando {{file}}: {{done}} de {{total}} grupos…",
     "checkDone": "{{file}} revisado: {{categorised}} classificados, {{renamed}} renomeados, {{rules}} regras e {{existing}} grupos anteriores sugeridos. Veja a tela de importação."
@@ -132,6 +156,7 @@
     "newPassword": "Nova senha",
     "repeatPassword": "Repita a senha",
     "currentPassword": "Senha atual",
+    "holdToShowPassword": "Mantenha pressionado para mostrar a senha",
     "password": "Senha",
     "passwordMismatch": "As senhas não coincidem.",
     "passwordChanged": "Senha alterada.",
@@ -199,12 +224,27 @@
     "unconvertedHint": "Ficam fora destes totais. Adicione taxas nas Configurações."
   },
   "ai": {
+    "chatTitle": "Modelo do chat",
+    "chatDesc": "Responde às suas perguntas e faz o que você pede no chat.",
+    "fileTitle": "Modelo para ler arquivos",
+    "fileDesc": "Usado quando o assistente confere uma importação CSV ou lê um extrato em PDF. Aqui um modelo mais barato basta.",
+    "pdfDesc": "Usado quando o assistente lê para você o texto de um extrato em PDF. Um modelo mais barato funciona bem aqui.",
+    "defaultModel": "Padrão ({{model}})",
+    "noModelList": "Este fornecedor não lista os seus modelos. Digite o nome do modelo como o fornecedor o escreve.",
+    "reloadHint": "Use o botão de recarregar para buscar a lista de modelos.",
+    "reloadModels": "Recarregar modelos",
+    "typeModel": "Digite o nome do modelo",
+    "filterModels": "Digite para filtrar os modelos",
+    "modelsShowing_one": "Mostrando {{shown}} de {{count}} modelo",
+    "modelsShowing_other": "Mostrando {{shown}} de {{count}} modelos",
+    "clearFilter": "Limpar o filtro",
+    "noModelMatch": "Nenhum modelo corresponde",
+    "useTyped": "Usar «{{name}}»",
     "hint": "Escolha a IA que responde na conversa do Kasboek e revisa arquivos CSV. Usa a sua própria conta e chave nesse fornecedor.",
     "providerCloud": "Funciona em {{company}}, com a sua própria chave API e cobrança.",
     "baseUrlLocalHint": "Deixe vazio para o predefinido ({{url}}). Altere-o se o servidor funcionar em outra porta ou computador.",
     "keyHint": "A sua chave API da {{name}}, salva criptografada na base de dados.",
     "keyHelp": "Crie uma chave na sua conta da {{name}} e cole-a aqui. O Kasboek a verifica uma vez com a {{name}}.",
-    "loadingModels": "Carregando…",
     "note": "Escolha um modelo que suporte ferramentas (function calling); modelos locais pequenos podem responder de forma menos confiável. As alterações propostas pelo assistente continuam aguardando a sua aprovação."
   },
   "accountKind": {
@@ -283,6 +323,7 @@
     }
   },
   "permissions": {
+    "trustNote": "Continua a perguntar primeiro: salvar uma importação lida de um PDF e as alterações pedidas através do Claude Desktop ou do Claude Code (a não ser que você desligue isso abaixo). O assistente nunca pode alterar configurações, chaves, endereços nem as suas próprias permissões.",
     "kind": {
       "memory": "Lembrar"
     },
@@ -308,6 +349,7 @@
     "current": "Você tem a versão {{version}}.",
     "downloading": "Baixando… {{percent}} % de {{size}}",
     "readyRestart": "Baixado e verificado. O Kasboek fecha, mostra o progresso da instalação em uma janela própria e volta a abrir. Demora cerca de um minuto.",
+    "preparing": "Preparando a atualização… Primeiro uma cópia de segurança dos seus dados.",
     "installing": "Instalando… O Kasboek fecha, mostra o progresso e volta a abrir em instantes.",
     "helper": {
       "waiting": "Aguardando o Kasboek fechar…",
@@ -339,7 +381,7 @@
     "introBody": "Um aplicativo de orçamento que guarda as suas finanças no seu próprio computador. Algumas escolhas e pronto.",
     "introPrivate": "Privado desde a origem",
     "introPrivateHint": "Os seus dados são criptografados e ficam neste computador. Sem conta, sem servidor do Kasboek.",
-    "introImportHint": "Solte uma exportação CSV do seu banco; o Kasboek mostra cada linha antes de salvar alguma coisa.",
+    "introImportHint": "Solte um arquivo CSV ou um extrato em PDF do seu banco; o Kasboek mostra cada linha antes de salvar alguma coisa.",
     "introPlan": "Planejar e acompanhar",
     "introPlanHint": "Orçamentos, custos fixos, metas de economia, uma visão anual e o seu patrimônio.",
     "basicsBody": "Você pode alterar tudo isso mais tarde nas Configurações.",
@@ -365,7 +407,7 @@
       "recurring": "Assinaturas, aluguel, seguros e salário, encontrados nos seus movimentos, com o que ainda falta pagar este mês.",
       "goals": "Economize para algo: um valor até uma data, com o que deve reservar por mês.",
       "year": "O ano inteiro por mês e categoria, com exportação CSV e PDF para os impostos ou o contador.",
-      "import": "Traga uma exportação CSV do seu banco. Deixe o assistente verificá-la antes de salvar.",
+      "import": "Traga um arquivo CSV ou um extrato em PDF do seu banco. Deixe o assistente verificá-lo antes de salvar.",
       "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo."
     }
   },
@@ -375,5 +417,10 @@
     "user": "Nome de usuário",
     "password": "Senha",
     "passwordHint": "De preferência uma senha de aplicativo criada para o Kasboek. Fica salva nos seus dados criptografados, só neste computador."
+  },
+  "insights": {
+    "consent": {
+      "stats": "Cerca de {{tokens}} tokens · 1 solicitação · {{address}} · {{model}}"
+    }
   }
 }

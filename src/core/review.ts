@@ -9,11 +9,10 @@ import type { Db } from './database'
 import { listBudgets, monthSummary } from './finance'
 import { getSettings } from './settings'
 
-export function monthReview(db: Db, month: string): MonthReview {
-  const main = getSettings(db).currency
-  const now = monthSummary(db, month)
-  const before = [1, 2, 3].map((n) => monthSummary(db, addMonths(month, -n)))
-  const avg = (pick: (s: ReturnType<typeof monthSummary>) => number): number => Math.round(before.reduce((t, s) => t + pick(s), 0) / before.length)
+const monthsBefore = (db: Db, month: string): ReturnType<typeof monthSummary>[] => [1, 2, 3].map((n) => monthSummary(db, addMonths(month, -n)))
+
+/** Each spending category of `month` against its average of the three months before, the biggest change first (the top 15). */
+export function categoryTrend(db: Db, month: string, now = monthSummary(db, month), before = monthsBefore(db, month)): MonthReview['categories'] {
   const names = new Map<number | null, string>()
   const spent = (s: ReturnType<typeof monthSummary>): Map<number | null, number> => {
     for (const c of s.byCategory) names.set(c.categoryId, c.name)
@@ -22,7 +21,7 @@ export function monthReview(db: Db, month: string): MonthReview {
   const nowBy = spent(now)
   const beforeBy = before.map(spent)
   const ids = new Set([...nowBy.keys(), ...beforeBy.flatMap((m) => [...m.keys()])])
-  const categories = [...ids]
+  return [...ids]
     .map((id) => {
       const cents = nowBy.get(id) ?? 0
       const average = Math.round(beforeBy.reduce((t, m) => t + (m.get(id) ?? 0), 0) / beforeBy.length)
@@ -30,6 +29,15 @@ export function monthReview(db: Db, month: string): MonthReview {
     })
     .filter((c) => c.cents || c.averageCents)
     .sort((a, b) => Math.abs(b.changeCents) - Math.abs(a.changeCents))
+    .slice(0, 15)
+}
+
+export function monthReview(db: Db, month: string): MonthReview {
+  const main = getSettings(db).currency
+  const now = monthSummary(db, month)
+  const before = monthsBefore(db, month)
+  const avg = (pick: (s: ReturnType<typeof monthSummary>) => number): number => Math.round(before.reduce((t, s) => t + pick(s), 0) / before.length)
+  const categories = categoryTrend(db, month, now, before)
   const overBudget = listBudgets(db, month)
     .filter((b) => b.budgetCents !== null && b.spentCents > b.budgetCents)
     .map((b) => ({ categoryId: b.categoryId, name: b.name, budgetCents: b.budgetCents!, spentCents: b.spentCents }))
@@ -74,7 +82,7 @@ export function monthReview(db: Db, month: string): MonthReview {
     averageIncomeCents: avg((s) => s.incomeCents),
     averageSpendingCents: avg((s) => s.spendingCents),
     uncategorised: now.uncategorized,
-    categories: categories.slice(0, 15),
+    categories,
     overBudget,
     unusual
   }

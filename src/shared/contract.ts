@@ -6,17 +6,19 @@
  */
 import { z } from 'zod'
 import { ASSISTANT_MODELS } from './types'
+import type { ErrorDetails } from './error-text'
 import { mappingSchema } from './import-mapping'
 import { MONTH } from './month'
 import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS, GROUP_SEPARATORS, GROUPINGS, NEGATIVE_STYLES, TIME_FORMATS } from './format'
 import { checkPassword } from './password'
 import { CURRENCIES } from './currency'
 import { LANGUAGE_CODES, type LanguageCode } from './languages'
-import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
+import { checkBaseUrl, isProviderId, type ProviderId } from './ai-providers'
 import { EFFORTS, REASONING_LEVELS } from './reasoning'
 import { SENSITIVE_MESSAGE, looksSensitive } from './sensitive'
 import { PERMISSION_KINDS, PERMISSION_MODES, type PermissionKind } from './permissions'
 import { GRAPHICS_CHOICES } from './graphics'
+import { PageContextSchema } from './page-context'
 
 const currency = z
   .string()
@@ -24,9 +26,13 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, InsightsPreview, InsightsView, McpClientsSeen, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, CheckAssistPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
+
+/** A step name for startup.log: lower-case words only, so the log can never hold anything else. */
+export const MILESTONE_NAME = /^[a-z0-9 _-]{1,40}$/
+const milestoneName = z.string().regex(MILESTONE_NAME)
 const empty = z.object({}).strict()
 const password = z
   .string()
@@ -39,6 +45,16 @@ const id = z.number().int().positive()
 const fxCostPct = z.number().min(0).max(20).nullable()
 const cents = z.number().int().min(-1e12).max(1e12)
 const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.')
+
+/** An AI provider: a built-in one or a custom one (custom-…). */
+const providerId = z.custom<ProviderId>(isProviderId, 'Unknown provider.')
+const providerName = z.string().trim().min(1).max(60)
+/** The address of an AI server; every custom provider's address passes the same check (https, or http on this computer or network). */
+const baseUrl = z
+  .string()
+  .trim()
+  .max(300)
+  .refine((u) => !checkBaseUrl(u), { error: (iss) => checkBaseUrl(String(iss.input)) ?? 'Invalid address.' })
 
 /** Where to sync: nothing (a folder, chosen in a dialog) or a WebDAV server. */
 const syncPlace = z
@@ -59,6 +75,8 @@ export const contract = {
   /* ----- App & preferences (available while locked) ----- */
   'app.info': { input: empty, output: out<AppInfo>() },
   'app.ready': { input: empty, output: out<{ ok: true }>() },
+  /** A timing fact from the page for startup.log (when the page got to a step). Only a fixed kind of text, never data. */
+  'app.milestone': { input: z.object({ name: milestoneName, ms: z.number().finite().min(0).max(86_400_000) }).strict(), output: out<{ ok: true }>() },
   /** Start Kasboek again (after changing how it draws). */
   'app.restart': { input: empty, output: out<{ ok: true }>() },
   'prefs.get': { input: empty, output: out<Prefs>() },
@@ -84,7 +102,8 @@ export const contract = {
         updateCheck: z.boolean(),
         welcomeDone: z.boolean(),
         graphics: z.enum(GRAPHICS_CHOICES),
-        keepInTray: z.boolean()
+        keepInTray: z.boolean(),
+        insights: z.boolean()
       })
       .partial()
       .strict(),
@@ -159,7 +178,7 @@ export const contract = {
   'assistant.status': { input: empty, output: out<AssistantStatus>() },
   'assistant.setKey': {
     input: z
-      .object({ apiKey: z.string().trim().min(1).max(500), provider: z.enum(PROVIDER_IDS).optional() })
+      .object({ apiKey: z.string().trim().min(1).max(500), provider: providerId.optional() })
       .strict()
       .superRefine((v, ctx) => {
         if ((v.provider ?? 'anthropic') === 'anthropic' && !/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(v.apiKey))
@@ -170,6 +189,12 @@ export const contract = {
   },
   'assistant.models': { input: empty, output: out<string[]>() },
   'assistant.clearKey': { input: empty, output: out<AssistantStatus>() },
+  'assistant.addProvider': {
+    input: z.object({ name: providerName, baseUrl, chatModel: z.string().trim().max(200), csvModel: z.string().trim().max(200) }).strict(),
+    output: out<Settings>()
+  },
+  'assistant.renameProvider': { input: z.object({ id: providerId, name: providerName }).strict(), output: out<Settings>() },
+  'assistant.removeProvider': { input: z.object({ id: providerId }).strict(), output: out<Settings>() },
   'assistant.configure': {
     input: z
       .object({
@@ -187,25 +212,23 @@ export const contract = {
           })
           .strict(),
         mcpEnabled: z.boolean(),
-        aiProvider: z.enum(PROVIDER_IDS),
-        aiBaseUrl: z
-          .string()
-          .trim()
-          .max(300)
-          .refine((u) => !checkBaseUrl(u), { error: (iss) => checkBaseUrl(String(iss.input)) ?? 'Invalid address.' })
-          .nullable(),
+        pageContextEnabled: z.boolean(),
+        aiProvider: providerId,
+        aiBaseUrl: baseUrl.nullable(),
         aiChatModel: z.string().trim().max(200),
-        aiCsvModel: z.string().trim().max(200)
+        aiCsvModel: z.string().trim().max(200),
+        aiPdfModel: z.string().trim().max(200)
       })
       .partial()
       .strict(),
     output: out<Settings>()
   },
-  'assistant.send': { input: z.object({ text: z.string().trim().min(1).max(8000) }).strict(), output: out<AssistantStatus>() },
+  'assistant.send': { input: z.object({ text: z.string().trim().min(1).max(8000), pageContext: PageContextSchema.optional() }).strict(), output: out<AssistantStatus>() },
   'assistant.confirm': { input: z.object({ id: z.string().uuid(), approve: z.boolean() }).strict(), output: out<AssistantStatus>() },
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },
-  'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'import.assist': { input: z.object({ sessionId: z.string().uuid(), consent: z.literal(true).optional() }).strict(), output: out<ImportPreview>() },
+  'import.assistPreview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<CheckAssistPreview>() },
   'export.csv': {
     input: z
       .object({
@@ -221,8 +244,10 @@ export const contract = {
   'export.pdf': { input: z.object({ html: z.string().max(2_000_000), defaultName: z.string().max(120) }).strict(), output: out<{ file: string | null }>() },
   'import.assistStatus': {
     input: z.object({ sessionId: z.string().uuid() }).strict(),
-    output: out<{ running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()
+    output: out<{ kind: 'check' | 'pdf'; running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()
   },
+  'import.pdfAssistPreview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<PdfAssistPreview>() },
+  'import.pdfAssist': { input: z.object({ sessionId: z.string().uuid(), consent: z.literal(true) }).strict(), output: out<ImportPreview>() },
   'import.assistCancel': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
   'mcp.setupStatus': { input: empty, output: out<McpSetupStatus>() },
   /** When each Claude app last reached Kasboek (cheap; polled while the setup is on screen). */
@@ -482,9 +507,49 @@ export const contract = {
     input: z.object({ month }).strict(),
     output: out<MonthReview>()
   },
+  'insights.get': {
+    description: 'Tips for the Overview found locally from the data of one month (YYYY-MM). Not offered to the assistant.',
+    input: z.object({ month }).strict(),
+    output: out<InsightsView>()
+  },
+  'insights.feedback': {
+    description: 'Remember on this computer what the person did with a tip (hidden, not useful, useful). Never synced.',
+    input: z.object({ key: z.string().trim().min(1).max(300), verdict: z.enum(['dismissed', 'not_useful', 'useful']) }).strict(),
+    output: out<{ ok: true }>()
+  },
+  'insights.preview': {
+    description: 'The exact text that would be sent to the assistant to write tips for one month. Not offered to the assistant.',
+    input: z.object({ month }).strict(),
+    output: out<InsightsPreview>()
+  },
+  'insights.run': {
+    description: 'Have the assistant write tips for one month from the local facts; consent: true records the person’s agreement for this provider. Not offered to the assistant.',
+    input: z.object({ month, consent: z.literal(true).optional() }).strict(),
+    output: out<InsightsView>()
+  },
+  'insights.cancel': {
+    description: 'Stop the assistant while it writes tips.',
+    input: empty,
+    output: out<{ ok: true }>()
+  },
+  'insights.status': {
+    description: 'Whether the assistant is writing tips now, for which month and since when. Not offered to the assistant.',
+    input: empty,
+    output: out<{ running: boolean; month: string | null; startedAt: string | null }>()
+  },
+  'insights.restoreDismissed': {
+    description: 'Show the tips the person hid on this computer again.',
+    input: empty,
+    output: out<{ restored: number }>()
+  },
   'recurring.list': {
     description: 'Payments and income that come back at a steady rhythm (subscriptions, rent, insurance, energy, salary), found from the last 14 months: usual amount, rhythm, last and next date, whether it is paid, due or late this month, and price changes. Plus fixed costs per month and what is still due this month.',
     input: empty,
+    output: out<RecurringSummary>()
+  },
+  'recurring.hide': {
+    description: 'Stop counting a detected fixed cost or fixed income (by its key from recurring_list) when the person says it is not fixed, or count it again with hidden: false. Hidden items are left out of fixed-cost totals and balance warnings; transactions are not changed.',
+    input: z.object({ key: z.string().trim().regex(/^(in|out):/).max(200), hidden: z.boolean().default(true) }).strict(),
     output: out<RecurringSummary>()
   },
   'transfers.find': {
@@ -562,6 +627,11 @@ export const contract = {
     input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(14_000_000), accountId: id }).strict(),
     output: out<ImportPreview>()
   },
+  'import.analyzePdf': {
+    input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(14_000_000), accountId: id }).strict(),
+    output: out<ImportPreview>()
+  },
+  'import.pdfCancel': { input: empty, output: out<{ ok: true }>() },
   'import.preview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
   'import.current': {
     description:
@@ -639,6 +709,7 @@ export type OpOutput<K extends OpName> = Contract[K]['output']
 export const PUBLIC_OPS: readonly OpName[] = [
   'app.info',
   'app.ready',
+  'app.milestone',
   'prefs.get',
   'prefs.update',
   'auth.status',
@@ -654,7 +725,7 @@ export const PUBLIC_OPS: readonly OpName[] = [
 ]
 
 /** Result sent back over IPC. Errors are values, not thrown across the bridge. */
-export type OpResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } }
+export type OpResult<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string; details?: ErrorDetails } }
 
 export interface KasboekBridge {
   invoke<K extends OpName>(op: K, input: OpInput<K>): Promise<OpResult<OpOutput<K>>>
@@ -668,10 +739,12 @@ export type AppEvent =
   | { type: 'auth.refresh' }
   | { type: 'assistant.update'; status: AssistantStatus }
   | { type: 'import.updated' }
+  | { type: 'insights.updated'; month: string }
   | { type: 'settings.changed' }
   | { type: 'update.changed'; status: UpdateStatus }
   | { type: 'import.checkProgress'; sessionId: string; groupsDone: number; groupsTotal: number; partsTotal: number }
-  | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string } | null }
+  | { type: 'import.pdfProgress'; page: number; pages: number }
+  | { type: 'import.checkDone'; sessionId: string; error: { code: string; message: string; details?: ErrorDetails } | null }
   | { type: 'sync.updated'; status: SyncStatus }
   | { type: 'data.changed'; actor: 'user' | 'assistant' | 'system' }
   | { type: 'mcp.request'; id: string; op: string; summary: string }

@@ -7,6 +7,7 @@ import { addMonths, localToday, monthOf } from '@shared/month'
 import type { RecurringItem, RecurringSummary } from '@shared/types'
 import { groupKey } from './assist-plan'
 import type { Db } from './database'
+import { AppError } from './errors'
 
 const RHYTHMS: { frequency: RecurringItem['frequency']; days: number; months: number; perMonth: number }[] = [
   { frequency: 'weekly', days: 7, months: 0, perMonth: 52 / 12 },
@@ -15,7 +16,7 @@ const RHYTHMS: { frequency: RecurringItem['frequency']; days: number; months: nu
   { frequency: 'yearly', days: 365, months: 12, perMonth: 1 / 12 }
 ]
 
-const median = (xs: number[]): number => {
+export const median = (xs: number[]): number => {
   const s = [...xs].sort((a, b) => a - b)
   const m = s.length >> 1
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2
@@ -49,7 +50,23 @@ interface Row {
   account_name: string
 }
 
+/**
+ * The last result per database, valid while nothing in it changed (SQLite counts the rows this connection
+ * changed, so a hidden mark shows at once) and for the same day. Scanning 430 days of payments takes a
+ * moment on a big file, and one refresh of the Overview asks several times. Treat the result as read-only.
+ */
+const kept = new WeakMap<Db, { key: string; summary: RecurringSummary }>()
+
 export function findRecurring(db: Db, today = localToday()): RecurringSummary {
+  const key = `${today}|${(db.prepare('SELECT total_changes() AS n').get() as { n: number }).n}`
+  const hit = kept.get(db)
+  if (hit?.key === key) return hit.summary
+  const summary = scanRecurring(db, today)
+  kept.set(db, { key, summary })
+  return summary
+}
+
+function scanRecurring(db: Db, today: string): RecurringSummary {
   const since = addDays(today, -430)
   const rows = db
     .prepare(
@@ -115,11 +132,32 @@ export function findRecurring(db: Db, today = localToday()): RecurringSummary {
     })
   }
   items.sort((a, b) => Math.abs(b.monthlyCents) - Math.abs(a.monthlyCents))
-  const out = items.filter((i) => i.direction === 'out')
+  const hiddenKeys = new Set((db.prepare('SELECT key FROM recurring_marks WHERE hidden = 1').all() as { key: string }[]).map((r) => r.key))
+  const hidden = items.filter((i) => hiddenKeys.has(i.key))
+  const counted = items.filter((i) => !hiddenKeys.has(i.key))
+  const out = counted.filter((i) => i.direction === 'out')
   return {
-    items,
+    items: counted,
+    hidden,
     monthlyOutCents: -out.reduce((t, i) => t + i.monthlyCents, 0),
-    monthlyInCents: items.filter((i) => i.direction === 'in').reduce((t, i) => t + i.monthlyCents, 0),
+    monthlyInCents: counted.filter((i) => i.direction === 'in').reduce((t, i) => t + i.monthlyCents, 0),
     dueThisMonthCents: -out.filter((i) => i.status === 'due' || i.status === 'late').reduce((t, i) => t + i.typicalCents, 0)
   }
+}
+
+/**
+ * Stops counting a detected item (or counts it again). Only items that are detected now can be
+ * hidden, so a made-up key does nothing. A mark is never deleted: for sync a deleted row stays
+ * deleted on every computer, so showing again sets `hidden` back to 0 instead.
+ */
+export function setRecurringHidden(db: Db, key: string, hidden: boolean, today = localToday()): RecurringSummary {
+  if (hidden) {
+    const found = findRecurring(db, today)
+    if (![...found.items, ...found.hidden].some((i) => i.key === key)) throw new AppError('recurring.not_found', 'That fixed cost is not (or no longer) found.')
+  } else if (!db.prepare('SELECT 1 FROM recurring_marks WHERE key = ?').get(key)) return findRecurring(db, today)
+  db.prepare(
+    `INSERT INTO recurring_marks (key, hidden) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET hidden = excluded.hidden, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`
+  ).run(key, hidden ? 1 : 0)
+  return findRecurring(db, today)
 }

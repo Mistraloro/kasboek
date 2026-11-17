@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { errText } from '../pages/auth/parts'
 import { useToast } from './Toast'
-import { Button, Field, Input, Modal } from './ui'
+import { Button, Field, Input, Modal, PasswordInput } from './ui'
 
 export interface WebDavInput {
   url: string
@@ -43,7 +43,7 @@ export function WebDavModal({ open, title, submit, onClose, onSubmit }: { open: 
         </Field>
         <Field label={t('webdav.user')}>{(id) => <Input id={id} value={w.user} onChange={(e) => setW({ ...w, user: e.target.value })} autoComplete="username" spellCheck={false} />}</Field>
         <Field label={t('webdav.password')} hint={t('webdav.passwordHint')}>
-          {(id) => <Input id={id} type="password" value={w.password} onChange={(e) => setW({ ...w, password: e.target.value })} autoComplete="current-password" />}
+          {(id) => <PasswordInput id={id} value={w.password} onChange={(e) => setW({ ...w, password: e.target.value })} autoComplete="current-password" />}
         </Field>
         <div className="mt-1 flex justify-end gap-2">
           <Button type="button" onClick={close} disabled={busy}>{t('settings.cancel')}</Button>

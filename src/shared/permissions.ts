@@ -11,7 +11,7 @@
 export const PERMISSION_KINDS = [
   { id: 'categorise', ops: ['transactions.categorize', 'transactions.edit', 'transactions.rename', 'transactions.split', 'transfers.pair', 'transfers.setCost'], risk: 'low' },
   { id: 'rules', ops: ['rules.create', 'rules.update'], risk: 'low' },
-  { id: 'organise', ops: ['categories.create', 'budgets.set', 'goals.create'], risk: 'low' },
+  { id: 'organise', ops: ['categories.create', 'budgets.set', 'goals.create', 'recurring.hide'], risk: 'low' },
   { id: 'balances', ops: ['balances.set', 'valuations.set', 'fx.setRate'], risk: 'high' },
   { id: 'deleteRules', ops: ['rules.delete'], risk: 'high' },
   { id: 'accounts', ops: ['accounts.create'], risk: 'high' },
@@ -55,12 +55,15 @@ function size(input: unknown): number {
 }
 
 /**
- * True when the change must wait for the person: always for an unknown kind, for Claude apps
- * (unless allowed), and for large changes outside "trust"; otherwise as the mode or rule says.
+ * True when the change must wait for the person: always for an unknown kind, for saving a PDF
+ * import, for Claude apps (unless allowed), and for large changes outside "trust"; otherwise as the
+ * mode or rule says.
  */
-export function needsApproval(p: PermissionSettings, op: string, input: unknown, source: 'chat' | 'mcp'): boolean {
+export function needsApproval(p: PermissionSettings, op: string, input: unknown, source: 'chat' | 'mcp', context: { pdfImport?: boolean } = {}): boolean {
   const kind = kindOf(op)
   if (!kind) return true
+  // Text read from a PDF can be wrong in ways a CSV can't: saving it always waits for the person, even in "trust".
+  if (op === 'import.commit' && context.pdfImport) return true
   if (source === 'mcp' && p.mcpAlwaysAsk) return true
   if (p.mode === 'ask') return true
   if (p.mode !== 'trust' && size(input) > BULK_LIMIT) return true

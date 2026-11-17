@@ -1,5 +1,5 @@
 import type { GraphicsChoice, GraphicsStatus } from './graphics'
-import type { ProviderId } from './ai-providers'
+import type { ProviderId, ProviderSettings } from './ai-providers'
 import type { FormatPrefs } from './format'
 import type { LanguageCode } from './languages'
 import type { Effort, ReasoningLevel } from './reasoning'
@@ -160,6 +160,10 @@ export interface Settings {
   /** Model names for OpenAI-compatible providers (Claude uses chatModel/csvModel). */
   aiChatModel: string
   aiCsvModel: string
+  /** The model that reads PDF statements; empty = Haiku for Claude, else the model for reading files. */
+  aiPdfModel: string
+  /** The saved values of the providers that are not in use (address, models, and a custom one's name), by provider id. */
+  aiProviders: Record<string, ProviderSettings>
   /** Saved searches on the Transactions page (this computer only). */
   savedSearches: SavedSearch[]
   /** Other providers: how much the model reasons, in the chat and in CSV checks. */
@@ -169,6 +173,20 @@ export interface Settings {
   permissions: PermissionSettings
   /** The assistant remembers facts and preferences between conversations (this computer only). */
   memoryEnabled: boolean
+  /** The chat tells the assistant which page is open (see shared/page-context.ts). */
+  pageContextEnabled: boolean
+  /**
+   * The person agreed to send the tips summary to this AI provider at this address with this model (see
+   * core/insight-plan.ts for what is sent); null = not asked yet. `baseUrl` (normalised) and `model` are
+   * missing in records written before they were kept: those count as not agreed.
+   */
+  aiInsightsConsent: { provider: string; version: number; at: string; baseUrl?: string; model?: string } | null
+  /**
+   * The person agreed to send the rows of a CSV file to this AI provider at this address with this model
+   * for "Check with AI" (see main/assistant/csv.ts for what is sent); null = not asked yet. A record that
+   * differs in any field, or is from an older list of what is sent, counts as not agreed.
+   */
+  aiCheckConsent: { provider: string; baseUrl: string; model: string; version: number; at: string } | null
 }
 
 /** Something the assistant remembers between conversations. */
@@ -200,6 +218,8 @@ export interface AssistantStatus {
   /** Who receives the data; null when the model runs on this computer or network. */
   company: string | null
   busy: boolean
+  /** What the assistant is doing while busy: waiting for the model, running a tool, or waiting for the person's approval. */
+  activity: { kind: 'model' } | { kind: 'tool'; tool: string } | { kind: 'approval' } | null
   messages: ChatMessage[]
   /** The chat model refused the reasoning setting, so it is sent without it. */
   reasoningUnsupported?: boolean
@@ -240,6 +260,8 @@ export interface Prefs {
   graphics: GraphicsChoice
   /** Closing the window keeps Kasboek running in the tray instead of quitting. Off unless chosen. */
   keepInTray: boolean
+  /** Show the Suggestions card on the Overview (tips found from the person's own data, nothing is sent anywhere). */
+  insights: boolean
   /** Set by Kasboek when the graphics card failed to show its window; "automatic" then draws in software. */
   graphicsFailed: boolean
 }
@@ -248,7 +270,7 @@ export interface Prefs {
 export type UpdateKind = 'msi' | 'appimage' | 'deb' | 'dmg'
 
 export interface UpdateStatus {
-  state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'installing' | 'opened' | 'error'
+  state: 'idle' | 'checking' | 'none' | 'available' | 'downloading' | 'ready' | 'preparing' | 'installing' | 'opened' | 'error'
   /** This version and the newest release. */
   current: string
   latest: string | null
@@ -426,8 +448,99 @@ export type Alert =
   | { kind: 'budget'; key: string; categoryId: number; name: string; budgetCents: number; spentCents: number; level: 'near' | 'over' }
   | { kind: 'balance'; key: string; accountId: number; name: string; currency: string; balanceCents: number; lowestCents: number; until: string; dueCents: number }
 
+/** What a tip on the Overview is about. */
+export type InsightKind =
+  | 'price_up'
+  | 'charged_twice'
+  | 'late'
+  | 'upcoming'
+  | 'over_budget'
+  | 'near_budget'
+  | 'category_up'
+  | 'unusual'
+  | 'no_budget'
+  | 'balance_low'
+  | 'subscriptions'
+
+/** One value of a tip. Money is in cents of its own currency, so it is never mixed with another. */
+export type InsightValue = { money: number; currency: string } | { date: string } | { count: number } | { text: string }
+
+/** A fact found from the person's own data. The tip texts are made from these on screen. */
+export interface InsightFact {
+  id: string
+  /** Stable for the same situation (same payee and month, same category and month), so a hidden tip stays hidden. */
+  key: string
+  kind: InsightKind
+  values: Record<string, InsightValue>
+  categoryId: number | null
+  recurringKey: string | null
+  /** The payments behind it (at most 20). */
+  transactionIds: number[]
+  /** How much money it is about, in cents of the main currency: the biggest come first. */
+  weight: number
+}
+
+/** A tip written by the assistant and checked by Kasboek. Numbers and dates in the texts are placeholders like {f3.amount}, filled in at display time. */
+export interface InsightSuggestion {
+  kind: InsightKind
+  severity: 'warning' | 'tip' | 'info'
+  /** Keys (not ids) of the facts it is about; the first decides the button. */
+  factKeys: string[]
+  title: string
+  body: string
+}
+
+/** The tips last written by the assistant for a month, kept on this computer. */
+export interface InsightsAi {
+  createdAt: string
+  providerName: string
+  model: string
+  language: string
+  /** The data changed, or the interface language did, since the tips were written. */
+  stale: 'data' | 'language' | null
+  suggestions: InsightSuggestion[]
+  /** The facts that were sent (the ids in the placeholders refer to them). */
+  facts: InsightFact[]
+}
+
+export interface InsightsView {
+  facts: InsightFact[]
+  ai: InsightsAi | null
+}
+
+/** Exactly what would be sent to the assistant to write tips. */
+export interface InsightsPreview {
+  text: string
+  approxTokens: number
+  facts: number
+  providerName: string
+  /** Who receives it; null when the model runs on this computer or network. */
+  company: string | null
+  /** Where it goes: the host of an online provider, the whole address of a local or custom one. */
+  address: string
+  model: string
+}
+
+/** Exactly what "Check with AI" would send for an open import. */
+export interface CheckAssistPreview {
+  /** Every request's text, the same as is sent; several requests are separated by a line. */
+  text: string
+  approxTokens: number
+  /** Rows of the file. */
+  rows: number
+  /** The text is sent in this many requests. */
+  parts: number
+  providerName: string
+  company: string | null
+  address: string
+  model: string
+}
+
 export interface RecurringSummary {
+  /** What counts as fixed (everything below is worked out from these). */
   items: RecurringItem[]
+  /** Detected, but the person said they are not fixed: left out of the totals and the warnings. */
+  hidden: RecurringItem[]
   /** Fixed costs and fixed income per month. */
   monthlyOutCents: number
   monthlyInCents: number
@@ -666,6 +779,22 @@ export interface ImportMapping {
   columns: ImportColumns
 }
 
+/** How a PDF statement's printed balances and the rows read from it agree (cents). */
+export interface Reconciliation {
+  openingCents: number | null
+  closingCents: number | null
+  /** Sum of the rows' amounts (rows the person skipped are left out). */
+  sumCents: number
+  /** Closing minus (opening plus sum); 0 when the rows add up. Null when a balance is missing. */
+  differenceCents: number | null
+  rowsChecked: number
+  /** Rows whose running balance doesn't follow from the one before. */
+  runningMismatches: number
+}
+
+/** A remark about a PDF statement, as a code the screen words in the person's language. */
+export type PdfNote = { code: 'other_account'; iban: string } | { code: 'dates_without_year' } | { code: 'pages_without_text'; count: number } | { code: 'no_table'; pages: number; lines: number }
+
 export interface ImportPreview {
   sessionId: string
   fileName: string
@@ -698,7 +827,33 @@ export interface ImportPreview {
     fileTo: string | null
   }
   notes: string[]
+  /** Rows the person changed by hand (what an assistant's check changed is not counted). */
+  edited: number
   check: CheckSummary | null
+  fileKind: 'csv' | 'pdf'
+  /** Only for a PDF statement. */
+  pdf: {
+    pages: number
+    readBy: 'kasboek' | 'assistant'
+    /** False when no table of transactions was found in the text. */
+    tableFound: boolean
+    reconciliation: Reconciliation | null
+    notes: PdfNote[]
+  } | null
+}
+
+/** What "Read with the assistant" would send for an open PDF statement. */
+export interface PdfAssistPreview {
+  /** Pages of text that are sent. */
+  pages: number
+  /** The text is sent in this many calls. */
+  parts: number
+  chars: number
+  approxTokens: number
+  /** Exactly the text that is sent, masked. */
+  text: string
+  /** Whether the part above the table of transactions (name and address blocks, the first page's header) is left out. */
+  preambleLeftOut: boolean
 }
 
 export interface ImportBatch {

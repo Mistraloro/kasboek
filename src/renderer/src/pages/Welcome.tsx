@@ -1,7 +1,7 @@
 import { ArrowDownToLine, Bot, Check, Coins, FileUp, FolderInput, FolderSync, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
+import { PROVIDER_IDS, PROVIDERS, isCustomId, presetFor, type ProviderId } from '@shared/ai-providers'
 import type { LanguageCode } from '@shared/languages'
 import type { BackupStatus, McpSetupStatus, Settings, SyncStatus } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
@@ -9,7 +9,7 @@ import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopRunning } 
 import { CurrencySelect } from '../components/CurrencySelect'
 import { useToast } from '../components/Toast'
 import { startTour } from '../components/Tour'
-import { Badge, Button, Field, Input, Segmented, Select, Switch, cx } from '../components/ui'
+import { Badge, Button, Field, PasswordInput, Segmented, Select, Switch, cx } from '../components/ui'
 import { LANGUAGES } from '../i18n'
 import { ApiError, call } from '../lib/api'
 import { FORMAT_PRESETS, formatDate as fmtDate, formatMoney as fmtMoney, formatTime as fmtTime, matchingPreset, type FormatPrefs } from '@shared/format'
@@ -120,7 +120,7 @@ export function Welcome() {
     void call('sync.status').then(setSync)
   }, [])
   const provider: ProviderId = settings?.aiProvider ?? 'anthropic'
-  const preset = PROVIDERS[provider]
+  const preset = presetFor(provider, settings?.aiProviders[provider]?.name)
   const hasKey = !!assistant?.keyHint && assistant.provider === provider
   const at = STEPS.indexOf(step)
   const go = (s: Step): void => setStep(s)
@@ -267,7 +267,8 @@ export function Welcome() {
             <Field label={t('welcome.provider')}>
               {(id) => (
                 <Select id={id} value={provider} onChange={(e) => chooseProvider(e.target.value as ProviderId)}>
-                  {PROVIDER_IDS.filter((p) => p !== 'custom').map((p) => <option key={p} value={p}>{PROVIDERS[p].name}</option>)}
+                  {isCustomId(provider) && <option value={provider}>{preset.name}</option>}
+                  {PROVIDER_IDS.map((p) => <option key={p} value={p}>{PROVIDERS[p].name}</option>)}
                 </Select>
               )}
             </Field>
@@ -276,7 +277,7 @@ export function Welcome() {
                 <p className="flex items-center gap-1.5 text-[13px] text-accent"><Check size={14} />{t('welcome.keySaved', { hint: assistant?.keyHint })}</p>
               ) : (
                 <Field label={t('claude.apiKey')} hint={preset.keyUrl ? <a className="font-medium text-accent hover:underline" href={preset.keyUrl} target="_blank" rel="noreferrer">{t('ai.getKey', { name: preset.name })}</a> : undefined}>
-                  {(id) => <Input id={id} type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} autoComplete="off" />}
+                  {(id) => <PasswordInput id={id} value={key} onChange={(e) => setKey(e.target.value)} placeholder={preset.keyPlaceholder ?? ''} autoComplete="off" />}
                 </Field>
               )
             ) : (

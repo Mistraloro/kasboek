@@ -2,21 +2,20 @@ import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { dispatch, onAppReady, registerIpc } from './ipc'
+import { cancelRunningJobs, dispatch, ensureSyncScheduler, onAppReady, registerIpc, startUpdateChecks } from './ipc'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
 import { hasTray, initTray, refreshTray, stopTray, syncTray } from './tray'
 import { quitWhenAllWindowsClosed, shouldHideOnClose } from '@shared/window-policy'
 import { startAlertChecks } from './notify'
-import { startUpdateChecks } from './update'
 import { isDevRendererUrl } from './trusted-url'
-import { closeSplash, splashMinimumElapsed, splashProgress } from './splash'
+import { closeSplash, splashMinimumElapsed, splashStep } from './splash'
+import { MAIN_WINDOW_SAFETY_MS, shouldShowMainWindow } from './startup-plan'
 import { startupLog, watchGraphics, watchWindow } from './graphics'
 import { getPrefs } from './prefs'
 import { clearImportSessions } from '@core/import'
-import { initSession, lock, onLock, startAutoLock } from './session'
+import { lock, onLock, startAutoLock, startDeferredChecks, startSession } from './session'
 import { startBackupScheduler } from './transfer/scheduler'
-import { startSyncScheduler } from './sync/service'
 import { applyTheme, initThemeSync, resolvedTheme, THEME_COLORS, TITLEBAR_HEIGHT, trackOverlay } from './theme'
 
 paths.rendererDir = join(__dirname, '../renderer')
@@ -63,8 +62,10 @@ function createWindow(hidden = false): BrowserWindow {
   })
   if (!isMac) trackOverlay(win)
   watchWindow(win, { hidden })
-  // Shown when the page reports its first screen is drawn (see startApp), so it never appears blank.
-  win.webContents.once('did-finish-load', () => splashProgress(0.8, 'Loading the interface…'))
+  // Created hidden and shown when the page reports its first screen is drawn (see startApp), so it never appears blank.
+  win.webContents.once('dom-ready', () => splashStep('interface-script-run'))
+  startupLog('main window created')
+  splashStep('main-window-created')
 
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (!app.isPackaged && devUrl) void win.loadURL(devUrl)
@@ -121,61 +122,73 @@ export async function startApp({ background }: { background: boolean }): Promise
   })
   harden()
   watchGraphics()
-  splashProgress(0.15, 'Starting…')
   initThemeSync()
   applyTheme(getPrefs().theme)
-  splashProgress(0.3, 'Opening your data…')
   startupLog('opening data')
-  await initSession()
-  startupLog('data opened')
-  onLock(clearImportSessions)
-  splashProgress(0.55, 'Preparing…')
+  // The account is read while the window is created and its page loads; operations that need it wait (see dispatch).
+  const dataOpened = startSession()
+  // Running jobs are stopped before the database closes: their writes are all synchronous after an await that checks the signal.
+  onLock(() => {
+    cancelRunningJobs()
+    clearImportSessions()
+  })
   registerIpc()
   const win = createWindow(background)
   let shown = false
-  const reveal = (): void => {
+  const reveal = (why: string): void => {
     if (shown || win.isDestroyed()) return
     shown = true
-    splashProgress(0.95, 'Almost ready…')
+    splashStep('first-screen')
     void splashMinimumElapsed().then(() => {
       if (win.isDestroyed()) return
       revealed = true
-      if (!background || showRequested) win.show()
+      if (shouldShowMainWindow({ background, showRequested })) win.show()
       closeSplash()
+      startupLog(`main window ${win.isVisible() ? 'shown' : 'kept hidden (background start)'}: ${why}`)
+      afterFirstScreen()
     })
   }
-  onAppReady(reveal)
-  // Never leave the person with only the launch window.
+  onAppReady(() => reveal('first screen'))
+  // Never leave the person with only the launch window: armed before the data is awaited, so a slow or failing start still ends.
   setTimeout(() => {
-    if (!shown) startupLog('showing the window without a first screen (20 s)')
-    reveal()
-  }, 20_000)
+    if (!shown) startupLog(`showing the window without a first screen (${MAIN_WINDOW_SAFETY_MS / 1000} s)`)
+    reveal('safety timeout')
+  }, MAIN_WINDOW_SAFETY_MS)
+
+  // Registered before the data is awaited, so quitting, re-opening and closing the window work during a slow start.
+  let keepInStep: NodeJS.Timeout | null = null
+  app.on('activate', showMainWindow)
+  app.on('window-all-closed', () => {
+    if (quitWhenAllWindowsClosed(process.platform)) app.quit()
+  })
+  app.on('will-quit', () => {
+    if (keepInStep) clearInterval(keepInStep)
+    stopTray()
+    stopMcpBridge()
+    lock('user', true)
+  })
+
+  await dataOpened
+  startupLog('data opened')
+  splashStep('data-opened')
   startBackupScheduler()
-  startSyncScheduler()
   startAutoLock()
   startAlertChecks()
-  startUpdateChecks()
   // Keep the MCP bridge in step with the lock state and the setting.
   initTray({ startedInTray: background, open: showMainWindow })
-  const keepInStep = setInterval(() => {
+  keepInStep = setInterval(() => {
     if (quitting) return
     syncMcpBridge(dispatch)
     syncTray()
     refreshTray()
   }, 2000)
+}
 
-  app.on('activate', showMainWindow)
-
-  app.on('window-all-closed', () => {
-    if (quitWhenAllWindowsClosed(process.platform)) app.quit()
-  })
-
-  app.on('will-quit', () => {
-    clearInterval(keepInStep)
-    stopTray()
-    stopMcpBridge()
-    lock('user', true)
-  })
+/** What can wait until the first screen is up: the Windows Hello check, sync and update checks (modules loaded only now). */
+function afterFirstScreen(): void {
+  startDeferredChecks()
+  void ensureSyncScheduler()
+  startUpdateChecks().catch((err: unknown) => startupLog(`update checks could not start: ${err instanceof Error ? err.message : String(err)}`))
 }
 
 /** How the kasboek-mcp helper can start Kasboek when a Claude app wants it (see tools/kasboek-mcp/launch.go). */

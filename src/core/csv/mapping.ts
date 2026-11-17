@@ -36,9 +36,9 @@ const SYNONYMS: Record<Field | 'description' | 'ignore', string[]> = {
     'bedrag', 'bedrag (eur)', 'bedrag in eur', 'transactiebedrag', 'montant', 'montant (eur)', 'montant de l operation', 'amount', 'amount (eur)', 'amount (gbp)', 'amount (usd)', 'transaction amount',
     'betrag', 'betrag (eur)', 'betrag ( )', 'importe', 'importe ( )', 'importe (eur)', 'cantidad', 'montante', 'importo', 'valor', 'net', 'netto'
   ],
-  debit: ['debet', 'debit', 'debit amount', 'debit euros', 'af', 'uitgaven', 'soll', 'paid out', 'money out', 'withdrawals', 'withdrawal', 'cargo', 'cargos', 'debito', 'addebiti', 'uscite', 'ausgang'],
-  credit: ['credit', 'krediet', 'credit amount', 'credit euros', 'bij', 'inkomsten', 'haben', 'paid in', 'money in', 'deposits', 'deposit', 'abono', 'abonos', 'credito', 'accrediti', 'entrate', 'eingang'],
-  direction: ['af bij', 'af/bij', 'debit/credit', 'credit/debit', 'debet/credit', 'credit/debet', 's/h', 'soll/haben', 'dr/cr', 'cr/dr', 'sens', 'debit credit', 'debet credit', 'credit debit indicator'],
+  debit: ['debet', 'debit', 'debit amount', 'debit euros', 'af', 'uitgaven', 'soll', 'paid out', 'money out', 'withdrawals', 'withdrawal', 'cargo', 'cargos', 'debito', 'addebiti', 'uscite', 'ausgang', 'opname', 'debe', 'debitos', 'retraits'],
+  credit: ['credit', 'krediet', 'credit amount', 'credit euros', 'bij', 'inkomsten', 'haben', 'paid in', 'money in', 'deposits', 'deposit', 'abono', 'abonos', 'credito', 'accrediti', 'entrate', 'eingang', 'ontvangsten', 'storting', 'haber', 'creditos', 'versements'],
+  direction: ['af bij', 'af/bij', 'debit/credit', 'credit/debit', 'debet/credit', 'credit/debet', 's/h', 'soll/haben', 'dr/cr', 'cr/dr', 'sens', 'd/c', 'c/d', 'debit credit', 'debet credit', 'credit debit indicator'],
   currency: ['munt', 'muntsoort', 'devies', 'munteenheid', 'valuta rekening', 'devise du compte', 'devise', 'currency', 'currency code', 'wahrung', 'waehrung', 'moneda', 'divisa', 'moeda'],
   counterpartyName: [
     'naam tegenpartij', 'naam van de tegenpartij', 'tegenpartij naam', 'naam / omschrijving', 'nom de la contrepartie', 'nom contrepartie', 'counterparty name', 'partner name', 'merchant', 'payee name', 'payer name',
@@ -52,7 +52,7 @@ const SYNONYMS: Record<Field | 'description' | 'ignore', string[]> = {
   description: [
     'omschrijving', 'omschrijving 1', 'omschrijving 2', 'omschrijving 3', 'beschrijving', 'details', 'detail van de omzet', 'mutatiesoort', 'transactie', 'description', 'transaction description', 'libelle', 'label',
     'detail de l ecriture', 'type verrichting', 'type de transaction', 'transaction type', 'buchungstext', 'umsatzart', 'umsatztyp', 'verwendungszweck', 'memo', 'narrative', 'omschrijving transactie',
-    'concepto', 'descripcion', 'movimiento', 'descricao', 'descrizione', 'operazione', 'dettagli', 'causale', 'lancamento', 'type'
+    'particulars', 'transaction details', 'vorgang', 'nature de l operation', 'libelle de l operation', 'concepto', 'descripcion', 'movimiento', 'descricao', 'descrizione', 'operazione', 'dettagli', 'causale', 'lancamento', 'type'
   ],
   communication: ['mededeling', 'mededelingen', 'bericht', 'communication', 'vrije mededeling', 'gestructureerde mededeling', 'message', 'reference de paiement', 'payment reference', 'notes and #tags', 'note', 'notes'],
   bankReference: [
@@ -72,6 +72,17 @@ export function directionOf(text: string): -1 | 1 | null {
   if (/^(af|debet|debit|d|dr|s|soll|out|uit|debito|cargo|withdrawal|uitgaand|-)$/.test(v) || text.trim() === '-') return -1
   if (/^(bij|credit|c|cr|h|haben|in|credito|abono|deposit|inkomend|\+)$/.test(v) || text.trim() === '+') return 1
   return null
+}
+
+/** The field a header name stands for (exact name first, then partial for longer names), or null. */
+export function headerField(text: string): Field | 'description' | 'ignore' | null {
+  const h = normHeader(text)
+  const fields = Object.keys(SYNONYMS) as (Field | 'description' | 'ignore')[]
+  return (
+    fields.find((f) => SYNONYMS[f].includes(h)) ??
+    fields.find((f) => f !== 'ignore' && SYNONYMS[f].some((syn) => syn.length >= 5 && h.includes(syn))) ??
+    null
+  )
 }
 
 export function scoreHeaderRow(cells: string[]): number {
@@ -180,9 +191,11 @@ export function detectDateOrder(samples: string[]): CsvMapping['dateOrder'] {
 export function detectDecimal(samples: string[]): ',' | '.' {
   let comma = 0
   let dot = 0
-  for (const s of samples) {
-    if (/,\d{1,2}-?$/.test(s.trim())) comma++
-    else if (/\.\d{1,2}-?$/.test(s.trim())) dot++
+  for (const raw of samples) {
+    // "12.50 DR", "(12.50)": the sign marks are not part of the number.
+    const s = raw.trim().replace(/\s*\b(DR|CR)\.?$/i, '').replace(/\)$/, '')
+    if (/,\d{1,2}-?$/.test(s)) comma++
+    else if (/\.\d{1,2}-?$/.test(s)) dot++
   }
   return dot > comma ? '.' : ','
 }

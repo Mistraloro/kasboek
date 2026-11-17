@@ -6,6 +6,8 @@ import { centsToInput } from '@shared/format'
 import { addMonths, monthOf } from '@shared/month'
 import type { TransferPair, Category, Transaction } from '@shared/types'
 import type { Page } from '../App'
+import { DateInput } from '../components/DateInput'
+import { PromptModal } from '../components/PromptModal'
 import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -14,6 +16,8 @@ import { formatDate, monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { localToday } from '@shared/month'
+import { MAX_CONTEXT_ROWS } from '@shared/page-context'
+import { usePublishPageContext } from '../lib/page-context'
 
 export interface TxFilter {
   accountId?: number
@@ -22,11 +26,11 @@ export interface TxFilter {
   search?: string
 }
 
-export function CategorySelect({ value, categories, onChange, className, allowNone = true, label, id }: { value: number | null; categories: Category[]; onChange: (id: number | null) => void; className?: string; allowNone?: boolean; label: string; id?: string }) {
+export function CategorySelect({ value, categories, onChange, className, allowNone = true, label, id, disabled }: { value: number | null; categories: Category[]; onChange: (id: number | null) => void; className?: string; allowNone?: boolean; label: string; id?: string; disabled?: boolean }) {
   const { t } = useTranslation()
   const groups: Category['kind'][] = ['expense', 'income', 'transfer']
   return (
-    <Select id={id} aria-label={label} className={className} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+    <Select id={id} aria-label={label} className={className} disabled={disabled} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
       {allowNone && <option value="">{t('transactions.uncategorized')}</option>}
       {groups.map((g) => (
         <optgroup key={g} label={t(`categories.kind.${g}`)}>
@@ -45,6 +49,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   const [searchText, setSearchText] = useState(initial?.search ?? '')
   const [limit, setLimit] = useState(100)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [asking, setAsking] = useState<'search' | 'rename' | null>(null)
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null)
   const [suggest, setSuggest] = useState<{ pattern: string; categoryId: number; categoryName: string } | null>(null)
   const [transfersOpen, setTransfersOpen] = useState(false)
@@ -61,6 +66,13 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
 
   const months = useMemo(() => Array.from({ length: 24 }, (_, i) => addMonths(monthOf(), -i)), [])
   const items = page.data?.items ?? []
+  usePublishPageContext({
+    page: 'transactions',
+    filters: Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined && v !== '')) as Record<string, string | number>,
+    selectedIds: [...selected],
+    openId: editing && editing !== 'new' ? editing.id : null,
+    rows: items.slice(0, MAX_CONTEXT_ROWS).map((i) => ({ id: i.id, date: i.bookingDate, amountCents: i.amountCents, currency: i.currency, payee: i.counterpartyName, description: i.description, category: i.categoryName, account: i.accountName }))
+  })
   const allSelected = items.length > 0 && items.every((i) => selected.has(i.id))
 
   // Exactly two selected, money out of one account and into another (the same amount, or any amount
@@ -157,10 +169,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                 size="sm"
                 variant="ghost"
                 icon={<Bookmark size={14} />}
-                onClick={() => {
-                  const name = window.prompt(t('searches.namePrompt'), '')?.trim()
-                  if (name) void call('searches.save', { name, filter: activeFilter }).then(() => settingsOp.reload(), (e) => toast(errText(e), 'error'))
-                }}
+                onClick={() => setAsking('search')}
               >
                 {t('searches.save')}
               </Button>
@@ -209,10 +218,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
             size="sm"
             variant="ghost"
             icon={<PenLine size={14} />}
-            onClick={() => {
-              const name = window.prompt(t('transactions.renamePrompt', { count: selected.size }), '')?.trim()
-              if (name) void call('transactions.rename', { ids: [...selected], counterpartyName: name }).then(() => { setSelected(new Set()); void page.reload() }, (e) => toast(errText(e), 'error'))
-            }}
+            onClick={() => setAsking('rename')}
           >
             {t('transactions.rename')}
           </Button>
@@ -237,6 +243,25 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
             {t('transactions.delete')}
           </Button>
         </div>
+      )}
+
+      {asking === 'search' && (
+        <PromptModal
+          title={t('searches.save')}
+          label={t('searches.namePrompt')}
+          submitLabel={t('searches.save')}
+          onSubmit={(name) => void call('searches.save', { name, filter: activeFilter }).then(() => settingsOp.reload(), (e) => toast(errText(e), 'error'))}
+          onClose={() => setAsking(null)}
+        />
+      )}
+      {asking === 'rename' && (
+        <PromptModal
+          title={t('transactions.rename')}
+          label={t('transactions.renamePrompt', { count: selected.size })}
+          submitLabel={t('transactions.rename')}
+          onSubmit={(name) => void call('transactions.rename', { ids: [...selected], counterpartyName: name }).then(() => { setSelected(new Set()); void page.reload() }, (e) => toast(errText(e), 'error'))}
+          onClose={() => setAsking(null)}
+        />
       )}
 
       <Card>
@@ -399,7 +424,7 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
             </Field>
           </div>
         )}
-        <Field label={t('transactions.date')}>{(id) => <Input id={id} type="date" value={form.bookingDate} onChange={(e) => setForm({ ...form, bookingDate: e.target.value })} />}</Field>
+        <Field label={t('transactions.date')}>{(id) => <DateInput id={id} value={form.bookingDate} onChange={(bookingDate) => setForm({ ...form, bookingDate })} />}</Field>
         <Field label={t('transactions.amount')} hint={t('transactions.amountHint')}>{(id) => <Input id={id} className="num" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="-12,50" />}</Field>
         <div className="col-span-2"><Field label={t('transactions.counterparty')}>{(id) => <Input id={id} value={form.counterpartyName} onChange={(e) => setForm({ ...form, counterpartyName: e.target.value })} />}</Field></div>
         <div className="col-span-2"><Field label={t('transactions.description')}>{(id) => <Input id={id} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}</Field></div>

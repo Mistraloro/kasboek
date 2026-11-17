@@ -10,9 +10,10 @@ import * as fx from './fx'
 import * as wealth from './wealth'
 import { listBankBalances, setBankBalance } from './balance'
 import { findTransfers, pairTransfers, setTransferCost, transferCostInfo, unpairTransfer } from './transfers'
-import { findRecurring } from './recurring'
+import { findRecurring, setRecurringHidden } from './recurring'
 import { monthReview } from './review'
 import { listAlerts } from './alerts'
+import { giveFeedback, insightsView, restoreDismissed } from './insights'
 import { createGoal, deleteGoal, listGoals, updateGoal } from './goals'
 import { forget, forgetAll, memoryState, remember, setMemoryEnabled, updateMemory } from './memory'
 
@@ -262,7 +263,13 @@ export const coreOps: OpTable = {
   'memory.setEnabled': { mutates: true, assistant: false, handler: ({ db }, { enabled }) => setMemoryEnabled(db, enabled) },
   'alerts.list': { mutates: false, assistant: true, handler: ({ db }) => listAlerts(db) },
   'summary.review': { mutates: false, assistant: true, handler: ({ db }, { month }) => monthReview(db, month) },
+  // Tips for the Overview: found locally, never offered to the assistant; feedback stays on this computer.
+  // The desktop app replaces insights.get with one that also knows the interface language; preview, run and cancel are desktop operations.
+  'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsView(db, month, null) },
+  'insights.feedback': { mutates: true, assistant: false, handler: ({ db }, { key, verdict }) => giveFeedback(db, key, verdict) },
+  'insights.restoreDismissed': { mutates: true, assistant: false, handler: ({ db }) => restoreDismissed(db) },
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },
+  'recurring.hide': { mutates: true, assistant: true, handler: ({ db }, { key, hidden }) => setRecurringHidden(db, key, hidden) },
   'transfers.find': { mutates: false, assistant: true, handler: ({ db }) => findTransfers(db) },
   'transfers.pair': { mutates: true, assistant: true, handler: ({ db }, { pairs }) => pairTransfers(db, pairs) },
   'transfers.cost': { mutates: false, assistant: false, handler: ({ db }, { id }) => transferCostInfo(db, id) },
@@ -373,7 +380,7 @@ export async function runOp<K extends OpName>(
     }
     return { ok: true, data }
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, error: { code: err.code, message: err.message } }
+    if (err instanceof AppError) return { ok: false, error: { code: err.code, message: err.message, ...(err.details && { details: err.details }) } }
     console.error(`[op ${String(name)}]`, err)
     return { ok: false, error: { code: 'op.failed', message: 'Something went wrong. Details are in the log.' } }
   }
@@ -381,6 +388,6 @@ export async function runOp<K extends OpName>(
 
 /** Never store secrets in the audit log. */
 function redact(name: string, input: unknown): string {
-  if (/^(auth|transfer|backup|prefs)\./.test(name)) return '{}'
+  if (/^(auth|transfer|backup|prefs|insights)\./.test(name)) return '{}'
   return JSON.stringify(input)
 }

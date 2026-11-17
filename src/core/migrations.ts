@@ -312,6 +312,46 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
       -- their exchange cost when there is no exchange rate for that day.
       ALTER TABLE accounts ADD COLUMN fx_cost_pct REAL CHECK (fx_cost_pct IS NULL OR (fx_cost_pct >= 0 AND fx_cost_pct <= 20));
     `)
+  },
+  (db) => {
+    db.exec(`
+      -- Fixed costs are found from the transactions; this only remembers the ones the person said
+      -- are not fixed (by the item's key). Rows are never deleted, see setRecurringHidden.
+      CREATE TABLE recurring_marks (
+        id INTEGER PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE CHECK (length(key) BETWEEN 4 AND 200),
+        hidden INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT ${now},
+        uid TEXT
+      );
+      CREATE UNIQUE INDEX idx_recurring_marks_uid ON recurring_marks(uid);
+    `)
+    createSyncTriggers(db, SPEC.get('recurring_marks')!)
+  },
+  (db) => {
+    db.exec(`
+      -- What the person did with a tip on the Overview. On this computer only: not synced.
+      CREATE TABLE insight_feedback (
+        key TEXT PRIMARY KEY,
+        verdict TEXT NOT NULL CHECK (verdict IN ('dismissed', 'not_useful', 'useful')),
+        at TEXT NOT NULL DEFAULT ${now}
+      );
+    `)
+  },
+  (db) => {
+    db.exec(`
+      -- The tips the assistant last wrote for a month, with the facts that were sent. On this computer only: not synced.
+      CREATE TABLE insights (
+        month TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL,
+        language TEXT NOT NULL,
+        facts_hash TEXT NOT NULL,
+        facts_json TEXT NOT NULL,
+        suggestions_json TEXT NOT NULL
+      );
+    `)
   }
 ]
 

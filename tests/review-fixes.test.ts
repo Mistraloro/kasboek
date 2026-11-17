@@ -266,7 +266,7 @@ describe('assistant plumbing', () => {
     fetch.mockResolvedValueOnce(new Response(JSON.stringify({ data: [{ id: 'm1' }] }), { status: 200 }))
     const { listModels } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const models = await listModels({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm' })
+    const models = await listModels({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm', insightsModel: 'm' })
     expect(models).toEqual(['m1'])
     expect(fetch).toHaveBeenCalledTimes(2)
   })
@@ -289,7 +289,7 @@ describe('assistant plumbing', () => {
   })
 
   it('masks account numbers before a check is sent', async () => {
-    const { maskIban } = await import('../src/main/assistant/csv')
+    const { maskIban } = await import('../src/shared/iban')
     expect(maskIban('Naar BE68 5390 0754 7034 voor huur')).toBe('Naar BE…7034 voor huur')
     // Stuck to other text (a mandate reference), and only when the checksum is right.
     expect(maskIban('MANDAAT NUMMER : 864551BE68539007547034XYZ')).toBe('MANDAAT NUMMER : 864551BE…7034XYZ')
@@ -342,7 +342,7 @@ describe('review 14, medium items', () => {
     })
     const { request } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const open = await request({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm' }, '/x', {}, undefined, { timeoutMs: 1000, idleMs: 50 })
+    const open = await request({ preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm', insightsModel: 'm' }, '/x', {}, undefined, { timeoutMs: 1000, idleMs: 50 })
     const reader = open.res.body!.getReader()
     await reader.read()
     await expect(reader.read()).rejects.toThrow()
@@ -354,7 +354,7 @@ describe('review 14, medium items', () => {
     const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
     const { json, listModels } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm' }
+    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'm', csvModel: 'm', pdfModel: 'm', insightsModel: 'm' }
     fetch.mockReset()
     fetch.mockResolvedValueOnce(new Response('{"message":"rate limited"}', { status: 429, headers: { 'retry-after': '120' } }))
     await expect(listModels(p)).rejects.toThrow()
@@ -387,6 +387,19 @@ describe('review 14, low items', () => {
 })
 
 describe('reasoning settings', () => {
+  it('sends only an effort the Haiku default for PDF reads and tips accepts, whatever the CSV setting is', async () => {
+    const { EFFORTS, claudeEfforts } = await import('@shared/reasoning')
+    const { CLAUDE_PDF_MODEL } = await import('@shared/ai-provider-store')
+    const { modelParams } = await import('../src/main/assistant/claude')
+    for (const chosen of EFFORTS) {
+      const params = modelParams(CLAUDE_PDF_MODEL, chosen)
+      expect(params.model).toBe(CLAUDE_PDF_MODEL)
+      // "off" is never sent as an effort: it stops thinking and keeps a low effort; any other level is one the model lists.
+      expect(claudeEfforts(CLAUDE_PDF_MODEL)).toContain(chosen === 'off' ? 'off' : params.output_config.effort)
+      expect(params.output_config.effort).toBe(chosen === 'off' ? 'low' : chosen)
+    }
+  })
+
   it('offers each Claude model its own levels and builds the request', async () => {
     const { claudeEfforts, claudeEffort, reasoningParams } = await import('@shared/reasoning')
     const { modelParams } = await import('../src/main/assistant/claude')
@@ -407,7 +420,7 @@ describe('reasoning settings', () => {
     const fetch = electron.net.fetch as unknown as ReturnType<typeof vi.fn>
     const { json, reasoningIgnored } = await import('../src/main/assistant/openai')
     const { PROVIDERS } = await import('@shared/ai-providers')
-    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'magistral-x', csvModel: 'magistral-x' }
+    const p = { preset: PROVIDERS.mistral, baseUrl: 'https://api.mistral.ai/v1', key: 'k', chatModel: 'magistral-x', csvModel: 'magistral-x', pdfModel: 'magistral-x', insightsModel: 'magistral-x' }
     fetch.mockReset()
     const sent: Record<string, unknown>[] = []
     fetch.mockImplementation(async (_u: string, init: { body: string }) => {
@@ -445,6 +458,17 @@ describe('permissions', () => {
     expect(needsApproval(custom, 'import.commit', {}, 'chat')).toBe(false)
     expect(needsApproval(custom, 'budgets.set', {}, 'chat')).toBe(true)
     expect(needsApproval({ ...custom, mode: 'trust' }, 'something.new', {}, 'chat')).toBe(true)
+  })
+
+  it('always asks before saving a PDF import, in the chat and over MCP, even in trust mode', async () => {
+    const { needsApproval, DEFAULT_PERMISSIONS } = await import('@shared/permissions')
+    const trust = { ...DEFAULT_PERMISSIONS, mode: 'trust' as const, mcpAlwaysAsk: false }
+    expect(needsApproval(trust, 'import.commit', {}, 'chat')).toBe(false)
+    expect(needsApproval(trust, 'import.commit', {}, 'chat', { pdfImport: true })).toBe(true)
+    expect(needsApproval(trust, 'import.commit', {}, 'mcp', { pdfImport: true })).toBe(true)
+    expect(needsApproval({ ...trust, mode: 'custom', rules: { import: 'allow' } }, 'import.commit', {}, 'chat', { pdfImport: true })).toBe(true)
+    // Other changes are not affected.
+    expect(needsApproval(trust, 'rules.create', { field: 'any', pattern: 'x' }, 'chat', { pdfImport: true })).toBe(false)
   })
 
   it('covers every change the assistant can make', async () => {

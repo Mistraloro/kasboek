@@ -6,11 +6,11 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, type Server, type Socket } from 'node:net'
-import { getSettings } from '@core/settings'
+import { getSetting, getSettings } from '@core/settings'
 import { needsApproval } from '@shared/permissions'
 import type { OpName, OpResult } from '@shared/contract'
 import type { McpClientsSeen } from '@shared/types'
-import { compactResult, describeChange, mcpTools, precheck } from '../assistant/tools'
+import { compactResult, describeChange, isPdfCommit, mcpTools, precheck } from '../assistant/tools'
 import { broadcast, db, isUnlocked } from '../session'
 import { discoveryFile, socketPath, type BridgeRequest, type BridgeResponse } from './channel'
 
@@ -56,7 +56,7 @@ export function respondMcp(id: string, approve: boolean): void {
 
 function enabled(): boolean {
   try {
-    return isUnlocked() && getSettings(db()).mcpEnabled
+    return isUnlocked() && getSetting(db(), 'mcpEnabled')
   } catch {
     return false
   }
@@ -88,14 +88,14 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   lastUsed = Date.now()
   lastSeen[clientKind(req.client)] = lastUsed
   if (!isUnlocked()) return { id: req.id, ok: false, error: 'Kasboek is locked. Unlock it on your computer, then try again.' }
-  if (!enabled()) return { id: req.id, ok: false, error: 'MCP access is switched off in Kasboek (Settings → Claude).' }
+  if (!enabled()) return { id: req.id, ok: false, error: 'MCP access is switched off in Kasboek (Settings → Assistant).' }
   if (req.call === 'list') return { id: req.id, ok: true, result: mcpTools().map(({ name, description, inputSchema, mutates }) => ({ name, description, inputSchema, mutates })) }
   const def = mcpTools().find((t) => t.name === String(req.name))
   if (!def) return { id: req.id, ok: false, error: `Unknown tool ${String(req.name)}.` }
   const invalid = precheck(def.name, req.input)
   if (invalid) return { id: req.id, ok: false, error: invalid }
   // Changes wait for the person unless their permissions let Claude apps make them too.
-  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp')) {
+  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp', { pdfImport: isPdfCommit(def.op, req.input) })) {
     const approved = await askPerson(def.op, describeChange(db(), def.op, (req.input ?? {}) as Record<string, unknown>))
     if (!approved) return { id: req.id, ok: false, error: 'The person declined this change in Kasboek. Do not retry it unless they ask.' }
   }

@@ -1,14 +1,17 @@
 import { ArrowDown, ArrowUp, Copy, ListChecks, Tags, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
 import { centsToInput } from '@shared/format'
 import { monthOf } from '@shared/month'
+import { MAX_CONTEXT_ROWS } from '@shared/page-context'
 import type { BudgetRow, RuleField, RuleMatch, RulePreview } from '@shared/types'
 import { Meter } from '../components/charts'
+import { PromptModal } from '../components/PromptModal'
 import { Badge, Button, Card, Field, Input, Modal, MonthNav, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
+import { usePublishPageContext } from '../lib/page-context'
 import { monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
@@ -16,16 +19,38 @@ import { CategorySelect } from './Transactions'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 
-export function Budgets() {
+/** How long the category a tip pointed to stays highlighted. */
+const HIGHLIGHT_MS = 2500
+
+export function Budgets({ initial }: { initial?: { month?: string; categoryId?: number | 'none' } }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { fmt, money } = useSettings()
-  const [month, setMonth] = useState(monthOf())
+  const [month, setMonth] = useState(initial?.month ?? monthOf())
   const [rows, setRows] = useState<BudgetRow[] | null>(null)
   const [modal, setModal] = useState<null | 'categories' | 'rules'>(null)
   const load = (): void => void call('budgets.list', { month }).then(setRows)
   useEffect(load, [month])
 
+  // The category a tip pointed to is scrolled into view once the rows are there, and marked for a moment.
+  const [marked, setMarked] = useState<number | null>(typeof initial?.categoryId === 'number' ? initial.categoryId : null)
+  const markedRow = useRef<HTMLTableRowElement | null>(null)
+  const found = rows?.some((r) => r.categoryId === marked) ?? false
+  useEffect(() => {
+    if (marked === null || !found) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    markedRow.current?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' })
+    const timer = setTimeout(() => setMarked(null), HIGHLIGHT_MS)
+    return () => clearTimeout(timer)
+  }, [marked, found])
+
+  usePublishPageContext({
+    page: 'budgets',
+    filters: { month },
+    selectedIds: [],
+    openId: null,
+    rows: (rows ?? []).slice(0, MAX_CONTEXT_ROWS).map((r) => ({ categoryId: r.categoryId, category: r.name, budgetCents: r.budgetCents, spentCents: r.spentCents }))
+  })
   const budgeted = (rows ?? []).filter((r) => r.budgetCents !== null)
   const totalBudget = budgeted.reduce((s, r) => s + (r.budgetCents ?? 0), 0)
   const totalSpent = (rows ?? []).reduce((s, r) => s + r.spentCents, 0)
@@ -62,7 +87,7 @@ export function Budgets() {
           </thead>
           <tbody>
             {(rows ?? []).map((r) => (
-              <BudgetLine key={`${month}-${r.categoryId}`} row={r} month={month} money={money} onSaved={setRows} />
+              <BudgetLine key={`${month}-${r.categoryId}`} row={r} month={month} money={money} onSaved={setRows} marked={r.categoryId === marked} rowRef={markedRow} />
             ))}
           </tbody>
           {rows && (
@@ -84,7 +109,7 @@ export function Budgets() {
   )
 }
 
-function BudgetLine({ row, month, money, onSaved }: { row: BudgetRow; month: string; money: (c: number) => string; onSaved: (r: BudgetRow[]) => void }) {
+function BudgetLine({ row, month, money, onSaved, marked, rowRef }: { row: BudgetRow; month: string; money: (c: number) => string; onSaved: (r: BudgetRow[]) => void; marked: boolean; rowRef: RefObject<HTMLTableRowElement | null> }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { fmt } = useSettings()
@@ -99,7 +124,7 @@ function BudgetLine({ row, month, money, onSaved }: { row: BudgetRow; month: str
   }
   const left = row.budgetCents === null ? null : row.budgetCents - row.spentCents
   return (
-    <tr className="border-b border-border last:border-b-0">
+    <tr ref={marked ? rowRef : undefined} className={cx('border-b border-border transition-colors last:border-b-0', marked && 'bg-accent-soft')}>
       <td className="px-5 py-2.5 font-medium">{row.name}</td>
       <td className="px-3 py-1.5">
         <Input
@@ -131,18 +156,18 @@ function CategoriesModal({ open, onClose }: { open: boolean; onClose: () => void
   const cats = useOp('categories.list')
   const [name, setName] = useState('')
   const [kind, setKind] = useState<'expense' | 'income' | 'transfer'>('expense')
+  const [renaming, setRenaming] = useState<{ id: number; name: string } | null>(null)
   const act = (p: Promise<unknown>): void => void p.then(() => cats.reload(), (e) => toast(errText(e), 'error'))
+  // While a name is typed the list gives way to that dialog, so Escape only closes one of them.
   return (
-    <Modal open={open} title={t('budgets.categories')} onClose={onClose}>
+    <>
+    <Modal open={open && !renaming} title={t('budgets.categories')} onClose={onClose}>
       <div className="flex max-h-80 flex-col overflow-y-auto">
         {(cats.data ?? []).map((c) => (
           <div key={c.id} className="flex items-center gap-2 border-b border-border py-2 text-[13px] last:border-b-0">
             <span className={cx('flex-1', c.archived && 'text-muted line-through')}>{c.name}</span>
             <Badge>{t(`categories.kind.${c.kind}`)}</Badge>
-            <Button size="sm" variant="ghost" onClick={() => {
-              const n = window.prompt(t('budgets.rename'), c.name)
-              if (n && n.trim() && n !== c.name) act(call('categories.update', { id: c.id, name: n.trim() }))
-            }}>{t('budgets.renameShort')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setRenaming(c)}>{t('budgets.renameShort')}</Button>
             <Button size="sm" variant="ghost" onClick={() => act(call('categories.update', { id: c.id, archived: !c.archived }))}>{c.archived ? t('budgets.restore') : t('budgets.archive')}</Button>
           </div>
         ))}
@@ -155,6 +180,17 @@ function CategoriesModal({ open, onClose }: { open: boolean; onClose: () => void
         <Button type="submit" variant="primary" disabled={!name.trim()}>{t('budgets.add')}</Button>
       </form>
     </Modal>
+    {renaming && (
+      <PromptModal
+        title={t('budgets.renameShort')}
+        label={t('budgets.rename')}
+        initialValue={renaming.name}
+        submitLabel={t('budgets.renameShort')}
+        onSubmit={(name) => name !== renaming.name && act(call('categories.update', { id: renaming.id, name }))}
+        onClose={() => setRenaming(null)}
+      />
+    )}
+    </>
   )
 }
 

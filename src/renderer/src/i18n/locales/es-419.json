@@ -29,7 +29,10 @@
     "fixAmount": "Escribe el monto, negativo para una salida (p. ej. -12,50)",
     "checked": "{{ai}} revisó el archivo. Mira las notas encima de las filas.",
     "claudeOff": "Configura un asistente en Configuración para que revise los archivos.",
-    "checkPrivacyLocal": "Envía las filas de este archivo a {{ai}} en esta computadora o esta red."
+    "checkPrivacyLocal": "Muestra lo que se envía a {{ai}} en esta computadora o esta red y pregunta antes de la primera revisión.",
+    "consent": {
+      "sendsLocal": "Esto envía a {{ai}} en esta computadora o esta red los nombres y descripciones de los pagos de este archivo y de tus movimientos aún sin categoría, las primeras filas del archivo tal como están escritas, la lista de tus categorías y reglas, y las notas que el asistente ha recordado. Los números de cuenta y de tarjeta se ocultan. Nada va a un servicio en línea."
+    }
   },
   "assistant": {
     "tool": {
@@ -108,6 +111,20 @@
     "unconvertedHint": "No cuentan en estos totales. Agrega tipos en Configuración."
   },
   "ai": {
+    "chatTitle": "Modelo del chat",
+    "chatDesc": "Responde a tus preguntas y hace lo que le pides en el chat.",
+    "fileTitle": "Modelo para leer archivos",
+    "fileDesc": "Se usa cuando el asistente revisa una importación CSV o lee un extracto en PDF. Aquí basta un modelo más barato.",
+    "noModelList": "Este proveedor no muestra la lista de sus modelos. Escribe el nombre del modelo tal como lo escribe el proveedor.",
+    "reloadHint": "Pulsa el botón de recargar para obtener la lista de modelos.",
+    "reloadModels": "Recargar modelos",
+    "typeModel": "Escribe el nombre del modelo",
+    "filterModels": "Escribe para filtrar los modelos",
+    "modelsShowing_one": "Mostrando {{shown}} de {{count}} modelo",
+    "modelsShowing_other": "Mostrando {{shown}} de {{count}} modelos",
+    "clearFilter": "Borrar el filtro",
+    "noModelMatch": "Ningún modelo coincide",
+    "useTyped": "Usar «{{name}}»",
     "providerLocal": "Funciona en esta computadora o en tu red. No va nada a un servicio en línea.",
     "local": "en tu computadora",
     "baseUrlLocalHint": "Déjala vacía para usar la predeterminada ({{url}}). Cámbiala si el servidor funciona en otro puerto o computadora.",
@@ -161,7 +178,7 @@
       "accounts": "Agregar cuentas"
     },
     "kindHint": {
-      "organise": "Agregar una categoría, fijar un presupuesto, crear una meta de ahorro."
+      "organise": "Agregar una categoría, fijar un presupuesto, crear una meta de ahorro, marcar un gasto fijo como no fijo."
     }
   },
   "memory": {

@@ -1,9 +1,10 @@
 /**
- * CSV import sessions. Nothing is written until commit; the person (or the assistant, with
+ * Import sessions for CSV files and PDF statements (a PDF's table is read into the same grid of text
+ * a CSV file gives, so everything after that is shared). Nothing is written until commit; the person (or the assistant, with
  * confirmation) can change the mapping, skip rows and set categories first.
  */
 import { randomUUID } from 'node:crypto'
-import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow } from '@shared/types'
+import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow, PdfNote, Reconciliation } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { categorizeTransactions, createRule, insertTransaction, listRules, matchRule } from './finance'
@@ -14,6 +15,9 @@ import { fingerprint } from './fingerprint'
 import { autoMap, detectLayout, headerSignature, mappingSchema, type CsvMapping } from './csv/mapping'
 import { normalizeRows, realReference, type CleanRow } from './csv/normalize'
 import { decode, detectDelimiter, parseCsv } from './csv/read'
+import type { PdfLine } from './pdf/lines'
+import { isPdf } from './pdf/detect'
+import { reconcile, runningMismatches, type StatementBalances, type StatementPeriod } from './pdf/statement'
 
 export interface RowOverride {
   decided?: 'include' | 'skip' | null
@@ -26,10 +30,23 @@ export interface RowOverride {
   note?: string | null
 }
 
+/** What a PDF statement adds to its session. Kept in memory only, like the session. */
+export interface PdfSessionData {
+  lines: PdfLine[]
+  pages: number
+  readBy: 'kasboek' | 'assistant'
+  balances: StatementBalances
+  period: StatementPeriod
+  /** Remarks from reading the file. */
+  notes?: PdfNote[]
+}
+
 interface Session {
   id: string
   fileName: string
   accountId: number
+  kind: 'csv' | 'pdf'
+  pdf?: PdfSessionData
   encoding: string
   rows: string[][]
   mapping: CsvMapping | null
@@ -63,7 +80,7 @@ const sessions = new Map<string, Session>()
 const MAX_BYTES = 10 * 1024 * 1024
 const MAX_ROWS = 50_000
 
-/** Called on lock: import data never outlives the login. */
+/** Called on lock: import data (also a PDF's text) never outlives the login. */
 export function clearImportSessions(): void {
   sessions.clear()
 }
@@ -78,20 +95,18 @@ export function latestSession(): string | null {
   return [...sessions.keys()].at(-1) ?? null
 }
 
-export function analyze(db: Db, input: { fileName: string; bytes: Uint8Array; accountId: number }): ImportPreview {
-  if (input.bytes.length > MAX_BYTES) throw new AppError('import.too_big', 'This file is larger than 10 MB.')
-  if (!db.prepare('SELECT 1 FROM accounts WHERE id = ?').get(input.accountId)) throw new AppError('accounts.not_found', 'Choose an account first.')
-  const { text, encoding } = decode(input.bytes)
-  const delimiter = detectDelimiter(text) as CsvMapping['delimiter']
-  const rows = parseCsv(text, delimiter)
-  if (rows.length < 2) throw new AppError('import.empty', 'This file has no rows to import.')
-  if (rows.length > MAX_ROWS) throw new AppError('import.too_many', 'This file has more than 50,000 rows.')
+function requireAccount(db: Db, accountId: number): void {
+  if (!db.prepare('SELECT 1 FROM accounts WHERE id = ?').get(accountId)) throw new AppError('accounts.not_found', 'Choose an account first.')
+}
 
+/** The mapping detected from the header names, unless one saved from an earlier import with the same header row exists. */
+function detectMapping(db: Db, rows: string[][], kind: Session['kind'], delimiter: CsvMapping['delimiter']): { mapping: CsvMapping | null; source: ImportPreview['mappingSource'] } {
   let mapping = autoMap(rows, delimiter)
   let source: ImportPreview['mappingSource'] = mapping ? 'detected' : 'none'
-  // A mapping saved from an earlier import with the same header row wins.
+  // A PDF's layouts are kept apart from CSV ones.
+  const signatureKind = kind === 'pdf' ? 'pdf' : delimiter
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const saved = db.prepare('SELECT mapping_json FROM csv_profiles WHERE header_signature = ?').get(headerSignature(rows[i]!, delimiter)) as { mapping_json: string } | undefined
+    const saved = db.prepare('SELECT mapping_json FROM csv_profiles WHERE header_signature = ?').get(headerSignature(rows[i]!, signatureKind)) as { mapping_json: string } | undefined
     if (saved) {
       const parsed = mappingSchema.safeParse(JSON.parse(saved.mapping_json))
       if (parsed.success) {
@@ -101,22 +116,86 @@ export function analyze(db: Db, input: { fileName: string; bytes: Uint8Array; ac
       break
     }
   }
+  return { mapping, source }
+}
+
+/** Opens the session for rows of text, however they were read: one open session per account. */
+function openSession(db: Db, input: { fileName: string; accountId: number; encoding: string; rows: string[][]; kind: Session['kind']; delimiter: CsvMapping['delimiter']; pdf?: PdfSessionData }): ImportPreview {
+  if (input.rows.length > MAX_ROWS) throw new AppError('import.too_many', 'This file has more than 50,000 rows.')
+  const { mapping, source } = detectMapping(db, input.rows, input.kind, input.delimiter)
   for (const s of sessions.values()) if (s.accountId === input.accountId) sessions.delete(s.id)
   const s: Session = {
     id: randomUUID(),
     fileName: input.fileName,
     accountId: input.accountId,
-    encoding,
-    rows,
+    kind: input.kind,
+    ...(input.pdf ? { pdf: input.pdf } : {}),
+    encoding: input.encoding,
+    rows: input.rows,
     mapping,
     mappingSource: source,
-    layout: detectLayout(rows[mapping?.headerRow ?? 0] ?? []),
+    layout: detectLayout(input.rows[mapping?.headerRow ?? 0] ?? []),
     overrides: new Map(),
     notes: [],
     check: null
   }
   sessions.set(s.id, s)
   return preview(db, s.id)
+}
+
+export function analyze(db: Db, input: { fileName: string; bytes: Uint8Array; accountId: number }): ImportPreview {
+  if (input.bytes.length > MAX_BYTES) throw new AppError('import.too_big', 'This file is larger than 10 MB.')
+  requireAccount(db, input.accountId)
+  if (isPdf(input.bytes)) throw new AppError('import.is_pdf', 'This is a PDF file. Open it as a bank statement instead.')
+  const { text, encoding } = decode(input.bytes)
+  const delimiter = detectDelimiter(text) as CsvMapping['delimiter']
+  const rows = parseCsv(text, delimiter)
+  if (rows.length < 2) throw new AppError('import.empty', 'This file has no rows to import.')
+  return openSession(db, { fileName: input.fileName, accountId: input.accountId, encoding, rows, kind: 'csv', delimiter })
+}
+
+/**
+ * Opens a session for a table already read from a PDF statement. The grid may be empty (no table
+ * found) as long as the text lines are there, so a later read can still use the session.
+ */
+export function analyzeGrid(db: Db, input: { fileName: string; accountId: number; grid: string[][]; pdf: PdfSessionData }): ImportPreview {
+  requireAccount(db, input.accountId)
+  if (input.grid.length < 2 && !input.pdf.lines.length) throw new AppError('import.empty', 'This file has no rows to import.')
+  return openSession(db, { fileName: input.fileName, accountId: input.accountId, encoding: 'pdf', rows: input.grid, kind: 'pdf', delimiter: ',', pdf: input.pdf })
+}
+
+/**
+ * Puts a new table in an open session (a PDF read again): the changes made to the old rows and the
+ * last check no longer apply. A mapping is detected when none is given; `pdf` updates what the
+ * statement says about itself.
+ */
+export function replaceGrid(db: Db, id: string, grid: string[][], mapping: CsvMapping | null, pdf?: Partial<Pick<PdfSessionData, 'readBy' | 'balances' | 'period' | 'notes'>>): ImportPreview {
+  const s = session(id)
+  if (grid.length > MAX_ROWS) throw new AppError('import.too_many', 'This file has more than 50,000 rows.')
+  const next = mapping ? { mapping: mappingSchema.parse(mapping), source: 'detected' as const } : detectMapping(db, grid, s.kind, s.mapping?.delimiter ?? ',')
+  s.rows = grid
+  s.mapping = next.mapping
+  s.mappingSource = next.source
+  s.layout = detectLayout(grid[next.mapping?.headerRow ?? 0] ?? [])
+  s.overrides = new Map()
+  s.notes = []
+  s.check = null
+  if (s.pdf && pdf) s.pdf = { ...s.pdf, ...pdf }
+  return preview(db, id)
+}
+
+/** The text lines of an open PDF session (none for a CSV file). */
+export function pdfLines(id: string): PdfLine[] {
+  return session(id).pdf?.lines ?? []
+}
+
+/** What an open PDF session holds: the lines and what the statement says about itself. Null for a CSV file. */
+export function pdfData(id: string): PdfSessionData | null {
+  return session(id).pdf ?? null
+}
+
+export function sessionKind(id: string): 'csv' | 'pdf' {
+  return session(id).kind
 }
 
 export function remap(db: Db, id: string, mapping: unknown, source: ImportPreview['mappingSource'] = 'manual'): ImportPreview {
@@ -393,6 +472,14 @@ function buildRows(db: Db, s: Session): { clean: CleanRow; raw: CleanRow; row: I
       } satisfies ImportRow
     }
   })
+  if (s.pdf) {
+    // A running balance in the statement that doesn't follow from the row before points at a row read wrong.
+    const checked = results.filter((r) => r.row.status !== 'skipped' && r.clean.amountCents !== null)
+    const wrong = runningMismatches(checked.map((r) => ({ amountCents: r.clean.amountCents, balanceCents: r.raw.balanceCents })), s.pdf.balances.opening)
+    checked.forEach((r, i) => {
+      if (wrong[i]) r.row.issues = [...r.row.issues, 'balance_mismatch']
+    })
+  }
   return results
 }
 
@@ -403,7 +490,8 @@ export function rowsWithBankText(db: Db, id: string): { row: ImportRow; raw: { c
 
 export function preview(db: Db, id: string): ImportPreview {
   const s = session(id)
-  const rows = buildRows(db, s).map((r) => r.row)
+  const built = buildRows(db, s)
+  const rows = built.map((r) => r.row)
   const ready = rows.filter((r) => r.status === 'ready')
   const dates = ready.map((r) => r.bookingDate!).sort()
   const fileDates = rows.flatMap((r) => (r.bookingDate ? [r.bookingDate] : [])).sort()
@@ -437,8 +525,25 @@ export function preview(db: Db, id: string): ImportPreview {
       fileTo: fileDates.at(-1) ?? null
     },
     notes: s.notes,
-    check: s.check ? checkSummary(s.check) : null
+    edited: editedRows(s),
+    check: s.check ? checkSummary(s.check) : null,
+    fileKind: s.kind,
+    pdf: s.pdf ? { pages: s.pdf.pages, readBy: s.pdf.readBy, tableFound: s.rows.length >= 2, reconciliation: s.rows.length >= 2 ? reconciliation(s.pdf, built) : null, notes: s.pdf.notes ?? [] } : null
   }
+}
+
+/** The statement's printed balances against the rows (rows the person skipped are left out). */
+function reconciliation(pdf: PdfSessionData, built: ReturnType<typeof buildRows>): Reconciliation {
+  return reconcile(
+    built.filter((b) => b.row.status !== 'skipped').map((b) => ({ amountCents: b.clean.amountCents, balanceCents: b.raw.balanceCents })),
+    pdf.balances
+  )
+}
+
+/** Rows with a change that did not come from the last check. */
+function editedRows(s: Session): number {
+  const byCheck = new Set(s.check ? [...s.check.parts.categories, ...s.check.parts.names, ...s.check.parts.fixes] : [])
+  return [...s.overrides.keys()].filter((i) => !byCheck.has(i)).length
 }
 
 function checkSummary(c: CheckState): CheckSummary {
@@ -497,7 +602,7 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
       db.prepare(
         `INSERT INTO csv_profiles (name, bank, header_signature, mapping_json) VALUES (?, ?, ?, ?)
          ON CONFLICT(header_signature) DO UPDATE SET mapping_json = excluded.mapping_json, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`
-      ).run(s.layout ?? s.fileName, s.layout, headerSignature(header, s.mapping!.delimiter), JSON.stringify(s.mapping))
+      ).run(s.layout ?? s.fileName, s.layout, headerSignature(header, s.kind === 'pdf' ? 'pdf' : s.mapping!.delimiter), JSON.stringify(s.mapping))
     }
   })()
   sessions.delete(id)
@@ -513,13 +618,13 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
   // A balance column: the balance after the last transaction of the file is what the bank showed
   // that day, so it is recorded (and compared with what Kasboek expected).
   let bankBalance: ImportCommitResult['bankBalance'] = null
-  const fromFile = fileBalance(built.map((b) => b.raw))
+  const fromFile = bankClosing(s, built, lastDate)
   let balanceNote: string | null = null
   if (fromFile && kind !== 'investment') {
     try {
-      bankBalance = setBankBalance(db, { accountId: s.accountId, date: fromFile.date, balanceCents: fromFile.cents, note: 'From the CSV' })
+      bankBalance = setBankBalance(db, { accountId: s.accountId, date: fromFile.date, balanceCents: fromFile.cents, note: s.kind === 'pdf' ? 'From the PDF' : 'From the CSV' })
     } catch (err) {
-      console.warn('[import] closing balance from the CSV not recorded:', err instanceof Error ? err.message : err)
+      console.warn('[import] closing balance from the file not recorded:', err instanceof Error ? err.message : err)
       balanceNote = err instanceof Error ? err.message : 'The closing balance in the file could not be recorded.'
     }
   }
@@ -539,7 +644,10 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
 }
 
 /** What committing the open import would do, for the approval text. */
-export function commitSummary(db: Db, id: string): { rows: number; totalCents: number; from: string | null; to: string | null; accountName: string; currency: string; closing: { date: string; cents: number } | null } {
+export function commitSummary(
+  db: Db,
+  id: string
+): { rows: number; totalCents: number; from: string | null; to: string | null; accountName: string; currency: string; closing: { date: string; cents: number } | null; pdf: { readBy: 'kasboek' | 'assistant'; differenceCents: number | null } | null } {
   const s = session(id)
   const built = buildRows(db, s)
   const ready = built.filter((b) => b.row.status === 'ready')
@@ -552,8 +660,21 @@ export function commitSummary(db: Db, id: string): { rows: number; totalCents: n
     to: dates.at(-1) ?? null,
     accountName: account.name,
     currency: account.currency,
-    closing: account.kind === 'investment' ? null : fileBalance(built.map((b) => b.raw))
+    closing: account.kind === 'investment' ? null : bankClosing(s, built, built.flatMap((b) => (b.row.bookingDate ? [b.row.bookingDate] : [])).sort().at(-1) ?? null),
+    pdf: s.pdf ? { readBy: s.pdf.readBy, differenceCents: reconciliation(s.pdf, built).differenceCents } : null
   }
+}
+
+/**
+ * The bank's balance at the end of the file: from a balance column, else the closing balance printed
+ * on a PDF statement, dated at the end of the statement period (else the last booking date).
+ */
+function bankClosing(s: Session, built: ReturnType<typeof buildRows>, lastDate: string | null): { date: string; cents: number } | null {
+  const fromColumn = fileBalance(built.map((b) => b.raw))
+  if (fromColumn) return fromColumn
+  const closing = s.pdf?.balances.closing ?? null
+  const date = s.pdf?.period.to ?? lastDate
+  return closing !== null && date ? { date, cents: closing } : null
 }
 
 /**

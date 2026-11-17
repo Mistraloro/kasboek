@@ -1,7 +1,9 @@
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { Eye, EyeOff, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { useTranslation } from 'react-i18next'
+import { closeAction, type CloseSource } from '@shared/modal-close'
+import { revealedAfter, type RevealEvent } from '@shared/password-reveal'
 
 const cx = (...c: (string | false | null | undefined)[]): string => c.filter(Boolean).join(' ')
 
@@ -81,6 +83,63 @@ const control =
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...rest} className={cx(control, className)} />
+}
+
+/** A password field with an eye button: the text is only visible while the button is held down. */
+export function PasswordInput({ className, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const { t } = useTranslation()
+  const [shown, setShown] = useState(false)
+  const apply = (event: RevealEvent): void => setShown((s) => revealedAfter(s, event))
+
+  useEffect(() => {
+    if (!shown) return
+    const onBlur = (): void => apply({ kind: 'window-blur' })
+    const onVisibility = (): void => apply({ kind: 'visibility', hidden: document.hidden })
+    window.addEventListener('blur', onBlur)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('blur', onBlur)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [shown])
+
+  const label = t('auth.holdToShowPassword')
+  return (
+    <div
+      className="relative"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && shown) apply({ kind: 'keydown', key: e.key })
+      }}
+      onBlur={() => apply({ kind: 'blur' })}
+    >
+      <Input {...rest} type={shown ? 'text' : 'password'} className={cx('pr-10', className)} />
+      <button
+        type="button"
+        tabIndex={0}
+        aria-label={label}
+        title={label}
+        aria-pressed={shown}
+        onMouseDown={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          if (e.button !== 0) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          apply({ kind: 'pointerdown' })
+        }}
+        onPointerUp={() => apply({ kind: 'pointerup' })}
+        onPointerCancel={() => apply({ kind: 'pointercancel' })}
+        onPointerLeave={() => apply({ kind: 'pointerleave' })}
+        onKeyDown={(e) => {
+          if (e.key === ' ' || e.key === 'Enter') e.preventDefault()
+          apply({ kind: 'keydown', key: e.key })
+        }}
+        onKeyUp={(e) => apply({ kind: 'keyup', key: e.key })}
+        className="absolute top-1/2 right-0.5 inline-flex h-8 w-8 -translate-y-1/2 touch-none items-center justify-center rounded-md text-muted transition-colors select-none hover:bg-surface-2 hover:text-text focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+      >
+        {shown ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+      </button>
+    </div>
+  )
 }
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
@@ -176,20 +235,52 @@ export function EmptyState({ icon, title, body, action }: { icon: ReactNode; tit
   )
 }
 
-export function Modal({ open, title, onClose, children, dismissible = true }: { open: boolean; title: ReactNode; onClose: () => void; children: ReactNode; dismissible?: boolean }) {
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  dismissible = true,
+  closeOnBackdrop = false,
+  dirty = false
+}: {
+  open: boolean
+  title: ReactNode
+  onClose: () => void
+  children: ReactNode
+  dismissible?: boolean
+  /** A click on the dimmed background closes it. Off by default: an accidental click must not lose typed text. */
+  closeOnBackdrop?: boolean
+  /** Something was typed: Escape and the close button ask before closing. */
+  dirty?: boolean
+}) {
+  const { t } = useTranslation()
+  const [asking, setAsking] = useState(false)
+  const request = (source: CloseSource): void => {
+    const action = closeAction({ source, dirty, closeOnBackdrop, dismissible })
+    if (action === 'close') onClose()
+    else if (action === 'confirm') setAsking(true)
+  }
+  const requestRef = useRef(request)
+  requestRef.current = request
+  useEffect(() => {
+    if (!open) setAsking(false)
+  }, [open])
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && dismissible) onClose()
+      if (e.key !== 'Escape') return
+      if (asking) setAsking(false)
+      else requestRef.current('escape')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, dismissible])
+  }, [open, asking])
   if (!open) return null
   // On document.body: a modal opened from the title bar (the update button) would otherwise sit inside
   // its window-drag area, where clicks and scrolling don't reach the page.
   return createPortal(
-    <div className="no-drag fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onMouseDown={dismissible ? onClose : undefined}>
+    <div className="no-drag fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onMouseDown={() => request('backdrop')}>
       <div
         role="dialog"
         aria-modal="true"
@@ -199,12 +290,24 @@ export function Modal({ open, title, onClose, children, dismissible = true }: { 
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <h2 className="font-semibold">{title}</h2>
           {dismissible && (
-            <button type="button" aria-label="Close" onClick={onClose} className="rounded-md p-1 text-muted hover:bg-surface-2 hover:text-text">
+            <button type="button" aria-label={t('modal.close')} onClick={() => request('button')} className="rounded-md p-1 text-muted hover:bg-surface-2 hover:text-text">
               <X size={16} />
             </button>
           )}
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="px-5 py-4">
+          {/* Kept mounted while asking, so "Keep editing" returns to exactly what was typed. */}
+          <div hidden={asking}>{children}</div>
+          {asking && (
+            <div role="alertdialog" className="flex flex-col gap-4">
+              <p className="text-[13px]">{t('modal.discardAsk')}</p>
+              <div className="flex justify-end gap-2">
+                <Button autoFocus onClick={() => setAsking(false)}>{t('modal.keepEditing')}</Button>
+                <Button variant="danger" onClick={onClose}>{t('modal.discard')}</Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>,
     document.body

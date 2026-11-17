@@ -5,7 +5,7 @@
  */
 import { app, Menu, Tray, nativeImage } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { getSettings, updateSettings } from '@core/settings'
+import { getSetting, updateSettings } from '@core/settings'
 import { mcpBridgeState } from './mcp/bridge'
 import { getPrefs } from './prefs'
 import { trayWanted } from '@shared/window-policy'
@@ -72,7 +72,7 @@ function setMcp(enabled: boolean): void {
 export function refreshTray(): void {
   if (!tray) return
   const unlocked = isUnlocked()
-  const enabled = unlocked && getSettings(db()).mcpEnabled
+  const enabled = unlocked && getSetting(db(), 'mcpEnabled')
   const { running, lastUsed } = mcpBridgeState()
   const time = lastUsed ? new Date(lastUsed).toLocaleTimeString(getPrefs().language, { hour: '2-digit', minute: '2-digit' }) : ''
   const key = JSON.stringify([unlocked, enabled, running, time, getPrefs().language])

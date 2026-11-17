@@ -30,7 +30,7 @@ export function UpdateButton() {
   const { t } = useTranslation()
   const status = useUpdate()
   const [open, setOpen] = useState(false)
-  const shown = status && status.latest && ['available', 'downloading', 'ready', 'installing', 'opened', 'error'].includes(status.state) && (status.state !== 'error' || status.kind)
+  const shown = status && status.latest && ['available', 'downloading', 'ready', 'preparing', 'installing', 'opened', 'error'].includes(status.state) && (status.state !== 'error' || status.kind)
   if (!shown) return null
   return (
     <>
@@ -60,9 +60,10 @@ function UpdateModal({ status, open, onClose }: { status: UpdateStatus; open: bo
       .finally(() => setStarting(false))
   }
   const percent = Math.round(status.progress * 100)
+  const busy = status.state === 'preparing' || status.state === 'installing'
   const restart = status.kind === 'msi' || status.kind === 'appimage'
   return (
-    <Modal open={open} title={t('update.title', { version: status.latest })} onClose={onClose} dismissible={status.state !== 'installing'}>
+    <Modal open={open} title={t('update.title', { version: status.latest })} onClose={onClose} dismissible={!busy}>
       <div className="flex flex-col gap-4 text-[13px]">
         <p className="text-muted">{t('update.current', { version: status.current })}</p>
         {status.notes && <div className="max-h-72 overflow-y-auto rounded-lg border border-border bg-surface-2/40 px-4 py-3"><Rich text={whatsNew(status.notes)} /></div>}
@@ -76,6 +77,7 @@ function UpdateModal({ status, open, onClose }: { status: UpdateStatus; open: bo
           </div>
         )}
         {status.state === 'ready' && <p className="text-muted">{restart ? t('update.readyRestart') : t(`update.ready.${status.kind}`)}</p>}
+        {status.state === 'preparing' && <p className="flex items-center gap-2 font-medium"><RefreshCw size={14} className="animate-spin text-accent" />{t('update.preparing')}</p>}
         {status.state === 'installing' && <p className="flex items-center gap-2 font-medium"><RefreshCw size={14} className="animate-spin text-accent" />{t('update.installing')}</p>}
         {status.state === 'opened' && <p className="font-medium">{t(`update.opened.${status.kind}`)}</p>}
         {status.error && <p className="text-negative">{status.error}</p>}
@@ -87,14 +89,14 @@ function UpdateModal({ status, open, onClose }: { status: UpdateStatus; open: bo
             <ExternalLink size={13} /> {t('update.releasePage')}
           </button>
           <div className="flex gap-2">
-            {status.state !== 'installing' && <Button onClick={onClose}>{t('update.later')}</Button>}
+            {!busy && <Button onClick={onClose}>{t('update.later')}</Button>}
             {status.kind && (status.state === 'available' || status.state === 'error') && (
               <Button variant="primary" icon={<ArrowDownToLine size={14} />} onClick={() => act(call('update.download'))}>
                 {status.sizeBytes ? t('update.downloadSize', { size: mb(status.sizeBytes) }) : t('update.download')}
               </Button>
             )}
-            {status.state === 'ready' && (
-              <Button variant="primary" disabled={starting} onClick={install}>
+            {(status.state === 'ready' || status.state === 'preparing') && (
+              <Button variant="primary" disabled={starting || status.state === 'preparing'} onClick={install}>
                 {restart ? t('update.installRestart') : t('update.openInstaller')}
               </Button>
             )}

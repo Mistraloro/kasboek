@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { ErrorDetails } from '@shared/error-text'
 import type { OpInput, OpName, OpOutput } from '@shared/contract'
 
 export class ApiError extends Error {
   constructor(
     public readonly code: string,
-    message: string
+    message: string,
+    public readonly details?: ErrorDetails
   ) {
     super(message)
   }
@@ -13,7 +15,7 @@ export class ApiError extends Error {
 /** Runs an operation in the main process. Throws ApiError on failure. */
 export async function call<K extends OpName>(op: K, ...args: {} extends OpInput<K> ? [OpInput<K>?] : [OpInput<K>]): Promise<OpOutput<K>> {
   const res = await window.kasboek.invoke(op, (args[0] ?? {}) as OpInput<K>)
-  if (!res.ok) throw new ApiError(res.error.code, res.error.message)
+  if (!res.ok) throw new ApiError(res.error.code, res.error.message, res.error.details)
   return res.data
 }
 
@@ -28,7 +30,7 @@ export function useOp<K extends OpName>(op: K, input?: OpInput<K>) {
     setLoading(true)
     try {
       setData(await window.kasboek.invoke(op, JSON.parse(key)).then((r) => {
-        if (!r.ok) throw new ApiError(r.error.code, r.error.message)
+        if (!r.ok) throw new ApiError(r.error.code, r.error.message, r.error.details)
         return r.data
       }))
       setError(null)

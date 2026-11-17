@@ -36,6 +36,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "src/core/**/*",
+    "src/renderer/src/i18n/**/*",
     "tests/**/*"
   ]
 }

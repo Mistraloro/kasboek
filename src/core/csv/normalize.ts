@@ -2,7 +2,7 @@
 import { parseAmount } from '@shared/amount'
 import { directionOf, type CsvMapping } from './mapping'
 
-export type RowIssue = 'date_invalid' | 'amount_invalid' | 'amount_zero' | 'status_refused' | 'currency_other'
+export type RowIssue = 'date_invalid' | 'amount_invalid' | 'amount_zero' | 'status_refused' | 'currency_other' | 'balance_mismatch'
 
 export interface CleanRow {
   /** Index in the data rows (0 = first row after the header). */

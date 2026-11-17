@@ -19,7 +19,6 @@ import type { BackupEntryInfo, BackupStatus, ImportReset, PickedTransfer } from 
 import { paths } from '../paths'
 import { canUseDeviceMode } from '../security/device-mode'
 import { adopt, closeForReplace, db, isUnlocked, secrets } from '../session'
-import { removeSyncLeftovers } from '../sync/service'
 
 const AUTO_FILE = new RegExp(`^kasboek-backup-[0-9_-]+\\.${TRANSFER_EXTENSION}$`)
 
@@ -53,17 +52,26 @@ export async function writeTransfer(file: string, kind: 'export' | 'backup', opt
   const { account, master, vault } = secrets()
   const live = db()
   const tmp = join(paths.dataDir, `snapshot-${randomUUID()}.tmp`)
+  // Read and encrypt in one synchronous step: locking wipes the master key, which must not happen halfway
+  // (a file encrypted with a zeroed key could never be opened). Only writing the finished bytes waits.
+  let bytes: Buffer
   try {
     snapshotEncrypted(live, tmp)
     leaveOut(tmp, vault.dbKey, opts.leaveOut ?? [])
-    const bytes = encodeTransfer({ kind, account, master, vault, dbFile: await readFile(tmp), appVersion: app.getVersion(), schemaVersion: schemaVersion(live) })
-    const partial = file + '.partial'
+    bytes = encodeTransfer({ kind, account, master, vault, dbFile: readFileSync(tmp), appVersion: app.getVersion(), schemaVersion: schemaVersion(live) })
+  } finally {
+    rmSync(tmp, { force: true })
+  }
+  const partial = file + '.partial'
+  try {
     await writeFile(partial, bytes, { mode: 0o600 })
     await rename(partial, file)
-  } finally {
-    await rm(tmp, { force: true })
+  } catch (err) {
+    await rm(partial, { force: true })
+    throw err
   }
-  if (kind === 'backup') updateSettings(live, { lastBackupAt: new Date().toISOString(), lastBackupFile: file })
+  // Locked while writing: the file is complete, but the database it came from is closed.
+  if (kind === 'backup' && isUnlocked() && db() === live) updateSettings(live, { lastBackupAt: new Date().toISOString(), lastBackupFile: file })
   return file
 }
 
@@ -244,6 +252,6 @@ export async function importTransfer(input: {
   await adopt(next, master, vault, usedRecovery)
   picked.delete(input.token)
   // The staged database has sync off; the place file (URL, user name) and outbox next to it are stale now.
-  if (!opts.joining && reset.includes('sync')) removeSyncLeftovers()
+  if (!opts.joining && reset.includes('sync')) (await import('../sync/service')).removeSyncLeftovers()
   return reset
 }

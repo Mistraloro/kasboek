@@ -1,6 +1,6 @@
 /** Pure helpers for updates: comparing versions and picking this computer's release file. */
 import { posix, win32 } from 'node:path'
-import type { UpdateKind } from '@shared/types'
+import type { UpdateKind, UpdateStatus } from '@shared/types'
 
 /** "0.11.2" > "0.11.1"; a leading "v" and anything after "-" are ignored. */
 export function newer(a: string, b: string): boolean {
@@ -187,5 +187,23 @@ export function oneAtATime<T>(run: () => Promise<T>, stayLocked: (result: T) => 
     } finally {
       if (!keep) running = false
     }
+  }
+}
+
+/**
+ * The status changes while "Install and restart" works: `preparing` at once (backup, starting the
+ * helper), `installing` when Kasboek is about to close, and back to `ready` with the reason if
+ * anything fails, so the button works again.
+ */
+export function installStep(step: 'prepare' | 'close' | 'fail' | 'opened', message?: string): Partial<UpdateStatus> {
+  switch (step) {
+    case 'prepare':
+      return { state: 'preparing', error: null }
+    case 'close':
+      return { state: 'installing' }
+    case 'opened':
+      return { state: 'opened' }
+    case 'fail':
+      return { state: 'ready', error: message ?? null }
   }
 }

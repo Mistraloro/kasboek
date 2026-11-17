@@ -128,15 +128,10 @@ export function rowGroups(rows: Row[], existing: ExistingTx[] = []): RowGroup[] 
   return [...map.values()].sort((a, b) => b.rows.length + b.existing.length - (a.rows.length + a.existing.length))
 }
 
-/**
- * Reads the model's plan. Strict where it matters (each fix and category is checked), forgiving
- * where models slip: numbers written as text are accepted, and a single bad entry is dropped
- * instead of throwing away the whole answer.
- */
-export function parsePlan(text: string, name: string): Plan {
-  let raw: unknown
+/** The JSON in a model's answer, with a code fence around it ignored; `assistant.bad_plan` when it does not read. */
+export function parseJsonAnswer(text: string, name: string): unknown {
   try {
-    raw = JSON.parse(
+    return JSON.parse(
       text
         .trim()
         .replace(/^```(?:json)?\s*/i, '')
@@ -145,6 +140,15 @@ export function parsePlan(text: string, name: string): Plan {
   } catch {
     throw new AppError('assistant.bad_plan', `${name}’s answer couldn’t be read. Try again, or try another model.`)
   }
+}
+
+/**
+ * Reads the model's plan. Strict where it matters (each fix and category is checked), forgiving
+ * where models slip: numbers written as text are accepted, and a single bad entry is dropped
+ * instead of throwing away the whole answer.
+ */
+export function parsePlan(text: string, name: string): Plan {
+  const raw = parseJsonAnswer(text, name)
   const strict = Plan.safeParse(raw)
   if (strict.success) return strict.data
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>

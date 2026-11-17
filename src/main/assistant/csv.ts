@@ -4,22 +4,20 @@
  * manual change, so Claude never writes amounts straight into the database.
  */
 import { memoryState } from '@core/memory'
-import { z } from 'zod'
-import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { RULE_COLUMNS, listRules, ruleMatches, ruleText, type RuleText } from '@core/finance'
 import * as imp from '@core/import'
-import { getSettings } from '@core/settings'
 import { mappingSchema } from '@shared/import-mapping'
-import type { ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
+import { maskNumbers } from '@shared/iban'
+import { consentAddress } from '@core/insight-plan'
+import { getSettings, updateSettings } from '@core/settings'
+import type { CheckAssistPreview, ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
 import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type RowGroup } from '@core/assist-plan'
-import { client, explainError, modelParams } from './claude'
-import * as openai from './openai'
-import { activeProvider, requireConfigured } from './provider'
-import { app } from 'electron'
-import { LANGUAGES } from '@shared/languages'
-import { reasoningParams } from '@shared/reasoning'
+import { callJsonSplit } from './json'
+import { PARALLEL, TIME_LIMIT_MS, pool, runJob, type AssistState } from './jobs'
+import { CHARS_PER_TOKEN, activeProvider, requireConfigured, shownAddress, type ActiveProvider } from './provider'
+import { languageName } from '@shared/languages'
 import { getPrefs } from '../prefs'
 import { checkActivity } from './chat'
 import { broadcast } from '../session'
@@ -30,48 +28,16 @@ const INSTRUCTIONS = `You check a bank CSV export before it is imported into a p
 
 You get the raw cells, the column mapping the app detected, the rows it couldn't read or flagged, groups of similar transactions and the categories. Rows that are exactly the same as transactions already in Kasboek are left out (the stats say how many). Return a plan:
 - mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines. Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
-- fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: a few words.
-- groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group; the app applies it to every row in the group. Banks write these texts differently, so read them carefully:
+- fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: at most 6 words.
+- groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group where you set a categoryId, a name or a description, and leave out the groups where all three would be null; the app applies an entry to every row in the group. Banks write these texts differently, so read them carefully:
   - categoryId: for groups marked "uncategorised", a category id from the list. Most have an obvious category (supermarkets, bakeries, energy, telecom, rent, salary, restaurants, fuel, insurance, …): categorise every group where one fits; null only if you really can't tell. Transfers between the person's own accounts (savings, own accounts) go in a transfer category, not spending. Use only the category ids given. null for groups that already have a category.
-  - name: who the money went to or came from, short and readable, as people would say it: the shop, company or person (e.g. "Tesco", "Bakkerij De Roos", "Netflix", "Jan Peeters"), found in the counterparty or inside the bank text (card payments often put the shop and its address after the card number). Use normal capitalisation, not all caps. null if the text gives no name.
-  - description: a short, readable description without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Card payment, Brugge", "Kartenzahlung, Berlin", "Automatisch sparen"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
+  - name: who the money went to or came from, short and readable, as people would say it: the shop, company or person (e.g. "Tesco", "Bakkerij De Roos", "Netflix", "Jan Peeters"), found in the counterparty or inside the bank text (card payments often put the shop and its address after the card number). Use normal capitalisation, not all caps, at most 40 characters. null if the text gives no name.
+  - description: a short, readable description (at most 80 characters) without card numbers, account numbers, references, value dates or times, in the language of the bank text (e.g. "Card payment, Brugge", "Kartenzahlung, Berlin", "Automatisch sparen"). Keep anything the person would want to read, such as the communication of a transfer. null to keep the bank's text.
 - rules: rules make future imports categorise themselves. Suggest one only for a payee that comes back (a group with 2 or more transactions, or a known shop, employer, utility or subscription). field: where the text is ("counterparty" if the counterparty column holds the name, else "description"). pattern: a distinctive piece of the bank's own text (as written in the counterparty or bank text column, not your readable name), at least 4 characters, that is in every transaction of the group and wouldn't appear in unrelated payments: the shop or company name, not a city, card number, date or generic word like "BETALING". match: "word" for a name that must stand alone, else "contains". categoryId: the category for the group. Don't suggest rules that already exist.
-- notes: 1 to 5 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
+- notes: 1 to 3 short sentences for the person: what you checked, what you changed, anything they should look at. Plain words, in the language given as noteLanguage.
+Your answer has a length limit and is cut off when it is too long, so be brief: no explanations outside the fields, and no entries that change nothing.
 personNotes, when given, are things the person told the assistant to remember (e.g. which category a payee belongs in): follow them.
 Never invent amounts or dates that are not supported by the raw cells.`
-
-/**
- * Account numbers don't help the check: only the country and last four digits are sent. Also
- * found when stuck to other text ("…864551BE29001477…" in a mandate reference); a candidate only
- * counts when its IBAN checksum is right, so other codes are left alone.
- */
-const IBAN = /(?<![A-Z])([A-Z]{2})(\d{2})((?:[ ]?[A-Z0-9]){10,30})/g
-const IBAN_LENGTH: Record<string, number> = { BE: 16, NL: 18, FR: 27, DE: 22, LU: 20, ES: 24, PT: 25, IT: 27, GB: 22, IE: 22, AT: 20, CH: 21, LT: 20, MT: 31 }
-
-function validIban(iban: string): boolean {
-  const re = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55))
-  let rem = 0
-  for (const ch of re) rem = (rem * 10 + Number(ch)) % 97
-  return rem === 1
-}
-
-export const maskIban = (text: string): string =>
-  text.replace(IBAN, (m, cc: string) => {
-    const compact = m.replace(/\s/g, '')
-    // Try the country's length first (the match may run on into other text), then shorter ones.
-    const lengths = IBAN_LENGTH[cc] ? [IBAN_LENGTH[cc]!] : Array.from({ length: compact.length - 13 }, (_, i) => compact.length - i)
-    for (const len of lengths) {
-      const candidate = compact.slice(0, len)
-      if (candidate.length === len && validIban(candidate)) {
-        // Keep what followed the account number.
-        let used = 0
-        let count = 0
-        while (count < len && used < m.length) if (m[used++] !== ' ') count++
-        return `${cc}…${candidate.slice(-4)}${m.slice(used)}`
-      }
-    }
-    return m
-  })
 
 /** At most `n` items spread over the whole list rather than only the first ones. */
 function spread<T>(items: T[], n: number): T[] {
@@ -119,53 +85,73 @@ interface Batch {
   first: boolean
   n: number
   of: number
+  /** Indexes of the flagged rows (see flaggedRows) this part answers; the part may be one of several. */
+  flagged: number[]
+  /** Set when this is half of a part that was too big for one answer. */
+  split?: true
 }
 
-function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
+/** Flagged rows sent for fixes at most (spread over the file). */
+const MAX_FLAGGED = 150
+
+/** Rows the app couldn't read or isn't sure of; exact duplicates are already in Kasboek and not sent again. */
+function flaggedRows(preview: ImportPreview): ImportPreview['rows'] {
+  return spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), MAX_FLAGGED)
+}
+
+/**
+ * The text of one request of a check: what the assistant gets to see, with every free text (names,
+ * descriptions, cells, the file name, rules, remembered notes) run through maskNumbers so that account
+ * and card numbers never leave the computer. This is the only place the text is made: the preview in
+ * the consent dialog shows these same strings, and the requests send them.
+ */
+export function checkPayload(db: Db, preview: ImportPreview, batch: Batch, language: string): string {
   const groups = batch.groups
+  const mask = maskNumbers
   const raw = imp.rawWindow(preview.sessionId, 0, 25)
-  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(maskIban)
-  // Exact duplicates are already in Kasboek: not sent again.
-  const flagged = spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), 150).map((r) => ({
+  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(mask)
+  const own = new Set(batch.flagged)
+  const flagged = flaggedRows(preview).filter((r) => own.has(r.index)).map((r) => ({
     index: r.index,
     status: r.status,
     issues: r.issues,
     cells: cells(r.index),
-    ...(r.match ? { inKasboek: { date: r.match.bookingDate, counterparty: r.match.counterpartyName, description: maskIban(r.match.description.slice(0, 300)) } } : {})
+    ...(r.match ? { inKasboek: { date: r.match.bookingDate, counterparty: r.match.counterpartyName === null ? null : mask(r.match.counterpartyName), description: mask(r.match.description.slice(0, 300)) } } : {})
   }))
   const catName = new Map((db.prepare('SELECT id, name FROM categories').all() as { id: number; name: string }[]).map((c) => [c.id, c.name]))
+  const label = batch.of > 1 ? `Part ${batch.n} of ${batch.of}` : 'Part of the file'
   const lines = groups.map((g, i) => {
     const cat = g.example.categoryId === null ? 'uncategorised' : (catName.get(g.example.categoryId) ?? 'categorised')
-    const comm = g.example.communication ? ` | communication: ${maskIban(g.example.communication.slice(0, 120))}` : ''
-    return `${batch.from + i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${maskIban(g.example.counterpartyName ?? '')} | ${maskIban(g.example.description.slice(0, 400))}${comm}`
+    const comm = g.example.communication ? ` | communication: ${mask(g.example.communication.slice(0, 120))}` : ''
+    return `${batch.from + i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${mask(g.example.counterpartyName ?? '')} | ${mask(g.example.description.slice(0, 400))}${comm}`
   })
-  const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${c.name} (${c.kind})`)
-  const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId)
+  const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${mask(c.name)} (${c.kind})`)
+  const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId) as { name: string; currency: string; bank: string | null; kind: string }
   // What the assistant remembers (payees, categories, preferences) helps here too.
-  const memory = (({ enabled, items }) => (enabled ? items.map((m) => m.text) : []))(memoryState(db))
+  const memory = (({ enabled, items }) => (enabled ? items.map((m) => mask(m.text)) : []))(memoryState(db))
   return JSON.stringify(
     {
-      ...(batch.of > 1
+      ...(batch.of > 1 || batch.split
         ? {
             batch: batch.first
-              ? `Part ${batch.n} of ${batch.of}: check the columns and flagged rows, and the groups below. The other groups are checked separately.`
-              : `Part ${batch.n} of ${batch.of}: only the groups below. Return mapping null and no fixes; the columns and flagged rows are checked in part 1.`
+              ? `${label}: check the columns, the flagged rows listed below and the groups below. The other groups and flagged rows are checked separately.`
+              : `${label}: only the groups and flagged rows listed below. Return mapping null; give fixes only for the flaggedRows listed here. The columns are checked in part 1.`
           }
         : {}),
-      noteLanguage: LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English',
-      account,
-      fileName: preview.fileName,
+      noteLanguage: languageName(language),
+      account: { ...account, name: mask(account.name), bank: account.bank === null ? null : mask(account.bank) },
+      fileName: mask(preview.fileName),
       recognisedLayout: preview.layout,
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,
       stats: preview.stats,
-      linesAboveHeader: raw.preamble.map((r) => r.map(maskIban)),
-      header: raw.header.map((h, i) => `${i}: ${h}`),
-      firstRows: batch.first ? raw.rows.map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })) : raw.rows.slice(0, 5).map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })),
-      flaggedRows: batch.first ? flagged : [],
+      linesAboveHeader: raw.preamble.map((r) => r.map(mask)),
+      header: raw.header.map((h, i) => `${i}: ${mask(h)}`),
+      firstRows: (batch.first ? raw.rows : raw.rows.slice(0, 5)).map((r) => ({ index: r.index, cells: r.cells.map(mask) })),
+      flaggedRows: flagged,
       groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
-      rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`),
+      rules: listRules(db).map((r) => `${r.field} ${r.match} "${mask(r.pattern)}" → ${r.categoryId}`),
       ...(memory.length ? { personNotes: memory } : {})
     },
     null,
@@ -382,106 +368,153 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
   return out
 }
 
-/** Each part of a check that runs too long is stopped, so the import screen never waits forever. */
-const TIME_LIMIT_MS = 4 * 60_000
-/** Dev builds only: a shorter limit, to test what happens when a part runs out of time. */
-const limitMs = (): number => (!app.isPackaged && Number(process.env['KASBOEK_CHECK_LIMIT_MS'])) || TIME_LIMIT_MS
-/** Groups per model call, and calls at the same time: a big file is checked in parts. */
+/** Groups per model call at most: a big file is checked in parts. */
 const BATCH_GROUPS = 80
-const PARALLEL = 3
-const running = new Map<string, AbortController>()
+/**
+ * What a part's answer is expected to take, in tokens, so that a typical part fits in one answer
+ * (reasoning shares the same limit, and some servers allow only 8192 in total).
+ */
+const ANSWER_TOKENS = 6000
+const OVERHEAD_TOKENS = 600
+const GROUP_TOKENS = 60
+const FIX_TOKENS = 55
+/** A part of this many groups and flagged rows or fewer is not split further. */
+const MIN_UNITS = 5
 
-/** Where a check stands, so the import screen can pick it up again after switching tabs. */
-export interface AssistState {
-  running: boolean
-  startedAt: number
-  groupsDone: number
-  groupsTotal: number
-  partsTotal: number
-  error: string | null
+/**
+ * Raise this whenever the list of what a check sends changes (see checkPayload): everyone is asked
+ * again before the next request.
+ */
+export const CHECK_CONSENT_VERSION = 1
+
+/** The model that reads the file: Claude's own setting, else the provider's model for reading files. */
+const checkModel = (db: Db, p: ActiveProvider): string => (p.preset.id === 'anthropic' ? getSettings(db).csvModel : p.csvModel)
+
+/** What the person agrees to: where the rows go (provider and address) and which model reads them. */
+const target = (db: Db, p: ActiveProvider): { provider: string; baseUrl: string; model: string } => ({ provider: p.preset.id, baseUrl: consentAddress(p.baseUrl), model: checkModel(db, p) })
+
+/** A record from an older list of what is sent, or for another provider, address or model, never matches: the person is asked again. */
+const agreed = (db: Db, p: ActiveProvider): boolean => {
+  const consent = getSettings(db).aiCheckConsent
+  const now = target(db, p)
+  return !!consent && consent.version === CHECK_CONSENT_VERSION && consent.provider === now.provider && consent.baseUrl === now.baseUrl && consent.model === now.model
 }
-const states = new Map<string, AssistState>()
 
-export function assistStatus(sessionId: string): AssistState | null {
-  return states.get(sessionId) ?? null
+/** The groups the check looks at and the parts it is sent in. */
+function planParts(db: Db, preview: ImportPreview): { groups: RowGroup[]; parts: Batch[] } {
+  const groups = rowGroups(preview.rows, existingUncategorised(db, preview.accountId)).slice(0, MAX_GROUPS)
+  const parts = batches(groups, BATCH_GROUPS, flaggedRows(preview).map((r) => r.index)).map((b, _i, all) => ({ ...b, of: all.length }))
+  return { groups, parts }
 }
 
-/** Stops a running check for this import (the "Stop" button). */
-export function cancelAssist(sessionId: string): void {
-  running.get(sessionId)?.abort('cancelled')
-}
-
-export async function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
-  running.get(sessionId)?.abort('cancelled')
-  const controller = new AbortController()
-  running.set(sessionId, controller)
-  const state: AssistState = { running: true, startedAt: Date.now(), groupsDone: 0, groupsTotal: 0, partsTotal: 0, error: null }
-  states.set(sessionId, state)
-  let error: AppError | null = null
-  try {
-    return await check(db, sessionId, controller.signal, state)
-  } catch (err) {
-    error = controller.signal.aborted ? new AppError('assistant.cancelled', 'Check stopped.') : err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The check failed.')
-    throw error
-  } finally {
-    if (running.get(sessionId) === controller) running.delete(sessionId)
-    state.running = false
-    state.error = error?.message ?? null
-    // Also reaches an import screen that was opened again while the check ran.
-    broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message } : null })
+/** What a check would send for this import: shown in the dialog where the person agrees, built by the same code as the requests. */
+export function checkPreview(db: Db, sessionId: string): CheckAssistPreview {
+  const provider = activeProvider(db)
+  requireConfigured(provider)
+  const preview = imp.preview(db, sessionId)
+  const language = getPrefs().language
+  const bodies = planParts(db, preview).parts.map((b) => checkPayload(db, preview, b, language))
+  const text = bodies.length === 1 ? bodies[0]! : bodies.map((b, i) => `--- Request ${i + 1} of ${bodies.length} ---\n${b}`).join('\n\n')
+  // Every request also carries the instructions.
+  const chars = INSTRUCTIONS.length * bodies.length + bodies.reduce((n, b) => n + b.length, 0)
+  return {
+    text,
+    approxTokens: Math.ceil(chars / CHARS_PER_TOKEN),
+    rows: preview.stats.total,
+    parts: bodies.length,
+    providerName: provider.preset.assistantName,
+    company: provider.preset.company,
+    address: shownAddress(provider),
+    model: checkModel(db, provider)
   }
 }
 
-/** Splits the groups into parts; the first part also carries the columns and flagged rows. */
-export function batches(groups: RowGroup[], size = BATCH_GROUPS): Omit<Batch, 'of'>[] {
+/** Starts the check; without the person's agreement for this provider, address and model it refuses (`consent: true` records it). */
+export async function assistImport(db: Db, sessionId: string, opts: { consent?: true } = {}): Promise<ImportPreview> {
+  const provider = activeProvider(db)
+  requireConfigured(provider)
+  if (!agreed(db, provider)) {
+    if (!opts.consent) throw new AppError('import.consent_needed', `Agree to send the rows of this file to ${provider.preset.assistantName} first.`)
+    updateSettings(db, { aiCheckConsent: { ...target(db, provider), version: CHECK_CONSENT_VERSION, at: new Date().toISOString() } })
+  }
+  return runJob(sessionId, 'check', (signal, state) => check(db, sessionId, signal, state))
+}
+
+/**
+ * Splits the groups and flagged rows into parts, each sized so that its expected answer fits; the
+ * first part also carries the columns.
+ */
+export function batches(groups: RowGroup[], size = BATCH_GROUPS, flagged: number[] = []): Omit<Batch, 'of'>[] {
   const out: Omit<Batch, 'of'>[] = []
-  for (let from = 0; from < Math.max(groups.length, 1); from += size) out.push({ from, groups: groups.slice(from, from + size), first: from === 0, n: out.length + 1 })
+  let from = 0
+  let f = 0
+  do {
+    const rows: number[] = []
+    let cost = OVERHEAD_TOKENS
+    while (f < flagged.length && cost + FIX_TOKENS <= ANSWER_TOKENS) {
+      rows.push(flagged[f++]!)
+      cost += FIX_TOKENS
+    }
+    const n = Math.min(size, Math.floor((ANSWER_TOKENS - cost) / GROUP_TOKENS), groups.length - from)
+    out.push({ from, groups: groups.slice(from, from + n), first: from === 0 && out.length === 0, n: out.length + 1, flagged: rows })
+    from += n
+  } while (from < groups.length || f < flagged.length)
   return out
 }
 
-/** Puts the parts' answers together: columns and row fixes come only from the first part. */
-export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { groups: unknown[] }; plan: Plan }[]): Plan {
+/** A part in two halves (the first keeps the column check), or null when it is small enough. */
+export function splitBatch<B extends Omit<Batch, 'of'>>(b: B): [B, B] | null {
+  if (b.groups.length + b.flagged.length <= MIN_UNITS) return null
+  const g = Math.ceil(b.groups.length / 2)
+  const f = Math.ceil(b.flagged.length / 2)
+  return [
+    { ...b, split: true, groups: b.groups.slice(0, g), flagged: b.flagged.slice(0, f) },
+    { ...b, split: true, first: false, from: b.from + g, groups: b.groups.slice(g), flagged: b.flagged.slice(f) }
+  ]
+}
+
+/** What is in a part, in words for the person: the flagged rows and the payees in it. */
+function describeBatch(b: Batch): string {
+  const some = (items: string[]): string => `${items.slice(0, 3).join(', ')}${items.length > 3 ? ', …' : ''}`
+  const names = b.groups.map((g) => `“${(g.example.counterpartyName || g.example.description).slice(0, 30)}”`)
+  const rows = b.flagged.map((i) => String(i + 1))
+  const bits = [
+    ...(rows.length ? [`${rows.length} flagged row${rows.length === 1 ? '' : 's'} (rows ${some(rows)})`] : []),
+    ...(names.length ? [`${names.length} group${names.length === 1 ? '' : 's'} of transactions (${some(names)})`] : []),
+    ...(b.first ? ['the column check'] : [])
+  ]
+  return bits.join(' and ')
+}
+
+/**
+ * Puts the parts' answers together: columns come only from the first part, fixes from it and for
+ * the flagged rows of the others.
+ */
+export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { groups: unknown[]; flagged?: number[] }; plan: Plan }[]): Plan {
   const first = parts.find((p) => p.batch.first)?.plan
+  const fixes = new Map<number, Plan['fixes'][number]>()
+  for (const p of [...parts.filter((x) => x.batch.first), ...parts.filter((x) => !x.batch.first)])
+    for (const f of p.plan.fixes) if (!fixes.has(f.index) && (p.batch.first || p.batch.flagged?.includes(f.index))) fixes.set(f.index, f)
   // Only answers about the part's own groups count (a model may renumber them from 0).
   const own = <T extends { group: number }>(p: (typeof parts)[number], list: T[]): T[] => list.filter((g) => g.group >= p.batch.from && g.group < p.batch.from + p.batch.groups.length)
   return {
     mapping: first?.mapping ?? null,
-    fixes: first?.fixes ?? [],
+    fixes: [...fixes.values()],
     groups: parts.flatMap((p) => own(p, p.plan.groups)),
     rules: parts.flatMap((p) => own(p, p.plan.rules)),
     notes: [...new Set(parts.flatMap((p) => p.plan.notes))].slice(0, 6)
   }
 }
 
-/** Runs `work` over the items with at most `limit` at a time; failures are returned, not thrown. */
-async function pool<T, R>(items: T[], limit: number, work: (item: T) => Promise<R>): Promise<({ ok: true; value: R } | { ok: false; error: unknown })[]> {
-  const results: ({ ok: true; value: R } | { ok: false; error: unknown })[] = new Array(items.length)
-  let next = 0
-  const lane = async (): Promise<void> => {
-    while (next < items.length) {
-      const i = next++
-      try {
-        results[i] = { ok: true, value: await work(items[i]!) }
-      } catch (error) {
-        results[i] = { ok: false, error }
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
-  return results
-}
-
 async function check(db: Db, sessionId: string, signal: AbortSignal, state: AssistState): Promise<ImportPreview> {
   const preview = imp.preview(db, sessionId)
-  const groups = rowGroups(preview.rows, existingUncategorised(db, preview.accountId)).slice(0, MAX_GROUPS)
+  const { groups, parts } = planParts(db, preview)
   if (!groups.length && !preview.rows.some((r) => r.status === 'problem' || r.status === 'possible_duplicate') && preview.mapping) {
     const name = activeProvider(db).preset.assistantName
     throw new AppError('assistant.nothing_to_check', `There is nothing for ${name} to check: every row is already in Kasboek and no transactions of this account are uncategorised.`)
   }
   const provider = activeProvider(db)
   requireConfigured(provider)
-  const name = provider.preset.assistantName
-  const parts = batches(groups).map((b, _i, all) => ({ ...b, of: all.length }))
   // Shown in the assistant panel too: the reasoning as it comes, and the notes at the end.
   const activity = checkActivity(preview.fileName)
   try {
@@ -507,6 +540,7 @@ async function runParts(
 ): Promise<ImportPreview> {
   const sessionId = preview.sessionId
   const name = provider.preset.assistantName
+  const language = getPrefs().language
   let done = 0
   const progress = (): void => {
     Object.assign(state, { groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
@@ -514,71 +548,39 @@ async function runParts(
     broadcast({ type: 'import.checkProgress', sessionId, groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
   }
   progress()
-  const results = await pool(parts, PARALLEL, async (batch) => {
-    const timeout = new AbortController()
-    const timer = setTimeout(() => timeout.abort('timeout'), limitMs())
-    try {
-      const text = await callModel(db, provider, buildContext(db, preview, batch), AbortSignal.any([signal, timeout.signal]), (t) => activity.thinking(batch.n, batch.of, t))
-      const plan = parsePlan(text, name)
-      done += batch.groups.length
-      progress()
-      return { batch, plan }
-    } catch (err) {
-      if (signal.aborted) throw err
-      if (timeout.signal.aborted)
-        throw new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
-      throw err
-    } finally {
-      clearTimeout(timer)
-    }
-  })
+  const results = await pool(parts, PARALLEL, (batch) =>
+    callJsonSplit(
+      db,
+      provider,
+      { system: INSTRUCTIONS, schema: Plan, signal, onThinking: (t) => activity.thinking(batch.n, batch.of, t) },
+      {
+        part: batch,
+        context: (b) => checkPayload(db, preview, b, language),
+        parse: (text) => parsePlan(text, name),
+        split: splitBatch,
+        describe: describeBatch,
+        done: (b) => {
+          // The parts that were answered never overlap, so this only goes up.
+          done += b.groups.length
+          progress()
+        },
+        timedOut: () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
+      }
+    )
+  )
   if (signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
-  const finished = results.flatMap((r) => (r.ok ? [r.value] : []))
-  const failed = parts.filter((_, i) => !results[i]!.ok)
-  if (!finished.length) {
-    const first = results.find((r) => !r.ok) as { ok: false; error: unknown }
-    throw first.error
-  }
+  const errors = results.flatMap((r) => (r.ok ? [] : [r.error]))
+  if (errors.length) throw errors[0]
+  const outcomes = results.flatMap((r) => (r.ok ? [r.value] : []))
+  const finished = outcomes.flatMap((o) => o.answered.map((a) => ({ batch: a.part, plan: a.value })))
+  const failed = outcomes.flatMap((o) => o.failed)
+  if (!finished.length) throw failed[0]!.error
   const plan = mergePlans(finished)
   // Parts that failed are left out; what the others found is kept.
-  const lost = failed.map((b) => (b.first ? `part ${b.n} (with the column check)` : `part ${b.n}`))
-  if (lost.length) plan.notes.unshift(`${lost.length} of ${parts.length} parts couldn’t be checked (${lost.join(', ')}); run Check again to try them.`)
+  if (failed.length) {
+    const hint = failed.some((f) => f.error instanceof AppError && f.error.code === 'assistant.too_long') ? ' A model with a bigger output limit, or a smaller file, avoids this.' : ''
+    const lost = [...new Set(failed.map((f) => f.part.n))]
+    plan.notes.unshift(`${lost.length} of ${parts.length} parts couldn’t be checked (part ${lost.join(', ')}): ${failed.map((f) => describeBatch(f.part)).join('; ')}. Run Check again to try them.${hint}`)
+  }
   return applyPlan(db, preview, groups, plan, name)
-}
-
-/** One model call that returns the plan as JSON text. */
-async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, context: string, signal: AbortSignal, onThinking: (t: string) => void): Promise<string> {
-  const name = provider.preset.assistantName
-  if (provider.preset.id !== 'anthropic') {
-    try {
-      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal, onThinking, reasoning: reasoningParams(provider.preset.id, getSettings(db).aiCsvReasoning) })
-    } catch (err) {
-      if (signal.aborted) throw err
-      throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
-    }
-  }
-  const settings = getSettings(db)
-  const params = modelParams(settings.csvModel, settings.csvEffort)
-  let text = ''
-  try {
-    const stream = client(db).beta.messages.stream(
-      {
-        ...params,
-        max_tokens: 32000,
-        output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
-        system: INSTRUCTIONS,
-        messages: [{ role: 'user', content: context }]
-      },
-      { signal }
-    )
-    stream.on('thinking', (delta) => onThinking(delta))
-    const message = await stream.finalMessage()
-    if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
-    if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')
-    for (const b of message.content) if (b.type === 'text') text += b.text
-  } catch (err) {
-    if (signal.aborted) throw err
-    throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
-  }
-  return text
 }

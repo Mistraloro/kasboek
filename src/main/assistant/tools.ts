@@ -5,7 +5,8 @@ import { coreOps } from '@core/ops'
 import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
 import { previewRule } from '@core/finance'
-import { commitSummary, latestSession } from '@core/import'
+import { findRecurring } from '@core/recurring'
+import { commitSummary, latestSession, sessionKind } from '@core/import'
 import type { RuleField, RuleMatch } from '@shared/types'
 import { getPrefs } from '../prefs'
 import { contract, type ContractEntry, type OpName } from '@shared/contract'
@@ -76,6 +77,8 @@ export function compactResult(op: OpName, data: unknown, input?: unknown): strin
       fileName: p.fileName,
       account: p.accountName,
       layout: p.layout,
+      fileKind: p.fileKind,
+      ...(p.pdf ? { pdf: { tableFound: p.pdf.tableFound, readBy: p.pdf.readBy, reconciliation: p.pdf.reconciliation } } : {}),
       mappingSource: p.mappingSource,
       headers: p.headers.map((h, i) => `${i}: ${h}`),
       mapping: p.mapping,
@@ -136,6 +139,18 @@ export function fitJson(data: unknown, max: number): string {
   return build(lo)
 }
 
+/** Whether this change saves an import that was read from a PDF (those always wait for the person). */
+export function isPdfCommit(op: OpName, input: unknown): boolean {
+  if (op !== 'import.commit') return false
+  const given = (input as { sessionId?: unknown } | null | undefined)?.sessionId
+  const id = typeof given === 'string' ? given : latestSession()
+  try {
+    return !!id && sessionKind(id) === 'pdf'
+  } catch {
+    return false
+  }
+}
+
 /** Money in the user's own formats, for confirmation cards. */
 const money = (db: Db, c: number, currency = getSettings(db).currency): string => formatMoney(c, currency, getPrefs().formats)
 
@@ -172,6 +187,11 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
     }
     case 'goals.create':
       return `Create the savings goal “${String(input['name'])}”: ${money(db, Number(input['targetCents']))}${input['targetDate'] ? ` by ${String(input['targetDate'])}` : ''}`
+    case 'recurring.hide': {
+      const found = findRecurring(db)
+      const name = [...found.items, ...found.hidden].find((i) => i.key === input['key'])?.name ?? String(input['key']).replace(/^(in|out):/, '')
+      return input['hidden'] === false ? `Count “${name}” as a fixed cost again` : `Stop counting “${name}” as a fixed cost`
+    }
     case 'transactions.split': {
       const parts = (input['parts'] as { categoryId: number | null; amountCents: number }[] | undefined) ?? []
       if (!parts.length) return 'Remove the split of a transaction'
@@ -207,7 +227,9 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
         const fmt = getPrefs().formats
         const range = c.from && c.to ? (c.from === c.to ? `, ${formatDate(c.from, fmt)}` : `, ${formatDate(c.from, fmt)} – ${formatDate(c.to, fmt)}`) : ''
         const closing = c.closing ? `, and record the file’s closing balance ${money(db, c.closing.cents, c.currency)} on ${formatDate(c.closing.date, fmt)}` : ''
-        return `Import ${c.rows} row${c.rows === 1 ? '' : 's'} (${money(db, c.totalCents, c.currency)}${range}) into ${c.accountName}${closing}`
+        const source = c.pdf ? `from the PDF statement${c.pdf.readBy === 'assistant' ? ' (read by the assistant from the statement’s text)' : ''} ` : ''
+        const off = c.pdf?.differenceCents ? `. Warning: the rows don’t add up to the statement’s closing balance (difference ${money(db, c.pdf.differenceCents, c.currency)})` : ''
+        return `Import ${c.rows} row${c.rows === 1 ? '' : 's'} ${source}(${money(db, c.totalCents, c.currency)}${range}) into ${c.accountName}${closing}${off}`
       } catch {
         return 'Import the ready rows of the open CSV as transactions'
       }

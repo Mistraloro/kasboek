@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildUpdatePlan, failedUpdateMessage, installKind, msiOutcome, msiOutcomeMessage, newer, oneAtATime, pickAsset, updateMayStillBeRunning, waitForHelperStart, type HelperProbe, type MsiOutcome, type UpdatePlanInput } from '@core/update'
+import { buildUpdatePlan, failedUpdateMessage, installKind, installStep, msiOutcome, msiOutcomeMessage, newer, oneAtATime, pickAsset, updateMayStillBeRunning, waitForHelperStart, type HelperProbe, type MsiOutcome, type UpdatePlanInput } from '@core/update'
 
 const files = ['Kasboek-0.12.0-win-x64.msi', 'Kasboek-0.12.0-win-arm64.msi', 'Kasboek-0.12.0-mac-arm64.dmg', 'Kasboek-0.12.0-mac-x64.dmg', 'Kasboek-0.12.0-x86_64.AppImage', 'Kasboek-0.12.0-arm64.AppImage', 'Kasboek-0.12.0-amd64.deb', 'Kasboek-0.12.0-arm64.deb', 'SHA256SUMS.txt'].map((name) => ({ name }))
 
@@ -234,5 +234,33 @@ describe('one install at a time', () => {
     expect(await install()).toBe('opened')
     expect(await install()).toBe('opened')
     expect(n).toBe(3)
+  })
+
+  it('shows "preparing" at once, closes on success and goes back to ready with the reason on failure', () => {
+    expect(installStep('prepare')).toEqual({ state: 'preparing', error: null })
+    expect(installStep('close')).toEqual({ state: 'installing' })
+    expect(installStep('opened')).toEqual({ state: 'opened' })
+    expect(installStep('fail', 'The update could not be started.')).toEqual({ state: 'ready', error: 'The update could not be started.' })
+    expect(installStep('fail')).toEqual({ state: 'ready', error: null })
+  })
+
+  it('keeps the one-at-a-time guard through the preparing state', async () => {
+    let state = 'ready'
+    let release!: () => void
+    const run = oneAtATime(
+      async () => {
+        state = installStep('prepare').state as string
+        await new Promise<void>((r) => (release = r))
+        state = installStep('close').state as string
+        return state
+      },
+      (s) => s === 'installing',
+      () => state
+    )
+    const first = run()
+    expect(await run()).toBe('preparing')
+    release()
+    expect(await first).toBe('installing')
+    expect(await run()).toBe('installing')
   })
 })

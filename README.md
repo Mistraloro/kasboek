@@ -11,9 +11,15 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   searches, split one payment over categories), categories, rules ("Supermarket → Groceries", on text,
   whole words or the counterparty's IBAN), monthly budgets, and an overview with income, spending,
   budget left, warnings and a 6-month chart; a year view per category; net worth over time with
-  investments and loans; savings goals; fixed costs and subscriptions found from your transactions.
+  investments and loans; savings goals; fixed costs and subscriptions found from your transactions (if one is wrong, mark it "Not a fixed cost" and it stops counting).
   Refunds lower spending; transfers between your own accounts are paired and left out.
   Dark and light mode, eight languages, number and date formats chosen part by part.
+- **Suggestions**: a card on the Overview with tips found from your own data (a price rise, a payment
+  taken twice, a late or coming fixed cost, a budget nearly used up, a category that grew, an unusual
+  payment). Worked out on your computer: these local tips send nothing anywhere. With an assistant set
+  up, "Get tips from …" has it word the best ones as short personal tips, only when you press the button
+  (see the Assistant section below). Hide a tip or mark it not useful; turn the card off, or show
+  hidden tips again, in Settings → General.
 - **First start**: a welcome window sets the language, number and date style, exchange rates, the
   assistant, Claude Desktop / Claude Code and update checks, then offers a short tour of the app.
 - **Bank balance**: enter what your bank shows (or let a CSV balance column do it); the balance is
@@ -31,6 +37,19 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   bank reference, and "maybe imported" when the bank changed the text), applies your rules and the
   names you tidied before, and shows everything before saving. Undo per import. Export to CSV, and
   a year report as PDF.
+- **PDF statements**: drop a bank statement as PDF (one with selectable text; scans and photos are
+  not read). Kasboek finds the table of transactions on this computer, in a separate reader process;
+  the file is not sent anywhere. It checks the rows against the opening and closing balance printed
+  on the statement and says so when they don't add up (and suggests flipping the signs for a credit
+  card statement). Password-protected PDFs have to be unlocked first. Reading on this computer sends
+  nothing anywhere. Where no table is found, or the rows don't add up to the statement, you can
+  choose "Read with …" (needs an assistant): after you agree in a dialog that shows exactly what is
+  sent, only the statement's text goes to your provider, never the PDF. Account and card numbers are
+  hidden and the part above the table (your name and address) is left out. The assistant points out
+  which lines form each transaction and copies its date and amount; Kasboek checks that every one
+  of them is really in those lines, reads each amount from the PDF's own text, and shows every row
+  (the ones it can't confirm as problems) before anything is saved. Up to 40 pages, in parts of 4.
+  If no assistant is set up, ask the bank for a CSV.
 - **Assistant**: ask questions about your money or let the assistant make changes. You choose which
   kinds of change it may make by itself and which wait for your OK (Settings → Assistant → "What
   the assistant may do by itself"), how much it reasons per model, and what it remembers between conversations
@@ -129,12 +148,32 @@ code-signing certificate).
    (medium). Other providers: type a model name or load the list from the provider.
 
 Messages, the data the assistant looks up and what it remembers go to the chosen provider (or
-stay on your computer for local models). Nothing is sent until you ask.
+stay on your computer for local models). Nothing is sent until you ask. "Check with …" on a CSV
+asks first, once per provider, address and model (asked again when any of them changes, or when what
+is sent changes), and the dialog shows exactly what is sent: the payees and descriptions of the file
+and of your uncategorised transactions, the first rows as written, your categories and rules, and
+the notes the assistant remembered, all with account and card numbers shortened (IBANs and runs of
+13 or more digits). The rest of the file and transactions that already have a category are not
+sent. "Read with …" on a PDF statement sends
+only the statement's extracted text, masked as described under PDF statements, and only after you
+agree in a dialog every time (there is no "don't ask again"; it also says how many of your edited rows the reading replaces). "Get tips from …" on the Overview's
+Suggestions card sends a short summary made on your computer: the kind of each finding (a price rise,
+a budget over its limit, …), payee or category names (account and card numbers hidden, cut to 40
+characters) and amounts rounded to whole units. Never sent: account names, balances, income, your
+transactions or their descriptions. It only runs when you press the button, after you agreed once
+for that provider (asked again if you switch provider or if what is sent changes), and the dialog
+shows exactly what is sent. The assistant only picks and words the tips: it can't write numbers,
+Kasboek fills in every amount and date from your own data and drops any tip that doesn't check out.
+Tips are kept on this computer only (not synced). Text inside imported files is treated
+as data from the bank, never as instructions, and saving a PDF import always waits for your OK, also
+when the assistant may otherwise import by itself.
 
-**Permissions**: "Always ask" (the default), "Ask for important changes", "Decide by itself" or a
-choice per kind of change. Balances, deleting rules, new accounts, imports and remembering things
-ask unless you allow them; changes to more than 100 transactions always ask, except in "Decide by
-itself". Changes made without asking show in the chat.
+**Permissions**: "Ask first" (the default), "Smart", "Full access" or "Custom" (a choice per kind of
+change). In "Smart", balances, deleting rules, new accounts, importing and the assistant's memory ask
+unless you allow them; changes to more than 100 transactions always ask, except in "Full access".
+Even in "Full access", saving an import read from a PDF and changes asked for through Claude Desktop
+or Claude Code still ask (the second can be switched off), and the assistant can never change
+settings, keys, addresses or its own permissions. Changes made without asking show in the chat.
 
 **Memory**: say "remember that …", or add items in Settings → Assistant → "What the assistant remembers". Up to
 50 short items, stored in the encrypted database, not synced and not offered to Claude apps over
@@ -179,8 +218,9 @@ npm run test:mcp    # the Go MCP helper
 - `sync.json`: this computer's sync id and folder, when syncing
 - `safety-backups/`: copies made automatically before an import and before an update
 - `updates/`: a downloaded update while it installs
-- `startup.log`: what happened during the last start (version, system, graphics card, steps), never
-  your data; useful when Kasboek doesn't open properly
+- `startup.log`: what happened during the last start (version, system, graphics card, steps with
+  timings, whether it was the first start of this version), never your data; useful when Kasboek
+  doesn't open properly or starts slowly. The start before it is kept as `startup.prev.log`.
 
 The assistant's memory, settings that sync and everything you enter live inside `kasboek.db`.
 

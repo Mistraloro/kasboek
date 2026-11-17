@@ -5,7 +5,8 @@
  */
 import { net } from 'electron'
 import type Anthropic from '@anthropic-ai/sdk'
-import { AppError } from '@core/errors'
+import { AppError, TruncatedError } from '@core/errors'
+import type { ErrorDetails, ProviderFailureKind } from '@shared/error-text'
 import type { ActiveProvider } from './provider'
 
 type MessageParam = Anthropic.Beta.Messages.BetaMessageParam
@@ -406,6 +407,8 @@ export async function json(
     schema: Record<string, unknown>
     maxTokens: number
     signal?: AbortSignal
+    /** The model to call; the provider's model for reading files when left out. */
+    model?: string
     /** Streams the model's reasoning, where it shares it. */
     onThinking?: (t: string) => void
     /** Fields that set how much the model reasons (see reasoningParams). */
@@ -413,6 +416,7 @@ export async function json(
   }
 ): Promise<string> {
   const stream = !!opts.onThinking
+  const model = opts.model ?? p.csvModel
   const strict = { response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }, messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }] }
   const loose = {
     response_format: { type: 'json_object' },
@@ -428,7 +432,7 @@ export async function json(
   let open: Open
   for (;;) {
     try {
-      open = await withFallbacks(p, p.csvModel, { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: opts.maxTokens, ...(stream ? { stream: true } : {}) }, opts.reasoning ?? {}, opts.signal, stream)
+      open = await withFallbacks(p, model, { model, ...(strictMode ? strict : loose), max_tokens: opts.maxTokens, ...(stream ? { stream: true } : {}) }, opts.reasoning ?? {}, opts.signal, stream)
       break
     } catch (err) {
       if (!rejected(err) || !strictMode) throw err
@@ -457,7 +461,7 @@ export async function json(
     finish = choice?.finish_reason
     text = contentText(choice?.message?.content)
   }
-  if (finish === 'length') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')
+  if (finish === 'length') throw new TruncatedError('This part of the file was too large for one answer. Try again, or a shorter export.', text.trim().length > 0)
   // Some models wrap JSON in a code fence.
   return text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')
 }
@@ -490,6 +494,22 @@ export function chatModels(body: { data?: ModelEntry[]; models?: ModelEntry[] })
 export async function listModels(p: ActiveProvider): Promise<string[]> {
   const open = await request(p, '/models', {}, undefined, { timeoutMs: MODELS_TIMEOUT_MS })
   return chatModels(await readJson<{ data?: ModelEntry[]; models?: ModelEntry[] }>(open))
+}
+
+/** What went wrong with a call to the provider, as a kind with the status and the provider's own short message. */
+export function providerFailure(err: unknown): ErrorDetails {
+  if (err instanceof ProviderError) {
+    const { status } = err
+    const kind: ProviderFailureKind =
+      status === 0 ? 'network' : status === 401 || status === 403 ? 'auth' : status === 404 ? 'model_not_found' : status === 429 ? 'rate_limit' : status === 400 || status === 422 ? 'bad_request' : status >= 500 ? 'server' : 'unknown'
+    return { kind, status, message: err.message }
+  }
+  return { kind: 'unknown', status: 0, message: err instanceof ToolArgumentsError || err instanceof AppError ? err.message : '' }
+}
+
+/** The error for a failed call to the provider: the code and details the screen words in the person's language, and an English text for the log. */
+export function providerError(err: unknown, name: string): AppError {
+  return err instanceof AppError ? err : new AppError('assistant.failed', explainProviderError(err, name), providerFailure(err))
 }
 
 /** Plain-language errors for the person. */
