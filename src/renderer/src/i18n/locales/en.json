@@ -237,11 +237,11 @@
     "fixAmountTitle": "Fix the amount",
     "checking": "{{ai}} is checking…",
     "checked": "{{ai}} checked the file. See the notes above the rows.",
-    "checkPrivacy": "Sends the rows of this file to {{aiCompany}}.",
+    "checkPrivacy": "Shows what is sent to {{aiCompany}} and asks before the first check.",
     "claudeOff": "Set up an assistant in Settings to have it check files.",
     "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere. If a PDF can’t be read that way, you can choose to have the assistant read its text; that is only sent after you agree.",
     "layoutRecognised": "Layout recognised",
-    "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network.",
+    "checkPrivacyLocal": "Shows what is sent to {{ai}} on this computer or network and asks before the first check.",
     "stopCheck": "Stop",
     "checkSlowHint": "Large files are checked in parts, a few at a time. Each part stops by itself after 4 minutes.",
     "discard": "Discard",
@@ -322,8 +322,25 @@
         "loading": "Preparing…",
         "reading": "{{ai}} is reading the statement…",
         "readingPages": "{{ai}} is reading: {{done}} of {{total}} pages…",
-        "done": "{{ai}} read the statement. Check every row before importing."
+        "done": "{{ai}} read the statement. Check every row before importing.",
+        "replaces": "Changes you made to rows so far are replaced by the assistant’s reading.",
+        "edited_one": "{{count}} row you edited will be replaced.",
+        "edited_other": "{{count}} rows you edited will be replaced."
       }
+    },
+    "lockedWhileAssisting": "{{ai}} is working on these rows. Changes made now would be lost, so editing is off until it is done.",
+    "consent": {
+      "title": "Check this file with {{ai}}",
+      "loading": "Preparing…",
+      "intro": "{{ai}} can check this file: read the columns, point out rows that look wrong, and suggest categories, readable names and rules.",
+      "sendsRemote": "This sends {{aiCompany}} the names and descriptions of the payments in this file and of your transactions that still have no category, the first rows of the file as they are written, the list of your categories and rules, and any notes the assistant has remembered. Account and card numbers are hidden.",
+      "sendsLocal": "This sends {{ai}} on this computer or network the names and descriptions of the payments in this file and of your transactions that still have no category, the first rows of the file as they are written, the list of your categories and rules, and any notes the assistant has remembered. Account and card numbers are hidden. Nothing goes to an online service.",
+      "notSent": "Not sent: the rest of the file, transactions that already have a category, your other accounts.",
+      "again": "You’re asked again if you switch provider, address or model. Nothing is saved until you have looked at the result.",
+      "stats": "Rows: {{rows}} · about {{tokens}} tokens · requests: {{parts}} · {{address}} · {{model}}",
+      "show": "Show exactly what is sent",
+      "send": "Send to {{aiCompany}}",
+      "sendLocal": "Send to {{ai}}"
     }
   },
   "assistant": {
@@ -1399,7 +1416,7 @@
       "sendsLocal_one": "To write tips, Kasboek sends {{ai}} on this computer or network a short summary it made on this computer: {{count}} item such as fixed costs that went up, budgets that went over and payments that stand out, with the payee or category name and rounded amounts. No account or card numbers, no account names, no balances or income, and no list of your transactions. Nothing goes to an online service. {{ai}} only chooses and words the tips; every amount you see is filled in by Kasboek from your own data. Nothing is changed.",
       "sendsLocal_other": "To write tips, Kasboek sends {{ai}} on this computer or network a short summary it made on this computer: {{count}} items such as fixed costs that went up, budgets that went over and payments that stand out, with the payee or category name and rounded amounts. No account or card numbers, no account names, no balances or income, and no list of your transactions. Nothing goes to an online service. {{ai}} only chooses and words the tips; every amount you see is filled in by Kasboek from your own data. Nothing is changed.",
       "again": "You’re asked again if you switch provider. Tips are only made when you press the button.",
-      "stats": "About {{tokens}} tokens · 1 request",
+      "stats": "About {{tokens}} tokens · 1 request · {{address}} · {{model}}",
       "show": "Show exactly what is sent",
       "send": "Send to {{aiCompany}}",
       "sendLocal": "Send to {{ai}}"

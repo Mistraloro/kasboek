@@ -25,7 +25,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, InsightsPreview, InsightsView, McpClientsSeen, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, InsightsPreview, InsightsView, McpClientsSeen, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, CheckAssistPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -219,7 +219,8 @@ export const contract = {
   'assistant.confirm': { input: z.object({ id: z.string().uuid(), approve: z.boolean() }).strict(), output: out<AssistantStatus>() },
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },
-  'import.assist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'import.assist': { input: z.object({ sessionId: z.string().uuid(), consent: z.literal(true).optional() }).strict(), output: out<ImportPreview>() },
+  'import.assistPreview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<CheckAssistPreview>() },
   'export.csv': {
     input: z
       .object({

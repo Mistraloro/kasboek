@@ -55,10 +55,10 @@
     "fixAmount": "Digite o valor, negativo para uma saída (ex.: -12,50)",
     "checking": "{{ai}} está revisando…",
     "checked": "{{ai}} revisou o arquivo. Veja as notas por cima das linhas.",
-    "checkPrivacy": "Envia as linhas deste arquivo para {{aiCompany}}.",
+    "checkPrivacy": "Mostra o que é enviado para {{aiCompany}} e pergunta antes da primeira verificação.",
     "claudeOff": "Configure um assistente nas Configurações para revisar arquivos.",
     "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação.",
-    "checkPrivacyLocal": "Envia as linhas deste arquivo para {{ai}} neste computador ou nesta rede.",
+    "checkPrivacyLocal": "Mostra o que é enviado para {{ai}} neste computador ou nesta rede e pergunta antes da primeira verificação.",
     "checkSlowHint": "Os arquivos grandes são revistos por partes, algumas de cada vez. Cada parte para sozinha ao fim de 4 minutos.",
     "allKnown": "Tudo neste arquivo já está no Kasboek ({{from}} – {{to}}).",
     "undoPart": "Desfazer",
@@ -66,7 +66,28 @@
       "nothingChanged": "Nada neste arquivo precisava de mudar.",
       "saved": "Salvo: {{rules}} regra(s) e {{count}} movimento(s) classificado(s). Anular a verificação não os anula; altere-os em Regras ou Movimentos."
     },
-    "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…"
+    "checkingGroups": "{{ai}} está revisando: {{done}} de {{total}} grupos…",
+    "lockedWhileAssisting": "{{ai}} está trabalhando nestas linhas. Alterações feitas agora seriam perdidas, então a edição fica desativada até terminar.",
+    "pdf": {
+      "ai": {
+        "replaces": "As alterações que você fez até agora nas linhas são substituídas pela leitura do assistente.",
+        "edited_one": "{{count}} linha que você editou será substituída.",
+        "edited_many": "{{count}} linhas que você editou serão substituídas.",
+        "edited_other": "{{count}} linhas que você editou serão substituídas."
+      }
+    },
+    "consent": {
+      "title": "Verificar este arquivo com {{ai}}",
+      "intro": "{{ai}} pode verificar este arquivo: ler as colunas, apontar linhas que parecem erradas e sugerir categorias, nomes legíveis e regras.",
+      "sendsRemote": "Isto envia para {{aiCompany}} os nomes e descrições dos pagamentos deste arquivo e das suas transações ainda sem categoria, as primeiras linhas do arquivo como estão escritas, a lista das suas categorias e regras, e as anotações que o assistente memorizou. Os números de conta e de cartão ficam ocultos.",
+      "sendsLocal": "Isto envia para {{ai}} neste computador ou nesta rede os nomes e descrições dos pagamentos deste arquivo e das suas transações ainda sem categoria, as primeiras linhas do arquivo como estão escritas, a lista das suas categorias e regras, e as anotações que o assistente memorizou. Os números de conta e de cartão ficam ocultos. Nada vai para um serviço online.",
+      "notSent": "Não é enviado: o resto do arquivo, as transações que já têm categoria, as suas outras contas.",
+      "again": "Perguntamos de novo se você trocar de provedor, endereço ou modelo. Nada é salvo antes de você ver o resultado.",
+      "stats": "Linhas: {{rows}} · cerca de {{tokens}} tokens · solicitações: {{parts}} · {{address}} · {{model}}",
+      "show": "Mostrar exatamente o que é enviado",
+      "send": "Enviar para {{aiCompany}}",
+      "sendLocal": "Enviar para {{ai}}"
+    }
   },
   "assistant": {
     "example3": "Coloque meus movimentos sem categoria na categoria certa.",
@@ -394,5 +415,10 @@
     "user": "Nome de usuário",
     "password": "Senha",
     "passwordHint": "De preferência uma senha de aplicativo criada para o Kasboek. Fica salva nos seus dados criptografados, só neste computador."
+  },
+  "insights": {
+    "consent": {
+      "stats": "Cerca de {{tokens}} tokens · 1 solicitação · {{address}} · {{model}}"
+    }
   }
 }

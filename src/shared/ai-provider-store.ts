@@ -39,7 +39,11 @@ function valuesOf(s: AiSettings, id: ProviderId): { baseUrl: string | null; chat
   return { baseUrl: saved?.baseUrl ?? null, chatModel: saved?.chatModel ?? presetFor(id).suggestedModels[0] ?? '', csvModel: saved?.csvModel ?? '', pdfModel: saved?.pdfModel ?? '' }
 }
 
-/** The model Claude reads PDF statements with unless another is chosen: the structuring is simple enough for the cheapest one. */
+/**
+ * The model Claude reads PDF statements with unless another is chosen: the structuring is simple enough for the cheapest one.
+ * Hard-coded, so it must be one of `ASSISTANT_MODELS` (src/shared/types.ts), the list of ids the provider accepts and the
+ * settings offer; tests/ai-providers.test.ts fails when it is not. Change both together.
+ */
 export const CLAUDE_PDF_MODEL = 'claude-haiku-5-5'
 
 /**

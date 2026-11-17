@@ -342,7 +342,7 @@ describe('checking a CSV in smaller pieces', () => {
       const answers = groupLines.map((l) => ({ group: Number(l.split(' | ')[0]), categoryId: groceries, name: null, description: null }))
       return reply(JSON.stringify({ mapping: null, fixes: [], groups: answers, rules: [], notes: ['Checked.'] }))
     })
-    const preview = await assistImport(db, p.sessionId)
+    const preview = await assistImport(db, p.sessionId, { consent: true })
     expect(requests).toHaveLength(3)
     expect(preview.rows.every((r) => r.categoryId === groceries)).toBe(true)
     expect(preview.notes.join(' ')).not.toMatch(/couldn’t be checked/)

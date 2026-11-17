@@ -237,11 +237,11 @@
     "fixAmountTitle": "Corrigir o montante",
     "checking": "{{ai}} está a rever…",
     "checked": "{{ai}} reviu o ficheiro. Veja as notas por cima das linhas.",
-    "checkPrivacy": "Envia as linhas deste ficheiro para {{aiCompany}}.",
+    "checkPrivacy": "Mostra o que é enviado para {{aiCompany}} e pergunta antes da primeira verificação.",
     "claudeOff": "Configure um assistente nas Definições para rever ficheiros.",
     "anyBank": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum. Se um PDF não puder ser lido assim, pode pedir ao assistente que leia o texto; só é enviado depois de concordar.",
     "layoutRecognised": "Formato reconhecido",
-    "checkPrivacyLocal": "Envia as linhas deste ficheiro para {{ai}} neste computador ou nesta rede.",
+    "checkPrivacyLocal": "Mostra o que é enviado para {{ai}} neste computador ou nesta rede e pergunta antes da primeira verificação.",
     "stopCheck": "Parar",
     "checkSlowHint": "Os ficheiros grandes são revistos por partes, algumas de cada vez. Cada parte para sozinha ao fim de 4 minutos.",
     "discard": "Descartar",
@@ -322,8 +322,26 @@
         "loading": "A preparar…",
         "reading": "{{ai}} está a ler o extrato…",
         "readingPages": "{{ai}} está a ler: {{done}} de {{total}} páginas…",
-        "done": "{{ai}} leu o extrato. Verifique cada linha antes de importar."
+        "done": "{{ai}} leu o extrato. Verifique cada linha antes de importar.",
+        "replaces": "As alterações que fez até agora às linhas são substituídas pela leitura do assistente.",
+        "edited_one": "{{count}} linha que editou será substituída.",
+        "edited_many": "{{count}} linhas que editou serão substituídas.",
+        "edited_other": "{{count}} linhas que editou serão substituídas."
       }
+    },
+    "lockedWhileAssisting": "{{ai}} está a trabalhar nestas linhas. As alterações feitas agora perder-se-iam, por isso a edição fica desativada até terminar.",
+    "consent": {
+      "title": "Verificar este ficheiro com {{ai}}",
+      "loading": "A preparar…",
+      "intro": "{{ai}} pode verificar este ficheiro: ler as colunas, assinalar linhas que parecem erradas e sugerir categorias, nomes legíveis e regras.",
+      "sendsRemote": "Isto envia a {{aiCompany}} os nomes e descrições dos pagamentos deste ficheiro e dos seus movimentos ainda sem categoria, as primeiras linhas do ficheiro tal como estão escritas, a lista das suas categorias e regras, e as notas que o assistente memorizou. Os números de conta e de cartão ficam ocultos.",
+      "sendsLocal": "Isto envia a {{ai}} neste computador ou nesta rede os nomes e descrições dos pagamentos deste ficheiro e dos seus movimentos ainda sem categoria, as primeiras linhas do ficheiro tal como estão escritas, a lista das suas categorias e regras, e as notas que o assistente memorizou. Os números de conta e de cartão ficam ocultos. Nada vai para um serviço em linha.",
+      "notSent": "Não é enviado: o resto do ficheiro, os movimentos que já têm categoria, as suas outras contas.",
+      "again": "Voltamos a perguntar se mudar de fornecedor, de endereço ou de modelo. Nada é guardado antes de ver o resultado.",
+      "stats": "Linhas: {{rows}} · cerca de {{tokens}} tokens · pedidos: {{parts}} · {{address}} · {{model}}",
+      "show": "Mostrar exatamente o que é enviado",
+      "send": "Enviar para {{aiCompany}}",
+      "sendLocal": "Enviar para {{ai}}"
     }
   },
   "assistant": {
@@ -1399,7 +1417,7 @@
       "sendsLocal_one": "Para escrever dicas, o Kasboek envia a {{ai}}, neste computador ou rede, um breve resumo feito neste computador: {{count}} item, como despesas fixas que subiram, orçamentos ultrapassados e pagamentos que se destacam, com o nome do beneficiário ou da categoria e valores arredondados. Sem números de conta ou de cartão, sem nomes de contas, sem saldos nem rendimentos e sem lista das suas transações. Nada vai para um serviço online. {{ai}} apenas escolhe e redige as dicas; cada valor que vê é preenchido pelo Kasboek a partir dos seus próprios dados. Nada é alterado.",
       "sendsLocal_other": "Para escrever dicas, o Kasboek envia a {{ai}}, neste computador ou rede, um breve resumo feito neste computador: {{count}} itens, como despesas fixas que subiram, orçamentos ultrapassados e pagamentos que se destacam, com o nome do beneficiário ou da categoria e valores arredondados. Sem números de conta ou de cartão, sem nomes de contas, sem saldos nem rendimentos e sem lista das suas transações. Nada vai para um serviço online. {{ai}} apenas escolhe e redige as dicas; cada valor que vê é preenchido pelo Kasboek a partir dos seus próprios dados. Nada é alterado.",
       "again": "Voltamos a perguntar se mudar de fornecedor. As dicas só são feitas quando carrega no botão.",
-      "stats": "Cerca de {{tokens}} tokens · 1 pedido",
+      "stats": "Cerca de {{tokens}} tokens · 1 pedido · {{address}} · {{model}}",
       "show": "Mostrar exatamente o que é enviado",
       "send": "Enviar para {{aiCompany}}",
       "sendLocal": "Enviar para {{ai}}"

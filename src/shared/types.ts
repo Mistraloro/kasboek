@@ -179,6 +179,12 @@ export interface Settings {
    * missing in records written before they were kept: those count as not agreed.
    */
   aiInsightsConsent: { provider: string; version: number; at: string; baseUrl?: string; model?: string } | null
+  /**
+   * The person agreed to send the rows of a CSV file to this AI provider at this address with this model
+   * for "Check with AI" (see main/assistant/csv.ts for what is sent); null = not asked yet. A record that
+   * differs in any field, or is from an older list of what is sent, counts as not agreed.
+   */
+  aiCheckConsent: { provider: string; baseUrl: string; model: string; version: number; at: string } | null
 }
 
 /** Something the assistant remembers between conversations. */
@@ -506,6 +512,24 @@ export interface InsightsPreview {
   providerName: string
   /** Who receives it; null when the model runs on this computer or network. */
   company: string | null
+  /** Where it goes: the host of an online provider, the whole address of a local or custom one. */
+  address: string
+  model: string
+}
+
+/** Exactly what "Check with AI" would send for an open import. */
+export interface CheckAssistPreview {
+  /** Every request's text, the same as is sent; several requests are separated by a line. */
+  text: string
+  approxTokens: number
+  /** Rows of the file. */
+  rows: number
+  /** The text is sent in this many requests. */
+  parts: number
+  providerName: string
+  company: string | null
+  address: string
+  model: string
 }
 
 export interface RecurringSummary {
@@ -799,6 +823,8 @@ export interface ImportPreview {
     fileTo: string | null
   }
   notes: string[]
+  /** Rows the person changed by hand (what an assistant's check changed is not counted). */
+  edited: number
   check: CheckSummary | null
   fileKind: 'csv' | 'pdf'
   /** Only for a PDF statement. */

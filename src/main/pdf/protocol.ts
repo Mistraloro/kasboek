@@ -15,24 +15,41 @@ export type ReaderMessage =
   | { ok: true; result: PdfText }
   | { ok: false; code: (typeof READER_ERROR_CODES)[number]; message: string }
 
-const coordinate = z.number().min(-1e7).max(1e7)
-const item = z.object({ str: z.string().max(PDF_LIMITS.maxChars), x: coordinate, y: coordinate, w: coordinate, h: coordinate }).strict()
-const page = z
-  .object({
-    n: z.number().int().min(1).max(PDF_LIMITS.maxPages),
-    width: z.number().min(0).max(1e7),
-    height: z.number().min(0).max(1e7),
-    items: z.array(item).max(PDF_LIMITS.maxItems)
-  })
-  .strict()
-const result = z
-  .object({ pages: z.array(page).max(PDF_LIMITS.maxPages), pageCount: z.number().int().min(1).max(PDF_LIMITS.maxPages) })
-  .strict()
-  .superRefine((t, ctx) => {
-    const items = t.pages.reduce((n, p) => n + p.items.length, 0)
-    const chars = t.pages.reduce((n, p) => n + p.items.reduce((m, i) => m + i.str.length, 0), 0)
-    if (items > PDF_LIMITS.maxItems || chars > PDF_LIMITS.maxChars) ctx.addIssue({ code: 'custom', message: 'Too much text.' })
-  })
+const inRange = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && v >= min && v <= max
+const isInt = (v: unknown, min: number, max: number): v is number => inRange(v, min, max) && Number.isInteger(v)
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/**
+ * Checks what the reader sends back by hand: a statement can hold tens of thousands of pieces and
+ * a schema library is several times slower on that, on the main thread. The cheap checks (counts)
+ * come first, so an oversized answer is refused before any piece is looked at. Same rules as a
+ * strict schema: exactly these fields, finite numbers in range.
+ */
+export function isPdfText(v: unknown): v is PdfText {
+  if (!isRecord(v) || Object.keys(v).length !== 2 || !isInt(v['pageCount'], 1, PDF_LIMITS.maxPages)) return false
+  const pages = v['pages']
+  if (!Array.isArray(pages) || pages.length > PDF_LIMITS.maxPages) return false
+  let items = 0
+  for (const p of pages) {
+    if (!isRecord(p) || !Array.isArray(p['items'])) return false
+    items += p['items'].length
+  }
+  if (items > PDF_LIMITS.maxItems) return false
+  let chars = 0
+  for (const p of pages as Record<string, unknown>[]) {
+    if (Object.keys(p).length !== 4 || !isInt(p['n'], 1, PDF_LIMITS.maxPages) || !inRange(p['width'], 0, 1e7) || !inRange(p['height'], 0, 1e7)) return false
+    for (const i of p['items'] as unknown[]) {
+      if (!isRecord(i) || Object.keys(i).length !== 5) return false
+      const str = i['str']
+      if (typeof str !== 'string' || !inRange(i['x'], -1e7, 1e7) || !inRange(i['y'], -1e7, 1e7) || !inRange(i['w'], -1e7, 1e7) || !inRange(i['h'], -1e7, 1e7)) return false
+      chars += str.length
+    }
+    if (chars > PDF_LIMITS.maxChars) return false
+  }
+  return true
+}
+
+const result = z.custom<PdfText>(isPdfText)
 
 export const readerMessageSchema = z.union([
   z.object({ progress: z.object({ page: z.number().int().min(1).max(PDF_LIMITS.maxPages), pages: z.number().int().min(1).max(PDF_LIMITS.maxPages) }).strict() }).strict(),

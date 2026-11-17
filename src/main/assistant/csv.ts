@@ -9,12 +9,14 @@ import { AppError } from '@core/errors'
 import { RULE_COLUMNS, listRules, ruleMatches, ruleText, type RuleText } from '@core/finance'
 import * as imp from '@core/import'
 import { mappingSchema } from '@shared/import-mapping'
-import { maskIban, maskNumbers } from '@shared/iban'
-import type { ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
+import { maskNumbers } from '@shared/iban'
+import { consentAddress } from '@core/insight-plan'
+import { getSettings, updateSettings } from '@core/settings'
+import type { CheckAssistPreview, ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
 import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type RowGroup } from '@core/assist-plan'
 import { callJsonSplit } from './json'
 import { PARALLEL, TIME_LIMIT_MS, pool, runJob, type AssistState } from './jobs'
-import { activeProvider, requireConfigured } from './provider'
+import { CHARS_PER_TOKEN, activeProvider, requireConfigured, shownAddress, type ActiveProvider } from './provider'
 import { languageName } from '@shared/languages'
 import { getPrefs } from '../prefs'
 import { checkActivity } from './chat'
@@ -97,29 +99,36 @@ function flaggedRows(preview: ImportPreview): ImportPreview['rows'] {
   return spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), MAX_FLAGGED)
 }
 
-function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
+/**
+ * The text of one request of a check: what the assistant gets to see, with every free text (names,
+ * descriptions, cells, the file name, rules, remembered notes) run through maskNumbers so that account
+ * and card numbers never leave the computer. This is the only place the text is made: the preview in
+ * the consent dialog shows these same strings, and the requests send them.
+ */
+export function checkPayload(db: Db, preview: ImportPreview, batch: Batch, language: string): string {
   const groups = batch.groups
+  const mask = maskNumbers
   const raw = imp.rawWindow(preview.sessionId, 0, 25)
-  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(maskIban)
+  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(mask)
   const own = new Set(batch.flagged)
   const flagged = flaggedRows(preview).filter((r) => own.has(r.index)).map((r) => ({
     index: r.index,
     status: r.status,
     issues: r.issues,
     cells: cells(r.index),
-    ...(r.match ? { inKasboek: { date: r.match.bookingDate, counterparty: r.match.counterpartyName, description: maskIban(r.match.description.slice(0, 300)) } } : {})
+    ...(r.match ? { inKasboek: { date: r.match.bookingDate, counterparty: r.match.counterpartyName === null ? null : mask(r.match.counterpartyName), description: mask(r.match.description.slice(0, 300)) } } : {})
   }))
   const catName = new Map((db.prepare('SELECT id, name FROM categories').all() as { id: number; name: string }[]).map((c) => [c.id, c.name]))
   const label = batch.of > 1 ? `Part ${batch.n} of ${batch.of}` : 'Part of the file'
   const lines = groups.map((g, i) => {
     const cat = g.example.categoryId === null ? 'uncategorised' : (catName.get(g.example.categoryId) ?? 'categorised')
-    const comm = g.example.communication ? ` | communication: ${maskIban(g.example.communication.slice(0, 120))}` : ''
-    return `${batch.from + i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${maskIban(g.example.counterpartyName ?? '')} | ${maskIban(g.example.description.slice(0, 400))}${comm}`
+    const comm = g.example.communication ? ` | communication: ${mask(g.example.communication.slice(0, 120))}` : ''
+    return `${batch.from + i} | ${g.rows.length} | ${g.existing.length} | ${g.sign} | ${g.example.amountCents} | ${g.totalCents} | ${cat} | ${mask(g.example.counterpartyName ?? '')} | ${mask(g.example.description.slice(0, 400))}${comm}`
   })
-  const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${c.name} (${c.kind})`)
-  const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId)
+  const categories = (db.prepare('SELECT id, name, kind FROM categories WHERE archived = 0 ORDER BY kind, name').all() as { id: number; name: string; kind: string }[]).map((c) => `${c.id}: ${mask(c.name)} (${c.kind})`)
+  const account = db.prepare('SELECT name, currency, bank, kind FROM accounts WHERE id = ?').get(preview.accountId) as { name: string; currency: string; bank: string | null; kind: string }
   // What the assistant remembers (payees, categories, preferences) helps here too.
-  const memory = (({ enabled, items }) => (enabled ? items.map((m) => m.text) : []))(memoryState(db))
+  const memory = (({ enabled, items }) => (enabled ? items.map((m) => mask(m.text)) : []))(memoryState(db))
   return JSON.stringify(
     {
       ...(batch.of > 1 || batch.split
@@ -129,20 +138,20 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
               : `${label}: only the groups and flagged rows listed below. Return mapping null; give fixes only for the flaggedRows listed here. The columns are checked in part 1.`
           }
         : {}),
-      noteLanguage: languageName(getPrefs().language),
-      account,
-      fileName: maskNumbers(preview.fileName),
+      noteLanguage: languageName(language),
+      account: { ...account, name: mask(account.name), bank: account.bank === null ? null : mask(account.bank) },
+      fileName: mask(preview.fileName),
       recognisedLayout: preview.layout,
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,
       stats: preview.stats,
-      linesAboveHeader: raw.preamble.map((r) => r.map(maskIban)),
-      header: raw.header.map((h, i) => `${i}: ${h}`),
-      firstRows: batch.first ? raw.rows.map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })) : raw.rows.slice(0, 5).map((r) => ({ index: r.index, cells: r.cells.map(maskIban) })),
+      linesAboveHeader: raw.preamble.map((r) => r.map(mask)),
+      header: raw.header.map((h, i) => `${i}: ${mask(h)}`),
+      firstRows: (batch.first ? raw.rows : raw.rows.slice(0, 5)).map((r) => ({ index: r.index, cells: r.cells.map(mask) })),
       flaggedRows: flagged,
       groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
-      rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.pattern}" → ${r.categoryId}`),
+      rules: listRules(db).map((r) => `${r.field} ${r.match} "${mask(r.pattern)}" → ${r.categoryId}`),
       ...(memory.length ? { personNotes: memory } : {})
     },
     null,
@@ -372,7 +381,62 @@ const FIX_TOKENS = 55
 /** A part of this many groups and flagged rows or fewer is not split further. */
 const MIN_UNITS = 5
 
-export function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
+/**
+ * Raise this whenever the list of what a check sends changes (see checkPayload): everyone is asked
+ * again before the next request.
+ */
+export const CHECK_CONSENT_VERSION = 1
+
+/** The model that reads the file: Claude's own setting, else the provider's model for reading files. */
+const checkModel = (db: Db, p: ActiveProvider): string => (p.preset.id === 'anthropic' ? getSettings(db).csvModel : p.csvModel)
+
+/** What the person agrees to: where the rows go (provider and address) and which model reads them. */
+const target = (db: Db, p: ActiveProvider): { provider: string; baseUrl: string; model: string } => ({ provider: p.preset.id, baseUrl: consentAddress(p.baseUrl), model: checkModel(db, p) })
+
+/** A record from an older list of what is sent, or for another provider, address or model, never matches: the person is asked again. */
+const agreed = (db: Db, p: ActiveProvider): boolean => {
+  const consent = getSettings(db).aiCheckConsent
+  const now = target(db, p)
+  return !!consent && consent.version === CHECK_CONSENT_VERSION && consent.provider === now.provider && consent.baseUrl === now.baseUrl && consent.model === now.model
+}
+
+/** The groups the check looks at and the parts it is sent in. */
+function planParts(db: Db, preview: ImportPreview): { groups: RowGroup[]; parts: Batch[] } {
+  const groups = rowGroups(preview.rows, existingUncategorised(db, preview.accountId)).slice(0, MAX_GROUPS)
+  const parts = batches(groups, BATCH_GROUPS, flaggedRows(preview).map((r) => r.index)).map((b, _i, all) => ({ ...b, of: all.length }))
+  return { groups, parts }
+}
+
+/** What a check would send for this import: shown in the dialog where the person agrees, built by the same code as the requests. */
+export function checkPreview(db: Db, sessionId: string): CheckAssistPreview {
+  const provider = activeProvider(db)
+  requireConfigured(provider)
+  const preview = imp.preview(db, sessionId)
+  const language = getPrefs().language
+  const bodies = planParts(db, preview).parts.map((b) => checkPayload(db, preview, b, language))
+  const text = bodies.length === 1 ? bodies[0]! : bodies.map((b, i) => `--- Request ${i + 1} of ${bodies.length} ---\n${b}`).join('\n\n')
+  // Every request also carries the instructions.
+  const chars = INSTRUCTIONS.length * bodies.length + bodies.reduce((n, b) => n + b.length, 0)
+  return {
+    text,
+    approxTokens: Math.ceil(chars / CHARS_PER_TOKEN),
+    rows: preview.stats.total,
+    parts: bodies.length,
+    providerName: provider.preset.assistantName,
+    company: provider.preset.company,
+    address: shownAddress(provider),
+    model: checkModel(db, provider)
+  }
+}
+
+/** Starts the check; without the person's agreement for this provider, address and model it refuses (`consent: true` records it). */
+export async function assistImport(db: Db, sessionId: string, opts: { consent?: true } = {}): Promise<ImportPreview> {
+  const provider = activeProvider(db)
+  requireConfigured(provider)
+  if (!agreed(db, provider)) {
+    if (!opts.consent) throw new AppError('import.consent_needed', `Agree to send the rows of this file to ${provider.preset.assistantName} first.`)
+    updateSettings(db, { aiCheckConsent: { ...target(db, provider), version: CHECK_CONSENT_VERSION, at: new Date().toISOString() } })
+  }
   return runJob(sessionId, 'check', (signal, state) => check(db, sessionId, signal, state))
 }
 
@@ -444,14 +508,13 @@ export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { gro
 
 async function check(db: Db, sessionId: string, signal: AbortSignal, state: AssistState): Promise<ImportPreview> {
   const preview = imp.preview(db, sessionId)
-  const groups = rowGroups(preview.rows, existingUncategorised(db, preview.accountId)).slice(0, MAX_GROUPS)
+  const { groups, parts } = planParts(db, preview)
   if (!groups.length && !preview.rows.some((r) => r.status === 'problem' || r.status === 'possible_duplicate') && preview.mapping) {
     const name = activeProvider(db).preset.assistantName
     throw new AppError('assistant.nothing_to_check', `There is nothing for ${name} to check: every row is already in Kasboek and no transactions of this account are uncategorised.`)
   }
   const provider = activeProvider(db)
   requireConfigured(provider)
-  const parts = batches(groups, BATCH_GROUPS, flaggedRows(preview).map((r) => r.index)).map((b, _i, all) => ({ ...b, of: all.length }))
   // Shown in the assistant panel too: the reasoning as it comes, and the notes at the end.
   const activity = checkActivity(preview.fileName)
   try {
@@ -477,6 +540,7 @@ async function runParts(
 ): Promise<ImportPreview> {
   const sessionId = preview.sessionId
   const name = provider.preset.assistantName
+  const language = getPrefs().language
   let done = 0
   const progress = (): void => {
     Object.assign(state, { groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
@@ -491,7 +555,7 @@ async function runParts(
       { system: INSTRUCTIONS, schema: Plan, signal, onThinking: (t) => activity.thinking(batch.n, batch.of, t) },
       {
         part: batch,
-        context: (b) => buildContext(db, preview, b),
+        context: (b) => checkPayload(db, preview, b, language),
         parse: (text) => parsePlan(text, name),
         split: splitBatch,
         describe: describeBatch,

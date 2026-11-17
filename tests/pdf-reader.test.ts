@@ -40,7 +40,33 @@ describe('reader messages', () => {
     const long = (n: number) => ({ str: 'a'.repeat(n), x: 1, y: 2, w: 3, h: 4 })
     expect(valid({ pageCount: 1, pages: [{ n: 1, width: 1, height: 1, items: [long(PDF_LIMITS.maxChars + 1)] }] })).toBe(false)
     // Each piece is allowed, together they are not.
-    expect(valid({ pageCount: 1, pages: [{ n: 1, width: 1, height: 1, items: [long(2_000_000), long(2_000_000)] }] })).toBe(false)
+    expect(valid({ pageCount: 1, pages: [{ n: 1, width: 1, height: 1, items: [long(600_000), long(600_000)] }] })).toBe(false)
+  })
+
+  it('rejects extra, missing and mistyped fields in the text', () => {
+    const item = { str: 'a', x: 1, y: 2, w: 3, h: 4 }
+    const page = { n: 1, width: 595, height: 842, items: [item] }
+    const result = { pageCount: 1, pages: [page] }
+    expect(valid(result)).toBe(true)
+    expect(valid({ ...result, extra: 1 } as unknown as PdfText)).toBe(false)
+    expect(valid({ ...result, pages: [{ ...page, extra: 1 }] } as unknown as PdfText)).toBe(false)
+    expect(valid({ ...result, pages: [{ ...page, items: [{ ...item, extra: 1 }] }] } as unknown as PdfText)).toBe(false)
+    expect(valid({ ...result, pages: [{ ...page, items: [{ str: 'a', x: 1, y: 2, w: 3, z: 4 }] }] } as unknown as PdfText)).toBe(false)
+    expect(valid({ ...result, pages: [{ ...page, items: [{ ...item, str: 5 }] }] } as unknown as PdfText)).toBe(false)
+    expect(valid({ ...result, pages: [{ ...page, n: 1.5 }] })).toBe(false)
+    expect(valid({ ...result, pages: [null] } as unknown as PdfText)).toBe(false)
+    expect(valid({ ...result, pages: [{ ...page, items: 'x' }] } as unknown as PdfText)).toBe(false)
+  })
+
+  it('checks a statement-sized answer quickly', () => {
+    // Generous bounds: this guards against the check becoming quadratic or heavy, not against a slow machine.
+    for (const [items, limitMs] of [[30_000, 500], [PDF_LIMITS.maxItems, 1500]] as const) {
+      const t = text(items)
+      const started = performance.now()
+      const ok = readerMessageSchema.safeParse({ ok: true, result: t }).success
+      expect(ok).toBe(true)
+      expect(performance.now() - started).toBeLessThan(limitMs)
+    }
   })
 
   it('rejects unknown fields, unknown error codes and long messages', () => {

@@ -314,7 +314,7 @@ function ConsentModal({ open, month, onClose, onSend }: { open: boolean; month: 
           <>
             <p>{t(local ? 'insights.consent.sendsLocal' : 'insights.consent.sendsRemote', vars)}</p>
             <p className="text-muted">{t('insights.consent.again')}</p>
-            <p className="num text-muted">{t('insights.consent.stats', { tokens: info.approxTokens.toLocaleString() })}</p>
+            <p className="num text-muted">{t('insights.consent.stats', { tokens: info.approxTokens.toLocaleString(), address: info.address, model: info.model })}</p>
             <details>
               <summary className="cursor-pointer font-medium">{t('insights.consent.show')}</summary>
               <pre className="selectable mt-2 max-h-64 overflow-auto rounded-lg border border-border bg-surface-2 p-3 text-[11px] leading-snug whitespace-pre-wrap">{info.text}</pre>

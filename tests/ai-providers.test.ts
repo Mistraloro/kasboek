@@ -9,8 +9,8 @@ import { getSecret, setSecret } from '@core/secrets'
 import { DEFAULT_SETTINGS, getSettings, resetImportedSettings, updateSettings } from '@core/settings'
 import { contract } from '@shared/contract'
 import { checkBaseUrl, isProviderId, type ProviderId } from '@shared/ai-providers'
-import { addCustomProvider, customProviders, isKnownProvider, newCustomId, providerGap, removeCustomProvider, renameCustomProvider, resolveProvider, switchProvider } from '@shared/ai-provider-store'
-import type { Settings } from '@shared/types'
+import { CLAUDE_PDF_MODEL, addCustomProvider, customProviders, isKnownProvider, newCustomId, providerGap, removeCustomProvider, renameCustomProvider, resolveProvider, switchProvider } from '@shared/ai-provider-store'
+import { ASSISTANT_MODELS, type Settings } from '@shared/types'
 import { activeProvider, isConfigured, keyName, requireConfigured } from '../src/main/assistant/provider'
 
 beforeAll(() => setPasswordKdfForTests({ m: 1024, t: 1, p: 1 }))
@@ -238,5 +238,11 @@ describe('the model for reading PDF statements', () => {
     resetImportedSettings(d)
     expect(getSettings(d).aiProviders).toEqual({})
     expect(resolveProvider(getSettings(d), 'anthropic').pdfModel).toBe('claude-haiku-5-5')
+  })
+})
+
+describe('the default model for PDF reads and tips', () => {
+  it('is one of the models the app lists, so a renamed or removed model cannot go unnoticed', () => {
+    expect(ASSISTANT_MODELS as readonly string[]).toContain(CLAUDE_PDF_MODEL)
   })
 })

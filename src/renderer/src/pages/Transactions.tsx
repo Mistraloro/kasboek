@@ -24,11 +24,11 @@ export interface TxFilter {
   search?: string
 }
 
-export function CategorySelect({ value, categories, onChange, className, allowNone = true, label, id }: { value: number | null; categories: Category[]; onChange: (id: number | null) => void; className?: string; allowNone?: boolean; label: string; id?: string }) {
+export function CategorySelect({ value, categories, onChange, className, allowNone = true, label, id, disabled }: { value: number | null; categories: Category[]; onChange: (id: number | null) => void; className?: string; allowNone?: boolean; label: string; id?: string; disabled?: boolean }) {
   const { t } = useTranslation()
   const groups: Category['kind'][] = ['expense', 'income', 'transfer']
   return (
-    <Select id={id} aria-label={label} className={className} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
+    <Select id={id} aria-label={label} className={className} disabled={disabled} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
       {allowNone && <option value="">{t('transactions.uncategorized')}</option>}
       {groups.map((g) => (
         <optgroup key={g} label={t(`categories.kind.${g}`)}>

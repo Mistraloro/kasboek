@@ -237,11 +237,11 @@
     "fixAmountTitle": "Betrag korrigieren",
     "checking": "{{ai}} prüft…",
     "checked": "{{ai}} hat die Datei geprüft. Siehe die Hinweise über den Zeilen.",
-    "checkPrivacy": "Sendet die Zeilen dieser Datei an {{aiCompany}}.",
+    "checkPrivacy": "Zeigt, was an {{aiCompany}} gesendet wird, und fragt vor der ersten Prüfung nach.",
     "claudeOff": "Richte in den Einstellungen einen Assistenten ein, um Dateien prüfen zu lassen.",
     "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet. Lässt sich ein PDF so nicht lesen, kannst du den Text vom Assistenten lesen lassen; er wird erst gesendet, wenn du zustimmst.",
     "layoutRecognised": "Format erkannt",
-    "checkPrivacyLocal": "Sendet die Zeilen dieser Datei an {{ai}} auf diesem Computer oder in diesem Netzwerk.",
+    "checkPrivacyLocal": "Zeigt, was an {{ai}} auf diesem Computer oder in diesem Netzwerk gesendet wird, und fragt vor der ersten Prüfung nach.",
     "stopCheck": "Stopp",
     "checkSlowHint": "Große Dateien werden in Teilen geprüft, einige gleichzeitig. Jeder Teil stoppt nach 4 Minuten von selbst.",
     "discard": "Verwerfen",
@@ -322,8 +322,25 @@
         "loading": "Wird vorbereitet…",
         "reading": "{{ai}} liest den Kontoauszug…",
         "readingPages": "{{ai}} liest: {{done}} von {{total}} Seiten…",
-        "done": "{{ai}} hat den Kontoauszug gelesen. Prüfe jede Zeile, bevor du importierst."
+        "done": "{{ai}} hat den Kontoauszug gelesen. Prüfe jede Zeile, bevor du importierst.",
+        "replaces": "Änderungen, die du bisher an Zeilen gemacht hast, werden durch das Lesen des Assistenten ersetzt.",
+        "edited_one": "{{count}} Zeile, die du bearbeitet hast, wird ersetzt.",
+        "edited_other": "{{count}} Zeilen, die du bearbeitet hast, werden ersetzt."
       }
+    },
+    "lockedWhileAssisting": "{{ai}} arbeitet an diesen Zeilen. Änderungen jetzt gingen verloren, daher ist das Bearbeiten bis zum Ende gesperrt.",
+    "consent": {
+      "title": "Diese Datei mit {{ai}} prüfen",
+      "loading": "Wird vorbereitet…",
+      "intro": "{{ai}} kann diese Datei prüfen: die Spalten lesen, auffällige Zeilen markieren und Kategorien, lesbare Namen und Regeln vorschlagen.",
+      "sendsRemote": "Dies sendet {{aiCompany}} die Namen und Beschreibungen der Zahlungen in dieser Datei und deiner Buchungen ohne Kategorie, die ersten Zeilen der Datei, wie sie dort stehen, die Liste deiner Kategorien und Regeln sowie Notizen, die sich der Assistent gemerkt hat. Konto- und Kartennummern werden verborgen.",
+      "sendsLocal": "Dies sendet {{ai}} auf diesem Computer oder in diesem Netzwerk die Namen und Beschreibungen der Zahlungen in dieser Datei und deiner Buchungen ohne Kategorie, die ersten Zeilen der Datei, wie sie dort stehen, die Liste deiner Kategorien und Regeln sowie Notizen, die sich der Assistent gemerkt hat. Konto- und Kartennummern werden verborgen. Nichts geht an einen Online-Dienst.",
+      "notSent": "Nicht gesendet: der Rest der Datei, Buchungen, die schon eine Kategorie haben, deine anderen Konten.",
+      "again": "Du wirst erneut gefragt, wenn du Anbieter, Adresse oder Modell wechselst. Nichts wird gespeichert, bevor du das Ergebnis gesehen hast.",
+      "stats": "Zeilen: {{rows}} · etwa {{tokens}} Tokens · Anfragen: {{parts}} · {{address}} · {{model}}",
+      "show": "Genau anzeigen, was gesendet wird",
+      "send": "An {{aiCompany}} senden",
+      "sendLocal": "An {{ai}} senden"
     }
   },
   "assistant": {
@@ -1399,7 +1416,7 @@
       "sendsLocal_one": "Um Tipps zu schreiben, schickt Kasboek {{ai}} auf diesem Computer oder in diesem Netzwerk eine kurze Zusammenfassung, die auf diesem Computer erstellt wurde: {{count}} Punkt, etwa Fixkosten, die teurer wurden, überschrittene Budgets und auffällige Zahlungen, mit dem Namen des Zahlungsempfängers oder der Kategorie und gerundeten Beträgen. Keine Konto- oder Kartennummern, keine Kontonamen, keine Kontostände oder Einkünfte und keine Liste deiner Umsätze. Nichts geht an einen Online-Dienst. {{ai}} wählt und formuliert nur die Tipps; jeden Betrag, den du siehst, setzt Kasboek selbst aus deinen eigenen Daten ein. Es wird nichts geändert.",
       "sendsLocal_other": "Um Tipps zu schreiben, schickt Kasboek {{ai}} auf diesem Computer oder in diesem Netzwerk eine kurze Zusammenfassung, die auf diesem Computer erstellt wurde: {{count}} Punkte, etwa Fixkosten, die teurer wurden, überschrittene Budgets und auffällige Zahlungen, mit dem Namen des Zahlungsempfängers oder der Kategorie und gerundeten Beträgen. Keine Konto- oder Kartennummern, keine Kontonamen, keine Kontostände oder Einkünfte und keine Liste deiner Umsätze. Nichts geht an einen Online-Dienst. {{ai}} wählt und formuliert nur die Tipps; jeden Betrag, den du siehst, setzt Kasboek selbst aus deinen eigenen Daten ein. Es wird nichts geändert.",
       "again": "Du wirst erneut gefragt, wenn du den Anbieter wechselst. Tipps entstehen nur, wenn du auf die Schaltfläche drückst.",
-      "stats": "Etwa {{tokens}} Tokens · 1 Anfrage",
+      "stats": "Etwa {{tokens}} Tokens · 1 Anfrage · {{address}} · {{model}}",
       "show": "Genau anzeigen, was gesendet wird",
       "send": "An {{aiCompany}} senden",
       "sendLocal": "An {{ai}} senden"

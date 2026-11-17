@@ -27,7 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiCsvReasoning: 'default',
   permissions: DEFAULT_PERMISSIONS,
   memoryEnabled: true,
-  aiInsightsConsent: null
+  aiInsightsConsent: null,
+  aiCheckConsent: null
 }
 
 export function getSettings(db: Db): Settings {
@@ -60,12 +61,12 @@ export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
   return getSettings(db)
 }
 
-/** Settings that decide where data is sent, what Claude may do and where files are written, plus the agreement to send tips data to a provider. */
-const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled', 'aiInsightsConsent'] as const
+/** Settings that decide where data is sent, what Claude may do and where files are written, plus the agreements to send tips data and CSV rows to a provider. */
+const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled', 'aiInsightsConsent', 'aiCheckConsent'] as const
 
 /**
  * After an import or a sync join: a file from elsewhere must not bring its own AI address, permissions,
- * backup folder, assistant memory, agreement to send tips data or API keys. These go back to their defaults; everything else (currency, …) stays.
+ * backup folder, assistant memory, agreements to send tips data or CSV rows, or API keys. These go back to their defaults; everything else (currency, …) stays.
  * The sync key and WebDAV password go too, unless this import is a sync join: it needs the key that came with
  * the snapshot, and its caller stores the WebDAV password right afterwards. Otherwise sync is switched off and its
  * state cleared too, as stopSync does: sync without its key can't run. Runs in one transaction, so a failure

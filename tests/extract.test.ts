@@ -74,13 +74,20 @@ describe('extractText', () => {
     expect((await failure(many)).code).toBe('import.pdf_too_large')
   })
 
-  it('does not hang on a content stream that inflates to a huge size', async () => {
-    const started = Date.now()
-    const outcome = await extractText(makePdf([{}], { flate: true, filler: 64 * 1024 * 1024 })).then(
-      () => 'result',
-      (e: unknown) => (e as AppError).code
+  it('stops at the first page that goes over a limit, without reading the rest', async () => {
+    const progress: number[] = []
+    const err = await extractText(makePdf(PAGES), (n) => progress.push(n), { ...PDF_LIMITS, maxItems: 5 }).then(
+      () => null,
+      (e: unknown) => e
     )
-    expect(['result', 'import.pdf_scanned', 'import.pdf_broken', 'import.pdf_too_large']).toContain(outcome)
-    expect(Date.now() - started).toBeLessThan(20_000)
-  }, 25_000)
+    expect((err as AppError).code).toBe('import.pdf_too_large')
+    expect(progress.length).toBeLessThan(PAGES.length)
+  })
+
+  it('reads a content stream that inflates a thousandfold as a page without text', async () => {
+    // 4 MiB of zeros deflates to a few KB: the page has no text, so the answer is a fixed one.
+    const bytes = makePdf([{}], { flate: true, filler: 4 * 1024 * 1024 })
+    expect(bytes.length).toBeLessThan(20_000)
+    expect((await failure(bytes)).code).toBe('import.pdf_scanned')
+  })
 })

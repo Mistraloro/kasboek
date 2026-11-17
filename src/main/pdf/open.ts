@@ -20,7 +20,10 @@ export interface OpenPdfInput {
  * still opens, with an empty grid.
  */
 export async function openPdfSession(db: Db, input: OpenPdfInput): Promise<ImportPreview> {
-  const bytes = new Uint8Array(Buffer.from(input.contentBase64, 'base64'))
+  const decoded = Buffer.from(input.contentBase64, 'base64')
+  // A view on the decoded bytes, not a copy. A small buffer may share a pool with unrelated data, and
+  // the whole underlying buffer travels to the reader process, so only that case is copied.
+  const bytes = decoded.buffer.byteLength === decoded.length ? new Uint8Array(decoded.buffer, decoded.byteOffset, decoded.length) : new Uint8Array(decoded)
   if (!isPdf(bytes)) throw new AppError('import.not_pdf', 'This is not a PDF file.')
   const account = db.prepare('SELECT iban FROM accounts WHERE id = ?').get(input.accountId) as { iban: string | null } | undefined
   if (!account) throw new AppError('accounts.not_found', 'Choose an account first.')

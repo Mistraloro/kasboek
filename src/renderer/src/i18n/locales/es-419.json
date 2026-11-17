@@ -29,7 +29,10 @@
     "fixAmount": "Escribe el monto, negativo para una salida (p. ej. -12,50)",
     "checked": "{{ai}} revisó el archivo. Mira las notas encima de las filas.",
     "claudeOff": "Configura un asistente en Configuración para que revise los archivos.",
-    "checkPrivacyLocal": "Envía las filas de este archivo a {{ai}} en esta computadora o esta red."
+    "checkPrivacyLocal": "Muestra lo que se envía a {{ai}} en esta computadora o esta red y pregunta antes de la primera revisión.",
+    "consent": {
+      "sendsLocal": "Esto envía a {{ai}} en esta computadora o esta red los nombres y descripciones de los pagos de este archivo y de tus movimientos aún sin categoría, las primeras filas del archivo tal como están escritas, la lista de tus categorías y reglas, y las notas que el asistente ha recordado. Los números de cuenta y de tarjeta se ocultan. Nada va a un servicio en línea."
+    }
   },
   "assistant": {
     "tool": {

@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, ListChecks, RotateCcw, Sparkles, Square, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CheckPart, ImportCommitResult, ImportColumns, ImportMapping, ImportPreview, ImportRow, PdfAssistPreview } from '@shared/types'
+import type { CheckPart, ImportCommitResult, ImportColumns, ImportMapping, ImportPreview, ImportRow, PdfAssistPreview, CheckAssistPreview } from '@shared/types'
 import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -114,13 +114,15 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
         assisting={assisting}
         onAssist={
           assistant?.configured
-            ? (p) => {
+            ? (p, consent, needConsent) => {
                 setAssistKind('check')
                 setAssisting(Date.now())
                 // The result arrives as an event (import.checkDone), also when this tab was left meanwhile.
-                void call('import.assist', { sessionId: p.sessionId }).catch((e) => {
+                void call('import.assist', consent ? { sessionId: p.sessionId, consent } : { sessionId: p.sessionId }).catch((e) => {
                   setAssisting(null)
-                  if (!(e instanceof ApiError)) toast(errText(e), 'error')
+                  // Not agreed yet for this provider, address and model: the dialog asks.
+                  if (e instanceof ApiError && e.code === 'import.consent_needed') needConsent()
+                  else if (!(e instanceof ApiError)) toast(errText(e), 'error')
                 })
               }
             : undefined
@@ -252,7 +254,8 @@ function PreviewView({
   onChange: (p: ImportPreview) => void
   onCancel: () => void
   onCommitted: (r: ImportCommitResult) => void
-  onAssist?: (p: ImportPreview) => void
+  /** Starts the check; `needConsent` is called when the person has not agreed yet (then call again with `consent`). */
+  onAssist?: (p: ImportPreview, consent: boolean, needConsent: () => void) => void
   onAssistPdf?: (p: ImportPreview) => void
   onSetup: () => void
   assisting: number | null
@@ -292,6 +295,9 @@ function PreviewView({
   const noTable = pdf?.tableFound === false
   const [mappingOpen, setMappingOpen] = useState(!preview.mapping && !noTable)
   const [consentOpen, setConsentOpen] = useState(false)
+  const [checkConsentOpen, setCheckConsentOpen] = useState(false)
+  // While an assistant works the rows are its to change: edits made now would be lost or fight with its answer.
+  const locked = assisting !== null
   // The row whose unreadable date or amount is being typed in.
   const [fixing, setFixing] = useState<{ index: number; field: 'date' | 'amount' } | null>(null)
   const [saveProfile, setSaveProfile] = useState(true)
@@ -403,14 +409,14 @@ function PreviewView({
                 </>
                 )
               ) : (
-                <Button size="sm" variant="primary" icon={<Sparkles size={14} />} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview)}>
+                <Button size="sm" variant="primary" icon={<Sparkles size={14} />} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview, false, () => setCheckConsentOpen(true))}>
                   {allKnown ? t('import.categoriseExisting', { name: assistant?.providerName ?? 'Claude' }) : t('import.checkWithClaude')}
                 </Button>
               )
             ) : (
               <span className="text-xs text-muted">{t('import.claudeOff')}</span>
             )}
-            <Button size="sm" icon={<Columns3 size={14} />} onClick={() => setMappingOpen(true)}>{t('import.columns')}</Button>
+            <Button size="sm" icon={<Columns3 size={14} />} disabled={locked} onClick={() => setMappingOpen(true)}>{t('import.columns')}</Button>
           </span>
         </div>
         {(banner.kind !== 'none' || running > 0) && (
@@ -422,10 +428,11 @@ function PreviewView({
             {running > 0 && <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.runningMismatch', { count: running })}</p>}
             {(banner.kind === 'mismatch' || banner.kind === 'maybeFlip') && <div className="flex items-center gap-2">{aiRead}</div>}
             {banner.kind === 'maybeFlip' && preview.mapping && (
-              <p className="flex items-center gap-2 text-muted">{t('import.pdf.flipHint')} <Button size="sm" onClick={flipSigns}>{t('import.pdf.flip')}</Button></p>
+              <p className="flex items-center gap-2 text-muted">{t('import.pdf.flipHint')} <Button size="sm" disabled={locked} onClick={flipSigns}>{t('import.pdf.flip')}</Button></p>
             )}
           </div>
         )}
+        {locked && <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{t('import.lockedWhileAssisting', { ai: assistant?.providerName ?? 'Claude' })}</p>}
         {notes.length > 0 && (
           <ul className="mt-3 list-disc space-y-0.5 border-t border-border pt-3 pl-5 text-[13px] text-muted">
             {notes.map((n, i) => <li key={i}>{n}</li>)}
@@ -479,14 +486,14 @@ function PreviewView({
                         type="checkbox"
                         aria-label={t('import.includeRow')}
                         className="accent-[var(--accent)]"
-                        disabled={r.status === 'problem'}
+                        disabled={r.status === 'problem' || locked}
                         checked={r.status === 'ready'}
                         onChange={(e) => update([{ index: r.index, decided: e.target.checked ? 'include' : 'skip' }])}
                       />
                     </td>
                     <td className="num px-2 py-2 text-[13px] whitespace-nowrap">
                       {r.bookingDate ? formatDate(r.bookingDate, fmt) : (
-                        <button type="button" className="font-medium text-negative underline decoration-dotted" onClick={() => setFixing({ index: r.index, field: 'date' })}>{t('import.badDate')}</button>
+                        <button type="button" className="font-medium text-negative underline decoration-dotted" disabled={locked} onClick={() => setFixing({ index: r.index, field: 'date' })}>{t('import.badDate')}</button>
                       )}
                     </td>
                     <td className="max-w-0 px-2 py-2">
@@ -497,11 +504,11 @@ function PreviewView({
                       )}
                     </td>
                     <td className="px-2 py-1.5">
-                      <CategorySelect label={t('transactions.category')} className="h-8 text-[13px]" value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
+                      <CategorySelect label={t('transactions.category')} className="h-8 text-[13px]" disabled={locked} value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
                     </td>
                     <td className={cx('num px-2 py-2 text-right font-medium whitespace-nowrap', r.status === 'ready' && (r.amountCents ?? 0) > 0 && 'text-accent', r.status === 'ready' && (r.amountCents ?? 0) <= 0 && 'text-text')}>
                       {r.amountCents === null ? (
-                        <button type="button" className="text-negative underline decoration-dotted" onClick={() => setFixing({ index: r.index, field: 'amount' })}>{t('import.badAmount')}</button>
+                        <button type="button" className="text-negative underline decoration-dotted" disabled={locked} onClick={() => setFixing({ index: r.index, field: 'amount' })}>{t('import.badAmount')}</button>
                       ) : money(r.amountCents, preview.currency)}
                     </td>
                     <td className="py-2 pr-5 pl-2" title={r.issues.map((i) => t(`import.issue.${i}`)).join(' · ')}>
@@ -536,6 +543,7 @@ function PreviewView({
           onClose={() => setFixing(null)}
         />
       )}
+      <CheckConsentModal open={checkConsentOpen} preview={preview} onClose={() => setCheckConsentOpen(false)} onSend={() => { setCheckConsentOpen(false); onAssist?.(preview, true, () => undefined) }} />
       <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />
       {!noTable && <MappingModal key={JSON.stringify(preview.mapping)} open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />}
     </>
@@ -568,7 +576,8 @@ function PdfConsentModal({ open, preview, onClose, onSend }: { open: boolean; pr
       t(preview.pdf?.tableFound === false ? 'import.pdf.ai.introNoTable' : 'import.pdf.ai.introMismatch'),
       t(local ? 'import.pdf.ai.sendsLocal' : 'import.pdf.ai.sendsRemote', { count: info.pages }),
       t(info.preambleLeftOut ? 'import.pdf.ai.hiddenTop' : 'import.pdf.ai.hiddenNoTop'),
-      t('import.pdf.ai.verify')
+      t('import.pdf.ai.verify'),
+      t('import.pdf.ai.replaces')
     ].join(' ')
   return (
     <Modal open={open} title={t('import.pdf.ai.title')} onClose={onClose}>
@@ -578,6 +587,7 @@ function PdfConsentModal({ open, preview, onClose, onSend }: { open: boolean; pr
         {info && (
           <>
             <p>{message}</p>
+            {preview.edited > 0 && <p className="font-medium text-warning">{t('import.pdf.ai.edited', { count: preview.edited })}</p>}
             <p className="num text-muted">{t('import.pdf.ai.stats', { pages: info.pages, tokens: info.approxTokens.toLocaleString(), parts: info.parts })}</p>
             <details>
               <summary className="cursor-pointer font-medium">{t('import.pdf.ai.show')}</summary>
@@ -589,6 +599,53 @@ function PdfConsentModal({ open, preview, onClose, onSend }: { open: boolean; pr
       <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
         <Button onClick={onClose}>{t('settings.cancel')}</Button>
         <Button variant="primary" icon={<Sparkles size={14} />} disabled={!info} onClick={onSend}>{t(local ? 'import.pdf.ai.sendLocal' : 'import.pdf.ai.send')}</Button>
+      </div>
+    </Modal>
+  )
+}
+
+/** Asks before the rows of a CSV file go to the assistant (once per provider, address and model), and shows exactly what is sent. */
+function CheckConsentModal({ open, preview, onClose, onSend }: { open: boolean; preview: ImportPreview; onClose: () => void; onSend: () => void }) {
+  const { t } = useTranslation()
+  const [info, setInfo] = useState<CheckAssistPreview | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!open) return
+    setInfo(null)
+    setError(null)
+    let current = true
+    void call('import.assistPreview', { sessionId: preview.sessionId }).then(
+      (r) => current && setInfo(r),
+      (e) => current && setError(errText(e))
+    )
+    return () => {
+      current = false
+    }
+  }, [open, preview.sessionId])
+  const local = info?.company === null
+  const vars = info && { ai: info.providerName, aiCompany: info.company ?? info.providerName }
+  return (
+    <Modal open={open} title={t('import.consent.title', { ai: info?.providerName ?? '' })} onClose={onClose}>
+      <div className="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pr-1 text-[13px]">
+        {error && <p className="text-negative">{error}</p>}
+        {!info && !error && <p className="text-muted">{t('import.consent.loading')}</p>}
+        {info && vars && (
+          <>
+            <p>{t('import.consent.intro', vars)}</p>
+            <p>{t(local ? 'import.consent.sendsLocal' : 'import.consent.sendsRemote', vars)}</p>
+            <p>{t('import.consent.notSent')}</p>
+            <p className="text-muted">{t('import.consent.again')}</p>
+            <p className="num text-muted">{t('import.consent.stats', { rows: info.rows, tokens: info.approxTokens.toLocaleString(), parts: info.parts, address: info.address, model: info.model })}</p>
+            <details>
+              <summary className="cursor-pointer font-medium">{t('import.consent.show')}</summary>
+              <pre className="selectable mt-2 max-h-64 overflow-auto rounded-lg border border-border bg-surface-2 p-3 text-[11px] leading-snug whitespace-pre-wrap">{info.text}</pre>
+            </details>
+          </>
+        )}
+      </div>
+      <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
+        <Button onClick={onClose}>{t('settings.cancel')}</Button>
+        <Button variant="primary" icon={<Sparkles size={14} />} disabled={!info} onClick={onSend}>{t(local ? 'import.consent.sendLocal' : 'import.consent.send', vars ?? {})}</Button>
       </div>
     </Modal>
   )

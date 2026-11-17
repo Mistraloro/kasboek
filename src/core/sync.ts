@@ -286,12 +286,18 @@ export function apply(db: Db, me: string, from: string, changes: Change[], descr
         }))
       ]
       let touchedFx = false
+      // Changes for a table this version doesn't know (a newer computer added it). The cursor moves
+      // past their file, so they are kept here and applied once an update knows the table.
+      const unknown: { device: string; c: Change }[] = []
       for (;;) {
         const deferred: { device: string; c: Change }[] = []
         const appliedBefore = result.applied
         for (const { device, c } of queue) {
           const s = SPEC.get(c.t)
-          if (!s) continue
+          if (!s) {
+            unknown.push({ device, c })
+            continue
+          }
           if (c.t === 'fx_rates') touchedFx = true
           const prev = readState(db, c.t, c.u)
           if (c.op === 'delete') {
@@ -351,6 +357,7 @@ export function apply(db: Db, me: string, from: string, changes: Change[], descr
         }
         queue = deferred
       }
+      for (const u of unknown) db.prepare('INSERT INTO sync_pending (device, change) VALUES (?, ?)').run(u.device, JSON.stringify(u.c))
       if (touchedFx) fxChanged(db)
     } finally {
       setApplying(db, false)

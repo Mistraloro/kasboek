@@ -17,7 +17,7 @@ import { getPrefs } from '../prefs'
 import { broadcast } from '../session'
 import { TIME_LIMIT_MS, withTimeLimit } from './jobs'
 import { callJson } from './json'
-import { CHARS_PER_TOKEN, activeProvider, requireConfigured, type ActiveProvider } from './provider'
+import { CHARS_PER_TOKEN, activeProvider, requireConfigured, shownAddress, type ActiveProvider } from './provider'
 
 /** The run in progress: one at a time. It goes on when the card is left; the card asks `insightsStatus` when it comes back. */
 let running: { controller: AbortController; month: string; startedAt: string } | null = null
@@ -44,7 +44,7 @@ export function insightsPreview(db: Db, month: string, today = localToday()): In
   const facts = buildFacts(db, month, today)
   const text = factsPayload(facts, { currency: getSettings(db).currency, month, today }).text
   const system = insightsSystem(getPrefs().language)
-  return { text, approxTokens: Math.ceil((system.length + text.length) / CHARS_PER_TOKEN), facts: facts.length, providerName: provider.preset.assistantName, company: provider.preset.company }
+  return { text, approxTokens: Math.ceil((system.length + text.length) / CHARS_PER_TOKEN), facts: facts.length, providerName: provider.preset.assistantName, company: provider.preset.company, address: shownAddress(provider), model: provider.insightsModel }
 }
 
 /** Stops the run in progress (the Stop button); nothing happens when none runs. */

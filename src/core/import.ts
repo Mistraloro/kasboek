@@ -525,6 +525,7 @@ export function preview(db: Db, id: string): ImportPreview {
       fileTo: fileDates.at(-1) ?? null
     },
     notes: s.notes,
+    edited: editedRows(s),
     check: s.check ? checkSummary(s.check) : null,
     fileKind: s.kind,
     pdf: s.pdf ? { pages: s.pdf.pages, readBy: s.pdf.readBy, tableFound: s.rows.length >= 2, reconciliation: s.rows.length >= 2 ? reconciliation(s.pdf, built) : null, notes: s.pdf.notes ?? [] } : null
@@ -537,6 +538,12 @@ function reconciliation(pdf: PdfSessionData, built: ReturnType<typeof buildRows>
     built.filter((b) => b.row.status !== 'skipped').map((b) => ({ amountCents: b.clean.amountCents, balanceCents: b.raw.balanceCents })),
     pdf.balances
   )
+}
+
+/** Rows with a change that did not come from the last check. */
+function editedRows(s: Session): number {
+  const byCheck = new Set(s.check ? [...s.check.parts.categories, ...s.check.parts.names, ...s.check.parts.fixes] : [])
+  return [...s.overrides.keys()].filter((i) => !byCheck.has(i)).length
 }
 
 function checkSummary(c: CheckState): CheckSummary {

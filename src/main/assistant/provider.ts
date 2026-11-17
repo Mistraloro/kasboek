@@ -22,6 +22,20 @@ export function activeProvider(db: Db): ActiveProvider {
   return { ...p, key: getSecret(db, keyName(p.preset.id)) }
 }
 
+/**
+ * Where requests go, as shown in the dialogs where the person agrees: only the host of an online
+ * provider (its address is fixed), the whole address of one the person can point anywhere (local
+ * servers, custom ones), so that a changed address is visible.
+ */
+export function shownAddress(p: ActiveProvider): string {
+  if (p.preset.editableUrl) return p.baseUrl
+  try {
+    return new URL(p.baseUrl).host
+  } catch {
+    return p.baseUrl
+  }
+}
+
 /** True when the assistant has what it needs to answer. */
 export function isConfigured(p: ActiveProvider): boolean {
   return providerGap(p, p.key) === null

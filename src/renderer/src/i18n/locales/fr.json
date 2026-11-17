@@ -237,11 +237,11 @@
     "fixAmountTitle": "Corriger le montant",
     "checking": "{{ai}} vérifie…",
     "checked": "{{ai}} a vérifié le fichier. Voir les notes au-dessus des lignes.",
-    "checkPrivacy": "Envoie les lignes de ce fichier à {{aiCompany}}.",
+    "checkPrivacy": "Montre ce qui est envoyé à {{aiCompany}} et demande avant la première vérification.",
     "claudeOff": "Configurez un assistant dans les Réglages pour faire vérifier les fichiers.",
     "anyBank": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import. Les relevés PDF contenant un tableau d’opérations sont lus sur cet ordinateur ; rien n’est envoyé nulle part. Si un PDF ne peut pas être lu ainsi, vous pouvez faire lire son texte par l’assistant ; il n’est envoyé qu’après votre accord.",
     "layoutRecognised": "Mise en page reconnue",
-    "checkPrivacyLocal": "Envoie les lignes de ce fichier à {{ai}} sur cet ordinateur ou ce réseau.",
+    "checkPrivacyLocal": "Montre ce qui est envoyé à {{ai}} sur cet ordinateur ou ce réseau et demande avant la première vérification.",
     "stopCheck": "Arrêter",
     "checkSlowHint": "Les gros fichiers sont vérifiés par parties, quelques-unes à la fois. Chaque partie s’arrête d’elle-même après 4 minutes.",
     "discard": "Abandonner",
@@ -322,8 +322,26 @@
         "loading": "Préparation…",
         "reading": "{{ai}} lit le relevé…",
         "readingPages": "{{ai}} lit : {{done}} pages sur {{total}}…",
-        "done": "{{ai}} a lu le relevé. Vérifiez chaque ligne avant d’importer."
+        "done": "{{ai}} a lu le relevé. Vérifiez chaque ligne avant d’importer.",
+        "replaces": "Les modifications que tu as faites jusqu’ici sur les lignes sont remplacées par la lecture de l’assistant.",
+        "edited_one": "{{count}} ligne que tu as modifiée sera remplacée.",
+        "edited_many": "{{count}} lignes que tu as modifiées seront remplacées.",
+        "edited_other": "{{count}} lignes que tu as modifiées seront remplacées."
       }
+    },
+    "lockedWhileAssisting": "{{ai}} travaille sur ces lignes. Les modifications faites maintenant seraient perdues : la modification est désactivée jusqu’à la fin.",
+    "consent": {
+      "title": "Vérifier ce fichier avec {{ai}}",
+      "loading": "Préparation…",
+      "intro": "{{ai}} peut vérifier ce fichier : lire les colonnes, signaler les lignes suspectes et proposer des catégories, des noms lisibles et des règles.",
+      "sendsRemote": "Cela envoie à {{aiCompany}} les noms et descriptions des paiements de ce fichier et de tes transactions encore sans catégorie, les premières lignes du fichier telles qu’elles y sont écrites, la liste de tes catégories et règles, et les notes que l’assistant a retenues. Les numéros de compte et de carte sont masqués.",
+      "sendsLocal": "Cela envoie à {{ai}} sur cet ordinateur ou ce réseau les noms et descriptions des paiements de ce fichier et de tes transactions encore sans catégorie, les premières lignes du fichier telles qu’elles y sont écrites, la liste de tes catégories et règles, et les notes que l’assistant a retenues. Les numéros de compte et de carte sont masqués. Rien ne part vers un service en ligne.",
+      "notSent": "Non envoyé : le reste du fichier, les transactions qui ont déjà une catégorie, tes autres comptes.",
+      "again": "On te redemandera si tu changes de fournisseur, d’adresse ou de modèle. Rien n’est enregistré avant que tu aies vu le résultat.",
+      "stats": "Lignes : {{rows}} · environ {{tokens}} jetons · requêtes : {{parts}} · {{address}} · {{model}}",
+      "show": "Afficher exactement ce qui est envoyé",
+      "send": "Envoyer à {{aiCompany}}",
+      "sendLocal": "Envoyer à {{ai}}"
     }
   },
   "assistant": {
@@ -1399,7 +1417,7 @@
       "sendsLocal_one": "Pour rédiger des conseils, Kasboek envoie à {{ai}}, sur cet ordinateur ou ce réseau, un court résumé établi sur cet ordinateur : {{count}} élément, comme des charges fixes qui ont augmenté, des budgets dépassés et des paiements inhabituels, avec le nom du bénéficiaire ou de la catégorie et des montants arrondis. Aucun numéro de compte ou de carte, aucun nom de compte, aucun solde ni revenu, et aucune liste de vos transactions. Rien ne part vers un service en ligne. {{ai}} choisit et formule seulement les conseils ; chaque montant affiché est inséré par Kasboek à partir de vos propres données. Rien n’est modifié.",
       "sendsLocal_other": "Pour rédiger des conseils, Kasboek envoie à {{ai}}, sur cet ordinateur ou ce réseau, un court résumé établi sur cet ordinateur : {{count}} éléments, comme des charges fixes qui ont augmenté, des budgets dépassés et des paiements inhabituels, avec le nom du bénéficiaire ou de la catégorie et des montants arrondis. Aucun numéro de compte ou de carte, aucun nom de compte, aucun solde ni revenu, et aucune liste de vos transactions. Rien ne part vers un service en ligne. {{ai}} choisit et formule seulement les conseils ; chaque montant affiché est inséré par Kasboek à partir de vos propres données. Rien n’est modifié.",
       "again": "Une nouvelle confirmation est demandée si vous changez de fournisseur. Les conseils ne sont créés que lorsque vous appuyez sur le bouton.",
-      "stats": "Environ {{tokens}} jetons · 1 requête",
+      "stats": "Environ {{tokens}} jetons · 1 requête · {{address}} · {{model}}",
       "show": "Afficher exactement ce qui est envoyé",
       "send": "Envoyer à {{aiCompany}}",
       "sendLocal": "Envoyer à {{ai}}"

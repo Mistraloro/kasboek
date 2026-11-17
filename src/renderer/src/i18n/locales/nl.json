@@ -237,11 +237,11 @@
     "fixAmountTitle": "Bedrag aanpassen",
     "checking": "{{ai}} kijkt na…",
     "checked": "{{ai}} heeft het bestand nagekeken. Zie de notities boven de regels.",
-    "checkPrivacy": "Stuurt de regels van dit bestand naar {{aiCompany}}.",
+    "checkPrivacy": "Toont wat er naar {{aiCompany}} gaat en vraagt eerst toestemming bij de eerste controle.",
     "claudeOff": "Stel in Instellingen een assistent in om bestanden te laten nakijken.",
     "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd. Kan een pdf zo niet gelezen worden, dan kun je de tekst door de assistent laten lezen; die wordt pas verstuurd nadat je akkoord gaat.",
     "layoutRecognised": "Indeling herkend",
-    "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk.",
+    "checkPrivacyLocal": "Toont wat er naar {{ai}} op deze computer of dit netwerk gaat en vraagt eerst toestemming bij de eerste controle.",
     "stopCheck": "Stoppen",
     "checkSlowHint": "Grote bestanden worden in delen nagekeken, een paar tegelijk. Elk deel stopt vanzelf na 4 minuten.",
     "discard": "Weggooien",
@@ -322,8 +322,25 @@
         "loading": "Voorbereiden…",
         "reading": "{{ai}} leest het afschrift…",
         "readingPages": "{{ai}} leest: {{done}} van {{total}} pagina’s…",
-        "done": "{{ai}} heeft het afschrift gelezen. Controleer elke rij voor je importeert."
+        "done": "{{ai}} heeft het afschrift gelezen. Controleer elke rij voor je importeert.",
+        "replaces": "Wijzigingen die je tot nu toe aan regels hebt gemaakt, worden vervangen door wat de assistent leest.",
+        "edited_one": "{{count}} regel die je hebt aangepast wordt vervangen.",
+        "edited_other": "{{count}} regels die je hebt aangepast worden vervangen."
       }
+    },
+    "lockedWhileAssisting": "{{ai}} werkt aan deze regels. Wijzigingen nu zouden verloren gaan, dus bewerken staat uit tot het klaar is.",
+    "consent": {
+      "title": "Dit bestand controleren met {{ai}}",
+      "loading": "Voorbereiden…",
+      "intro": "{{ai}} kan dit bestand controleren: de kolommen lezen, regels aanwijzen die niet kloppen en categorieën, leesbare namen en regels voorstellen.",
+      "sendsRemote": "Dit stuurt {{aiCompany}} de namen en omschrijvingen van de betalingen in dit bestand en van je transacties zonder categorie, de eerste regels van het bestand zoals ze er staan, de lijst met je categorieën en regels, en notities die de assistent heeft onthouden. Rekening- en kaartnummers worden verborgen.",
+      "sendsLocal": "Dit stuurt {{ai}} op deze computer of dit netwerk de namen en omschrijvingen van de betalingen in dit bestand en van je transacties zonder categorie, de eerste regels van het bestand zoals ze er staan, de lijst met je categorieën en regels, en notities die de assistent heeft onthouden. Rekening- en kaartnummers worden verborgen. Er gaat niets naar een online dienst.",
+      "notSent": "Niet verstuurd: de rest van het bestand, transacties die al een categorie hebben, je andere rekeningen.",
+      "again": "Je wordt opnieuw gevraagd als je van aanbieder, adres of model wisselt. Er wordt niets opgeslagen voordat je het resultaat hebt bekeken.",
+      "stats": "Regels: {{rows}} · ongeveer {{tokens}} tokens · verzoeken: {{parts}} · {{address}} · {{model}}",
+      "show": "Toon precies wat er wordt verstuurd",
+      "send": "Versturen naar {{aiCompany}}",
+      "sendLocal": "Versturen naar {{ai}}"
     }
   },
   "assistant": {
@@ -1399,7 +1416,7 @@
       "sendsLocal_one": "Om tips te schrijven stuurt Kasboek {{ai}} op deze computer of dit netwerk een korte samenvatting die op deze computer is gemaakt: {{count}} punt, zoals vaste lasten die duurder werden, budgetten die overschreden zijn en opvallende betalingen, met de naam van de begunstigde of categorie en afgeronde bedragen. Geen rekening- of kaartnummers, geen rekeningnamen, geen saldo’s of inkomsten en geen lijst van je transacties. Er gaat niets naar een onlinedienst. {{ai}} kiest en formuleert alleen de tips; elk bedrag dat je ziet, vult Kasboek zelf in uit je eigen gegevens. Er wordt niets aangepast.",
       "sendsLocal_other": "Om tips te schrijven stuurt Kasboek {{ai}} op deze computer of dit netwerk een korte samenvatting die op deze computer is gemaakt: {{count}} punten, zoals vaste lasten die duurder werden, budgetten die overschreden zijn en opvallende betalingen, met de naam van de begunstigde of categorie en afgeronde bedragen. Geen rekening- of kaartnummers, geen rekeningnamen, geen saldo’s of inkomsten en geen lijst van je transacties. Er gaat niets naar een onlinedienst. {{ai}} kiest en formuleert alleen de tips; elk bedrag dat je ziet, vult Kasboek zelf in uit je eigen gegevens. Er wordt niets aangepast.",
       "again": "Je wordt opnieuw gevraagd als je van aanbieder wisselt. Tips worden alleen gemaakt als je op de knop drukt.",
-      "stats": "Ongeveer {{tokens}} tokens · 1 verzoek",
+      "stats": "Ongeveer {{tokens}} tokens · 1 verzoek · {{address}} · {{model}}",
       "show": "Toon precies wat er wordt verstuurd",
       "send": "Versturen naar {{aiCompany}}",
       "sendLocal": "Versturen naar {{ai}}"

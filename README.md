@@ -149,9 +149,14 @@ code-signing certificate).
 
 Messages, the data the assistant looks up and what it remembers go to the chosen provider (or
 stay on your computer for local models). Nothing is sent until you ask. "Check with …" on a CSV
-sends the rows of that file (account numbers shortened). "Read with …" on a PDF statement sends
+asks first, once per provider, address and model (asked again when any of them changes, or when what
+is sent changes), and the dialog shows exactly what is sent: the payees and descriptions of the file
+and of your uncategorised transactions, the first rows as written, your categories and rules, and
+the notes the assistant remembered, all with account and card numbers shortened (IBANs and runs of
+13 or more digits). The rest of the file and transactions that already have a category are not
+sent. "Read with …" on a PDF statement sends
 only the statement's extracted text, masked as described under PDF statements, and only after you
-agree in a dialog every time (there is no "don't ask again"). "Get tips from …" on the Overview's
+agree in a dialog every time (there is no "don't ask again"; it also says how many of your edited rows the reading replaces). "Get tips from …" on the Overview's
 Suggestions card sends a short summary made on your computer: the kind of each finding (a price rise,
 a budget over its limit, …), payee or category names (account and card numbers hidden, cut to 40
 characters) and amounts rounded to whole units. Never sent: account names, balances, income, your

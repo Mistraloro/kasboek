@@ -128,19 +128,42 @@ describe('reading a PDF statement with the assistant', () => {
 
   it('splits into parts of 4 pages, runs them side by side and merges by line id', async () => {
     const { assistPdf } = await import('../src/main/assistant/pdf')
-    const { db, sessionId } = setup(statement(9))
-    // The first part answers last.
+    const { PARALLEL } = await import('../src/main/assistant/jobs')
+    const pages = 13
+    const { db, sessionId } = setup(statement(pages))
+    // Calls are held until PARALLEL of them are in flight at once (a serial run never gets there and
+    // fails by timeout), then released so that the first part answers last. No timers involved.
+    let inFlight = 0
+    let maxInFlight = 0
+    const finished: number[] = []
+    const release = new Map<number, () => void>()
     await mockFetch(async (b) => {
-      if (partOf(b) === 1) await new Promise((r) => setTimeout(r, 60))
+      const part = partOf(b)
+      inFlight++
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      if (release.size < PARALLEL && part <= PARALLEL) {
+        await new Promise<void>((resolve) => {
+          release.set(part, resolve)
+          if (release.size === PARALLEL) release.get(PARALLEL)!()
+        })
+      }
+      finished.push(part)
+      // Each held part lets the one before it go, so the first part is last.
+      release.get(part - 1)?.()
+      inFlight--
       return answer(b)
     })
     const preview = await assistPdf(db, sessionId)
-    expect(requests.map(partOf).sort()).toEqual([1, 2, 3])
-    expect(requests.every((b) => /Part \d of 3/.test(userText(b)))).toBe(true)
+    expect(requests.map(partOf).sort()).toEqual([1, 2, 3, 4])
+    expect(maxInFlight).toBe(PARALLEL)
+    // The first wave finished in reverse order (part 1 last), and the result does not depend on it.
+    expect(finished.filter((n) => n <= PARALLEL)).toEqual([3, 2, 1])
+    expect(requests.every((b) => /Part \d of 4/.test(userText(b)))).toBe(true)
     // Later parts carry the last lines of the part before as context only.
     expect(userText(requests.find((b) => partOf(b) === 2)!)).toContain('(context only) L')
     expect(userText(requests.find((b) => partOf(b) === 1)!)).not.toContain('(context only) L')
-    expect(preview.rows.map((r) => r.bookingDate)).toEqual(Array.from({ length: 9 }, (_, i) => [`2026-11-0${i + 1}`, `2026-11-0${i + 1}`]).flat())
+    const day = (i: number): string => `2026-11-${String(i + 1).padStart(2, '0')}`
+    expect(preview.rows.map((r) => r.bookingDate)).toEqual(Array.from({ length: pages }, (_, i) => [day(i), day(i)]).flat())
     expect(preview.stats.problems).toBe(0)
   })
 

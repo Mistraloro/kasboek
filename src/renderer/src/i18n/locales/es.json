@@ -237,11 +237,11 @@
     "fixAmountTitle": "Corregir el importe",
     "checking": "{{ai}} está revisando…",
     "checked": "{{ai}} ha revisado el archivo. Mira las notas encima de las filas.",
-    "checkPrivacy": "Envía las filas de este archivo a {{aiCompany}}.",
+    "checkPrivacy": "Muestra lo que se envía a {{aiCompany}} y pregunta antes de la primera revisión.",
     "claudeOff": "Configura un asistente en Ajustes para que revise los archivos.",
     "anyBank": "Funciona con archivos CSV de cualquier banco: Kasboek lee los nombres de las columnas (neerlandés, francés, inglés o alemán) y recuerda cada formato tras la primera importación. Los extractos en PDF con una tabla de movimientos se leen en este ordenador; no se envía nada a ninguna parte. Si un PDF no se puede leer así, puedes pedir al asistente que lea su texto; solo se envía después de que lo aceptes.",
     "layoutRecognised": "Formato reconocido",
-    "checkPrivacyLocal": "Envía las filas de este archivo a {{ai}} en este ordenador o esta red.",
+    "checkPrivacyLocal": "Muestra lo que se envía a {{ai}} en este ordenador o esta red y pregunta antes de la primera revisión.",
     "stopCheck": "Detener",
     "checkSlowHint": "Los archivos grandes se revisan por partes, varias a la vez. Cada parte se detiene sola tras 4 minutos.",
     "discard": "Descartar",
@@ -322,8 +322,26 @@
         "loading": "Preparando…",
         "reading": "{{ai}} está leyendo el extracto…",
         "readingPages": "{{ai}} está leyendo: {{done}} de {{total}} páginas…",
-        "done": "{{ai}} ha leído el extracto. Revisa cada fila antes de importar."
+        "done": "{{ai}} ha leído el extracto. Revisa cada fila antes de importar.",
+        "replaces": "Los cambios que hayas hecho hasta ahora en las filas se sustituyen por la lectura del asistente.",
+        "edited_one": "Se sustituirá {{count}} fila que has editado.",
+        "edited_many": "Se sustituirán {{count}} filas que has editado.",
+        "edited_other": "Se sustituirán {{count}} filas que has editado."
       }
+    },
+    "lockedWhileAssisting": "{{ai}} está trabajando en estas filas. Los cambios hechos ahora se perderían, así que la edición está desactivada hasta que termine.",
+    "consent": {
+      "title": "Revisar este archivo con {{ai}}",
+      "loading": "Preparando…",
+      "intro": "{{ai}} puede revisar este archivo: leer las columnas, señalar filas que parecen incorrectas y proponer categorías, nombres legibles y reglas.",
+      "sendsRemote": "Esto envía a {{aiCompany}} los nombres y descripciones de los pagos de este archivo y de tus movimientos aún sin categoría, las primeras filas del archivo tal como están escritas, la lista de tus categorías y reglas, y las notas que el asistente ha recordado. Los números de cuenta y de tarjeta se ocultan.",
+      "sendsLocal": "Esto envía a {{ai}} en este ordenador o esta red los nombres y descripciones de los pagos de este archivo y de tus movimientos aún sin categoría, las primeras filas del archivo tal como están escritas, la lista de tus categorías y reglas, y las notas que el asistente ha recordado. Los números de cuenta y de tarjeta se ocultan. Nada va a un servicio en línea.",
+      "notSent": "No se envía: el resto del archivo, los movimientos que ya tienen categoría, tus otras cuentas.",
+      "again": "Se te volverá a preguntar si cambias de proveedor, de dirección o de modelo. No se guarda nada hasta que hayas visto el resultado.",
+      "stats": "Filas: {{rows}} · unos {{tokens}} tokens · solicitudes: {{parts}} · {{address}} · {{model}}",
+      "show": "Mostrar exactamente lo que se envía",
+      "send": "Enviar a {{aiCompany}}",
+      "sendLocal": "Enviar a {{ai}}"
     }
   },
   "assistant": {
@@ -1399,7 +1417,7 @@
       "sendsLocal_one": "Para escribir consejos, Kasboek envía a {{ai}}, en este ordenador o red, un breve resumen hecho en este ordenador: {{count}} elemento, como gastos fijos que subieron, presupuestos superados y pagos que destacan, con el nombre del beneficiario o de la categoría e importes redondeados. Sin números de cuenta o de tarjeta, sin nombres de cuentas, sin saldos ni ingresos y sin lista de tus transacciones. No sale nada hacia un servicio en línea. {{ai}} solo elige y redacta los consejos; cada importe que ves lo rellena Kasboek con tus propios datos. No se cambia nada.",
       "sendsLocal_other": "Para escribir consejos, Kasboek envía a {{ai}}, en este ordenador o red, un breve resumen hecho en este ordenador: {{count}} elementos, como gastos fijos que subieron, presupuestos superados y pagos que destacan, con el nombre del beneficiario o de la categoría e importes redondeados. Sin números de cuenta o de tarjeta, sin nombres de cuentas, sin saldos ni ingresos y sin lista de tus transacciones. No sale nada hacia un servicio en línea. {{ai}} solo elige y redacta los consejos; cada importe que ves lo rellena Kasboek con tus propios datos. No se cambia nada.",
       "again": "Se te preguntará de nuevo si cambias de proveedor. Los consejos solo se generan cuando pulsas el botón.",
-      "stats": "Unos {{tokens}} tokens · 1 solicitud",
+      "stats": "Unos {{tokens}} tokens · 1 solicitud · {{address}} · {{model}}",
       "show": "Mostrar exactamente lo que se envía",
       "send": "Enviar a {{aiCompany}}",
       "sendLocal": "Enviar a {{ai}}"

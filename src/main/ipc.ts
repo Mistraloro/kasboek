@@ -29,7 +29,7 @@ import { checkProviderKey, listProviderModels } from './assistant/models'
 import { addCustomProvider, isKnownProvider, newCustomId, removeCustomProvider, renameCustomProvider, resolveProvider, switchProvider } from '@shared/ai-provider-store'
 import { isCustomId } from '@shared/ai-providers'
 import { claudeEffort } from '@shared/reasoning'
-import { assistImport } from './assistant/csv'
+import { assistImport, checkPreview } from './assistant/csv'
 import { assistPdf, pdfAssistPreview } from './assistant/pdf'
 import { assistStatus, cancelAssist } from './assistant/jobs'
 import { cancelInsights, insightsPreview, insightsStatus, runInsights } from './assistant/insights'
@@ -385,7 +385,8 @@ const desktopOps: OpTable = {
       return assistantStatus()
     }
   },
-  'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId, consent }) => assistImport(db, sessionId, { consent }) },
+  'import.assistPreview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => checkPreview(db, sessionId) },
   'import.pdfAssistPreview': { mutates: false, assistant: false, handler: (_c, { sessionId }) => pdfAssistPreview(sessionId) },
   'import.pdfAssist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistPdf(db, sessionId) },
   // Tips on the Overview: the cached ones need the interface language, and the assistant writes them only when asked.
