@@ -1,4 +1,4 @@
-import { ArrowUp, Check, ChevronRight, FileCheck2, RotateCcw, Sparkles, Square, X } from 'lucide-react'
+import { ArrowUp, Check, ChevronRight, Eye, EyeOff, FileCheck2, RotateCcw, Sparkles, Square, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { THINKING_START_OPEN, hasThinking, showJumpToLatest, stickToBottom, thinkingLabelKey, toggleThinking } from '@shared/thinking-view'
@@ -7,6 +7,7 @@ import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatM
 import { presetFor, type ProviderId } from '@shared/ai-providers'
 import type { Page } from '../App'
 import { call } from '../lib/api'
+import { usePageContext } from '../lib/page-context'
 import { openSettingsTab } from '../lib/settings-tab'
 import { setAiName } from '../i18n'
 import { errText } from '../pages/auth/parts'
@@ -244,6 +245,15 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
   const toast = useToast()
   const status = useAssistant()
   const [text, setText] = useState('')
+  const pageContext = usePageContext()
+  const [pageShared, setPageShared] = useState(true)
+  const [allowed, setAllowed] = useState(true)
+  useEffect(() => {
+    const load = (): void => void call('settings.get').then((s) => setAllowed(s.pageContextEnabled), () => undefined)
+    load()
+    return window.kasboek.onEvent((e) => (e.type === 'data.changed' || e.type === 'settings.changed') && load())
+  }, [])
+  const sharing = allowed && pageContext ? pageContext : null
   const scroller = useRef<HTMLDivElement>(null)
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight })
@@ -252,7 +262,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
   const sendText = (v: string): void => {
     if (!v.trim() || status?.busy) return
     setText('')
-    void call('assistant.send', { text: v }).catch((e) => toast(errText(e), 'error'))
+    void call('assistant.send', { text: v, ...(sharing && pageShared ? { pageContext: sharing } : {}) }).catch((e) => toast(errText(e), 'error'))
   }
 
   return (
@@ -293,6 +303,21 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
             {status.busy && <Working activity={status.activity} />}
           </div>
           <form className="p-4" onSubmit={(e) => { e.preventDefault(); sendText(text) }}>
+            {sharing && (
+              <div className="mb-1.5 flex items-center gap-1.5 text-xs text-muted">
+                {pageShared ? <Eye size={13} className="shrink-0" /> : <EyeOff size={13} className="shrink-0" />}
+                <span className="min-w-0 flex-1 truncate">
+                  {pageShared
+                    ? sharing.rows.length
+                      ? t('assistant.lookingRows', { page: t(`nav.${sharing.page}`), count: sharing.rows.length })
+                      : t('assistant.looking', { page: t(`nav.${sharing.page}`) })
+                    : t('assistant.lookingPaused')}
+                </span>
+                <button type="button" title={pageShared ? t('assistant.lookingOff') : t('assistant.lookingOn')} aria-label={pageShared ? t('assistant.lookingOff') : t('assistant.lookingOn')} aria-pressed={pageShared} onClick={() => setPageShared(!pageShared)} className="rounded p-1 hover:bg-surface-2 hover:text-text">
+                  {pageShared ? <X size={12} /> : <Eye size={12} />}
+                </button>
+              </div>
+            )}
             <div className="flex items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2 focus-within:border-accent">
               <textarea
                 rows={1}

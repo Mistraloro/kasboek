@@ -173,6 +173,8 @@ export interface Settings {
   permissions: PermissionSettings
   /** The assistant remembers facts and preferences between conversations (this computer only). */
   memoryEnabled: boolean
+  /** The chat tells the assistant which page is open (see shared/page-context.ts). */
+  pageContextEnabled: boolean
   /**
    * The person agreed to send the tips summary to this AI provider at this address with this model (see
    * core/insight-plan.ts for what is sent); null = not asked yet. `baseUrl` (normalised) and `model` are

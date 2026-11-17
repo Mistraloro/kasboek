@@ -16,6 +16,8 @@ import { formatDate, monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { localToday } from '@shared/month'
+import { MAX_CONTEXT_ROWS } from '@shared/page-context'
+import { usePublishPageContext } from '../lib/page-context'
 
 export interface TxFilter {
   accountId?: number
@@ -64,6 +66,13 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
 
   const months = useMemo(() => Array.from({ length: 24 }, (_, i) => addMonths(monthOf(), -i)), [])
   const items = page.data?.items ?? []
+  usePublishPageContext({
+    page: 'transactions',
+    filters: Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined && v !== '')) as Record<string, string | number>,
+    selectedIds: [...selected],
+    openId: editing && editing !== 'new' ? editing.id : null,
+    rows: items.slice(0, MAX_CONTEXT_ROWS).map((i) => ({ id: i.id, date: i.bookingDate, amountCents: i.amountCents, currency: i.currency, payee: i.counterpartyName, description: i.description, category: i.categoryName, account: i.accountName }))
+  })
   const allSelected = items.length > 0 && items.every((i) => selected.has(i.id))
 
   // Exactly two selected, money out of one account and into another (the same amount, or any amount

@@ -18,6 +18,7 @@ import { EFFORTS, REASONING_LEVELS } from './reasoning'
 import { SENSITIVE_MESSAGE, looksSensitive } from './sensitive'
 import { PERMISSION_KINDS, PERMISSION_MODES, type PermissionKind } from './permissions'
 import { GRAPHICS_CHOICES } from './graphics'
+import { PageContextSchema } from './page-context'
 
 const currency = z
   .string()
@@ -211,6 +212,7 @@ export const contract = {
           })
           .strict(),
         mcpEnabled: z.boolean(),
+        pageContextEnabled: z.boolean(),
         aiProvider: providerId,
         aiBaseUrl: baseUrl.nullable(),
         aiChatModel: z.string().trim().max(200),
@@ -221,7 +223,7 @@ export const contract = {
       .strict(),
     output: out<Settings>()
   },
-  'assistant.send': { input: z.object({ text: z.string().trim().min(1).max(8000) }).strict(), output: out<AssistantStatus>() },
+  'assistant.send': { input: z.object({ text: z.string().trim().min(1).max(8000), pageContext: PageContextSchema.optional() }).strict(), output: out<AssistantStatus>() },
   'assistant.confirm': { input: z.object({ id: z.string().uuid(), approve: z.boolean() }).strict(), output: out<AssistantStatus>() },
   'assistant.stop': { input: empty, output: out<AssistantStatus>() },
   'assistant.reset': { input: empty, output: out<AssistantStatus>() },

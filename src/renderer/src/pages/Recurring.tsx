@@ -1,11 +1,13 @@
 import { MoreHorizontal, Repeat } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MAX_CONTEXT_ROWS } from '@shared/page-context'
 import type { RecurringItem, RulePreview } from '@shared/types'
 import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, EmptyState, Modal, PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
+import { usePublishPageContext } from '../lib/page-context'
 import { formatDate } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
@@ -145,6 +147,13 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
   const [recategorize, setRecategorize] = useState<RecurringItem | null>(null)
   const [showHidden, setShowHidden] = useState(false)
   const r = data.data
+  usePublishPageContext({
+    page: 'recurring',
+    filters: {},
+    selectedIds: [],
+    openId: null,
+    rows: (r?.items ?? []).slice(0, MAX_CONTEXT_ROWS).map((i) => ({ name: i.name, direction: i.direction, frequency: i.frequency, typicalCents: i.typicalCents, status: i.status, nextDate: i.nextDate, category: i.categoryName, account: i.accountName }))
+  })
 
   const setHidden = async (item: RecurringItem, hidden: boolean): Promise<void> => {
     try {

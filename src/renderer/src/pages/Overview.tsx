@@ -6,6 +6,7 @@ import type { Page } from '../App'
 import { CategoryBars, MonthBars } from '../components/charts'
 import { Button, Card, CardHeader, EmptyState, MonthNav, PageHeader, cx } from '../components/ui'
 import { call, useOp } from '../lib/api'
+import { usePublishPageContext } from '../lib/page-context'
 import { useAssistant } from '../components/AssistantPanel'
 import { Suggestions } from '../components/Suggestions'
 import { useToast } from '../components/Toast'
@@ -24,6 +25,7 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
   const backup = useOp('backup.status')
   const accounts = useOp('accounts.list')
   const assistant = useAssistant()
+  usePublishPageContext({ page: 'overview', filters: { month }, selectedIds: [], openId: null, rows: [] })
   const alerts = useOp('alerts.list')
   const toast = useToast()
   const s = summary.data

@@ -4,12 +4,14 @@ import { useTranslation } from 'react-i18next'
 import { parseAmount } from '@shared/amount'
 import { centsToInput } from '@shared/format'
 import { monthOf } from '@shared/month'
+import { MAX_CONTEXT_ROWS } from '@shared/page-context'
 import type { BudgetRow, RuleField, RuleMatch, RulePreview } from '@shared/types'
 import { Meter } from '../components/charts'
 import { PromptModal } from '../components/PromptModal'
 import { Badge, Button, Card, Field, Input, Modal, MonthNav, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
+import { usePublishPageContext } from '../lib/page-context'
 import { monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
@@ -42,6 +44,13 @@ export function Budgets({ initial }: { initial?: { month?: string; categoryId?: 
     return () => clearTimeout(timer)
   }, [marked, found])
 
+  usePublishPageContext({
+    page: 'budgets',
+    filters: { month },
+    selectedIds: [],
+    openId: null,
+    rows: (rows ?? []).slice(0, MAX_CONTEXT_ROWS).map((r) => ({ categoryId: r.categoryId, category: r.name, budgetCents: r.budgetCents, spentCents: r.spentCents }))
+  })
   const budgeted = (rows ?? []).filter((r) => r.budgetCents !== null)
   const totalBudget = budgeted.reduce((s, r) => s + (r.budgetCents ?? 0), 0)
   const totalSpent = (rows ?? []).reduce((s, r) => s + r.spentCents, 0)

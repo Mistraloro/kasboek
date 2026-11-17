@@ -181,6 +181,11 @@ export function ClaudeSection() {
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
         </>
       )}
+      {s && (
+        <Row label={t('assistant.pageContext')} hint={t('assistant.pageContextHint')}>
+          <Switch label={t('assistant.pageContext')} checked={s.pageContextEnabled} onChange={(pageContextEnabled) => configure({ pageContextEnabled })} />
+        </Row>
+      )}
       {s && <McpRows enabled={s.mcpEnabled} onChange={(mcpEnabled) => configure({ mcpEnabled })} />}
 
       <AddProviderModal

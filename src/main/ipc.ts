@@ -426,7 +426,7 @@ const desktopOps: OpTable = {
     }
   },
   'assistant.models': { mutates: false, assistant: false, handler: async (ctx) => (await models.get()).listProviderModels(ctx.db) },
-  'assistant.send': { mutates: false, assistant: false, handler: async (_c, { text }) => (await chat.get()).send(text) },
+  'assistant.send': { mutates: false, assistant: false, handler: async (_c, { text, pageContext }) => (await chat.get()).send(text, pageContext) },
   'assistant.confirm': {
     mutates: false,
     assistant: false,

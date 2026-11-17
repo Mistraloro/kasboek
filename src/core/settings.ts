@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiCsvReasoning: 'default',
   permissions: DEFAULT_PERMISSIONS,
   memoryEnabled: true,
+  pageContextEnabled: true,
   aiInsightsConsent: null,
   aiCheckConsent: null
 }
