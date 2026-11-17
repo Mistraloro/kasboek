@@ -29,11 +29,17 @@ export async function openPdfSession(db: Db, input: OpenPdfInput): Promise<Impor
   const lines = toLines(text)
   const read = readStatement(lines, account.iban)
   const empty = text.pages.filter((p) => p.items.length === 0).length
-  const notes: PdfNote[] = [...read.notes, ...(empty ? [{ code: 'pages_without_text' as const, count: empty }] : [])]
+  const grid = read.headerFound ? read.grid : []
+  const notes: PdfNote[] = [
+    ...read.notes,
+    ...(empty ? [{ code: 'pages_without_text' as const, count: empty }] : []),
+    // Only counts, never the text: what the person can tell the developer when a bank's PDF is not read.
+    ...(grid.length ? [] : [{ code: 'no_table' as const, pages: text.pageCount, lines: lines.length }])
+  ]
   return analyzeGrid(db, {
     fileName: input.fileName,
     accountId: input.accountId,
-    grid: read.headerFound ? read.grid : [],
+    grid,
     pdf: { lines, pages: text.pageCount, readBy: 'kasboek', balances: read.balances, period: read.period, notes }
   })
 }

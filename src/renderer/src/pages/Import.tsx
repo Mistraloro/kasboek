@@ -264,6 +264,8 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           return t('import.pdf.note.dates_without_year')
         case 'pages_without_text':
           return t('import.pdf.note.pages_without_text', { count: n.count })
+        case 'no_table':
+          return t('import.pdf.note.no_table', { pages: n.pages, lines: n.lines })
       }
     })
   ]

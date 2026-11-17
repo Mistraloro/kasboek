@@ -294,7 +294,8 @@
         "other_account": "Este extracto parece ser de {{iban}}, no de esta cuenta. Comprueba que has elegido la cuenta correcta.",
         "dates_without_year": "El extracto muestra fechas sin año; Kasboek ha usado el periodo del extracto.",
         "pages_without_text_one": "{{count}} página no tenía texto legible y se ha omitido.",
-        "pages_without_text_other": "{{count}} páginas no tenían texto legible y se han omitido."
+        "pages_without_text_other": "{{count}} páginas no tenían texto legible y se han omitido.",
+        "no_table": "No se encontró ninguna tabla. Páginas leídas: {{pages}}, líneas de texto: {{lines}}."
       }
     }
   },

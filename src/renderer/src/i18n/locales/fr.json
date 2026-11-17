@@ -294,7 +294,8 @@
         "other_account": "Ce relevé semble concerner {{iban}}, pas ce compte. Vérifiez que vous avez choisi le bon compte.",
         "dates_without_year": "Le relevé indique des dates sans année ; Kasboek a utilisé la période du relevé.",
         "pages_without_text_one": "{{count}} page n’avait pas de texte lisible et a été ignorée.",
-        "pages_without_text_other": "{{count}} pages n’avaient pas de texte lisible et ont été ignorées."
+        "pages_without_text_other": "{{count}} pages n’avaient pas de texte lisible et ont été ignorées.",
+        "no_table": "Aucun tableau trouvé. Pages lues : {{pages}}, lignes de texte : {{lines}}."
       }
     }
   },

@@ -294,7 +294,8 @@
         "other_account": "Dieser Kontoauszug scheint zu {{iban}} zu gehören, nicht zu diesem Konto. Prüfe, ob du das richtige Konto gewählt hast.",
         "dates_without_year": "Der Kontoauszug zeigt Daten ohne Jahr; Kasboek hat den Zeitraum des Auszugs verwendet.",
         "pages_without_text_one": "{{count}} Seite hatte keinen lesbaren Text und wurde übersprungen.",
-        "pages_without_text_other": "{{count}} Seiten hatten keinen lesbaren Text und wurden übersprungen."
+        "pages_without_text_other": "{{count}} Seiten hatten keinen lesbaren Text und wurden übersprungen.",
+        "no_table": "Es wurde keine Tabelle gefunden. Gelesene Seiten: {{pages}}, Textzeilen: {{lines}}."
       }
     }
   },

@@ -680,7 +680,7 @@ export interface Reconciliation {
 }
 
 /** A remark about a PDF statement, as a code the screen words in the person's language. */
-export type PdfNote = { code: 'other_account'; iban: string } | { code: 'dates_without_year' } | { code: 'pages_without_text'; count: number }
+export type PdfNote = { code: 'other_account'; iban: string } | { code: 'dates_without_year' } | { code: 'pages_without_text'; count: number } | { code: 'no_table'; pages: number; lines: number }
 
 export interface ImportPreview {
   sessionId: string

@@ -294,7 +294,8 @@
         "other_account": "Dit afschrift lijkt voor {{iban}} te zijn, niet voor deze rekening. Controleer of je de juiste rekening hebt gekozen.",
         "dates_without_year": "Het afschrift toont datums zonder jaar; Kasboek gebruikte de periode van het afschrift.",
         "pages_without_text_one": "{{count}} pagina had geen leesbare tekst en is overgeslagen.",
-        "pages_without_text_other": "{{count}} pagina’s hadden geen leesbare tekst en zijn overgeslagen."
+        "pages_without_text_other": "{{count}} pagina’s hadden geen leesbare tekst en zijn overgeslagen.",
+        "no_table": "Geen tabel gevonden. Gelezen pagina’s: {{pages}}, regels tekst: {{lines}}."
       }
     }
   },

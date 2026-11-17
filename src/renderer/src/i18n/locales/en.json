@@ -294,7 +294,8 @@
         "other_account": "This statement seems to be for {{iban}}, not this account. Check that you chose the right account.",
         "dates_without_year": "The statement shows dates without a year; Kasboek used the statement period.",
         "pages_without_text_one": "{{count}} page had no readable text and was skipped.",
-        "pages_without_text_other": "{{count}} pages had no readable text and were skipped."
+        "pages_without_text_other": "{{count}} pages had no readable text and were skipped.",
+        "no_table": "No table was found. Pages read: {{pages}}, lines of text: {{lines}}."
       }
     }
   },

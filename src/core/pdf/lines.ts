@@ -31,6 +31,8 @@ export interface PdfLine {
   id: number
   page: number
   y: number
+  /** Height of the page, to tell margins from the body. */
+  pageHeight?: number
   cells: PdfCell[]
 }
 
@@ -61,7 +63,7 @@ export function toLines(t: PdfText): PdfLine[] {
       } else groups.push({ y: item.y, items: [item] })
     }
     for (const group of groups) {
-      lines.push({ id: lines.length, page: page.n, y: group.y, cells: toCells(group.items.sort((a, b) => a.x - b.x)) })
+      lines.push({ id: lines.length, page: page.n, y: group.y, pageHeight: page.height, cells: toCells(group.items.sort((a, b) => a.x - b.x)) })
     }
   }
   return lines
