@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiBaseUrl: null,
   aiChatModel: '',
   aiCsvModel: '',
+  aiPdfModel: '',
   aiProviders: {},
   savedSearches: [],
   aiReasoning: 'default',

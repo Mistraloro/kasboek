@@ -13,7 +13,7 @@ import { AppError } from './errors'
 import { detectDateOrder, detectDecimal } from './csv/mapping'
 import { parseDate } from './csv/normalize'
 import type { PdfLine } from './pdf/lines'
-import { completeYear, isHeaderLine, type StatementBalances, type StatementPeriod } from './pdf/statement'
+import { completeYear, isHeaderLine, isMonthName, type StatementBalances, type StatementPeriod } from './pdf/statement'
 
 /** What the model must return (also sent as the JSON schema). */
 export const PdfRowsPlan = z.object({
@@ -204,6 +204,34 @@ function appears(hay: string, needle: string, kind: 'number' | 'date' | 'text'):
   return false
 }
 
+const tokens = (s: string): string[] => norm(s).split(' ').filter(Boolean)
+
+/** The positions of `want` among `have`, each as a whole token and in reading order (not necessarily next to each other); null when one is missing. */
+function findTokens(have: string[], want: string[]): number[] | null {
+  const at: number[] = []
+  for (const w of want) {
+    const i = have.indexOf(w, (at.at(-1) ?? -1) + 1)
+    if (i < 0) return null
+    at.push(i)
+  }
+  return at
+}
+
+/**
+ * The tokens of a date that a block layout prints in separate cells or lines ("3" above "mars"): a
+ * month name with a day, and perhaps a year, each a whole token. Null for anything else.
+ */
+function splitDate(date: string): string[] | null {
+  const want = tokens(date)
+  const months = want.filter(isMonthName).length
+  return want.length >= 2 && want.length <= 3 && months === 1 && want.every((t) => isMonthName(t) || /^\d{1,4}$/.test(t)) ? want : null
+}
+
+const spansCells = (text: string, date: string): boolean => {
+  const want = splitDate(date)
+  return want !== null && findTokens(tokens(text), want) !== null
+}
+
 /** A sign the text itself has: minus, plus, brackets, or DR / CR. */
 const HAS_SIGN = /[-+(]|\b(?:CR|DR)\b/i
 
@@ -259,7 +287,7 @@ export function applyRowsPlan(lines: PdfLine[], parts: PlanPart[], period: State
       const text = norm(ids.map((id) => sent.get(id)!.plain).join(' '))
       // A date and an amount are required; the other strings may be null (or empty) when the lines don't have them.
       const check = (value: string | null, kind: 'number' | 'date' | 'text', label: string, required = false): string | null =>
-        (required || norm(value ?? '')) && !appears(text, value ?? '', kind) ? `The ${label} “${norm(value ?? '')}” is not in the text of this row’s lines.` : null
+        (required || norm(value ?? '')) && !appears(text, value ?? '', kind) && !(kind === 'date' && spansCells(text, value ?? '')) ? `The ${label} “${norm(value ?? '')}” is not in the text of this row’s lines.` : null
       const wrong =
         check(row.date, 'date', 'date', true) ?? check(row.valueDate, 'date', 'value date') ?? check(row.amount, 'number', 'amount', true) ?? check(row.balance, 'number', 'balance') ?? check(row.counterparty, 'text', 'counterparty')
       if (wrong) {
@@ -272,7 +300,17 @@ export function applyRowsPlan(lines: PdfLine[], parts: PlanPart[], period: State
       let counterparty = norm(row.counterparty ?? '')
       for (const iban of ibans) counterparty = counterparty.split(maskIban(iban)).join(iban)
       let description = realText
-      for (const piece of [row.date, row.valueDate, row.amount, row.balance]) if (piece) description = description.replace(norm(piece), ' ')
+      for (const piece of [row.date, row.valueDate, row.amount, row.balance]) {
+        if (!piece) continue
+        const split = splitDate(piece)
+        if (description.includes(norm(piece)) || !split) description = description.replace(norm(piece), ' ')
+        else {
+          // A date over several cells: its own tokens leave the description.
+          const have = tokens(description)
+          findTokens(have, split)?.forEach((i) => (have[i] = ''))
+          description = have.join(' ')
+        }
+      }
       ids.forEach((id) => used.add(id))
       accepted.push({
         order,

@@ -15,6 +15,8 @@ import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
 import { Row } from './Settings'
 
+const isAssistantModel = (m: string): m is AssistantModel => (ASSISTANT_MODELS as readonly string[]).includes(m)
+
 export function ClaudeSection() {
   const { t } = useTranslation()
   const toast = useToast()
@@ -75,8 +77,16 @@ export function ClaudeSection() {
       : modelsStatus ? t('ai.modelsLoaded', { count: modelsStatus.count })
       : models.length ? null
       : t('ai.reloadHint')
-  const modelInput = (value: string, field: 'aiChatModel' | 'aiCsvModel', label: string, placeholder?: string, emptyLabel?: string) => (
-    <ModelPicker key={`${preset.id}-${field}`} value={value} loaded={models} suggested={preset.suggestedModels} label={label} placeholder={placeholder} emptyLabel={emptyLabel} loading={loadingModels} status={modelsLine(models.length === 0 && preset.suggestedModels.length === 0 && !(modelsStatus && 'error' in modelsStatus))} onChange={(v) => configure({ [field]: v })} onReload={loadModels} />
+  // Claude's models are known without asking; the others' list is loaded from the provider.
+  const modelInput = (value: string, field: 'aiChatModel' | 'aiCsvModel' | 'aiPdfModel', label: string, placeholder?: string, emptyLabel?: string) => (
+    <ModelPicker key={`${preset.id}-${field}`} value={value} loaded={native ? ASSISTANT_MODELS : models} suggested={preset.suggestedModels} label={label} placeholder={placeholder} emptyLabel={emptyLabel} loading={loadingModels} status={native ? undefined : modelsLine(models.length === 0 && preset.suggestedModels.length === 0 && !(modelsStatus && 'error' in modelsStatus))} onChange={(v) => configure({ [field]: v })} onReload={loadModels} />
+  )
+  // Reading PDF statements has a model of its own: the one chosen, else the default of the provider.
+  const pdfModel = s ? resolveProvider(s).pdfModel : ''
+  const pdfRow = s && (
+    <Row label={t('ai.pdfTitle')} hint={<>{t('ai.pdfDesc')}{!pdfModel && warn('model')}</>}>
+      {modelInput(s.aiPdfModel, 'aiPdfModel', t('ai.pdfTitle'), undefined, t('ai.defaultModel', { model: pdfModel ? (isAssistantModel(pdfModel) ? t(`claude.model.${pdfModel}`) : pdfModel) : '' }))}
+    </Row>
   )
 
   return (
@@ -128,6 +138,7 @@ export function ClaudeSection() {
             {modelSelect(s.csvModel, (csvModel) => configure({ csvModel }), t('claude.csv'))}
             {effortSelect(s.csvModel, s.csvEffort, (csvEffort) => configure({ csvEffort }), t('claude.effortLabel'))}
           </Row>
+          {pdfRow}
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('claude.privacy')}</div>
         </>
       )}
@@ -141,6 +152,7 @@ export function ClaudeSection() {
             {modelInput(s.aiCsvModel, 'aiCsvModel', t('ai.fileTitle'), undefined, t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
             {reasoningSelect(s.aiCsvReasoning, (aiCsvReasoning) => configure({ aiCsvReasoning }), t('assistant.reasoningLabel'))}
           </Row>
+          {pdfRow}
           <div className="border-b border-border px-5 py-3 text-xs text-muted">{t('assistant.reasoningHint')}</div>
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
         </>

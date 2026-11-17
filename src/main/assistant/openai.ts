@@ -406,6 +406,8 @@ export async function json(
     schema: Record<string, unknown>
     maxTokens: number
     signal?: AbortSignal
+    /** The model to call; the provider's model for reading files when left out. */
+    model?: string
     /** Streams the model's reasoning, where it shares it. */
     onThinking?: (t: string) => void
     /** Fields that set how much the model reasons (see reasoningParams). */
@@ -413,6 +415,7 @@ export async function json(
   }
 ): Promise<string> {
   const stream = !!opts.onThinking
+  const model = opts.model ?? p.csvModel
   const strict = { response_format: { type: 'json_schema', json_schema: { name: 'plan', strict: true, schema: opts.schema } }, messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.user }] }
   const loose = {
     response_format: { type: 'json_object' },
@@ -428,7 +431,7 @@ export async function json(
   let open: Open
   for (;;) {
     try {
-      open = await withFallbacks(p, p.csvModel, { model: p.csvModel, ...(strictMode ? strict : loose), max_tokens: opts.maxTokens, ...(stream ? { stream: true } : {}) }, opts.reasoning ?? {}, opts.signal, stream)
+      open = await withFallbacks(p, model, { model, ...(strictMode ? strict : loose), max_tokens: opts.maxTokens, ...(stream ? { stream: true } : {}) }, opts.reasoning ?? {}, opts.signal, stream)
       break
     } catch (err) {
       if (!rejected(err) || !strictMode) throw err

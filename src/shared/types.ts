@@ -160,6 +160,8 @@ export interface Settings {
   /** Model names for OpenAI-compatible providers (Claude uses chatModel/csvModel). */
   aiChatModel: string
   aiCsvModel: string
+  /** The model that reads PDF statements; empty = Haiku for Claude, else the model for reading files. */
+  aiPdfModel: string
   /** The saved values of the providers that are not in use (address, models, and a custom one's name), by provider id. */
   aiProviders: Record<string, ProviderSettings>
   /** Saved searches on the Transactions page (this computer only). */

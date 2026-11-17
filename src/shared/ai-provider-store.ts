@@ -1,5 +1,5 @@
 /**
- * What is remembered per AI provider. The flat settings (aiProvider, aiBaseUrl, aiChatModel, aiCsvModel)
+ * What is remembered per AI provider. The flat settings (aiProvider, aiBaseUrl, aiChatModel, aiCsvModel, aiPdfModel)
  * are the values of the provider in use; every other provider's values wait in aiProviders until it is
  * chosen again. Switching saves the old values and restores the new ones, so nothing typed is lost.
  * Settings from before this existed need no migration step: the flat values already are the values of the
@@ -9,8 +9,8 @@
 import { CUSTOM_PRESET, checkBaseUrl, isCustomId, keyRequired, presetFor, type ProviderId, type ProviderPreset, type ProviderSettings } from './ai-providers'
 import type { Settings } from './types'
 
-export type AiSettings = Pick<Settings, 'aiProvider' | 'aiBaseUrl' | 'aiChatModel' | 'aiCsvModel' | 'aiProviders'>
-export type AiPatch = Pick<Partial<Settings>, 'aiProvider' | 'aiBaseUrl' | 'aiChatModel' | 'aiCsvModel' | 'aiProviders'>
+export type AiSettings = Pick<Settings, 'aiProvider' | 'aiBaseUrl' | 'aiChatModel' | 'aiCsvModel' | 'aiPdfModel' | 'aiProviders'>
+export type AiPatch = Pick<Partial<Settings>, 'aiProvider' | 'aiBaseUrl' | 'aiChatModel' | 'aiCsvModel' | 'aiPdfModel' | 'aiProviders'>
 
 /** What a call to a provider needs, apart from its key. */
 export interface ResolvedProvider {
@@ -18,6 +18,8 @@ export interface ResolvedProvider {
   baseUrl: string
   chatModel: string
   csvModel: string
+  /** The model that reads PDF statements. */
+  pdfModel: string
 }
 
 export interface CustomProvider {
@@ -29,17 +31,26 @@ export interface CustomProvider {
 export const newCustomId = (random: string): ProviderId => `custom-${random.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 12)}`
 
 /** The values of one provider: the flat ones when it is in use, else what was saved (or the starting values). */
-function valuesOf(s: AiSettings, id: ProviderId): { baseUrl: string | null; chatModel: string; csvModel: string } {
-  if (id === s.aiProvider) return { baseUrl: s.aiBaseUrl, chatModel: s.aiChatModel, csvModel: s.aiCsvModel }
+function valuesOf(s: AiSettings, id: ProviderId): { baseUrl: string | null; chatModel: string; csvModel: string; pdfModel: string } {
+  if (id === s.aiProvider) return { baseUrl: s.aiBaseUrl, chatModel: s.aiChatModel, csvModel: s.aiCsvModel, pdfModel: s.aiPdfModel }
   const saved = s.aiProviders[id]
-  return { baseUrl: saved?.baseUrl ?? null, chatModel: saved?.chatModel ?? presetFor(id).suggestedModels[0] ?? '', csvModel: saved?.csvModel ?? '' }
+  return { baseUrl: saved?.baseUrl ?? null, chatModel: saved?.chatModel ?? presetFor(id).suggestedModels[0] ?? '', csvModel: saved?.csvModel ?? '', pdfModel: saved?.pdfModel ?? '' }
 }
+
+/** The model Claude reads PDF statements with unless another is chosen: the structuring is simple enough for the cheapest one. */
+export const CLAUDE_PDF_MODEL = 'claude-haiku-5-5'
+
+/**
+ * The model for reading PDF statements: the one chosen for it; else Haiku for Claude; else the model
+ * for reading files (which is the chat model when it has none of its own).
+ */
+const pdfModelOf = (id: ProviderId, v: { chatModel: string; csvModel: string; pdfModel: string }): string => v.pdfModel || (id === 'anthropic' ? CLAUDE_PDF_MODEL : v.csvModel || v.chatModel)
 
 /** The address, models and preset to call for a provider (the one in use unless another id is given). */
 export function resolveProvider(s: AiSettings, id: ProviderId = s.aiProvider): ResolvedProvider {
   const preset = presetFor(id, s.aiProviders[id]?.name)
   const v = valuesOf(s, id)
-  return { preset, baseUrl: (preset.editableUrl && v.baseUrl) || preset.baseUrl, chatModel: v.chatModel, csvModel: v.csvModel || v.chatModel }
+  return { preset, baseUrl: (preset.editableUrl && v.baseUrl) || preset.baseUrl, chatModel: v.chatModel, csvModel: v.csvModel || v.chatModel, pdfModel: pdfModelOf(id, v) }
 }
 
 /** What is still missing before a provider can answer; null when it is ready. Checked in this order. */
@@ -69,8 +80,8 @@ export const isKnownProvider = (s: AiSettings, id: ProviderId): boolean => !isCu
 /** Use another provider: save the values of the one in use and restore the other's. */
 export function switchProvider(s: AiSettings, to: ProviderId): AiPatch {
   const v = valuesOf(s, to)
-  const leaving: ProviderSettings = { ...s.aiProviders[s.aiProvider], baseUrl: s.aiBaseUrl, chatModel: s.aiChatModel, csvModel: s.aiCsvModel }
-  return { aiProvider: to, aiBaseUrl: v.baseUrl, aiChatModel: v.chatModel, aiCsvModel: v.csvModel, aiProviders: { ...s.aiProviders, [s.aiProvider]: leaving } }
+  const leaving: ProviderSettings = { ...s.aiProviders[s.aiProvider], baseUrl: s.aiBaseUrl, chatModel: s.aiChatModel, csvModel: s.aiCsvModel, pdfModel: s.aiPdfModel }
+  return { aiProvider: to, aiBaseUrl: v.baseUrl, aiChatModel: v.chatModel, aiCsvModel: v.csvModel, aiPdfModel: v.pdfModel, aiProviders: { ...s.aiProviders, [s.aiProvider]: leaving } }
 }
 
 /** Add a custom provider and use it. */

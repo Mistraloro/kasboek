@@ -85,6 +85,76 @@ describe('masked lines', () => {
   })
 })
 
+describe('dates over several cells or lines (block layouts)', () => {
+  const BLOCK = [
+    line(0, [[40, 'Relevé du 1 mars au 31 mars 2026']]),
+    line(1, [[40, '3'], [140, 'EPICERIE DU COIN'], [510, '12,50-']]),
+    line(2, [[40, 'mars']]),
+    line(3, [[40, '5'], [140, 'VIREMENT SALAIRE'], [510, '1.500,00']]),
+    line(4, [[140, 'Paiement carte']]),
+    line(5, [[40, 'avril']]),
+    line(6, [[40, 'Page 1/5']])
+  ]
+  const blockSent = maskedLines(BLOCK)
+  const run = (rows: Plan['rows'], period: { from: string | null; to: string | null } = { from: '2026-03-01', to: '2026-03-31' }) => applyRowsPlan(BLOCK, [{ own: blockSent, plan: plan(rows) }], period, OWN)
+
+  it('accepts a day above its month and reads it with the statement period', () => {
+    const r = run([row({ lines: [1, 2], date: '3 mars', amount: '12,50-' })])
+    expect(r.accepted).toBe(1)
+    expect(r.grid[1]!.slice(0, 3)).toEqual(['3 mars 2026', '', 'EPICERIE DU COIN'])
+    expect(readBack(r.grid, r.mapping)[0]!.bookingDate).toBe('2026-03-03')
+  })
+
+  it('accepts a day on the first line and its month on the third, in order of reading', () => {
+    const r = run([row({ lines: [3, 4, 5], date: '5 avril', amount: '1.500,00' })], { from: '2026-03-01', to: '2026-04-30' })
+    expect(r.accepted).toBe(1)
+    expect(r.grid[1]![2]).toBe('VIREMENT SALAIRE Paiement carte')
+    expect(r.grid[1]![0]).toBe('5 avril 2026')
+  })
+
+  it('still accepts the fully adjacent form, with a trailing dot or a year', () => {
+    const lines = [line(0, [[40, '3 mars.'], [140, 'SHOP'], [510, '1,00-']]), line(1, [[40, '4'], [60, 'MÄRZ'], [140, 'SHOP'], [510, '2,00-']])]
+    const r = applyRowsPlan(lines, [{ own: maskedLines(lines), plan: plan([row({ lines: [0], date: '3 mars.', amount: '1,00-' }), row({ lines: [1], date: '4 MÄRZ 2026', amount: '2,00-' })]) }], PERIOD, OWN)
+    expect(r.rejected.map((x) => x.reason)).toEqual(['The date “4 MÄRZ 2026” is not in the text of this row’s lines.'])
+  })
+
+  it('refuses a month the lines do not have, tokens in the wrong order and tokens from other rows', () => {
+    expect(run([row({ lines: [1, 2], date: '3 avril', amount: '12,50-' })]).accepted).toBe(0)
+    expect(run([row({ lines: [1, 2], date: 'mars 3', amount: '12,50-' })]).accepted).toBe(0)
+    // Line 5 says "avril", but it is not one of this row's lines.
+    expect(run([row({ lines: [1], date: '3 avril', amount: '12,50-' })]).accepted).toBe(0)
+  })
+
+  it('refuses "3 mars" when the lines say "3" and "avril"', () => {
+    const r = run([row({ lines: [3, 5], date: '3 mars', amount: '1.500,00' })])
+    expect(r.accepted).toBe(0)
+    expect(r.rejected[0]!.reason).toMatch(/not in the text/)
+  })
+
+  it('does not take a day that is only part of a longer number or a page footer for a date', () => {
+    expect(run([row({ lines: [1, 2], date: '13 mars', amount: '12,50-' })]).accepted).toBe(0)
+    // "1/5" is one token and has no month: not a date made of "1" and "5".
+    expect(run([row({ lines: [5, 6], date: '1 5', amount: '1,00' })]).accepted).toBe(0)
+    expect(run([row({ lines: [2, 6], date: 'mars 1', amount: '1,00' })]).accepted).toBe(0)
+  })
+
+  it('refuses a date without a year when no period can complete it', () => {
+    const r = run([row({ lines: [1, 2], date: '3 mars', amount: '12,50-' })], { from: null, to: null })
+    expect(r.accepted).toBe(0)
+    expect(r.rejected[0]!.reason).toMatch(/year/)
+  })
+
+  it('reads month names in every language, short and long, with and without a dot', () => {
+    const names = [['3', 'mars', '2026-03-03'], ['3', 'mrt.', '2026-03-03'], ['3', 'März', '2026-03-03'], ['3', 'March', '2026-03-03'], ['3', 'marzo', '2026-03-03'], ['3', 'março', '2026-03-03'], ['9', 'dez.', '2026-12-09'], ['9', 'sept', '2026-09-09'], ['9', 'okt', '2026-10-09'], ['9', 'janv.', '2026-01-09']]
+    for (const [day, month, iso] of names) {
+      const lines = [line(0, [[40, day!], [140, 'SHOP'], [510, '1,00-']]), line(1, [[40, month!]]), line(2, [[40, '8'], [140, 'SHOP'], [510, '2,00-']]), line(3, [[40, month!]])]
+      const r = applyRowsPlan(lines, [{ own: maskedLines(lines), plan: plan([row({ lines: [0, 1], date: `${day} ${month}`, amount: '1,00-' }), row({ lines: [2, 3], date: `8 ${month}`, amount: '2,00-' })]) }], { from: '2026-01-01', to: '2026-12-31' }, OWN)
+      expect(r.accepted, `${day} ${month}`).toBe(2)
+      expect(readBack(r.grid, r.mapping)[0]!.bookingDate, `${day} ${month}`).toBe(iso)
+    }
+  })
+})
+
 describe('applyRowsPlan', () => {
   it('reads an accepted row from the text: date, amount with its own sign, counterparty, balance', () => {
     const r = apply(plan([row({ lines: [1], counterparty: 'ALBERT HEIJN BRUSSEL', balance: null })], { closingBalance: '988,00' }))

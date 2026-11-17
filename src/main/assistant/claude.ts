@@ -5,7 +5,6 @@ import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
 import { claudeEffort, type Effort } from '@shared/reasoning'
-import type { AssistantModel } from '@shared/types'
 
 export const API_KEY = 'anthropicApiKey'
 
@@ -24,7 +23,7 @@ export function client(db: Db): Anthropic {
  * has none. Thinking is adaptive with a readable summary (shown in the panel); "off" stops it where
  * the model allows (Sonnet 5.5: between tool calls only; Haiku 5.5: disabled), at a low effort.
  */
-export function modelParams(model: AssistantModel, level: Effort) {
+export function modelParams(model: string, level: Effort) {
   const fallback = model !== 'claude-haiku-5-5'
   const effort = claudeEffort(model, level)
   const off = effort === 'off'

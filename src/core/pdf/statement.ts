@@ -237,7 +237,7 @@ function marginLines(lines: PdfLine[]): Set<number> {
 /** A date as one cell, with or without a year. */
 const isDateCell = (text: string): boolean => DATE_CELL.test(text) || /^\d{4}-\d{2}-\d{2}$/.test(text) || /^\d{1,2}[ -][A-Za-z]{3,9}\.?[ -]\d{2,4}$/.test(text) || yearless(text) !== null
 
-const isMonthName = (text: string): boolean => /^[A-Za-zÀ-ÿ]{3,9}\.?$/.test(text) && parseAny(`1 ${text} 2000`) !== null
+export const isMonthName = (text: string): boolean => /^[A-Za-zÀ-ÿ]{3,9}\.?$/.test(text) && parseAny(`1 ${text} 2000`) !== null
 
 const FULL_DATE = /(?<!\d)(\d{1,2}[./-]\d{1,2}[./-]\d{4})(?!\d)/g
 const SIGNED = /^[-+(]|-$|\b(?:CR|DR)\b/i

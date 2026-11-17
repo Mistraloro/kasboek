@@ -96,9 +96,9 @@ async function read(db: Db, sessionId: string, signal: AbortSignal, state: Assis
   const results = await pool(parts, PARALLEL, (part: PdfPart) =>
     withTimeLimit(
       signal,
-      () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${part.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`),
+      () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${part.n} and was stopped. Try again, or pick a faster model for reading PDF statements in Settings → Assistant.`),
       async (partSignal) => {
-        const text = await callJson(db, provider, { system, schema: PdfRowsPlan, context: partText(part), signal: partSignal })
+        const text = await callJson(db, provider, { system, schema: PdfRowsPlan, context: partText(part), signal: partSignal, model: provider.pdfModel })
         const plan = parsePdfPlan(text, name)
         donePages += pagesOf(part.own)
         progress()

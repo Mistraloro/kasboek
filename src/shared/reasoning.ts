@@ -3,20 +3,19 @@
  * (some can't stop thinking at all); other providers get a general level that Kasboek translates
  * into that provider's own parameter.
  */
-import type { AssistantModel } from './types'
 
 /** Claude's levels: "off" (no thinking) only where the model allows it. */
 export const EFFORTS = ['off', 'low', 'medium', 'high', 'xhigh', 'max'] as const
 export type Effort = (typeof EFFORTS)[number]
 
 /** Levels per Claude model: Opus 5.5 and Fable 5.2 always think. */
-export function claudeEfforts(model: AssistantModel): Effort[] {
+export function claudeEfforts(model: string): Effort[] {
   const canStop = model === 'claude-sonnet-5-5' || model === 'claude-haiku-5-5'
   return canStop ? [...EFFORTS] : EFFORTS.filter((e) => e !== 'off')
 }
 
 /** The chosen level, or the nearest one this model has. */
-export function claudeEffort(model: AssistantModel, effort: Effort): Effort {
+export function claudeEffort(model: string, effort: Effort): Effort {
   return claudeEfforts(model).includes(effort) ? effort : 'low'
 }
 

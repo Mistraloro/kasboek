@@ -16,24 +16,24 @@ import type { ActiveProvider } from './provider'
 /** The longest answer asked for. */
 const MAX_TOKENS = 32000
 
-/** The model's answer as JSON text, from the model chosen for CSV checks. */
+/** The model's answer as JSON text, from the given model, else the one chosen for CSV checks. */
 export async function callJson(
   db: Db,
   provider: ActiveProvider,
-  opts: { system: string; schema: z.ZodType; context: string; signal: AbortSignal; onThinking?: (t: string) => void }
+  opts: { system: string; schema: z.ZodType; context: string; signal: AbortSignal; model?: string; onThinking?: (t: string) => void }
 ): Promise<string> {
   const name = provider.preset.assistantName
-  const { system, schema, context, signal, onThinking } = opts
+  const { system, schema, context, signal, model, onThinking } = opts
   if (provider.preset.id !== 'anthropic') {
     try {
-      return await openai.json(provider, { system, user: context, schema: z.toJSONSchema(schema) as Record<string, unknown>, maxTokens: MAX_TOKENS, signal, onThinking, reasoning: reasoningParams(provider.preset.id, getSettings(db).aiCsvReasoning) })
+      return await openai.json(provider, { system, user: context, schema: z.toJSONSchema(schema) as Record<string, unknown>, maxTokens: MAX_TOKENS, signal, model, onThinking, reasoning: reasoningParams(provider.preset.id, getSettings(db).aiCsvReasoning) })
     } catch (err) {
       if (signal.aborted) throw err
       throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
     }
   }
   const settings = getSettings(db)
-  const params = modelParams(settings.csvModel, settings.csvEffort)
+  const params = modelParams(model ?? settings.csvModel, settings.csvEffort)
   let text = ''
   try {
     const stream = client(db).beta.messages.stream(

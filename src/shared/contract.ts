@@ -206,7 +206,8 @@ export const contract = {
         aiProvider: providerId,
         aiBaseUrl: baseUrl.nullable(),
         aiChatModel: z.string().trim().max(200),
-        aiCsvModel: z.string().trim().max(200)
+        aiCsvModel: z.string().trim().max(200),
+        aiPdfModel: z.string().trim().max(200)
       })
       .partial()
       .strict(),

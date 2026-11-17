@@ -190,3 +190,53 @@ describe('with a database', () => {
     expect(getSettings(d).aiProviders).toEqual({})
   })
 })
+
+describe('the model for reading PDF statements', () => {
+  it('is Haiku for Claude, the file-reading model for the others, and the chosen one when there is one', () => {
+    expect(resolveProvider(DEFAULT_SETTINGS).pdfModel).toBe('claude-haiku-5-5')
+    // The CSV check keeps its own model, whatever the PDF read uses.
+    expect(resolveProvider(DEFAULT_SETTINGS).csvModel).toBe('')
+    expect(resolveProvider(apply(DEFAULT_SETTINGS, { aiPdfModel: 'claude-sonnet-5-5' })).pdfModel).toBe('claude-sonnet-5-5')
+
+    const ollama = apply(DEFAULT_SETTINGS, { aiProvider: 'ollama', aiChatModel: 'llama3' })
+    expect(resolveProvider(ollama)).toMatchObject({ csvModel: 'llama3', pdfModel: 'llama3' })
+    expect(resolveProvider(apply(ollama, { aiCsvModel: 'llama3-small' })).pdfModel).toBe('llama3-small')
+    expect(resolveProvider(apply(ollama, { aiCsvModel: 'llama3-small', aiPdfModel: 'llama3-tiny' }))).toMatchObject({ csvModel: 'llama3-small', pdfModel: 'llama3-tiny' })
+
+    const custom = apply(DEFAULT_SETTINGS, addCustomProvider(DEFAULT_SETTINGS, 'custom-aaa', home))
+    expect(resolveProvider(custom).pdfModel).toBe('qwen3-small')
+    expect(resolveProvider(apply(custom, { aiCsvModel: '' })).pdfModel).toBe('qwen3')
+  })
+
+  it('is remembered per provider, like the other two models', () => {
+    let s = apply(DEFAULT_SETTINGS, { aiPdfModel: 'claude-sonnet-5-5' })
+    s = apply(s, switchProvider(s, 'ollama'))
+    expect(s.aiPdfModel).toBe('')
+    s = apply(s, { aiChatModel: 'llama3', aiPdfModel: 'llama3-tiny' })
+    s = apply(s, switchProvider(s, 'anthropic'))
+    expect(s.aiPdfModel).toBe('claude-sonnet-5-5')
+    expect(resolveProvider(s, 'ollama').pdfModel).toBe('llama3-tiny')
+    s = apply(s, switchProvider(s, 'ollama'))
+    expect(s.aiPdfModel).toBe('llama3-tiny')
+    expect(resolveProvider(s, 'anthropic').pdfModel).toBe('claude-sonnet-5-5')
+  })
+
+  it('does not change when a provider is ready', () => {
+    const ollama = apply(DEFAULT_SETTINGS, { aiProvider: 'ollama', aiChatModel: 'llama3' })
+    expect(providerGap(resolveProvider(ollama), null)).toBeNull()
+    expect(providerGap(resolveProvider(apply(ollama, { aiPdfModel: 'x' })), null)).toBeNull()
+    expect(providerGap(resolveProvider(apply(ollama, { aiChatModel: '', aiPdfModel: 'x' })), null)).toBe('model')
+    expect(providerGap(resolveProvider(DEFAULT_SETTINGS), null)).toBe('key')
+    expect(providerGap(resolveProvider(DEFAULT_SETTINGS), 'sk-ant-key')).toBeNull()
+  })
+
+  it('is part of the settings contract and gone after an import', () => {
+    expect(contract['assistant.configure'].input.safeParse({ aiPdfModel: ' llama3-tiny ' })).toMatchObject({ success: true, data: { aiPdfModel: 'llama3-tiny' } })
+    const d = openDb()
+    updateSettings(d, { aiPdfModel: 'claude-sonnet-5-5', ...switchProvider({ ...getSettings(d), aiPdfModel: 'claude-sonnet-5-5' }, 'ollama') })
+    expect(getSettings(d).aiProviders['anthropic']?.pdfModel).toBe('claude-sonnet-5-5')
+    resetImportedSettings(d)
+    expect(getSettings(d).aiProviders).toEqual({})
+    expect(resolveProvider(getSettings(d), 'anthropic').pdfModel).toBe('claude-haiku-5-5')
+  })
+})

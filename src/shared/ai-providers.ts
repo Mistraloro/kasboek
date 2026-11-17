@@ -20,6 +20,7 @@ export interface ProviderSettings {
   baseUrl?: string | null
   chatModel?: string
   csvModel?: string
+  pdfModel?: string
 }
 
 export interface ProviderPreset {
