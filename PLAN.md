@@ -331,6 +331,13 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    (4) photos and screenshots of statements, and scanned PDFs, which need text recognition or sending
    the image to an AI after consent: only if people ask for it. Each format opens the same import
    session as CSV and PDF (preview, duplicates, remembered layouts, undo).
+26. **Fix: the add-account window closes when you click next to it.** An accidental click on the
+   dimmed background closes the dialog and everything typed so far is lost. Make the add-account
+   dialog (and any other dialog with a form: edit account, bank balance, goals, rules, import
+   mapping) ignore clicks on the background, so it only closes with Cancel, the close button, or
+   Escape; if there are unsaved changes, ask before closing with Escape or the close button too.
+   Look at the shared modal component (`dismissible` in src/renderer/src/components/ui.tsx) for the
+   one place to change.
 
 ## Later, maybe
 
