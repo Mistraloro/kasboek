@@ -169,7 +169,7 @@ export function analyzeGrid(db: Db, input: { fileName: string; accountId: number
  * last check no longer apply. A mapping is detected when none is given; `pdf` updates what the
  * statement says about itself.
  */
-export function replaceGrid(db: Db, id: string, grid: string[][], mapping: CsvMapping | null, pdf?: Partial<Pick<PdfSessionData, 'readBy' | 'balances' | 'period'>>): ImportPreview {
+export function replaceGrid(db: Db, id: string, grid: string[][], mapping: CsvMapping | null, pdf?: Partial<Pick<PdfSessionData, 'readBy' | 'balances' | 'period' | 'notes'>>): ImportPreview {
   const s = session(id)
   if (grid.length > MAX_ROWS) throw new AppError('import.too_many', 'This file has more than 50,000 rows.')
   const next = mapping ? { mapping: mappingSchema.parse(mapping), source: 'detected' as const } : detectMapping(db, grid, s.kind, s.mapping?.delimiter ?? ',')
@@ -187,6 +187,11 @@ export function replaceGrid(db: Db, id: string, grid: string[][], mapping: CsvMa
 /** The text lines of an open PDF session (none for a CSV file). */
 export function pdfLines(id: string): PdfLine[] {
   return session(id).pdf?.lines ?? []
+}
+
+/** What an open PDF session holds: the lines and what the statement says about itself. Null for a CSV file. */
+export function pdfData(id: string): PdfSessionData | null {
+  return session(id).pdf ?? null
 }
 
 export function sessionKind(id: string): 'csv' | 'pdf' {
@@ -632,7 +637,10 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
 }
 
 /** What committing the open import would do, for the approval text. */
-export function commitSummary(db: Db, id: string): { rows: number; totalCents: number; from: string | null; to: string | null; accountName: string; currency: string; closing: { date: string; cents: number } | null } {
+export function commitSummary(
+  db: Db,
+  id: string
+): { rows: number; totalCents: number; from: string | null; to: string | null; accountName: string; currency: string; closing: { date: string; cents: number } | null; pdf: { readBy: 'kasboek' | 'assistant'; differenceCents: number | null } | null } {
   const s = session(id)
   const built = buildRows(db, s)
   const ready = built.filter((b) => b.row.status === 'ready')
@@ -645,7 +653,8 @@ export function commitSummary(db: Db, id: string): { rows: number; totalCents: n
     to: dates.at(-1) ?? null,
     accountName: account.name,
     currency: account.currency,
-    closing: account.kind === 'investment' ? null : bankClosing(s, built, built.flatMap((b) => (b.row.bookingDate ? [b.row.bookingDate] : [])).sort().at(-1) ?? null)
+    closing: account.kind === 'investment' ? null : bankClosing(s, built, built.flatMap((b) => (b.row.bookingDate ? [b.row.bookingDate] : [])).sort().at(-1) ?? null),
+    pdf: s.pdf ? { readBy: s.pdf.readBy, differenceCents: reconciliation(s.pdf, built).differenceCents } : null
   }
 }
 

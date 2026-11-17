@@ -35,8 +35,15 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   not read). Kasboek finds the table of transactions on this computer, in a separate reader process;
   the file is not sent anywhere. It checks the rows against the opening and closing balance printed
   on the statement and says so when they don't add up (and suggests flipping the signs for a credit
-  card statement). Password-protected PDFs have to be unlocked first. Where no table is found, there
-  is nothing to import from that file: ask the bank for a CSV.
+  card statement). Password-protected PDFs have to be unlocked first. Reading on this computer sends
+  nothing anywhere. Where no table is found, or the rows don't add up to the statement, you can
+  choose "Read with …" (needs an assistant): after you agree in a dialog that shows exactly what is
+  sent, only the statement's text goes to your provider, never the PDF. Account and card numbers are
+  hidden and the part above the table (your name and address) is left out. The assistant points out
+  which lines form each transaction and copies its date and amount; Kasboek checks that every one
+  of them is really in those lines, reads each amount from the PDF's own text, and shows every row
+  (the ones it can't confirm as problems) before anything is saved. Up to 40 pages, in parts of 4.
+  If no assistant is set up, ask the bank for a CSV.
 - **Assistant**: ask questions about your money or let the assistant make changes. You choose which
   kinds of change it may make by itself and which wait for your OK (Settings → Assistant → "What
   the assistant may do by itself"), how much it reasons per model, and what it remembers between conversations
@@ -135,7 +142,12 @@ code-signing certificate).
    (medium). Other providers: type a model name or load the list from the provider.
 
 Messages, the data the assistant looks up and what it remembers go to the chosen provider (or
-stay on your computer for local models). Nothing is sent until you ask.
+stay on your computer for local models). Nothing is sent until you ask. "Check with …" on a CSV
+sends the rows of that file (account numbers shortened). "Read with …" on a PDF statement sends
+only the statement's extracted text, masked as described under PDF statements, and only after you
+agree in a dialog every time (there is no "don't ask again"). Text inside imported files is treated
+as data from the bank, never as instructions, and saving a PDF import always waits for your OK, also
+when the assistant may otherwise import by itself.
 
 **Permissions**: "Always ask" (the default), "Ask for important changes", "Decide by itself" or a
 choice per kind of change. Balances, deleting rules, new accounts, imports and remembering things

@@ -24,7 +24,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -221,8 +221,10 @@ export const contract = {
   'export.pdf': { input: z.object({ html: z.string().max(2_000_000), defaultName: z.string().max(120) }).strict(), output: out<{ file: string | null }>() },
   'import.assistStatus': {
     input: z.object({ sessionId: z.string().uuid() }).strict(),
-    output: out<{ running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()
+    output: out<{ kind: 'check' | 'pdf'; running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()
   },
+  'import.pdfAssistPreview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<PdfAssistPreview>() },
+  'import.pdfAssist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
   'import.assistCancel': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
   'mcp.setupStatus': { input: empty, output: out<McpSetupStatus>() },
   /** When each Claude app last reached Kasboek (cheap; polled while the setup is on screen). */

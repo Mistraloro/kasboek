@@ -1,13 +1,14 @@
 import { AlertTriangle, CheckCircle2, Columns3, Copy, FileUp, ListChecks, RotateCcw, Sparkles, Square, Undo2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CheckPart, ImportCommitResult, ImportColumns, ImportMapping, ImportPreview, ImportRow } from '@shared/types'
+import type { CheckPart, ImportCommitResult, ImportColumns, ImportMapping, ImportPreview, ImportRow, PdfAssistPreview } from '@shared/types'
 import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Switch, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
 import { SNIFF_BYTES, fileKindOf, isCancelledRead, reconciliationBanner } from '@shared/pdf-import'
 import { dateExample, datePlaceholder, parseDate } from '@shared/format'
+import i18n from '../i18n'
 import { ApiError, call, useOp } from '../lib/api'
 import { openSettingsTab } from '../lib/settings-tab'
 import { formatDate, formatDateTime } from '../lib/format'
@@ -18,6 +19,13 @@ import { useAssistant } from '../components/AssistantPanel'
 import { ImportBalanceCheck } from '../components/BankBalance'
 
 type Filter = 'all' | ImportRow['status']
+type AssistKind = 'check' | 'pdf'
+
+/** An error that arrives as an event: in the person's language when there is a translation. */
+const eventError = (e: { code: string; message: string }): string => {
+  const key = `errors.${e.code.replace(/\./g, '_')}`
+  return i18n.exists(key) ? i18n.t(key) : e.message
+}
 
 function toBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf)
@@ -45,6 +53,9 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   const assistant = useAssistant()
   // When the running check started (null: none), so the timer continues after switching tabs.
   const [assisting, setAssisting] = useState<number | null>(null)
+  const [assistKind, setAssistKind] = useState<AssistKind>('check')
+  const kindRef = useRef(assistKind)
+  kindRef.current = assistKind
   const sessionRef = useRef<string | null>(null)
   sessionRef.current = preview?.sessionId ?? null
   // Coming back to this tab: the open import (kept in the background) and a check still running.
@@ -53,7 +64,10 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
       if (!p) return
       setPreview((cur) => cur ?? p)
       const st = await call('import.assistStatus', { sessionId: p.sessionId })
-      if (st?.running) setAssisting(st.startedAt)
+      if (st?.running) {
+        setAssisting(st.startedAt)
+        setAssistKind(st.kind)
+      }
     })
   }, [])
   useEffect(
@@ -65,10 +79,10 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
         if (e.type === 'import.checkDone' && e.sessionId === sessionRef.current) {
           setAssisting(null)
           if (e.error) {
-            if (e.error.code !== 'assistant.cancelled') toast(e.error.message, 'error')
+            if (e.error.code !== 'assistant.cancelled') toast(eventError(e.error), 'error')
           } else {
             void call('import.preview', { sessionId: e.sessionId }).then(setPreview)
-            toast(t('import.checked'))
+            toast(t(kindRef.current === 'pdf' ? 'import.pdf.ai.done' : 'import.checked'))
           }
         }
       }),
@@ -106,6 +120,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
         onAssist={
           assistant?.configured
             ? (p) => {
+                setAssistKind('check')
                 setAssisting(Date.now())
                 // The result arrives as an event (import.checkDone), also when this tab was left meanwhile.
                 void call('import.assist', { sessionId: p.sessionId }).catch((e) => {
@@ -115,6 +130,24 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
               }
             : undefined
         }
+        assistKind={assistKind}
+        onAssistPdf={
+          assistant?.configured
+            ? (p) => {
+                setAssistKind('pdf')
+                setAssisting(Date.now())
+                // Like the check: the result arrives as an event (import.checkDone).
+                void call('import.pdfAssist', { sessionId: p.sessionId }).catch((e) => {
+                  setAssisting(null)
+                  if (!(e instanceof ApiError)) toast(errText(e), 'error')
+                })
+              }
+            : undefined
+        }
+        onSetup={() => {
+          openSettingsTab('assistant')
+          go('settings')
+        }}
         onCancel={() => {
           // Closing the import also stops a check that is still running for it.
           if (assisting !== null) void call('import.assistCancel', { sessionId: preview.sessionId })
@@ -209,7 +242,27 @@ const clock = (s: number): string => `${Math.floor(s / 60)}:${String(s % 60).pad
 
 const STATUS_TONE: Record<ImportRow['status'], 'accent' | 'warning' | 'negative' | 'neutral'> = { ready: 'accent', duplicate: 'warning', possible_duplicate: 'warning', problem: 'negative', skipped: 'neutral' }
 
-function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assisting }: { preview: ImportPreview; onChange: (p: ImportPreview) => void; onCancel: () => void; onCommitted: (r: ImportCommitResult) => void; onAssist?: (p: ImportPreview) => void; assisting: number | null }) {
+function PreviewView({
+  preview,
+  onChange,
+  onCancel,
+  onCommitted,
+  onAssist,
+  onAssistPdf,
+  onSetup,
+  assisting,
+  assistKind
+}: {
+  preview: ImportPreview
+  onChange: (p: ImportPreview) => void
+  onCancel: () => void
+  onCommitted: (r: ImportCommitResult) => void
+  onAssist?: (p: ImportPreview) => void
+  onAssistPdf?: (p: ImportPreview) => void
+  onSetup: () => void
+  assisting: number | null
+  assistKind: AssistKind
+}) {
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
@@ -243,6 +296,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
   // A PDF without a table of transactions has no columns to choose from.
   const noTable = pdf?.tableFound === false
   const [mappingOpen, setMappingOpen] = useState(!preview.mapping && !noTable)
+  const [consentOpen, setConsentOpen] = useState(false)
   const [saveProfile, setSaveProfile] = useState(true)
   const [busy, setBusy] = useState(false)
   const s = preview.stats
@@ -274,6 +328,25 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
     if (preview.mapping) void call('import.remap', { sessionId: preview.sessionId, mapping: { ...preview.mapping, invertSign: !preview.mapping.invertSign } }).then(onChange, (e) => toast(errText(e), 'error'))
   }
 
+  // "Read with the assistant" for a PDF the local reader couldn't read or whose totals don't add up.
+  const aiRunning = assisting !== null && assistKind === 'pdf'
+  const aiRead: ReactNode = aiRunning ? (
+    <>
+      <span className="text-xs text-muted">
+        {progress && progress.parts > 1 ? t('import.pdf.ai.readingPages', { done: progress.done, total: progress.total }) : t('import.pdf.ai.reading')} <span className="num">{clock(elapsed)}</span>
+      </span>
+      <Button size="sm" icon={<Square size={12} />} onClick={() => void call('import.assistCancel', { sessionId: preview.sessionId })}>{t('import.stopCheck')}</Button>
+    </>
+  ) : assisting !== null ? null : onAssistPdf ? (
+    <Button size="sm" variant="primary" icon={<Sparkles size={14} />} title={t(assistant?.company === null ? 'import.pdf.ai.hintLocal' : 'import.pdf.ai.hintRemote')} onClick={() => setConsentOpen(true)}>
+      {t('import.pdf.ai.button')}
+    </Button>
+  ) : (
+    <span className="text-xs text-muted">
+      {t('import.pdf.ai.off')} <button type="button" className="font-medium text-accent hover:underline" onClick={onSetup}>{t('assistant.setupButton')}</button>
+    </span>
+  )
+
   const chip = (f: Filter, label: string, n: number, tone?: string): ReactNode => (
     <button type="button" onClick={() => setFilter(f)} className={cx('rounded-full border px-3 py-1 text-[13px] font-medium transition-colors', filter === f ? 'border-accent bg-accent-soft text-accent' : 'border-border bg-surface text-muted hover:text-text', tone)}>
       {label} <span className="num">{n}</span>
@@ -289,6 +362,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
             <span className="selectable font-medium text-text">{preview.fileName}</span> → {preview.accountName}
             {preview.layout && <Badge tone="accent">{t('import.layoutRecognised')}</Badge>}
             {pdf && <Badge>PDF</Badge>}
+            {pdf?.readBy === 'assistant' && <Badge tone="accent">{t('import.pdf.readBy', { ai: assistant?.providerName ?? 'Claude' })}</Badge>}
             {!noTable && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
           </span>
         }
@@ -323,12 +397,14 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           <span className="ml-auto flex items-center gap-2">
             {onAssist ? (
               assisting !== null ? (
+                assistKind === 'pdf' ? null : (
                 <>
                   <span className="text-xs text-muted" title={t('import.checkSlowHint')}>
                     {progress && progress.parts > 1 ? t('import.checkingGroups', { done: progress.done, total: progress.total }) : t('import.checking')} <span className="num">{clock(elapsed)}</span>
                   </span>
                   <Button size="sm" icon={<Square size={12} />} onClick={() => void call('import.assistCancel', { sessionId: preview.sessionId })}>{t('import.stopCheck')}</Button>
                 </>
+                )
               ) : (
                 <Button size="sm" variant="primary" icon={<Sparkles size={14} />} title={t(assistant?.company === null ? 'import.checkPrivacyLocal' : 'import.checkPrivacy')} onClick={() => onAssist(preview)}>
                   {allKnown ? t('import.categoriseExisting', { name: assistant?.providerName ?? 'Claude' }) : t('import.checkWithClaude')}
@@ -347,6 +423,7 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
               <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.balanceMismatch', { amount: money(banner.differenceCents, preview.currency) })}</p>
             )}
             {running > 0 && <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.runningMismatch', { count: running })}</p>}
+            {(banner.kind === 'mismatch' || banner.kind === 'maybeFlip') && <div className="flex items-center gap-2">{aiRead}</div>}
             {banner.kind === 'maybeFlip' && preview.mapping && (
               <p className="flex items-center gap-2 text-muted">{t('import.pdf.flipHint')} <Button size="sm" onClick={flipSigns}>{t('import.pdf.flip')}</Button></p>
             )}
@@ -365,7 +442,10 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
         <Card className="px-5 py-6 text-[13px] text-muted">
           <p><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.pdf.noTable')}</p>
           {notes.length > 0 && <ul className="mt-3 list-disc space-y-0.5 pl-5">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
-          <Button className="mt-4" variant="primary" onClick={onCancel}>{t('import.pdf.chooseAnother')}</Button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button variant={onAssistPdf ? undefined : 'primary'} onClick={onCancel} disabled={aiRunning}>{t('import.pdf.chooseAnother')}</Button>
+            {aiRead}
+          </div>
         </Card>
       ) : !preview.mapping ? (
         <Card className="px-5 py-6 text-[13px] text-muted"><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.noMapping')}</Card>
@@ -449,8 +529,61 @@ function PreviewView({ preview, onChange, onCancel, onCommitted, onAssist, assis
           {rows.length > limit && <div className="mt-4 flex justify-center"><Button onClick={() => setLimit((l) => l + 500)}>{t('transactions.more')}</Button></div>}
         </>
       )}
+      <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />
       {!noTable && <MappingModal key={JSON.stringify(preview.mapping)} open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />}
     </>
+  )
+}
+
+/** Asks the person every time before a PDF's text goes to the assistant, and shows exactly what would be sent. */
+function PdfConsentModal({ open, preview, onClose, onSend }: { open: boolean; preview: ImportPreview; onClose: () => void; onSend: () => void }) {
+  const { t } = useTranslation()
+  const assistant = useAssistant()
+  const [info, setInfo] = useState<PdfAssistPreview | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!open) return
+    setInfo(null)
+    setError(null)
+    let current = true
+    void call('import.pdfAssistPreview', { sessionId: preview.sessionId }).then(
+      (r) => current && setInfo(r),
+      (e) => current && setError(errText(e))
+    )
+    return () => {
+      current = false
+    }
+  }, [open, preview.sessionId])
+  const local = assistant?.company === null
+  const message =
+    info &&
+    [
+      t(preview.pdf?.tableFound === false ? 'import.pdf.ai.introNoTable' : 'import.pdf.ai.introMismatch'),
+      t(local ? 'import.pdf.ai.sendsLocal' : 'import.pdf.ai.sendsRemote', { count: info.pages }),
+      t(info.preambleLeftOut ? 'import.pdf.ai.hiddenTop' : 'import.pdf.ai.hiddenNoTop'),
+      t('import.pdf.ai.verify')
+    ].join(' ')
+  return (
+    <Modal open={open} title={t('import.pdf.ai.title')} onClose={onClose}>
+      <div className="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pr-1 text-[13px]">
+        {error && <p className="text-negative">{error}</p>}
+        {!info && !error && <p className="text-muted">{t('import.pdf.ai.loading')}</p>}
+        {info && (
+          <>
+            <p>{message}</p>
+            <p className="num text-muted">{t('import.pdf.ai.stats', { pages: info.pages, tokens: info.approxTokens.toLocaleString(), parts: info.parts })}</p>
+            <details>
+              <summary className="cursor-pointer font-medium">{t('import.pdf.ai.show')}</summary>
+              <pre className="selectable mt-2 max-h-64 overflow-auto rounded-lg border border-border bg-surface-2 p-3 text-[11px] leading-snug whitespace-pre-wrap">{info.text}</pre>
+            </details>
+          </>
+        )}
+      </div>
+      <div className="mt-4 flex justify-end gap-2 border-t border-border pt-4">
+        <Button onClick={onClose}>{t('settings.cancel')}</Button>
+        <Button variant="primary" icon={<Sparkles size={14} />} disabled={!info} onClick={onSend}>{t(local ? 'import.pdf.ai.sendLocal' : 'import.pdf.ai.send')}</Button>
+      </div>
+    </Modal>
   )
 }
 

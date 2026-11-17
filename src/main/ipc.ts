@@ -26,7 +26,9 @@ import { activeProvider, keyName } from './assistant/provider'
 import { checkProviderKey, listProviderModels } from './assistant/models'
 import { PROVIDERS } from '@shared/ai-providers'
 import { claudeEffort } from '@shared/reasoning'
-import { assistImport, assistStatus, cancelAssist } from './assistant/csv'
+import { assistImport } from './assistant/csv'
+import { assistPdf, pdfAssistPreview } from './assistant/pdf'
+import { assistStatus, cancelAssist } from './assistant/jobs'
 import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
 import { openPdfSession } from './pdf/open'
@@ -343,6 +345,8 @@ const desktopOps: OpTable = {
     }
   },
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
+  'import.pdfAssistPreview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => pdfAssistPreview(db, sessionId) },
+  'import.pdfAssist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistPdf(db, sessionId) },
   'export.csv': { mutates: false, assistant: false, handler: (_c, { filter, labels, defaultName }) => exportCsv(filter, labels, defaultName) },
   'export.pdf': { mutates: false, assistant: false, handler: (_c, { html, defaultName }) => exportPdf(html, defaultName) },
   'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => assistStatus(sessionId) },

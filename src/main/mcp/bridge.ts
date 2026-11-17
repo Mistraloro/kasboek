@@ -10,7 +10,7 @@ import { getSettings } from '@core/settings'
 import { needsApproval } from '@shared/permissions'
 import type { OpName, OpResult } from '@shared/contract'
 import type { McpClientsSeen } from '@shared/types'
-import { compactResult, describeChange, mcpTools, precheck } from '../assistant/tools'
+import { compactResult, describeChange, isPdfCommit, mcpTools, precheck } from '../assistant/tools'
 import { broadcast, db, isUnlocked } from '../session'
 import { discoveryFile, socketPath, type BridgeRequest, type BridgeResponse } from './channel'
 
@@ -95,7 +95,7 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   const invalid = precheck(def.name, req.input)
   if (invalid) return { id: req.id, ok: false, error: invalid }
   // Changes wait for the person unless their permissions let Claude apps make them too.
-  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp')) {
+  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp', { pdfImport: isPdfCommit(def.op, req.input) })) {
     const approved = await askPerson(def.op, describeChange(db(), def.op, (req.input ?? {}) as Record<string, unknown>))
     if (!approved) return { id: req.id, ok: false, error: 'The person declined this change in Kasboek. Do not retry it unless they ask.' }
   }

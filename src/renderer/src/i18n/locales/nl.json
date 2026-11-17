@@ -237,7 +237,7 @@
     "checked": "{{ai}} heeft het bestand nagekeken. Zie de notities boven de regels.",
     "checkPrivacy": "Stuurt de regels van dit bestand naar {{aiCompany}}.",
     "claudeOff": "Stel in Instellingen een assistent in om bestanden te laten nakijken.",
-    "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd.",
+    "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd. Kan een pdf zo niet gelezen worden, dan kun je de tekst door de assistent laten lezen; die wordt pas verstuurd nadat je akkoord gaat.",
     "layoutRecognised": "Indeling herkend",
     "checkPrivacyLocal": "Stuurt de regels van dit bestand naar {{ai}} op deze computer of dit netwerk.",
     "stopCheck": "Stoppen",
@@ -296,6 +296,31 @@
         "pages_without_text_one": "{{count}} pagina had geen leesbare tekst en is overgeslagen.",
         "pages_without_text_other": "{{count}} pagina’s hadden geen leesbare tekst en zijn overgeslagen.",
         "no_table": "Geen tabel gevonden. Gelezen pagina’s: {{pages}}, regels tekst: {{lines}}."
+      },
+      "readBy": "Gelezen door {{ai}}",
+      "ai": {
+        "button": "Lezen met {{ai}}",
+        "hintRemote": "Stuurt de tekst van het afschrift, zonder reken- en kaartnummers, naar {{aiCompany}} nadat je akkoord gaat.",
+        "hintLocal": "Stuurt de tekst van het afschrift, zonder reken- en kaartnummers, naar {{ai}} op deze computer of dit netwerk nadat je akkoord gaat.",
+        "off": "Stel een assistent in om dit afschrift te laten lezen.",
+        "title": "Dit afschrift lezen met {{ai}}",
+        "introNoTable": "Kasboek kon de tabel met transacties in deze pdf niet zelf lezen. {{ai}} kan de tekst van het afschrift lezen en de transacties aanwijzen.",
+        "introMismatch": "De rijen die Kasboek uit deze pdf las, komen niet uit op het afschrift. {{ai}} kan de tekst van het afschrift lezen en de transacties aanwijzen.",
+        "sendsRemote_one": "Hiermee wordt de tekst van {{count}} pagina naar {{aiCompany}} gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
+        "sendsRemote_other": "Hiermee wordt de tekst van {{count}} pagina’s naar {{aiCompany}} gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
+        "sendsLocal_one": "Hiermee wordt de tekst van {{count}} pagina alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
+        "sendsLocal_other": "Hiermee wordt de tekst van {{count}} pagina’s alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
+        "hiddenTop": "Reken- en kaartnummers worden verborgen, je naam en adres bovenaan blijven weg en de pdf zelf wordt niet verstuurd.",
+        "hiddenNoTop": "Reken- en kaartnummers worden verborgen en de pdf zelf wordt niet verstuurd. Kasboek kon niet zien waar de tabel begint, dus de bovenkant van de eerste pagina zit erbij en je naam en adres kunnen in de tekst staan.",
+        "verify": "Kasboek leest elk bedrag uit de eigen tekst van de pdf en toont elke rij voordat er iets wordt opgeslagen.",
+        "show": "Toon precies wat wordt verstuurd",
+        "stats": "Pagina’s: {{pages}} · ongeveer {{tokens}} tokens · verzoeken: {{parts}}",
+        "send": "Versturen naar {{aiCompany}}",
+        "sendLocal": "Versturen naar {{ai}}",
+        "loading": "Voorbereiden…",
+        "reading": "{{ai}} leest het afschrift…",
+        "readingPages": "{{ai}} leest: {{done}} van {{total}} pagina’s…",
+        "done": "{{ai}} heeft het afschrift gelezen. Controleer elke rij voor je importeert."
       }
     }
   },
@@ -1268,6 +1293,16 @@
     "import_pdf_broken": "Deze pdf kon niet gelezen worden. Het bestand is mogelijk beschadigd. Download het opnieuw bij je bank.",
     "import_pdf_too_large": "Deze pdf is te groot of te ingewikkeld om te lezen. Probeer een pdf met één afschrift.",
     "import_pdf_scanned": "Deze pdf bevat geen selecteerbare tekst (waarschijnlijk een scan of foto). Vraag je bank om een CSV, of om een pdf met tekst.",
-    "import_pdf_busy": "Er wordt nog een andere pdf gelezen. Wacht even en probeer opnieuw."
+    "import_pdf_busy": "Er wordt nog een andere pdf gelezen. Wacht even en probeer opnieuw.",
+    "assistant_no_key": "Voeg eerst je API-sleutel toe in Instellingen → Assistent.",
+    "assistant_no_model": "Kies eerst een model in Instellingen → Assistent.",
+    "assistant_refused": "{{ai}} weigerde dit te lezen.",
+    "assistant_too_long": "Dit was te groot voor één antwoord. Probeer opnieuw, of probeer een korter afschrift.",
+    "assistant_timeout": "{{ai}} deed er te lang over en is gestopt. Probeer opnieuw, of kies een sneller model voor CSV-controles in Instellingen → Assistent.",
+    "assistant_bad_plan": "Het antwoord van {{ai}} kon niet worden gelezen. Probeer opnieuw, of probeer een ander model.",
+    "assistant_pdf_not_pdf": "Deze import is geen pdf-afschrift.",
+    "assistant_pdf_empty": "Deze pdf bevat geen tekst om te lezen.",
+    "assistant_pdf_too_long": "Dit afschrift heeft te veel pagina’s voor de assistent (de limiet is 40 pagina’s). Probeer een afschrift van een kortere periode.",
+    "assistant_pdf_no_rows": "{{ai}} vond geen transacties die bij de tekst van dit afschrift pasten. Er is niets gewijzigd."
   }
 }

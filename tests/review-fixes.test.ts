@@ -447,6 +447,17 @@ describe('permissions', () => {
     expect(needsApproval({ ...custom, mode: 'trust' }, 'something.new', {}, 'chat')).toBe(true)
   })
 
+  it('always asks before saving a PDF import, in the chat and over MCP, even in trust mode', async () => {
+    const { needsApproval, DEFAULT_PERMISSIONS } = await import('@shared/permissions')
+    const trust = { ...DEFAULT_PERMISSIONS, mode: 'trust' as const, mcpAlwaysAsk: false }
+    expect(needsApproval(trust, 'import.commit', {}, 'chat')).toBe(false)
+    expect(needsApproval(trust, 'import.commit', {}, 'chat', { pdfImport: true })).toBe(true)
+    expect(needsApproval(trust, 'import.commit', {}, 'mcp', { pdfImport: true })).toBe(true)
+    expect(needsApproval({ ...trust, mode: 'custom', rules: { import: 'allow' } }, 'import.commit', {}, 'chat', { pdfImport: true })).toBe(true)
+    // Other changes are not affected.
+    expect(needsApproval(trust, 'rules.create', { field: 'any', pattern: 'x' }, 'chat', { pdfImport: true })).toBe(false)
+  })
+
   it('covers every change the assistant can make', async () => {
     const { kindOf } = await import('@shared/permissions')
     const { coreOps } = await import('@core/ops')

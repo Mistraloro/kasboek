@@ -237,7 +237,7 @@
     "checked": "{{ai}} hat die Datei geprüft. Siehe die Hinweise über den Zeilen.",
     "checkPrivacy": "Sendet die Zeilen dieser Datei an {{aiCompany}}.",
     "claudeOff": "Richte in den Einstellungen einen Assistenten ein, um Dateien prüfen zu lassen.",
-    "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet.",
+    "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet. Lässt sich ein PDF so nicht lesen, kannst du den Text vom Assistenten lesen lassen; er wird erst gesendet, wenn du zustimmst.",
     "layoutRecognised": "Format erkannt",
     "checkPrivacyLocal": "Sendet die Zeilen dieser Datei an {{ai}} auf diesem Computer oder in diesem Netzwerk.",
     "stopCheck": "Stopp",
@@ -296,6 +296,31 @@
         "pages_without_text_one": "{{count}} Seite hatte keinen lesbaren Text und wurde übersprungen.",
         "pages_without_text_other": "{{count}} Seiten hatten keinen lesbaren Text und wurden übersprungen.",
         "no_table": "Es wurde keine Tabelle gefunden. Gelesene Seiten: {{pages}}, Textzeilen: {{lines}}."
+      },
+      "readBy": "Gelesen von {{ai}}",
+      "ai": {
+        "button": "Mit {{ai}} lesen",
+        "hintRemote": "Sendet den Text des Kontoauszugs, ohne Konto- und Kartennummern, an {{aiCompany}}, nachdem du zugestimmt hast.",
+        "hintLocal": "Sendet den Text des Kontoauszugs, ohne Konto- und Kartennummern, an {{ai}} auf diesem Computer oder in diesem Netzwerk, nachdem du zugestimmt hast.",
+        "off": "Richte einen Assistenten ein, damit er diesen Kontoauszug liest.",
+        "title": "Diesen Kontoauszug mit {{ai}} lesen",
+        "introNoTable": "Kasboek konnte die Umsatztabelle in diesem PDF nicht selbst lesen. {{ai}} kann den Text des Kontoauszugs lesen und die Umsätze herauszeigen.",
+        "introMismatch": "Die Zeilen, die Kasboek aus diesem PDF gelesen hat, ergeben nicht den Kontoauszug. {{ai}} kann den Text des Kontoauszugs lesen und die Umsätze herauszeigen.",
+        "sendsRemote_one": "Dabei wird der Text von {{count}} Seite an {{aiCompany}} gesendet: Datumsangaben, Beträge, Beschreibungen und die Namen derer, die du bezahlt hast oder die dich bezahlt haben.",
+        "sendsRemote_other": "Dabei wird der Text von {{count}} Seiten an {{aiCompany}} gesendet: Datumsangaben, Beträge, Beschreibungen und die Namen derer, die du bezahlt hast oder die dich bezahlt haben.",
+        "sendsLocal_one": "Dabei wird der Text von {{count}} Seite nur an {{ai}} auf diesem Computer oder in diesem Netzwerk gesendet: Datumsangaben, Beträge, Beschreibungen und die Namen derer, die du bezahlt hast oder die dich bezahlt haben.",
+        "sendsLocal_other": "Dabei wird der Text von {{count}} Seiten nur an {{ai}} auf diesem Computer oder in diesem Netzwerk gesendet: Datumsangaben, Beträge, Beschreibungen und die Namen derer, die du bezahlt hast oder die dich bezahlt haben.",
+        "hiddenTop": "Konto- und Kartennummern werden verborgen, dein Name und deine Adresse oben bleiben weg, und das PDF selbst wird nicht gesendet.",
+        "hiddenNoTop": "Konto- und Kartennummern werden verborgen, und das PDF selbst wird nicht gesendet. Kasboek konnte nicht erkennen, wo die Tabelle beginnt; der Anfang der ersten Seite ist daher dabei, und dein Name und deine Adresse können im Text stehen.",
+        "verify": "Kasboek liest jeden Betrag aus dem eigenen Text des PDFs und zeigt jede Zeile, bevor etwas gespeichert wird.",
+        "show": "Genau anzeigen, was gesendet wird",
+        "stats": "Seiten: {{pages}} · etwa {{tokens}} Tokens · Anfragen: {{parts}}",
+        "send": "An {{aiCompany}} senden",
+        "sendLocal": "An {{ai}} senden",
+        "loading": "Wird vorbereitet…",
+        "reading": "{{ai}} liest den Kontoauszug…",
+        "readingPages": "{{ai}} liest: {{done}} von {{total}} Seiten…",
+        "done": "{{ai}} hat den Kontoauszug gelesen. Prüfe jede Zeile, bevor du importierst."
       }
     }
   },
@@ -1268,6 +1293,16 @@
     "import_pdf_broken": "Dieses PDF konnte nicht gelesen werden. Die Datei ist vielleicht beschädigt. Lade sie erneut bei deiner Bank herunter.",
     "import_pdf_too_large": "Dieses PDF ist zu groß oder zu komplex zum Lesen. Versuche ein PDF mit einem einzelnen Kontoauszug.",
     "import_pdf_scanned": "Dieses PDF enthält keinen markierbaren Text (wahrscheinlich ein Scan oder Foto). Bitte deine Bank um eine CSV-Datei oder ein PDF mit Text.",
-    "import_pdf_busy": "Ein anderes PDF wird noch gelesen. Warte einen Moment und versuche es erneut."
+    "import_pdf_busy": "Ein anderes PDF wird noch gelesen. Warte einen Moment und versuche es erneut.",
+    "assistant_no_key": "Füge zuerst deinen API-Schlüssel unter Einstellungen → Assistent hinzu.",
+    "assistant_no_model": "Wähle zuerst ein Modell unter Einstellungen → Assistent.",
+    "assistant_refused": "{{ai}} hat sich geweigert, das zu lesen.",
+    "assistant_too_long": "Das war für eine Antwort zu groß. Versuche es erneut oder mit einem kürzeren Kontoauszug.",
+    "assistant_timeout": "{{ai}} hat zu lange gebraucht und wurde gestoppt. Versuche es erneut oder wähle unter Einstellungen → Assistent ein schnelleres Modell für CSV-Prüfungen.",
+    "assistant_bad_plan": "Die Antwort von {{ai}} konnte nicht gelesen werden. Versuche es erneut oder mit einem anderen Modell.",
+    "assistant_pdf_not_pdf": "Dieser Import ist kein PDF-Kontoauszug.",
+    "assistant_pdf_empty": "Dieses PDF enthält keinen lesbaren Text.",
+    "assistant_pdf_too_long": "Dieser Kontoauszug hat zu viele Seiten für den Assistenten (Grenze: 40 Seiten). Versuche einen Kontoauszug für einen kürzeren Zeitraum.",
+    "assistant_pdf_no_rows": "{{ai}} hat keine Umsätze gefunden, die zum Text dieses Kontoauszugs passen. Es wurde nichts geändert."
   }
 }

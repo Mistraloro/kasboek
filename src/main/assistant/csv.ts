@@ -4,23 +4,18 @@
  * manual change, so Claude never writes amounts straight into the database.
  */
 import { memoryState } from '@core/memory'
-import { z } from 'zod'
-import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { RULE_COLUMNS, listRules, ruleMatches, ruleText, type RuleText } from '@core/finance'
 import * as imp from '@core/import'
-import { getSettings } from '@core/settings'
 import { mappingSchema } from '@shared/import-mapping'
 import { maskIban, maskNumbers } from '@shared/iban'
 import type { ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
 import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type RowGroup } from '@core/assist-plan'
-import { client, explainError, modelParams } from './claude'
-import * as openai from './openai'
+import { callJson } from './json'
+import { PARALLEL, TIME_LIMIT_MS, pool, runJob, withTimeLimit, type AssistState } from './jobs'
 import { activeProvider, requireConfigured } from './provider'
-import { app } from 'electron'
 import { LANGUAGES } from '@shared/languages'
-import { reasoningParams } from '@shared/reasoning'
 import { getPrefs } from '../prefs'
 import { checkActivity } from './chat'
 import { broadcast } from '../session'
@@ -350,54 +345,11 @@ function checkRules(db: Db, sessionId: string, groups: RowGroup[], plan: Plan, c
   return out
 }
 
-/** Each part of a check that runs too long is stopped, so the import screen never waits forever. */
-const TIME_LIMIT_MS = 4 * 60_000
-/** Dev builds only: a shorter limit, to test what happens when a part runs out of time. */
-const limitMs = (): number => (!app.isPackaged && Number(process.env['KASBOEK_CHECK_LIMIT_MS'])) || TIME_LIMIT_MS
-/** Groups per model call, and calls at the same time: a big file is checked in parts. */
+/** Groups per model call: a big file is checked in parts. */
 const BATCH_GROUPS = 80
-const PARALLEL = 3
-const running = new Map<string, AbortController>()
 
-/** Where a check stands, so the import screen can pick it up again after switching tabs. */
-export interface AssistState {
-  running: boolean
-  startedAt: number
-  groupsDone: number
-  groupsTotal: number
-  partsTotal: number
-  error: string | null
-}
-const states = new Map<string, AssistState>()
-
-export function assistStatus(sessionId: string): AssistState | null {
-  return states.get(sessionId) ?? null
-}
-
-/** Stops a running check for this import (the "Stop" button). */
-export function cancelAssist(sessionId: string): void {
-  running.get(sessionId)?.abort('cancelled')
-}
-
-export async function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
-  running.get(sessionId)?.abort('cancelled')
-  const controller = new AbortController()
-  running.set(sessionId, controller)
-  const state: AssistState = { running: true, startedAt: Date.now(), groupsDone: 0, groupsTotal: 0, partsTotal: 0, error: null }
-  states.set(sessionId, state)
-  let error: AppError | null = null
-  try {
-    return await check(db, sessionId, controller.signal, state)
-  } catch (err) {
-    error = controller.signal.aborted ? new AppError('assistant.cancelled', 'Check stopped.') : err instanceof AppError ? err : new AppError('assistant.failed', err instanceof Error ? err.message : 'The check failed.')
-    throw error
-  } finally {
-    if (running.get(sessionId) === controller) running.delete(sessionId)
-    state.running = false
-    state.error = error?.message ?? null
-    // Also reaches an import screen that was opened again while the check ran.
-    broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message } : null })
-  }
+export function assistImport(db: Db, sessionId: string): Promise<ImportPreview> {
+  return runJob(sessionId, 'check', (signal, state) => check(db, sessionId, signal, state))
 }
 
 /** Splits the groups into parts; the first part also carries the columns and flagged rows. */
@@ -419,24 +371,6 @@ export function mergePlans(parts: { batch: Pick<Batch, 'first' | 'from'> & { gro
     rules: parts.flatMap((p) => own(p, p.plan.rules)),
     notes: [...new Set(parts.flatMap((p) => p.plan.notes))].slice(0, 6)
   }
-}
-
-/** Runs `work` over the items with at most `limit` at a time; failures are returned, not thrown. */
-async function pool<T, R>(items: T[], limit: number, work: (item: T) => Promise<R>): Promise<({ ok: true; value: R } | { ok: false; error: unknown })[]> {
-  const results: ({ ok: true; value: R } | { ok: false; error: unknown })[] = new Array(items.length)
-  let next = 0
-  const lane = async (): Promise<void> => {
-    while (next < items.length) {
-      const i = next++
-      try {
-        results[i] = { ok: true, value: await work(items[i]!) }
-      } catch (error) {
-        results[i] = { ok: false, error }
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
-  return results
 }
 
 async function check(db: Db, sessionId: string, signal: AbortSignal, state: AssistState): Promise<ImportPreview> {
@@ -482,24 +416,19 @@ async function runParts(
     broadcast({ type: 'import.checkProgress', sessionId, groupsDone: done, groupsTotal: groups.length, partsTotal: parts.length })
   }
   progress()
-  const results = await pool(parts, PARALLEL, async (batch) => {
-    const timeout = new AbortController()
-    const timer = setTimeout(() => timeout.abort('timeout'), limitMs())
-    try {
-      const text = await callModel(db, provider, buildContext(db, preview, batch), AbortSignal.any([signal, timeout.signal]), (t) => activity.thinking(batch.n, batch.of, t))
-      const plan = parsePlan(text, name)
-      done += batch.groups.length
-      progress()
-      return { batch, plan }
-    } catch (err) {
-      if (signal.aborted) throw err
-      if (timeout.signal.aborted)
-        throw new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`)
-      throw err
-    } finally {
-      clearTimeout(timer)
-    }
-  })
+  const results = await pool(parts, PARALLEL, (batch) =>
+    withTimeLimit(
+      signal,
+      () => new AppError('assistant.timeout', `${name} took longer than ${TIME_LIMIT_MS / 60_000} minutes for part ${batch.n} and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.`),
+      async (partSignal) => {
+        const text = await callJson(db, provider, { system: INSTRUCTIONS, schema: Plan, context: buildContext(db, preview, batch), signal: partSignal, onThinking: (t) => activity.thinking(batch.n, batch.of, t) })
+        const plan = parsePlan(text, name)
+        done += batch.groups.length
+        progress()
+        return { batch, plan }
+      }
+    )
+  )
   if (signal.aborted) throw new AppError('assistant.cancelled', 'Check stopped.')
   const finished = results.flatMap((r) => (r.ok ? [r.value] : []))
   const failed = parts.filter((_, i) => !results[i]!.ok)
@@ -512,41 +441,4 @@ async function runParts(
   const lost = failed.map((b) => (b.first ? `part ${b.n} (with the column check)` : `part ${b.n}`))
   if (lost.length) plan.notes.unshift(`${lost.length} of ${parts.length} parts couldn’t be checked (${lost.join(', ')}); run Check again to try them.`)
   return applyPlan(db, preview, groups, plan, name)
-}
-
-/** One model call that returns the plan as JSON text. */
-async function callModel(db: Db, provider: ReturnType<typeof activeProvider>, context: string, signal: AbortSignal, onThinking: (t: string) => void): Promise<string> {
-  const name = provider.preset.assistantName
-  if (provider.preset.id !== 'anthropic') {
-    try {
-      return await openai.json(provider, { system: INSTRUCTIONS, user: context, schema: z.toJSONSchema(Plan) as Record<string, unknown>, maxTokens: 32000, signal, onThinking, reasoning: reasoningParams(provider.preset.id, getSettings(db).aiCsvReasoning) })
-    } catch (err) {
-      if (signal.aborted) throw err
-      throw err instanceof AppError ? err : new AppError('assistant.failed', openai.explainProviderError(err, name))
-    }
-  }
-  const settings = getSettings(db)
-  const params = modelParams(settings.csvModel, settings.csvEffort)
-  let text = ''
-  try {
-    const stream = client(db).beta.messages.stream(
-      {
-        ...params,
-        max_tokens: 32000,
-        output_config: { ...params.output_config, format: betaZodOutputFormat(Plan) },
-        system: INSTRUCTIONS,
-        messages: [{ role: 'user', content: context }]
-      },
-      { signal }
-    )
-    stream.on('thinking', (delta) => onThinking(delta))
-    const message = await stream.finalMessage()
-    if (message.stop_reason === 'refusal') throw new AppError('assistant.refused', `${name} declined to check this file.`)
-    if (message.stop_reason === 'max_tokens') throw new AppError('assistant.too_long', 'This part of the file was too large for one answer. Try again, or a shorter export.')
-    for (const b of message.content) if (b.type === 'text') text += b.text
-  } catch (err) {
-    if (signal.aborted) throw err
-    throw err instanceof AppError ? err : new AppError('assistant.failed', explainError(err))
-  }
-  return text
 }

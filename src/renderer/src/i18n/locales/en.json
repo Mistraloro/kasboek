@@ -237,7 +237,7 @@
     "checked": "{{ai}} checked the file. See the notes above the rows.",
     "checkPrivacy": "Sends the rows of this file to {{aiCompany}}.",
     "claudeOff": "Set up an assistant in Settings to have it check files.",
-    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere.",
+    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere. If a PDF can’t be read that way, you can choose to have the assistant read its text; that is only sent after you agree.",
     "layoutRecognised": "Layout recognised",
     "checkPrivacyLocal": "Sends the rows of this file to {{ai}} on this computer or network.",
     "stopCheck": "Stop",
@@ -296,6 +296,31 @@
         "pages_without_text_one": "{{count}} page had no readable text and was skipped.",
         "pages_without_text_other": "{{count}} pages had no readable text and were skipped.",
         "no_table": "No table was found. Pages read: {{pages}}, lines of text: {{lines}}."
+      },
+      "readBy": "Read by {{ai}}",
+      "ai": {
+        "button": "Read with {{ai}}",
+        "hintRemote": "Sends the statement’s text, with account and card numbers hidden, to {{aiCompany}} after you agree.",
+        "hintLocal": "Sends the statement’s text, with account and card numbers hidden, to {{ai}} on this computer or network after you agree.",
+        "off": "Set up an assistant to have it read this statement.",
+        "title": "Read this statement with {{ai}}",
+        "introNoTable": "Kasboek couldn’t read the transactions table in this PDF by itself. {{ai}} can read the statement’s text and point out the transactions.",
+        "introMismatch": "The rows Kasboek read from this PDF don’t add up to the statement. {{ai}} can read the statement’s text and point out the transactions.",
+        "sendsRemote_one": "This sends the text of {{count}} page to {{aiCompany}}: dates, amounts, descriptions and the names of who you paid or who paid you.",
+        "sendsRemote_other": "This sends the text of {{count}} pages to {{aiCompany}}: dates, amounts, descriptions and the names of who you paid or who paid you.",
+        "sendsLocal_one": "This sends the text of {{count}} page only to {{ai}} on this computer or network: dates, amounts, descriptions and the names of who you paid or who paid you.",
+        "sendsLocal_other": "This sends the text of {{count}} pages only to {{ai}} on this computer or network: dates, amounts, descriptions and the names of who you paid or who paid you.",
+        "hiddenTop": "Account and card numbers are hidden, your name and address at the top are left out, and the PDF itself is not sent.",
+        "hiddenNoTop": "Account and card numbers are hidden and the PDF itself is not sent. Kasboek couldn’t tell where the table starts, so the top of the first page is included and your name and address may be in the text.",
+        "verify": "Kasboek reads every amount from the PDF’s own text and shows every row before anything is saved.",
+        "show": "Show exactly what is sent",
+        "stats": "Pages: {{pages}} · about {{tokens}} tokens · requests: {{parts}}",
+        "send": "Send to {{aiCompany}}",
+        "sendLocal": "Send to {{ai}}",
+        "loading": "Preparing…",
+        "reading": "{{ai}} is reading the statement…",
+        "readingPages": "{{ai}} is reading: {{done}} of {{total}} pages…",
+        "done": "{{ai}} read the statement. Check every row before importing."
       }
     }
   },
@@ -1268,6 +1293,16 @@
     "import_pdf_broken": "This PDF could not be read. The file may be damaged. Download it again from your bank.",
     "import_pdf_too_large": "This PDF is too large or too complex to read. Try a PDF of a single statement.",
     "import_pdf_scanned": "This PDF has no selectable text (probably a scan or photo). Ask your bank for a CSV, or for a PDF with text.",
-    "import_pdf_busy": "Another PDF is still being read. Wait a moment and try again."
+    "import_pdf_busy": "Another PDF is still being read. Wait a moment and try again.",
+    "assistant_no_key": "Add your API key in Settings → Assistant first.",
+    "assistant_no_model": "Choose a model in Settings → Assistant first.",
+    "assistant_refused": "{{ai}} declined to read this.",
+    "assistant_too_long": "This was too large for one answer. Try again, or try a shorter statement.",
+    "assistant_timeout": "{{ai}} took too long and was stopped. Try again, or pick a faster model for CSV checks in Settings → Assistant.",
+    "assistant_bad_plan": "{{ai}}’s answer couldn’t be read. Try again, or try another model.",
+    "assistant_pdf_not_pdf": "This import is not a PDF statement.",
+    "assistant_pdf_empty": "This PDF has no text to read.",
+    "assistant_pdf_too_long": "This statement has too many pages for the assistant to read (the limit is 40 pages). Try a statement for a shorter period.",
+    "assistant_pdf_no_rows": "{{ai}} didn’t find transactions that could be matched to the text of this statement. Nothing was changed."
   }
 }

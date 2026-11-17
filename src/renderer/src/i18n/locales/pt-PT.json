@@ -237,7 +237,7 @@
     "checked": "{{ai}} reviu o ficheiro. Veja as notas por cima das linhas.",
     "checkPrivacy": "Envia as linhas deste ficheiro para {{aiCompany}}.",
     "claudeOff": "Configure um assistente nas Definições para rever ficheiros.",
-    "anyBank": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum.",
+    "anyBank": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum. Se um PDF não puder ser lido assim, pode pedir ao assistente que leia o texto; só é enviado depois de concordar.",
     "layoutRecognised": "Formato reconhecido",
     "checkPrivacyLocal": "Envia as linhas deste ficheiro para {{ai}} neste computador ou nesta rede.",
     "stopCheck": "Parar",
@@ -296,6 +296,31 @@
         "pages_without_text_one": "{{count}} página não tinha texto legível e foi ignorada.",
         "pages_without_text_other": "{{count}} páginas não tinham texto legível e foram ignoradas.",
         "no_table": "Não foi encontrada nenhuma tabela. Páginas lidas: {{pages}}, linhas de texto: {{lines}}."
+      },
+      "readBy": "Lido por {{ai}}",
+      "ai": {
+        "button": "Ler com {{ai}}",
+        "hintRemote": "Envia o texto do extrato, com os números de conta e de cartão ocultos, para {{aiCompany}} depois de concordar.",
+        "hintLocal": "Envia o texto do extrato, com os números de conta e de cartão ocultos, para {{ai}} neste computador ou nesta rede depois de concordar.",
+        "off": "Configure um assistente para ler este extrato.",
+        "title": "Ler este extrato com {{ai}}",
+        "introNoTable": "O Kasboek não conseguiu ler sozinho a tabela de movimentos deste PDF. {{ai}} pode ler o texto do extrato e apontar os movimentos.",
+        "introMismatch": "As linhas que o Kasboek leu deste PDF não somam o que o extrato indica. {{ai}} pode ler o texto do extrato e apontar os movimentos.",
+        "sendsRemote_one": "Isto envia o texto de {{count}} página para {{aiCompany}}: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
+        "sendsRemote_other": "Isto envia o texto de {{count}} páginas para {{aiCompany}}: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
+        "sendsLocal_one": "Isto envia o texto de {{count}} página apenas para {{ai}} neste computador ou nesta rede: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
+        "sendsLocal_other": "Isto envia o texto de {{count}} páginas apenas para {{ai}} neste computador ou nesta rede: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
+        "hiddenTop": "Os números de conta e de cartão ficam ocultos, o seu nome e morada no topo ficam de fora e o próprio PDF não é enviado.",
+        "hiddenNoTop": "Os números de conta e de cartão ficam ocultos e o próprio PDF não é enviado. O Kasboek não conseguiu saber onde a tabela começa, por isso o topo da primeira página está incluído e o seu nome e morada podem estar no texto.",
+        "verify": "O Kasboek lê cada valor do próprio texto do PDF e mostra cada linha antes de guardar o que quer que seja.",
+        "show": "Mostrar exatamente o que é enviado",
+        "stats": "Páginas: {{pages}} · cerca de {{tokens}} tokens · pedidos: {{parts}}",
+        "send": "Enviar para {{aiCompany}}",
+        "sendLocal": "Enviar para {{ai}}",
+        "loading": "A preparar…",
+        "reading": "{{ai}} está a ler o extrato…",
+        "readingPages": "{{ai}} está a ler: {{done}} de {{total}} páginas…",
+        "done": "{{ai}} leu o extrato. Verifique cada linha antes de importar."
       }
     }
   },
@@ -1268,6 +1293,16 @@
     "import_pdf_broken": "Não foi possível ler este PDF. O ficheiro pode estar danificado. Transfira-o novamente do seu banco.",
     "import_pdf_too_large": "Este PDF é demasiado grande ou complexo para ser lido. Experimente um PDF de um único extrato.",
     "import_pdf_scanned": "Este PDF não tem texto selecionável (provavelmente é uma digitalização ou uma fotografia). Peça ao seu banco um CSV ou um PDF com texto.",
-    "import_pdf_busy": "Ainda está a ser lido outro PDF. Aguarde um momento e tente novamente."
+    "import_pdf_busy": "Ainda está a ser lido outro PDF. Aguarde um momento e tente novamente.",
+    "assistant_no_key": "Adicione primeiro a sua chave de API em Definições → Assistente.",
+    "assistant_no_model": "Escolha primeiro um modelo em Definições → Assistente.",
+    "assistant_refused": "{{ai}} recusou-se a ler isto.",
+    "assistant_too_long": "Era demasiado grande para uma só resposta. Tente novamente, ou tente um extrato mais curto.",
+    "assistant_timeout": "{{ai}} demorou demasiado e foi parado. Tente novamente, ou escolha um modelo mais rápido para as verificações de CSV em Definições → Assistente.",
+    "assistant_bad_plan": "Não foi possível ler a resposta de {{ai}}. Tente novamente, ou tente outro modelo.",
+    "assistant_pdf_not_pdf": "Esta importação não é um extrato em PDF.",
+    "assistant_pdf_empty": "Este PDF não tem texto para ler.",
+    "assistant_pdf_too_long": "Este extrato tem demasiadas páginas para o assistente (o limite é de 40 páginas). Tente um extrato de um período mais curto.",
+    "assistant_pdf_no_rows": "{{ai}} não encontrou movimentos que correspondam ao texto deste extrato. Nada foi alterado."
   }
 }

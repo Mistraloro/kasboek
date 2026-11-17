@@ -237,7 +237,7 @@
     "checked": "{{ai}} a vérifié le fichier. Voir les notes au-dessus des lignes.",
     "checkPrivacy": "Envoie les lignes de ce fichier à {{aiCompany}}.",
     "claudeOff": "Configurez un assistant dans les Réglages pour faire vérifier les fichiers.",
-    "anyBank": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import. Les relevés PDF contenant un tableau d’opérations sont lus sur cet ordinateur ; rien n’est envoyé nulle part.",
+    "anyBank": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import. Les relevés PDF contenant un tableau d’opérations sont lus sur cet ordinateur ; rien n’est envoyé nulle part. Si un PDF ne peut pas être lu ainsi, vous pouvez faire lire son texte par l’assistant ; il n’est envoyé qu’après votre accord.",
     "layoutRecognised": "Mise en page reconnue",
     "checkPrivacyLocal": "Envoie les lignes de ce fichier à {{ai}} sur cet ordinateur ou ce réseau.",
     "stopCheck": "Arrêter",
@@ -296,6 +296,31 @@
         "pages_without_text_one": "{{count}} page n’avait pas de texte lisible et a été ignorée.",
         "pages_without_text_other": "{{count}} pages n’avaient pas de texte lisible et ont été ignorées.",
         "no_table": "Aucun tableau trouvé. Pages lues : {{pages}}, lignes de texte : {{lines}}."
+      },
+      "readBy": "Lu par {{ai}}",
+      "ai": {
+        "button": "Lire avec {{ai}}",
+        "hintRemote": "Envoie le texte du relevé, sans les numéros de compte et de carte, à {{aiCompany}} après votre accord.",
+        "hintLocal": "Envoie le texte du relevé, sans les numéros de compte et de carte, à {{ai}} sur cet ordinateur ou ce réseau après votre accord.",
+        "off": "Configurez un assistant pour lui faire lire ce relevé.",
+        "title": "Lire ce relevé avec {{ai}}",
+        "introNoTable": "Kasboek n’a pas pu lire seul le tableau des opérations de ce PDF. {{ai}} peut lire le texte du relevé et repérer les opérations.",
+        "introMismatch": "Les lignes que Kasboek a lues dans ce PDF ne correspondent pas au relevé. {{ai}} peut lire le texte du relevé et repérer les opérations.",
+        "sendsRemote_one": "Cela envoie le texte de {{count}} page à {{aiCompany}} : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
+        "sendsRemote_other": "Cela envoie le texte de {{count}} pages à {{aiCompany}} : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
+        "sendsLocal_one": "Cela envoie le texte de {{count}} page uniquement à {{ai}} sur cet ordinateur ou ce réseau : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
+        "sendsLocal_other": "Cela envoie le texte de {{count}} pages uniquement à {{ai}} sur cet ordinateur ou ce réseau : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
+        "hiddenTop": "Les numéros de compte et de carte sont masqués, votre nom et votre adresse en haut de page ne sont pas inclus, et le PDF lui-même n’est pas envoyé.",
+        "hiddenNoTop": "Les numéros de compte et de carte sont masqués et le PDF lui-même n’est pas envoyé. Kasboek n’a pas pu repérer où commence le tableau : le haut de la première page est donc inclus et votre nom et votre adresse peuvent figurer dans le texte.",
+        "verify": "Kasboek lit chaque montant dans le texte même du PDF et affiche chaque ligne avant que quoi que ce soit soit enregistré.",
+        "show": "Afficher exactement ce qui est envoyé",
+        "stats": "Pages : {{pages}} · environ {{tokens}} jetons · requêtes : {{parts}}",
+        "send": "Envoyer à {{aiCompany}}",
+        "sendLocal": "Envoyer à {{ai}}",
+        "loading": "Préparation…",
+        "reading": "{{ai}} lit le relevé…",
+        "readingPages": "{{ai}} lit : {{done}} pages sur {{total}}…",
+        "done": "{{ai}} a lu le relevé. Vérifiez chaque ligne avant d’importer."
       }
     }
   },
@@ -1268,6 +1293,16 @@
     "import_pdf_broken": "Ce PDF n’a pas pu être lu. Le fichier est peut-être endommagé. Téléchargez-le de nouveau depuis votre banque.",
     "import_pdf_too_large": "Ce PDF est trop volumineux ou trop complexe à lire. Essayez un PDF d’un seul relevé.",
     "import_pdf_scanned": "Ce PDF n’a pas de texte sélectionnable (probablement un scan ou une photo). Demandez à votre banque un CSV ou un PDF avec du texte.",
-    "import_pdf_busy": "Un autre PDF est encore en cours de lecture. Patientez un instant et réessayez."
+    "import_pdf_busy": "Un autre PDF est encore en cours de lecture. Patientez un instant et réessayez.",
+    "assistant_no_key": "Ajoutez d’abord votre clé API dans Réglages → Assistant.",
+    "assistant_no_model": "Choisissez d’abord un modèle dans Réglages → Assistant.",
+    "assistant_refused": "{{ai}} a refusé de lire ceci.",
+    "assistant_too_long": "C’était trop volumineux pour une seule réponse. Réessayez, ou essayez un relevé plus court.",
+    "assistant_timeout": "{{ai}} a mis trop de temps et a été arrêté. Réessayez, ou choisissez un modèle plus rapide pour les vérifications CSV dans Réglages → Assistant.",
+    "assistant_bad_plan": "La réponse de {{ai}} n’a pas pu être lue. Réessayez, ou essayez un autre modèle.",
+    "assistant_pdf_not_pdf": "Cet import n’est pas un relevé PDF.",
+    "assistant_pdf_empty": "Ce PDF ne contient pas de texte à lire.",
+    "assistant_pdf_too_long": "Ce relevé a trop de pages pour l’assistant (la limite est de 40 pages). Essayez un relevé couvrant une période plus courte.",
+    "assistant_pdf_no_rows": "{{ai}} n’a trouvé aucune opération correspondant au texte de ce relevé. Rien n’a été modifié."
   }
 }

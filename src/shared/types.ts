@@ -727,6 +727,20 @@ export interface ImportPreview {
   } | null
 }
 
+/** What "Read with the assistant" would send for an open PDF statement. */
+export interface PdfAssistPreview {
+  /** Pages of text that are sent. */
+  pages: number
+  /** The text is sent in this many calls. */
+  parts: number
+  chars: number
+  approxTokens: number
+  /** Exactly the text that is sent, masked. */
+  text: string
+  /** Whether the part above the table of transactions (name and address blocks, the first page's header) is left out. */
+  preambleLeftOut: boolean
+}
+
 export interface ImportBatch {
   id: number
   fileName: string
