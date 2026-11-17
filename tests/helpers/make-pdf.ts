@@ -3,8 +3,10 @@ import { deflateSync } from 'node:zlib'
 export interface PdfPageSpec {
   width?: number
   height?: number
-  /** Text pieces: x to the right and y upward from the page bottom, like pdf.js reports them. */
-  texts?: { x: number; y: number; text: string; size?: number }[]
+  /** Turns the page a quarter, clockwise (a landscape page stored upright). */
+  rotate?: 90 | 180 | 270
+  /** Text pieces: x to the right and y upward from the page bottom, like pdf.js reports them (before any turning). `turned` writes the text upward instead of to the right. */
+  texts?: { x: number; y: number; text: string; size?: number; turned?: boolean }[]
 }
 
 export interface PdfOptions {
@@ -31,9 +33,9 @@ export function makePdf(pages: PdfPageSpec[], opts: PdfOptions = {}): Uint8Array
     const body =
       opts.filler && i === 0
         ? Buffer.alloc(opts.filler)
-        : Buffer.from((p.texts ?? []).map((t) => `BT /F1 ${t.size ?? 9} Tf ${t.x} ${t.y} Td (${escapeText(t.text)}) Tj ET`).join('\n'), 'latin1')
+        : Buffer.from((p.texts ?? []).map((t) => `BT /F1 ${t.size ?? 9} Tf ${t.turned ? `0 1 -1 0 ${t.x} ${t.y} Tm` : `${t.x} ${t.y} Td`} (${escapeText(t.text)}) Tj ET`).join('\n'), 'latin1')
     const data = opts.flate ? deflateSync(body) : body
-    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${p.width ?? 595} ${p.height ?? 842}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${pageId + 1} 0 R >>`
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${p.width ?? 595} ${p.height ?? 842}]${p.rotate ? ` /Rotate ${p.rotate}` : ''} /Resources << /Font << /F1 3 0 R >> >> /Contents ${pageId + 1} 0 R >>`
     objects[pageId + 1] = Buffer.concat([
       Buffer.from(`<< /Length ${data.length}${opts.flate ? ' /Filter /FlateDecode' : ''} >>\nstream\n`),
       data,
