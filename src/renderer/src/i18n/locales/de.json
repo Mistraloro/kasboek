@@ -158,7 +158,7 @@
     "intoAccount": "Importieren in",
     "needAccount": "Füge zuerst das Bankkonto hinzu, damit Kasboek weiß, wohin diese Buchungen gehören.",
     "addAccount": "Konto hinzufügen",
-    "choose": "CSV- oder PDF-Datei wählen…",
+    "choose": "CSV-, PDF- oder XML-Datei wählen…",
     "recent": "Letzte Importe",
     "rows_one": "{{count}} Zeile",
     "rows_other": "{{count}} Zeilen",
@@ -239,7 +239,7 @@
     "checked": "{{ai}} hat die Datei geprüft. Siehe die Hinweise über den Zeilen.",
     "checkPrivacy": "Zeigt, was an {{aiCompany}} gesendet wird, und fragt vor der ersten Prüfung nach.",
     "claudeOff": "Richte in den Einstellungen einen Assistenten ein, um Dateien prüfen zu lassen.",
-    "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet. Lässt sich ein PDF so nicht lesen, kannst du den Text vom Assistenten lesen lassen; er wird erst gesendet, wenn du zustimmst.",
+    "anyBank": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet. Lässt sich ein PDF so nicht lesen, kannst du den Text vom Assistenten lesen lassen; er wird erst gesendet, wenn du zustimmst. XML-Kontoauszüge (CAMT.053, von vielen europäischen Banken angeboten) werden ebenfalls auf diesem Computer gelesen: Beträge, Daten, Namen und Salden kommen direkt aus der Datei.",
     "layoutRecognised": "Format erkannt",
     "checkPrivacyLocal": "Zeigt, was an {{ai}} auf diesem Computer oder in diesem Netzwerk gesendet wird, und fragt vor der ersten Prüfung nach.",
     "stopCheck": "Stopp",
@@ -341,6 +341,15 @@
       "show": "Genau anzeigen, was gesendet wird",
       "send": "An {{aiCompany}} senden",
       "sendLocal": "An {{ai}} senden"
+    },
+    "xml": {
+      "note": {
+        "other_account": "Dieser Kontoauszug scheint zu {{iban}} zu gehören, nicht zu diesem Konto. Prüfe, ob du das richtige Konto gewählt hast.",
+        "accounts_left_out_one": "{{count}} weiteres Konto in dieser Datei wurde ausgelassen.",
+        "accounts_left_out_other": "{{count}} weitere Konten in dieser Datei wurden ausgelassen.",
+        "not_booked_one": "{{count}} noch nicht gebuchter Eintrag (ausstehend) wurde ausgelassen.",
+        "not_booked_other": "{{count}} noch nicht gebuchte Einträge (ausstehend) wurden ausgelassen."
+      }
     }
   },
   "assistant": {
@@ -1404,7 +1413,13 @@
     "assistant_failed_server": "{{ai}} hat einen Fehler gemeldet ({{status}}){{detail}}. Versuche es erneut.",
     "assistant_failed_model_not_found": "{{ai}} kennt dieses Modell oder diese Adresse nicht{{detail}}. Prüfe beides unter Einstellungen → Assistent.",
     "assistant_failed_bad_request": "{{ai}} hat die Anfrage abgelehnt{{detail}}. Dieses Modell unterstützt möglicherweise nicht, was nötig ist; versuche ein anderes Modell.",
-    "assistant_failed_unknown": "Bei der Kommunikation mit {{ai}} ist etwas schiefgelaufen{{detail}}. Versuche es erneut."
+    "assistant_failed_unknown": "Bei der Kommunikation mit {{ai}} ist etwas schiefgelaufen{{detail}}. Versuche es erneut.",
+    "import_xml_not_camt": "Diese XML-Datei ist kein Kontoauszug (CAMT.053). Frag deine Bank nach dem Kontoauszug als CAMT.053.",
+    "import_xml_broken": "Diese XML-Datei konnte nicht gelesen werden. Die Datei ist vielleicht beschädigt. Lade sie erneut bei deiner Bank herunter.",
+    "import_xml_dtd": "Diese XML-Datei enthält eine DTD oder Entity-Definitionen, die Kasboek nicht liest. Ein Kontoauszug braucht sie nicht.",
+    "import_xml_too_large": "Diese XML-Datei ist größer als 20 MB. Versuche einen kürzeren Zeitraum.",
+    "import_xml_version": "Diese Version des CAMT-Formats wird nicht unterstützt. Frag deine Bank nach CAMT.053 in Version 001.02 oder neuer.",
+    "import_xml_accounts": "Diese Datei enthält Kontoauszüge für mehr als ein Konto, und keines davon ist das gewählte Konto. Trage die IBAN des Kontos unter Einstellungen → Konten ein, wähle das Konto und öffne die Datei erneut."
   },
   "insights": {
     "title": "Vorschläge",

@@ -158,7 +158,7 @@
     "intoAccount": "Importeren in",
     "needAccount": "Voeg eerst de bankrekening toe, zodat Kasboek weet waar deze verrichtingen bij horen.",
     "addAccount": "Rekening toevoegen",
-    "choose": "CSV- of pdf-bestand kiezen…",
+    "choose": "CSV-, pdf- of xml-bestand kiezen…",
     "recent": "Recente imports",
     "rows_one": "{{count}} regel",
     "rows_other": "{{count}} regels",
@@ -239,7 +239,7 @@
     "checked": "{{ai}} heeft het bestand nagekeken. Zie de notities boven de regels.",
     "checkPrivacy": "Toont wat er naar {{aiCompany}} gaat en vraagt eerst toestemming bij de eerste controle.",
     "claudeOff": "Stel in Instellingen een assistent in om bestanden te laten nakijken.",
-    "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd. Kan een pdf zo niet gelezen worden, dan kun je de tekst door de assistent laten lezen; die wordt pas verstuurd nadat je akkoord gaat.",
+    "anyBank": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd. Kan een pdf zo niet gelezen worden, dan kun je de tekst door de assistent laten lezen; die wordt pas verstuurd nadat je akkoord gaat. Xml-afschriften (CAMT.053, aangeboden door veel Europese banken) worden ook op deze computer gelezen: bedragen, datums, namen en saldo’s komen rechtstreeks uit het bestand.",
     "layoutRecognised": "Indeling herkend",
     "checkPrivacyLocal": "Toont wat er naar {{ai}} op deze computer of dit netwerk gaat en vraagt eerst toestemming bij de eerste controle.",
     "stopCheck": "Stoppen",
@@ -341,6 +341,15 @@
       "show": "Toon precies wat er wordt verstuurd",
       "send": "Versturen naar {{aiCompany}}",
       "sendLocal": "Versturen naar {{ai}}"
+    },
+    "xml": {
+      "note": {
+        "other_account": "Dit afschrift lijkt voor {{iban}} te zijn, niet voor deze rekening. Controleer of je de juiste rekening hebt gekozen.",
+        "accounts_left_out_one": "{{count}} andere rekening in dit bestand is overgeslagen.",
+        "accounts_left_out_other": "{{count}} andere rekeningen in dit bestand zijn overgeslagen.",
+        "not_booked_one": "{{count}} nog niet geboekte (openstaande) transactie is overgeslagen.",
+        "not_booked_other": "{{count}} nog niet geboekte (openstaande) transacties zijn overgeslagen."
+      }
     }
   },
   "assistant": {
@@ -1404,7 +1413,13 @@
     "assistant_failed_server": "{{ai}} gaf een fout terug ({{status}}){{detail}}. Probeer het opnieuw.",
     "assistant_failed_model_not_found": "{{ai}} kent dit model of adres niet{{detail}}. Controleer ze in Instellingen → Assistent.",
     "assistant_failed_bad_request": "{{ai}} weigerde het verzoek{{detail}}. Dit model ondersteunt mogelijk niet wat nodig is; probeer een ander model.",
-    "assistant_failed_unknown": "Er ging iets mis bij het praten met {{ai}}{{detail}}. Probeer het opnieuw."
+    "assistant_failed_unknown": "Er ging iets mis bij het praten met {{ai}}{{detail}}. Probeer het opnieuw.",
+    "import_xml_not_camt": "Dit xml-bestand is geen bankafschrift (CAMT.053). Vraag je bank om het afschrift als CAMT.053.",
+    "import_xml_broken": "Dit xml-bestand kon niet gelezen worden. Het bestand is mogelijk beschadigd. Download het opnieuw bij je bank.",
+    "import_xml_dtd": "Dit xml-bestand bevat een DTD of entiteitsdefinities, die Kasboek niet leest. Een bankafschrift heeft die niet nodig.",
+    "import_xml_too_large": "Dit xml-bestand is groter dan 20 MB. Probeer een kortere periode.",
+    "import_xml_version": "Deze versie van het CAMT-formaat wordt niet ondersteund. Vraag je bank om CAMT.053 in versie 001.02 of nieuwer.",
+    "import_xml_accounts": "Dit bestand bevat afschriften van meer dan één rekening en geen daarvan is de gekozen rekening. Voeg het IBAN van de rekening toe onder Instellingen → Rekeningen, kies die rekening en open het bestand opnieuw."
   },
   "insights": {
     "title": "Suggesties",

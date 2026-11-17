@@ -631,6 +631,10 @@ export const contract = {
     input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(14_000_000), accountId: id }).strict(),
     output: out<ImportPreview>()
   },
+  'import.analyzeXml': {
+    input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(28_000_000), accountId: id }).strict(),
+    output: out<ImportPreview>()
+  },
   'import.pdfCancel': { input: empty, output: out<{ ok: true }>() },
   'import.preview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
   'import.current': {

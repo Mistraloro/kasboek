@@ -158,7 +158,7 @@
     "intoAccount": "Importar para",
     "needAccount": "Adicione primeiro a conta bancária, para que o Kasboek saiba a que conta pertencem estes movimentos.",
     "addAccount": "Adicionar uma conta",
-    "choose": "Escolher ficheiro CSV ou PDF…",
+    "choose": "Escolher ficheiro CSV, PDF ou XML…",
     "recent": "Importações recentes",
     "rows_one": "{{count}} linha",
     "rows_other": "{{count}} linhas",
@@ -239,7 +239,7 @@
     "checked": "{{ai}} reviu o ficheiro. Veja as notas por cima das linhas.",
     "checkPrivacy": "Mostra o que é enviado para {{aiCompany}} e pergunta antes da primeira verificação.",
     "claudeOff": "Configure um assistente nas Definições para rever ficheiros.",
-    "anyBank": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum. Se um PDF não puder ser lido assim, pode pedir ao assistente que leia o texto; só é enviado depois de concordar.",
+    "anyBank": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum. Se um PDF não puder ser lido assim, pode pedir ao assistente que leia o texto; só é enviado depois de concordar. Os extratos XML (CAMT.053, oferecidos por muitos bancos europeus) também são lidos neste computador: valores, datas, nomes e saldos vêm diretamente do ficheiro.",
     "layoutRecognised": "Formato reconhecido",
     "checkPrivacyLocal": "Mostra o que é enviado para {{ai}} neste computador ou nesta rede e pergunta antes da primeira verificação.",
     "stopCheck": "Parar",
@@ -342,6 +342,15 @@
       "show": "Mostrar exatamente o que é enviado",
       "send": "Enviar para {{aiCompany}}",
       "sendLocal": "Enviar para {{ai}}"
+    },
+    "xml": {
+      "note": {
+        "other_account": "Este extrato parece ser de {{iban}}, não desta conta. Verifique se escolheu a conta certa.",
+        "accounts_left_out_one": "{{count}} outra conta deste ficheiro foi ignorada.",
+        "accounts_left_out_other": "{{count}} outras contas deste ficheiro foram ignoradas.",
+        "not_booked_one": "{{count}} movimento ainda não contabilizado (pendente) foi ignorado.",
+        "not_booked_other": "{{count}} movimentos ainda não contabilizados (pendentes) foram ignorados."
+      }
     }
   },
   "assistant": {
@@ -1405,7 +1414,13 @@
     "assistant_failed_server": "{{ai}} devolveu um erro ({{status}}){{detail}}. Tente novamente.",
     "assistant_failed_model_not_found": "{{ai}} não conhece este modelo ou endereço{{detail}}. Verifique-os em Definições → Assistente.",
     "assistant_failed_bad_request": "{{ai}} recusou o pedido{{detail}}. Este modelo pode não suportar o que é necessário; tente outro modelo.",
-    "assistant_failed_unknown": "Algo correu mal ao comunicar com {{ai}}{{detail}}. Tente novamente."
+    "assistant_failed_unknown": "Algo correu mal ao comunicar com {{ai}}{{detail}}. Tente novamente.",
+    "import_xml_not_camt": "Este ficheiro XML não é um extrato bancário (CAMT.053). Peça ao seu banco o extrato em CAMT.053.",
+    "import_xml_broken": "Não foi possível ler este ficheiro XML. O ficheiro pode estar danificado. Transfira-o de novo do seu banco.",
+    "import_xml_dtd": "Este ficheiro XML contém um DTD ou definições de entidades, que o Kasboek não lê. Um extrato bancário não precisa deles.",
+    "import_xml_too_large": "Este ficheiro XML tem mais de 20 MB. Tente um período mais curto.",
+    "import_xml_version": "Esta versão do formato CAMT não é suportada. Peça ao seu banco CAMT.053 na versão 001.02 ou posterior.",
+    "import_xml_accounts": "Este ficheiro contém extratos de mais de uma conta e nenhuma é a conta escolhida. Adicione o IBAN da conta em Definições → Contas, escolha essa conta e abra o ficheiro de novo."
   },
   "insights": {
     "title": "Sugestões",

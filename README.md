@@ -50,6 +50,19 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   of them is really in those lines, reads each amount from the PDF's own text, and shows every row
   (the ones it can't confirm as problems) before anything is saved. Up to 40 pages, in parts of 4.
   If no assistant is set up, ask the bank for a CSV.
+- **XML statements (CAMT.053)**: drop the ISO 20022 statement many European banks offer (Hello bank,
+  Argenta, Keytrade, ING and others; CAMT.052 and CAMT.054 lists of entries are read too, any
+  version). It is read on this computer by a small built-in reader: nothing is sent anywhere, no
+  DTD or entity is ever followed (such a file is refused), and files over 20 MB or with more than
+  50,000 entries are refused. Every field is read exactly as the file states it: the amount and the
+  credit/debit indicator give the sign (never a guess), then booking and value date, counterparty
+  name and IBAN, the payment message and the bank's reference (used to flag duplicates). A batch
+  payment becomes one row per payment when their amounts add up to the entry. Entries that are not
+  booked yet are left out and counted. The opening and closing balances go through the same check as
+  a PDF and the closing balance is recorded after the import. A file with several accounts uses the
+  statements whose IBAN matches the account you chose (give the account its IBAN); a file of one
+  other account opens with a remark. An amount in another currency than the account is flagged,
+  like in a CSV. Preview, duplicates, rules, "Flip signs" and undo work as for CSV.
 - **Assistant**: ask questions about your money or let the assistant make changes. You choose which
   kinds of change it may make by itself and which wait for your OK (Settings → Assistant → "What
   the assistant may do by itself"), how much it reasons per model, and what it remembers between conversations

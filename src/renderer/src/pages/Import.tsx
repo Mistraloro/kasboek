@@ -84,11 +84,12 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
     busyRef.current = true
     setBusy(true)
     try {
-      // PDF or text is decided by the file's first bytes, not by its name.
-      const isPdf = fileKindOf(new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer())) === 'pdf'
+      // PDF, XML or text is decided by the file's first bytes, not by its name.
+      const kind = fileKindOf(new Uint8Array(await file.slice(0, SNIFF_BYTES).arrayBuffer()))
+      const isPdf = kind === 'pdf'
       const input = { fileName: file.name, contentBase64: toBase64(await file.arrayBuffer()), accountId: account }
       if (isPdf) setReading({ page: 0, pages: 0 })
-      setPreview(await call(isPdf ? 'import.analyzePdf' : 'import.analyze', input))
+      setPreview(await call(isPdf ? 'import.analyzePdf' : kind === 'xml' ? 'import.analyzeXml' : 'import.analyze', input))
       setDone(null)
     } catch (e) {
       // Cancelling is the person's own choice: back to the drop zone without a message.
@@ -206,7 +207,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
             ) : (
               <Button className="mt-5" variant="primary" disabled={busy || !account} onClick={() => fileInput.current?.click()}>{busy ? t('auth.working') : t('import.choose')}</Button>
             )}
-            <input ref={fileInput} type="file" accept=".csv,.txt,.pdf,text/csv,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void open(f) }} />
+            <input ref={fileInput} type="file" accept=".csv,.txt,.pdf,.xml,text/csv,application/pdf,text/xml,application/xml" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void open(f) }} />
           </div>
           <p className="mt-4 text-[13px] text-muted">{t('import.anyBank')}</p>
         </>

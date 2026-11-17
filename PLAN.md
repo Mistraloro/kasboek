@@ -323,7 +323,16 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    the file's columns when the bank gives them, or typed in), show it next to the billed amount
    ("EUR 45.00 (USD 49.20)"), keep it through CSV and PDF import, sync and export, and keep the
    overviews using the billed amount in the account's currency.
-25. **More statement formats for the import, after the PDF import has proven itself.** In this order:
+25. **More statement formats for the import, after the PDF import has proven itself.** CAMT.053 (XML) is
+   done, not released yet: `src/core/camt/` (own small XML reader: no DTD or entities, 20 MB and
+   50,000 entries caps; reader of Stmt/Rpt/Ntfctn, any namespace version) turns the entries into the
+   grid and mapping CSV uses, so mapping, duplicates, rules, Flip signs, undo and the PDF totals check
+   (opening/closing balance) work unchanged; contract op `import.analyzeXml`. Sign is the file's
+   CdtDbtInd as booked (RvslInd does not flip it again: a reversal of a debit is booked as CRDT);
+   batches become one row per TxDtls when their amounts add up; an amount in another currency is
+   flagged like in CSV (no new storage, item 24). Not done: choosing the account inside the file in the
+   screen (the account is matched by IBAN, else the file is refused when it holds several), checking
+   with real bank files. Still open: MT940, CODA, OFX/QIF, Excel. In this order:
    (1) CAMT.053 (ISO 20022 XML) and MT940, the standard statement exports of European banks, plus
    CODA (Belgian), structured so they read exactly: no layout guessing, opening and closing balances
    included for the same totals check as PDF; (2) OFX, QFX and QIF, the usual export of UK, US and
