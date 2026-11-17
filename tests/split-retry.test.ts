@@ -187,7 +187,7 @@ describe('a part whose answer is cut off', () => {
   it('ends at once when stopped during the retries', async () => {
     const { db } = newDb()
     const stop = new AbortController()
-    await mockFetch((b, n) => {
+    await mockFetch((_b, n) => {
       if (n === 2) stop.abort('cancelled')
       return reply('{"ok":[', 'length')
     })

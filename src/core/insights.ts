@@ -16,7 +16,7 @@ import { NEAR, listAlerts } from './alerts'
 import type { Db } from './database'
 import { convert } from './fx'
 import { listBudgets } from './finance'
-import { findRecurring } from './recurring'
+import { findRecurring, median } from './recurring'
 import { categoryTrend, monthReview } from './review'
 import { getSettings } from './settings'
 
@@ -47,11 +47,6 @@ const DISMISSED = ['dismissed', 'not_useful']
 
 type Draft = Omit<InsightFact, 'id'>
 
-const median = (xs: number[]): number => {
-  const s = [...xs].sort((a, b) => a - b)
-  const m = s.length >> 1
-  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2
-}
 const daysBetween = (from: string, to: string): number => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000)
 const addDays = (date: string, days: number): string => {
   const d = new Date(`${date}T00:00:00Z`)

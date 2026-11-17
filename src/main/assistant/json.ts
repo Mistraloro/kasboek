@@ -5,6 +5,7 @@
  */
 import { z } from 'zod'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
+import { parseJsonAnswer } from '@core/assist-plan'
 import type { Db } from '@core/database'
 import { AppError, TruncatedError } from '@core/errors'
 import { getSettings } from '@core/settings'
@@ -108,7 +109,7 @@ export interface SplitResult<P, R> {
 const cutOff = (text: string): boolean => {
   if (!text.trim()) return false
   try {
-    JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''))
+    parseJsonAnswer(text, '')
     return false
   } catch {
     return true

@@ -266,7 +266,7 @@ function monthFromName(name: string, language: string): number {
  * is not a real calendar date. Day and month may be typed with or without a leading zero, and a
  * plain ISO date is always accepted. Two-digit years count as 20YY.
  */
-export function parseDate(text: string, f: FormatPrefs, language = 'en'): string | null {
+export function parseTypedDate(text: string, f: FormatPrefs, language = 'en'): string | null {
   const input = text.trim()
   if (!input) return null
   const order: string[] = []
@@ -302,7 +302,7 @@ export function parseDate(text: string, f: FormatPrefs, language = 'en'): string
 /** What a date text field holds: the ISO date ('' when empty or unusable) and what is wrong, if anything. */
 export function checkDateText(text: string, f: FormatPrefs, language = 'en', max?: string): { iso: string; problem: 'invalid' | 'tooLate' | null } {
   if (!text.trim()) return { iso: '', problem: null }
-  const iso = parseDate(text, f, language)
+  const iso = parseTypedDate(text, f, language)
   if (iso === null) return { iso: '', problem: 'invalid' }
   if (max && iso > max) return { iso: '', problem: 'tooLate' }
   return { iso, problem: null }

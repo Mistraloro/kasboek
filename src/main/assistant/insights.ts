@@ -17,10 +17,7 @@ import { getPrefs } from '../prefs'
 import { broadcast } from '../session'
 import { TIME_LIMIT_MS, withTimeLimit } from './jobs'
 import { callJson } from './json'
-import { activeProvider, requireConfigured } from './provider'
-
-/** Roughly how many characters a token is, for the estimate shown before anything is sent. */
-const CHARS_PER_TOKEN = 3
+import { CHARS_PER_TOKEN, activeProvider, requireConfigured } from './provider'
 
 /** The run in progress: one at a time. It goes on when the card is left; the card asks `insightsStatus` when it comes back. */
 let running: { controller: AbortController; month: string; startedAt: string } | null = null

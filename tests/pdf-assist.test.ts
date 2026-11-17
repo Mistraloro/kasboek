@@ -86,7 +86,7 @@ describe('reading a PDF statement with the assistant', () => {
   it('shows exactly the masked text that is sent, and leaves out the top of the statement', async () => {
     const { pdfAssistPreview, assistPdf } = await import('../src/main/assistant/pdf')
     const { db, sessionId } = setup(statement(2))
-    const info = pdfAssistPreview(db, sessionId)
+    const info = pdfAssistPreview(sessionId)
     expect(info).toMatchObject({ pages: 2, parts: 1, preambleLeftOut: true })
     expect(info.chars).toBe(info.text.length)
     expect(info.approxTokens).toBeGreaterThan(info.chars / 4)
@@ -165,12 +165,12 @@ describe('reading a PDF statement with the assistant', () => {
     const { assistPdf, pdfAssistPreview } = await import('../src/main/assistant/pdf')
     const { db, sessionId } = setup(statement(41))
     await mockFetch((b) => answer(b))
-    expect(() => pdfAssistPreview(db, sessionId)).toThrow(/at most 40 pages/)
+    expect(() => pdfAssistPreview(sessionId)).toThrow(/at most 40 pages/)
     await expect(assistPdf(db, sessionId)).rejects.toMatchObject({ code: 'assistant.pdf_too_long' })
     expect(requests).toHaveLength(0)
     // 40 pages is fine.
     const ok = setup(statement(40))
-    expect(pdfAssistPreview(ok.db, ok.sessionId)).toMatchObject({ pages: 40, parts: 10 })
+    expect(pdfAssistPreview(ok.sessionId)).toMatchObject({ pages: 40, parts: 10 })
   })
 
   it('asks for a configured assistant, and only reads PDF imports', async () => {

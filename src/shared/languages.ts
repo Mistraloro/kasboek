@@ -13,6 +13,9 @@ export const LANGUAGES = [
 export type LanguageCode = (typeof LANGUAGES)[number]['code']
 export const LANGUAGE_CODES = LANGUAGES.map((l) => l.code) as LanguageCode[]
 
+/** The language named in itself, as written in prompts; English for a code that is not known. */
+export const languageName = (code: string): string => LANGUAGES.find((l) => l.code === code)?.label ?? 'English'
+
 /** Regional variants only hold the texts that differ from their base. */
 export const FALLBACKS: Partial<Record<LanguageCode, LanguageCode[]>> = { 'es-419': ['es', 'en'], 'pt-BR': ['pt-PT', 'en'] }
 

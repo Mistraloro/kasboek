@@ -7,7 +7,7 @@ import { Badge, Button, Card, CardHeader, Field, Modal, PageHeader, Select, Swit
 import { useToast } from '../components/Toast'
 import { parseAmount } from '@shared/amount'
 import { SNIFF_BYTES, fileKindOf, isCancelledRead, reconciliationBanner } from '@shared/pdf-import'
-import { dateExample, datePlaceholder, parseDate } from '@shared/format'
+import { dateExample, datePlaceholder, parseTypedDate } from '@shared/format'
 import { ApiError, call, useOp } from '../lib/api'
 import { errorMessage } from '../lib/error-message'
 import { openSettingsTab } from '../lib/settings-tab'
@@ -485,7 +485,7 @@ function PreviewView({
                       {r.bookingDate ? formatDate(r.bookingDate, fmt) : (
                         <button type="button" className="font-medium text-negative underline decoration-dotted" onClick={() => {
                           const v = window.prompt(t('import.fixDate', { format: datePlaceholder(fmt.formats) }), '')
-                          const iso = v ? parseDate(v, fmt.formats, fmt.language) : null
+                          const iso = v ? parseTypedDate(v, fmt.formats, fmt.language) : null
                           if (iso) update([{ index: r.index, bookingDate: iso }])
                           else if (v) toast(t('dateInput.invalid', { format: datePlaceholder(fmt.formats), example: dateExample(fmt.formats, fmt.language) }), 'error')
                         }}>{t('import.badDate')}</button>

@@ -16,7 +16,7 @@ const RHYTHMS: { frequency: RecurringItem['frequency']; days: number; months: nu
   { frequency: 'yearly', days: 365, months: 12, perMonth: 1 / 12 }
 ]
 
-const median = (xs: number[]): number => {
+export const median = (xs: number[]): number => {
   const s = [...xs].sort((a, b) => a - b)
   const m = s.length >> 1
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2

@@ -21,14 +21,14 @@ import {
   type MaskedLine,
   type PdfPart
 } from '@core/pdf-plan'
-import { LANGUAGES } from '@shared/languages'
+import { languageName } from '@shared/languages'
 import type { ImportPreview, PdfAssistPreview } from '@shared/types'
 import { z } from 'zod'
 import { getPrefs } from '../prefs'
 import { broadcast } from '../session'
 import { PARALLEL, TIME_LIMIT_MS, pool, runJob, type AssistState } from './jobs'
 import { callJsonSplit } from './json'
-import { activeProvider, requireConfigured } from './provider'
+import { CHARS_PER_TOKEN, activeProvider, requireConfigured } from './provider'
 
 const SCHEMA_TEXT = JSON.stringify(z.toJSONSchema(PdfRowsPlan))
 
@@ -52,9 +52,6 @@ How to fill it in:
 - openingBalance and closingBalance: the statement's own balances, copied exactly, or null if they are not in the text you were given.
 - notes: at most 3 short remarks for the person, only about things they should know, such as lines you could not place. Your answer has a length limit and is cut off when it is too long, so write nothing outside the fields.`
 
-/** Roughly how many characters a token is, for the estimate shown before anything is sent. */
-const CHARS_PER_TOKEN = 3
-
 /** Where a part is, for the message when it can't be read. */
 const describePart = (part: PdfPart): string => `lines ${part.own[0]!.id} to ${part.own.at(-1)!.id} (page ${part.own[0]!.page}${part.own.at(-1)!.page !== part.own[0]!.page ? ` to ${part.own.at(-1)!.page}` : ''})`
 
@@ -71,7 +68,7 @@ function prepare(sessionId: string): { data: NonNullable<ReturnType<typeof imp.p
 }
 
 /** What would be sent for this import: shown in the dialog where the person agrees. */
-export function pdfAssistPreview(_db: Db, sessionId: string): PdfAssistPreview {
+export function pdfAssistPreview(sessionId: string): PdfAssistPreview {
   const { masked, preambleLeftOut } = prepare(sessionId)
   const text = masked.map((m) => m.text).join('\n')
   return { pages: pagesOf(masked), parts: splitParts(masked).length, chars: text.length, approxTokens: Math.ceil(text.length / CHARS_PER_TOKEN), text, preambleLeftOut }
@@ -89,7 +86,7 @@ async function read(db: Db, sessionId: string, signal: AbortSignal, state: Assis
   const preview = imp.preview(db, sessionId)
   const parts = splitParts(masked)
   const totalPages = pagesOf(masked)
-  const system = `${PDF_INSTRUCTIONS}\n\nWrite the notes in ${LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English'}.`
+  const system = `${PDF_INSTRUCTIONS}\n\nWrite the notes in ${languageName(getPrefs().language)}.`
 
   // A page cut between two halves counts once, so the progress only goes up and ends at the total.
   const donePages = new Set<number>()

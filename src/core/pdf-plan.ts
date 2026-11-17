@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { parseAmount } from '@shared/amount'
 import { findIbans, maskIban, maskNumbers } from '@shared/iban'
 import type { ImportMapping } from '@shared/types'
-import { AppError } from './errors'
+import { parseJsonAnswer } from './assist-plan'
 import { detectDateOrder, detectDecimal } from './csv/mapping'
 import { parseDate } from './csv/normalize'
 import type { PdfLine } from './pdf/lines'
@@ -39,17 +39,7 @@ export type PdfRowsPlan = z.infer<typeof PdfRowsPlan>
  * dropped instead of throwing the whole answer away.
  */
 export function parsePdfPlan(text: string, name: string): PdfRowsPlan {
-  let raw: unknown
-  try {
-    raw = JSON.parse(
-      text
-        .trim()
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-    )
-  } catch {
-    throw new AppError('assistant.bad_plan', `${name}’s answer couldn’t be read. Try again, or try another model.`)
-  }
+  const raw = parseJsonAnswer(text, name)
   const strict = PdfRowsPlan.safeParse(raw)
   if (strict.success) return strict.data
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>

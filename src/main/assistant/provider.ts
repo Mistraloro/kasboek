@@ -7,6 +7,9 @@ import { checkBaseUrl, type ProviderId } from '@shared/ai-providers'
 import { providerGap, resolveProvider, type ResolvedProvider } from '@shared/ai-provider-store'
 import { API_KEY } from './claude'
 
+/** Roughly how many characters a token is, for the estimate shown before anything is sent. */
+export const CHARS_PER_TOKEN = 3
+
 /** Secret name for a provider's API key (Claude keeps its original name). */
 export const keyName = (id: ProviderId): string => (id === 'anthropic' ? API_KEY : `aiKey.${id}`)
 

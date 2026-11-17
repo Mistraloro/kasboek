@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import i18next from 'i18next'
 import { describe, expect, it, vi } from 'vitest'

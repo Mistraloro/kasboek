@@ -380,7 +380,7 @@ const desktopOps: OpTable = {
     }
   },
   'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistImport(db, sessionId) },
-  'import.pdfAssistPreview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => pdfAssistPreview(db, sessionId) },
+  'import.pdfAssistPreview': { mutates: false, assistant: false, handler: (_c, { sessionId }) => pdfAssistPreview(sessionId) },
   'import.pdfAssist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistPdf(db, sessionId) },
   // Tips on the Overview: the cached ones need the interface language, and the assistant writes them only when asked.
   'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsView(db, month, getPrefs().language) },

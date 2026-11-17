@@ -7,11 +7,12 @@
  * No Electron or network here.
  */
 import { z } from 'zod'
-import { LANGUAGES } from '@shared/languages'
+import { languageName } from '@shared/languages'
 import { maskNumbers } from '@shared/iban'
 import { PLACEHOLDER, severityOf } from '@shared/insights'
 import type { InsightFact, InsightKind, InsightSuggestion, InsightValue } from '@shared/types'
 import { AppError } from './errors'
+import { parseJsonAnswer } from './assist-plan'
 
 /**
  * Raise this whenever the list of data that is sent changes (see factsPayload): everyone is asked
@@ -64,7 +65,7 @@ How to fill it in:
 
 /** The system prompt, ending with the language the tips are written in. */
 export function insightsSystem(language: string): string {
-  return `${INSIGHT_INSTRUCTIONS}\n\nWrite in ${LANGUAGES.find((l) => l.code === language)?.label ?? 'English'}.`
+  return `${INSIGHT_INSTRUCTIONS}\n\nWrite in ${languageName(language)}.`
 }
 
 /**
@@ -72,17 +73,7 @@ export function insightsSystem(language: string): string {
  * dropped instead of throwing the whole answer away.
  */
 export function parseSuggestions(text: string, name: string): SuggestionsPlan {
-  let raw: unknown
-  try {
-    raw = JSON.parse(
-      text
-        .trim()
-        .replace(/^```(?:json)?\s*/i, '')
-        .replace(/\s*```$/, '')
-    )
-  } catch {
-    throw new AppError('assistant.bad_plan', `${name}’s answer couldn’t be read. Try again, or try another model.`)
-  }
+  const raw = parseJsonAnswer(text, name)
   const strict = SuggestionsPlan.safeParse(raw)
   if (strict.success) return strict.data
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>

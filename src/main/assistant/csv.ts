@@ -15,7 +15,7 @@ import { MAX_GROUPS, Plan, groupKey, parsePlan, rowGroups, type ExistingTx, type
 import { callJsonSplit } from './json'
 import { PARALLEL, TIME_LIMIT_MS, pool, runJob, type AssistState } from './jobs'
 import { activeProvider, requireConfigured } from './provider'
-import { LANGUAGES } from '@shared/languages'
+import { languageName } from '@shared/languages'
 import { getPrefs } from '../prefs'
 import { checkActivity } from './chat'
 import { broadcast } from '../session'
@@ -129,7 +129,7 @@ function buildContext(db: Db, preview: ImportPreview, batch: Batch): string {
               : `${label}: only the groups and flagged rows listed below. Return mapping null; give fixes only for the flaggedRows listed here. The columns are checked in part 1.`
           }
         : {}),
-      noteLanguage: LANGUAGES.find((l) => l.code === getPrefs().language)?.label ?? 'English',
+      noteLanguage: languageName(getPrefs().language),
       account,
       fileName: maskNumbers(preview.fileName),
       recognisedLayout: preview.layout,
