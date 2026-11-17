@@ -4,7 +4,7 @@ import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
 import { getSettings } from '@core/settings'
 import { checkBaseUrl, type ProviderId } from '@shared/ai-providers'
-import { resolveProvider, type ResolvedProvider } from '@shared/ai-provider-store'
+import { providerGap, resolveProvider, type ResolvedProvider } from '@shared/ai-provider-store'
 import { API_KEY } from './claude'
 
 /** Secret name for a provider's API key (Claude keeps its original name). */
@@ -19,20 +19,14 @@ export function activeProvider(db: Db): ActiveProvider {
   return { ...p, key: getSecret(db, keyName(p.preset.id)) }
 }
 
-/** True when the assistant has what it needs to answer (key and, for OpenAI-compatible, a model). */
+/** True when the assistant has what it needs to answer. */
 export function isConfigured(p: ActiveProvider): boolean {
-  if (p.preset.id === 'anthropic') return !!p.key
-  if (p.preset.needsKey && !p.key) return false
-  return !!p.chatModel && !!p.baseUrl && !checkBaseUrl(p.baseUrl)
+  return providerGap(p, p.key) === null
 }
 
 export function requireConfigured(p: ActiveProvider): void {
-  if (p.preset.id === 'anthropic') {
-    if (!p.key) throw new AppError('assistant.no_key', 'Add your Anthropic API key in Settings → Assistant first.')
-    return
-  }
-  if (p.preset.needsKey && !p.key) throw new AppError('assistant.no_key', `Add your ${p.preset.name} API key in Settings → Assistant first.`)
-  const bad = checkBaseUrl(p.baseUrl)
-  if (bad) throw new AppError('assistant.bad_url', bad)
-  if (!p.chatModel) throw new AppError('assistant.no_model', `Choose a ${p.preset.name} model in Settings → Assistant first.`)
+  const gap = providerGap(p, p.key)
+  if (gap === 'key') throw new AppError('assistant.no_key', `Add your ${p.preset.id === 'anthropic' ? 'Anthropic' : p.preset.name} API key in Settings → Assistant first.`)
+  if (gap === 'url') throw new AppError('assistant.bad_url', checkBaseUrl(p.baseUrl) ?? `Enter the address of ${p.preset.name} in Settings → Assistant first.`)
+  if (gap === 'model') throw new AppError('assistant.no_model', `Choose a ${p.preset.name} model in Settings → Assistant first.`)
 }

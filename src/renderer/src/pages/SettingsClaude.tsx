@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
 import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
 import { BULK_LIMIT, PERMISSION_KINDS, PERMISSION_MODES, presetRules, type PermissionMode, type PermissionRule, type PermissionSettings } from '@shared/permissions'
-import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
+import { PROVIDER_IDS, PROVIDERS, isCustomId, presetFor, type ProviderId } from '@shared/ai-providers'
+import { customProviders, providerGap, resolveProvider } from '@shared/ai-provider-store'
 import { useAssistant } from '../components/AssistantPanel'
 import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopOverwritten, useDesktopRunning } from '../components/ClaudeApps'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PasswordInput, Select, Switch } from '../components/ui'
@@ -23,11 +24,16 @@ export function ClaudeSection() {
   const [busy, setBusy] = useState(false)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
   // Changed elsewhere (e.g. "Stop Claude connection" in the tray menu).
   useEffect(() => window.kasboek.onEvent((e) => e.type === 'settings.changed' && void settings.reload()), [settings.reload]) // eslint-disable-line react-hooks/exhaustive-deps
   const s = settings.data
-  const preset = PROVIDERS[s?.aiProvider ?? 'anthropic']
+  const preset = s ? presetFor(s.aiProvider, s.aiProviders[s.aiProvider]?.name) : PROVIDERS.anthropic
   const native = preset.id === 'anthropic'
+  const custom = isCustomId(preset.id)
+  // What this provider still lacks (the key is known to the panel's status, which updates as soon as anything is saved).
+  const gap = s && !native ? providerGap(resolveProvider(s), status?.provider === preset.id && status.keyHint ? status.keyHint : null) : null
   const configure = (patch: Parameters<typeof call<'assistant.configure'>>[1]): void => void call('assistant.configure', patch).then(() => settings.reload(), (e) => toast(errText(e), 'error'))
   const modelSelect = (value: AssistantModel, onChange: (m: AssistantModel) => void, label: string) => (
     <Select className="w-52" aria-label={label} value={value} onChange={(e) => onChange(e.target.value as AssistantModel)}>
@@ -65,17 +71,34 @@ export function ClaudeSection() {
       <CardHeader title={t('ai.title')} description={t('ai.hint')} />
       {s && (
         <Row label={t('ai.provider')} hint={preset.company ? t('ai.providerCloud', { company: preset.company }) : t('ai.providerLocal')}>
-          <Select className="w-64!" aria-label={t('ai.provider')} value={s.aiProvider} onChange={(e) => { setModels([]); configure({ aiProvider: e.target.value as ProviderId }) }}>
+          <Select
+            className="w-64!"
+            aria-label={t('ai.provider')}
+            value={s.aiProvider}
+            onChange={(e) => {
+              if (e.target.value === ADD_PROVIDER) return setAddOpen(true)
+              setModels([])
+              configure({ aiProvider: e.target.value as ProviderId })
+            }}
+          >
             {PROVIDER_IDS.map((id) => <option key={id} value={id}>{PROVIDERS[id].name}{PROVIDERS[id].company ? '' : ` · ${t('ai.local')}`}</option>)}
+            {customProviders(s).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <option value={ADD_PROVIDER}>{t('ai.addProvider')}</option>
           </Select>
         </Row>
       )}
+      {s && custom && (
+        <Row label={t('ai.providerName')} hint={t('ai.providerNameHint')}>
+          <TextSetting key={`${preset.id}-name`} className="w-64!" label={t('ai.providerName')} value={s.aiProviders[preset.id]?.name ?? preset.name} onSave={(name) => name && void call('assistant.renameProvider', { id: preset.id, name }).then(() => settings.reload(), (e) => toast(errText(e), 'error'))} />
+          <Button size="sm" variant="ghost" aria-label={t('ai.removeProvider')} icon={<Trash2 size={14} />} onClick={() => setRemoveOpen(true)} />
+        </Row>
+      )}
       {s && preset.editableUrl && (
-        <Row label={t('ai.baseUrl')} hint={preset.id === 'custom' ? t('ai.baseUrlCustomHint') : t('ai.baseUrlLocalHint', { url: preset.baseUrl })}>
+        <Row label={t('ai.baseUrl')} hint={custom ? t('ai.baseUrlCustomHint') : t('ai.baseUrlLocalHint', { url: preset.baseUrl })}>
           <TextSetting key={`${preset.id}-url`} className="w-72!" label={t('ai.baseUrl')} value={s.aiBaseUrl ?? ''} placeholder={preset.baseUrl || 'https://…/v1'} onSave={(v) => configure({ aiBaseUrl: v || null })} />
         </Row>
       )}
-      {(preset.needsKey || preset.id === 'custom') && (
+      {(preset.needsKey || custom) && (
         <Row label={t('claude.apiKey')} hint={native ? t('claude.apiKeyHint') : preset.needsKey ? t('ai.keyHint', { name: preset.name }) : t('ai.keyOptional')}>
           <Badge tone={status?.keyHint ? 'accent' : 'neutral'}>{status?.keyHint ? t('claude.keySet', { hint: status.keyHint }) : t('claude.keyNotSet')}</Badge>
           <Button size="sm" icon={<KeyRound size={14} />} onClick={() => setKeyOpen(true)}>{status?.keyHint ? t('claude.replaceKey') : t('claude.addKey')}</Button>
@@ -107,14 +130,40 @@ export function ClaudeSection() {
             {reasoningSelect(s.aiCsvReasoning, (aiCsvReasoning) => configure({ aiCsvReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           <div className="border-b border-border px-5 py-3 text-xs text-muted">{t('assistant.reasoningHint')}</div>
-          <Row label={t('ai.models')} hint={t('ai.modelsHint', { name: preset.id === 'custom' ? t('ai.theServer') : preset.name })}>
+          <Row label={t('ai.models')} hint={t('ai.modelsHint', { name: custom ? t('ai.theServer') : preset.name })}>
             <Button size="sm" disabled={loadingModels} onClick={loadModels}>{loadingModels ? t('ai.loadingModels') : t('ai.loadModels')}</Button>
           </Row>
+          {gap && <div className="border-b border-border px-5 py-3 text-xs text-warning">{t(`ai.gap.${gap}`, { name: preset.name })}</div>}
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
         </>
       )}
       {s && <McpRows enabled={s.mcpEnabled} onChange={(mcpEnabled) => configure({ mcpEnabled })} />}
 
+      <AddProviderModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdded={() => {
+          setAddOpen(false)
+          setModels([])
+          void settings.reload()
+        }}
+      />
+      <Modal open={removeOpen} title={t('ai.removeTitle', { name: preset.name })} onClose={() => setRemoveOpen(false)}>
+        <p className="text-[13px] text-muted">{t('ai.removeConfirm')}</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button onClick={() => setRemoveOpen(false)}>{t('settings.cancel')}</Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setRemoveOpen(false)
+              setModels([])
+              void call('assistant.removeProvider', { id: preset.id }).then(() => settings.reload(), (e) => toast(errText(e), 'error'))
+            }}
+          >
+            {t('ai.removeButton')}
+          </Button>
+        </div>
+      </Modal>
       <Modal open={keyOpen} title={t('ai.addKeyFor', { name: preset.name })} onClose={() => setKeyOpen(false)}>
         <form
           className="flex flex-col gap-4"
@@ -143,6 +192,50 @@ export function ClaudeSection() {
         </form>
       </Modal>
     </Card>
+  )
+}
+
+const ADD_PROVIDER = '__add__'
+
+/** A new OpenAI-compatible provider: name, address, key (optional for a local server) and models. */
+function AddProviderModal({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded: () => void }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const [form, setForm] = useState({ name: '', baseUrl: '', apiKey: '', chatModel: '', csvModel: '' })
+  const [busy, setBusy] = useState(false)
+  const set = (patch: Partial<typeof form>): void => setForm((f) => ({ ...f, ...patch }))
+  useEffect(() => {
+    if (open) setForm({ name: '', baseUrl: '', apiKey: '', chatModel: '', csvModel: '' })
+  }, [open])
+  const submit = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      const next = await call('assistant.addProvider', { name: form.name, baseUrl: form.baseUrl, chatModel: form.chatModel, csvModel: form.csvModel })
+      onAdded()
+      // The provider exists now; a key that fails its check can be fixed in the settings that follow.
+      if (form.apiKey.trim()) await call('assistant.setKey', { apiKey: form.apiKey.trim(), provider: next.aiProvider })
+    } catch (err) {
+      toast(errText(err), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const ready = form.name.trim() && form.baseUrl.trim() && form.chatModel.trim()
+  return (
+    <Modal open={open} title={t('ai.addProviderTitle')} onClose={onClose}>
+      <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void submit() }}>
+        <p className="text-[13px] text-muted">{t('ai.addProviderHint')}</p>
+        <Field label={t('ai.providerName')}>{(id) => <Input id={id} autoFocus value={form.name} maxLength={60} placeholder={t('ai.providerNamePlaceholder')} onChange={(e) => set({ name: e.target.value })} />}</Field>
+        <Field label={t('ai.baseUrl')} hint={t('ai.baseUrlCustomHint')}>{(id) => <Input id={id} value={form.baseUrl} spellCheck={false} placeholder="https://…/v1" onChange={(e) => set({ baseUrl: e.target.value })} />}</Field>
+        <Field label={t('claude.apiKey')} hint={t('ai.keyLocalOptional')}>{(id) => <PasswordInput id={id} value={form.apiKey} autoComplete="off" onChange={(e) => set({ apiKey: e.target.value })} />}</Field>
+        <Field label={t('claude.chat')} hint={t('ai.chatModelHint')}>{(id) => <Input id={id} value={form.chatModel} spellCheck={false} onChange={(e) => set({ chatModel: e.target.value })} />}</Field>
+        <Field label={t('claude.csv')} hint={t('ai.csvModelHint')}>{(id) => <Input id={id} value={form.csvModel} spellCheck={false} onChange={(e) => set({ csvModel: e.target.value })} />}</Field>
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose}>{t('settings.cancel')}</Button>
+          <Button type="submit" variant="primary" disabled={!ready || busy}>{busy ? t('claude.checking') : t('ai.addProviderButton')}</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

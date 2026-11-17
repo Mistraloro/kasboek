@@ -71,6 +71,19 @@ export function isLocalHost(host: string): boolean {
   return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)
 }
 
+/**
+ * Whether calls to this address need an API key. Providers that always do say so in their preset; a custom
+ * one needs a key unless it is on this computer or the local network (a keyless local server is legitimate).
+ */
+export function keyRequired(preset: ProviderPreset, baseUrl: string): boolean {
+  if (!isCustomId(preset.id)) return preset.needsKey
+  try {
+    return !isLocalHost(new URL(baseUrl).hostname)
+  } catch {
+    return true
+  }
+}
+
 /** Checks a base URL: https, or http only on this computer or the local network (keys must not travel in the clear). */
 export function checkBaseUrl(url: string): string | null {
   let u: URL

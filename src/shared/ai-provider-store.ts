@@ -2,10 +2,11 @@
  * What is remembered per AI provider. The flat settings (aiProvider, aiBaseUrl, aiChatModel, aiCsvModel)
  * are the values of the provider in use; every other provider's values wait in aiProviders until it is
  * chosen again. Switching saves the old values and restores the new ones, so nothing typed is lost.
- * Settings from before this existed need no migration: their flat values are saved the first time the
- * person switches away.
+ * Settings from before this existed need no migration step: the flat values already are the values of the
+ * provider in use (the single "custom" provider of older versions included, which keeps its key as
+ * aiKey.custom), and they are saved the first time the person switches away.
  */
-import { CUSTOM_PRESET, isCustomId, presetFor, type ProviderId, type ProviderPreset, type ProviderSettings } from './ai-providers'
+import { CUSTOM_PRESET, checkBaseUrl, isCustomId, keyRequired, presetFor, type ProviderId, type ProviderPreset, type ProviderSettings } from './ai-providers'
 import type { Settings } from './types'
 
 export type AiSettings = Pick<Settings, 'aiProvider' | 'aiBaseUrl' | 'aiChatModel' | 'aiCsvModel' | 'aiProviders'>
@@ -39,6 +40,20 @@ export function resolveProvider(s: AiSettings, id: ProviderId = s.aiProvider): R
   const preset = presetFor(id, s.aiProviders[id]?.name)
   const v = valuesOf(s, id)
   return { preset, baseUrl: (preset.editableUrl && v.baseUrl) || preset.baseUrl, chatModel: v.chatModel, csvModel: v.csvModel || v.chatModel }
+}
+
+/** What is still missing before a provider can answer; null when it is ready. Checked in this order. */
+export type ProviderGap = 'key' | 'url' | 'model'
+
+/**
+ * Ready means: Claude has its key; any other provider has a valid address and a chat model, plus a key
+ * unless it is a custom server on this computer or network.
+ */
+export function providerGap(p: ResolvedProvider, key: string | null): ProviderGap | null {
+  if (p.preset.id === 'anthropic') return key ? null : 'key'
+  if (keyRequired(p.preset, p.baseUrl) && !key) return 'key'
+  if (!p.baseUrl || checkBaseUrl(p.baseUrl)) return 'url'
+  return p.chatModel ? null : 'model'
 }
 
 /** The custom providers, in the order they were added. The one in use always counts, even when it predates this list. */
