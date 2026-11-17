@@ -1119,7 +1119,19 @@
     "hint": "Changes the assistant makes wait for your OK, unless you allow that kind of change here. Changes made without asking show in the chat.",
     "mode": "Mode",
     "modes": {
-      "ask": "Always ask",
+      "ask": "Ask first",
+      "smart": "Smart",
+      "trust": "Full access",
+      "custom": "Custom"
+    },
+    "modeHint": {
+      "ask": "Every change waits for your OK.",
+      "smart": "Sorting, names, splits, transfers, rules, categories, budgets and goals happen by themselves. Balances, deleting rules, new accounts, importing and the assistant’s memory ask first. Changes to more than {{limit}} transactions always ask.",
+      "trust": "Every change happens by itself, also large ones. A few things still always ask, see the note below.",
+      "custom": "Choose per kind below. Changes to more than {{limit}} transactions always ask."
+    },
+    "trustNote": "Still asks first: saving an import read from a PDF, and changes asked for through Claude Desktop or Claude Code (unless you switch that off below). The assistant can never change settings, keys, addresses or its own permissions.",
+    "ask": "Always ask",
       "smart": "Ask for important changes",
       "trust": "Decide by itself",
       "custom": "Choose per kind"

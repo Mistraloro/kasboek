@@ -149,10 +149,12 @@ agree in a dialog every time (there is no "don't ask again"). Text inside import
 as data from the bank, never as instructions, and saving a PDF import always waits for your OK, also
 when the assistant may otherwise import by itself.
 
-**Permissions**: "Always ask" (the default), "Ask for important changes", "Decide by itself" or a
-choice per kind of change. Balances, deleting rules, new accounts, imports and remembering things
-ask unless you allow them; changes to more than 100 transactions always ask, except in "Decide by
-itself". Changes made without asking show in the chat.
+**Permissions**: "Ask first" (the default), "Smart", "Full access" or "Custom" (a choice per kind of
+change). In "Smart", balances, deleting rules, new accounts, importing and the assistant's memory ask
+unless you allow them; changes to more than 100 transactions always ask, except in "Full access".
+Even in "Full access", saving an import read from a PDF and changes asked for through Claude Desktop
+or Claude Code still ask (the second can be switched off), and the assistant can never change
+settings, keys, addresses or its own permissions. Changes made without asking show in the chat.
 
 **Memory**: say "remember that …", or add items in Settings → Assistant → "What the assistant remembers". Up to
 50 short items, stored in the encrypted database, not synced and not offered to Claude apps over

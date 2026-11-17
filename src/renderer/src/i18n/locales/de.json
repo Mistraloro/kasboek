@@ -1119,7 +1119,19 @@
     "hint": "Änderungen des Assistenten warten auf dein OK, außer du erlaubst diese Art von Änderung hier. Was ohne Nachfrage passiert, steht im Chat.",
     "mode": "Modus",
     "modes": {
-      "ask": "Immer fragen",
+      "ask": "Zuerst fragen",
+      "smart": "Smart",
+      "trust": "Voller Zugriff",
+      "custom": "Benutzerdefiniert"
+    },
+    "modeHint": {
+      "ask": "Jede Änderung wartet auf dein OK.",
+      "smart": "Einordnen, Namen, Aufteilungen, Umbuchungen, Regeln, Kategorien, Budgets und Ziele passieren von selbst. Kontostände, Regeln löschen, neue Konten, Importieren und das Gedächtnis des Assistenten fragen zuerst. Änderungen an mehr als {{limit}} Buchungen fragen immer.",
+      "trust": "Jede Änderung passiert von selbst, auch große. Ein paar Dinge fragen trotzdem immer, siehe den Hinweis unten.",
+      "custom": "Wähle unten pro Art. Änderungen an mehr als {{limit}} Buchungen fragen immer."
+    },
+    "trustNote": "Fragt weiterhin zuerst: das Speichern eines aus einer PDF gelesenen Imports und Änderungen, die über Claude Desktop oder Claude Code angefragt werden (außer du schaltest das unten aus). Der Assistent kann nie Einstellungen, Schlüssel, Adressen oder seine eigenen Berechtigungen ändern.",
+    "ask": "Immer fragen",
       "smart": "Bei wichtigen Änderungen fragen",
       "trust": "Selbst entscheiden",
       "custom": "Pro Art wählen"

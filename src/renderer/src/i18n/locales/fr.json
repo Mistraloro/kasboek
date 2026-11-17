@@ -1119,7 +1119,19 @@
     "hint": "Les changements de l’assistant attendent votre accord, sauf si vous autorisez ce type de changement ici. Ce qui est fait sans demander apparaît dans le chat.",
     "mode": "Mode",
     "modes": {
-      "ask": "Toujours demander",
+      "ask": "Demander d’abord",
+      "smart": "Intelligent",
+      "trust": "Accès complet",
+      "custom": "Personnalisé"
+    },
+    "modeHint": {
+      "ask": "Chaque changement attend votre accord.",
+      "smart": "Classer, noms, répartitions, virements, règles, catégories, budgets et objectifs se font seuls. Soldes, suppression de règles, nouveaux comptes, imports et mémoire de l’assistant demandent d’abord. Les changements sur plus de {{limit}} opérations demandent toujours.",
+      "trust": "Chaque changement se fait seul, même les gros. Quelques points demandent quand même toujours, voir la remarque ci-dessous.",
+      "custom": "Choisissez par type ci-dessous. Les changements sur plus de {{limit}} opérations demandent toujours."
+    },
+    "trustNote": "Demande toujours d’abord : l’enregistrement d’un import lu depuis un PDF, et les changements demandés via Claude Desktop ou Claude Code (sauf si vous le désactivez ci-dessous). L’assistant ne peut jamais modifier les réglages, les clés, les adresses ni ses propres autorisations.",
+    "ask": "Toujours demander",
       "smart": "Demander pour les changements importants",
       "trust": "Décider seul",
       "custom": "Choisir par type"

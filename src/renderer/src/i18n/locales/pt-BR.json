@@ -300,6 +300,7 @@
     }
   },
   "permissions": {
+    "trustNote": "Continua a perguntar primeiro: salvar uma importação lida de um PDF e as alterações pedidas através do Claude Desktop ou do Claude Code (a não ser que você desligue isso abaixo). O assistente nunca pode alterar configurações, chaves, endereços nem as suas próprias permissões.",
     "kind": {
       "memory": "Lembrar"
     },

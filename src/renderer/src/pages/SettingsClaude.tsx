@@ -416,6 +416,7 @@ export function PermissionsSection() {
           {PERMISSION_MODES.map((m) => <option key={m} value={m}>{t(`permissions.modes.${m}`)}</option>)}
         </Select>
       </Row>
+      {p.mode === 'trust' && <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('permissions.trustNote')}</div>}
       {PERMISSION_KINDS.map((k) => (
         <Row key={k.id} label={t(`permissions.kind.${k.id}`)} hint={t(`permissions.kindHint.${k.id}`)}>
           <Select
