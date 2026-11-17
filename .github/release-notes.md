@@ -1,19 +1,24 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.18 (0.18.0)
+## What’s new in 0.19 (0.19.0)
 
 **New**
 - **Import bank statements as PDF.** Drop or choose a PDF on the Import page. Kasboek reads it on your computer (nothing is sent anywhere), finds the transactions table and shows the same preview as a CSV. It checks that the amounts add up to the closing balance of the statement, and for credit card statements it offers a one-click “Flip signs” hint. Statements printed as blocks and turned landscape pages are supported. Scanned PDFs (photos without text) and password-protected PDFs are not supported; Kasboek tells you so.
 - **“Read with” your assistant** when Kasboek cannot read a layout or the totals don’t add up. You confirm every time, and Kasboek shows exactly what is sent: only the text of the statement, with account and card numbers hidden and your name and address left out. The PDF itself is never sent. Every row the assistant returns is checked against the PDF text and shown to you before anything is saved, and a PDF import from the assistant always asks for your OK. It works with Claude and with OpenAI-compatible providers. A separate setting chooses the model that reads PDF statements (for Claude, the cheapest model by default).
 - **Clearer assistant settings.** Each provider remembers its own address and models, and you can add several OpenAI-compatible providers (“Other”) with their own names. The layout is clearer, with a model picker that lists all models, a “Model for reading files”, and the reasoning rows under their model. Ollama Cloud and other custom providers now count as set up once they have an address, a model and, if they are not local, a key.
+- **Suggestions on the Overview.** A collapsible card with tips found on your computer from your own data: a fixed cost that went up or was charged twice, budgets over or near their limit, a category that rose, unusual payments, a low balance. With “Get tips from your assistant” it writes them up for you: only after you agree (asked once per provider, with the exact text shown), only a short summary is sent (masked, rounded names and amounts; never account or card numbers, balances, income or your transactions), and Kasboek fills in every amount itself. You can hide a tip or mark it not useful, and switch the card off in Settings.
+- **Fixed costs can be corrected.** On the Fixed costs page every row has a menu: “Not a fixed cost” (with Undo, and a Hidden list to count it again), “Show payments” and “Change category” (optionally with a rule for future payments).
+- **Clearer permission names for the assistant:** Ask first, Smart, Full access and Custom, each with a short description of what it does and what still always asks.
+- **The assistant’s thinking is collapsed** by default, follows the newest text when you open it, and no longer covers the chat.
 - **A hold-to-show eye** in every password field.
 
 **Fixes**
 - Clicking next to a dialog no longer closes it and loses what you typed. Escape or the close button asks first in add/edit account, goals, bank balance and net worth value.
 - Dates you type now follow your date format setting everywhere, and hints show today’s date in your format.
 - “Install and restart” shows “Preparing the update…” right away instead of looking frozen.
+- Reviews of long imports (and PDF reading) no longer fail with “too large for one answer”: a part whose answer is cut off is split and retried, and a part that still fails keeps the others.
 
-PDF import and the assistant’s PDF reading have so far been tried on invented statements and two real layouts only. Please report layouts that don’t read well.
+PDF import, the assistant’s PDF reading and the tips have so far been tried on invented data (and two real PDF layouts) only. Please report anything that doesn’t read or look right.
 
 Everything that came in 0.16 (the tray option, opening from the shortcut, the new update window) is listed on the 0.16.1 release.
 
