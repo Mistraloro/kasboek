@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiBaseUrl: null,
   aiChatModel: '',
   aiCsvModel: '',
+  aiProviders: {},
   savedSearches: [],
   aiReasoning: 'default',
   aiCsvReasoning: 'default',
@@ -58,7 +59,7 @@ export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
 }
 
 /** Settings that decide where data is sent, what Claude may do and where files are written. */
-const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled'] as const
+const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled'] as const
 
 /**
  * After an import or a sync join: a file from elsewhere must not bring its own AI address, permissions,
@@ -85,7 +86,7 @@ export function resetImportedSettings(db: Db, opts: { keepSyncKey?: boolean } = 
   }
   return db.transaction(() => {
     note('aiKey', hasSecret(aiSecrets))
-    note('aiEndpoint', hasSetting('aiBaseUrl') || hasSetting('aiProvider'))
+    note('aiEndpoint', hasSetting('aiBaseUrl') || hasSetting('aiProvider') || hasSetting('aiProviders'))
     note('permissions', hasSetting('permissions'))
     note('mcp', hasSetting('mcpEnabled'))
     note('autoBackup', hasSetting('autoBackupFolder') || hasSetting('autoBackupEnabled'))

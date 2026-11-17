@@ -1,5 +1,5 @@
 import type { GraphicsChoice, GraphicsStatus } from './graphics'
-import type { ProviderId } from './ai-providers'
+import type { ProviderId, ProviderSettings } from './ai-providers'
 import type { FormatPrefs } from './format'
 import type { LanguageCode } from './languages'
 import type { Effort, ReasoningLevel } from './reasoning'
@@ -160,6 +160,8 @@ export interface Settings {
   /** Model names for OpenAI-compatible providers (Claude uses chatModel/csvModel). */
   aiChatModel: string
   aiCsvModel: string
+  /** The saved values of the providers that are not in use (address, models, and a custom one's name), by provider id. */
+  aiProviders: Record<string, ProviderSettings>
   /** Saved searches on the Transactions page (this computer only). */
   savedSearches: SavedSearch[]
   /** Other providers: how much the model reasons, in the chat and in CSV checks. */

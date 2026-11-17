@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
 import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatMessage, type Effort, type Settings } from '@shared/types'
-import { PROVIDERS, type ProviderId } from '@shared/ai-providers'
+import { presetFor, type ProviderId } from '@shared/ai-providers'
 import type { Page } from '../App'
 import { call } from '../lib/api'
 import { openSettingsTab } from '../lib/settings-tab'
@@ -100,7 +100,7 @@ function ModelPicker({ provider, disabled, unsupported }: { provider: ProviderId
         </select>
       </div>
     )
-  const options = [...new Set([s.aiChatModel, ...models, ...PROVIDERS[provider].suggestedModels].filter(Boolean))]
+  const options = [...new Set([s.aiChatModel, ...models, ...presetFor(provider).suggestedModels].filter(Boolean))]
   if (!options.length) return null
   return (
     <div className="mt-1.5 flex min-w-0 items-center gap-1">

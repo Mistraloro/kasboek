@@ -3,25 +3,20 @@ import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
 import { getSettings } from '@core/settings'
-import { PROVIDERS, checkBaseUrl, type ProviderId, type ProviderPreset } from '@shared/ai-providers'
+import { checkBaseUrl, type ProviderId } from '@shared/ai-providers'
+import { resolveProvider, type ResolvedProvider } from '@shared/ai-provider-store'
 import { API_KEY } from './claude'
 
 /** Secret name for a provider's API key (Claude keeps its original name). */
 export const keyName = (id: ProviderId): string => (id === 'anthropic' ? API_KEY : `aiKey.${id}`)
 
-export interface ActiveProvider {
-  preset: ProviderPreset
-  baseUrl: string
+export interface ActiveProvider extends ResolvedProvider {
   key: string | null
-  chatModel: string
-  csvModel: string
 }
 
 export function activeProvider(db: Db): ActiveProvider {
-  const s = getSettings(db)
-  const preset = PROVIDERS[s.aiProvider] ?? PROVIDERS.anthropic
-  const baseUrl = (preset.editableUrl && s.aiBaseUrl) || preset.baseUrl
-  return { preset, baseUrl, key: getSecret(db, keyName(preset.id)), chatModel: s.aiChatModel, csvModel: s.aiCsvModel || s.aiChatModel }
+  const p = resolveProvider(getSettings(db))
+  return { ...p, key: getSecret(db, keyName(p.preset.id)) }
 }
 
 /** True when the assistant has what it needs to answer (key and, for OpenAI-compatible, a model). */

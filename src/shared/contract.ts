@@ -12,7 +12,7 @@ import { CURRENCY_POSITIONS, CURRENCY_STYLES, DATE_PATTERNS, DECIMAL_SEPARATORS,
 import { checkPassword } from './password'
 import { CURRENCIES } from './currency'
 import { LANGUAGE_CODES, type LanguageCode } from './languages'
-import { PROVIDER_IDS, checkBaseUrl } from './ai-providers'
+import { checkBaseUrl, isProviderId, type ProviderId } from './ai-providers'
 import { EFFORTS, REASONING_LEVELS } from './reasoning'
 import { SENSITIVE_MESSAGE, looksSensitive } from './sensitive'
 import { PERMISSION_KINDS, PERMISSION_MODES, type PermissionKind } from './permissions'
@@ -39,6 +39,16 @@ const id = z.number().int().positive()
 const fxCostPct = z.number().min(0).max(20).nullable()
 const cents = z.number().int().min(-1e12).max(1e12)
 const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code.')
+
+/** An AI provider: a built-in one or a custom one (custom-…). */
+const providerId = z.custom<ProviderId>(isProviderId, 'Unknown provider.')
+const providerName = z.string().trim().min(1).max(60)
+/** The address of an AI server; every custom provider's address passes the same check (https, or http on this computer or network). */
+const baseUrl = z
+  .string()
+  .trim()
+  .max(300)
+  .refine((u) => !checkBaseUrl(u), { error: (iss) => checkBaseUrl(String(iss.input)) ?? 'Invalid address.' })
 
 /** Where to sync: nothing (a folder, chosen in a dialog) or a WebDAV server. */
 const syncPlace = z
@@ -159,7 +169,7 @@ export const contract = {
   'assistant.status': { input: empty, output: out<AssistantStatus>() },
   'assistant.setKey': {
     input: z
-      .object({ apiKey: z.string().trim().min(1).max(500), provider: z.enum(PROVIDER_IDS).optional() })
+      .object({ apiKey: z.string().trim().min(1).max(500), provider: providerId.optional() })
       .strict()
       .superRefine((v, ctx) => {
         if ((v.provider ?? 'anthropic') === 'anthropic' && !/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(v.apiKey))
@@ -170,6 +180,12 @@ export const contract = {
   },
   'assistant.models': { input: empty, output: out<string[]>() },
   'assistant.clearKey': { input: empty, output: out<AssistantStatus>() },
+  'assistant.addProvider': {
+    input: z.object({ name: providerName, baseUrl, chatModel: z.string().trim().max(200), csvModel: z.string().trim().max(200) }).strict(),
+    output: out<Settings>()
+  },
+  'assistant.renameProvider': { input: z.object({ id: providerId, name: providerName }).strict(), output: out<Settings>() },
+  'assistant.removeProvider': { input: z.object({ id: providerId }).strict(), output: out<Settings>() },
   'assistant.configure': {
     input: z
       .object({
@@ -187,13 +203,8 @@ export const contract = {
           })
           .strict(),
         mcpEnabled: z.boolean(),
-        aiProvider: z.enum(PROVIDER_IDS),
-        aiBaseUrl: z
-          .string()
-          .trim()
-          .max(300)
-          .refine((u) => !checkBaseUrl(u), { error: (iss) => checkBaseUrl(String(iss.input)) ?? 'Invalid address.' })
-          .nullable(),
+        aiProvider: providerId,
+        aiBaseUrl: baseUrl.nullable(),
         aiChatModel: z.string().trim().max(200),
         aiCsvModel: z.string().trim().max(200)
       })

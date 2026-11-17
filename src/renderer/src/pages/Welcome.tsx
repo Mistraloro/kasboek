@@ -1,7 +1,7 @@
 import { ArrowDownToLine, Bot, Check, Coins, FileUp, FolderInput, FolderSync, Lock, Monitor, Moon, PiggyBank, Plug, ShieldCheck, Sparkles, Sun, Terminal } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PROVIDER_IDS, PROVIDERS, type ProviderId } from '@shared/ai-providers'
+import { PROVIDER_IDS, PROVIDERS, isCustomId, presetFor, type ProviderId } from '@shared/ai-providers'
 import type { LanguageCode } from '@shared/languages'
 import type { BackupStatus, McpSetupStatus, Settings, SyncStatus } from '@shared/types'
 import { useAssistant } from '../components/AssistantPanel'
@@ -120,7 +120,7 @@ export function Welcome() {
     void call('sync.status').then(setSync)
   }, [])
   const provider: ProviderId = settings?.aiProvider ?? 'anthropic'
-  const preset = PROVIDERS[provider]
+  const preset = presetFor(provider, settings?.aiProviders[provider]?.name)
   const hasKey = !!assistant?.keyHint && assistant.provider === provider
   const at = STEPS.indexOf(step)
   const go = (s: Step): void => setStep(s)
@@ -267,7 +267,8 @@ export function Welcome() {
             <Field label={t('welcome.provider')}>
               {(id) => (
                 <Select id={id} value={provider} onChange={(e) => chooseProvider(e.target.value as ProviderId)}>
-                  {PROVIDER_IDS.filter((p) => p !== 'custom').map((p) => <option key={p} value={p}>{PROVIDERS[p].name}</option>)}
+                  {isCustomId(provider) && <option value={provider}>{preset.name}</option>}
+                  {PROVIDER_IDS.map((p) => <option key={p} value={p}>{PROVIDERS[p].name}</option>)}
                 </Select>
               )}
             </Field>

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebFrameMain } from 'electron'
 import { AppError } from '@core/errors'
 import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/ops'
@@ -22,9 +23,10 @@ import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
 import { checkKey } from './assistant/claude'
-import { activeProvider, keyName } from './assistant/provider'
+import { keyName } from './assistant/provider'
 import { checkProviderKey, listProviderModels } from './assistant/models'
-import { PROVIDERS } from '@shared/ai-providers'
+import { addCustomProvider, isKnownProvider, newCustomId, removeCustomProvider, renameCustomProvider, resolveProvider, switchProvider } from '@shared/ai-provider-store'
+import { isCustomId } from '@shared/ai-providers'
 import { claudeEffort } from '@shared/reasoning'
 import { assistImport } from './assistant/csv'
 import { assistPdf, pdfAssistPreview } from './assistant/pdf'
@@ -267,17 +269,15 @@ const desktopOps: OpTable = {
     mutates: true,
     assistant: false,
     handler: async ({ db }, { apiKey, provider }) => {
-      const id = provider ?? getSettings(db).aiProvider
+      const settings = getSettings(db)
+      const id = provider ?? settings.aiProvider
+      if (!isKnownProvider(settings, id)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
       // Dev/test only: skip the online check.
       if (app.isPackaged || process.env['KASBOEK_SKIP_KEY_CHECK'] !== '1') {
         if (id === 'anthropic') await checkKey(apiKey)
         else {
-          // Check the key against this provider's own address: the stored address belongs to the
-          // active provider and only counts when that is the one this key is for.
-          const active = activeProvider(db)
-          const preset = PROVIDERS[id]
-          const baseUrl = active.preset.id === id ? active.baseUrl : preset.baseUrl
-          await checkProviderKey({ ...active, preset, baseUrl, key: apiKey })
+          // Check the key against this provider's own address, whether or not it is the one in use.
+          await checkProviderKey({ ...resolveProvider(settings, id), key: apiKey })
         }
       }
       setSecret(db, keyName(id), apiKey)
@@ -294,15 +294,47 @@ const desktopOps: OpTable = {
       return assistantStatus()
     }
   },
+  'assistant.addProvider': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { name, ...rest }) => {
+      const next = updateSettings(db, addCustomProvider(getSettings(db), newCustomId(randomUUID()), { name, ...rest }))
+      resetChat()
+      return next
+    }
+  },
+  'assistant.renameProvider': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { id, name }) => {
+      const settings = getSettings(db)
+      if (!isCustomId(id) || !isKnownProvider(settings, id)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
+      const next = updateSettings(db, renameCustomProvider(settings, id, name))
+      publishStatus()
+      return next
+    }
+  },
+  'assistant.removeProvider': {
+    mutates: true,
+    assistant: false,
+    handler: ({ db }, { id }) => {
+      const settings = getSettings(db)
+      if (!isCustomId(id) || !isKnownProvider(settings, id)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
+      const next = updateSettings(db, removeCustomProvider(settings, id))
+      setSecret(db, keyName(id), null)
+      resetChat()
+      return next
+    }
+  },
   'assistant.configure': {
     mutates: true,
     assistant: false,
     handler: ({ db }, patch) => {
       const before = getSettings(db)
-      // A new provider starts with its suggested model and its own address.
+      // Another provider brings back its own address and models (or its suggested model the first time).
       if (patch.aiProvider && patch.aiProvider !== before.aiProvider) {
-        const preset = PROVIDERS[patch.aiProvider]
-        patch = { aiChatModel: preset.suggestedModels[0] ?? '', aiCsvModel: '', aiBaseUrl: null, ...patch }
+        if (!isKnownProvider(before, patch.aiProvider)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
+        patch = { ...switchProvider(before, patch.aiProvider), ...patch }
       }
       // A model that can't stop thinking gets the lowest level instead of "off".
       const model = patch.chatModel ?? before.chatModel
