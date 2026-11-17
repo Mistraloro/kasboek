@@ -339,6 +339,38 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    Fixed in the shared `Modal`: a click on the background no longer closes any dialog (opt-in
    `closeOnBackdrop`, used only by the sync conflicts list). Escape and the close button ask "Discard
    what you typed?" when `dirty` is set (add/edit account, goal, bank balance, net worth value).
+27. **Faster start and a launch window that is visible and not blank.** Owner report: the first start
+   (after an install or update) takes long before anything shows, the launch window appears late and
+   blank, and a second start is faster. Investigated by reading the code and bundles (no changes yet).
+   *Confirmed:* the launch window is shown before it has content (`show: true` in `src/main/splash.ts`);
+   its page and script are two cold file reads from `app.asar.unpacked`; right after creating it the
+   main thread runs the whole 1.7 MB app bundle synchronously (`await import('./app')`,
+   `src/main/index.ts:47`), which includes a module-level `z.toJSONSchema` in `src/main/assistant/pdf.ts:32`;
+   progress calls made before the page has loaded are queued, so a late splash jumps straight to the end;
+   the log line "launch window shown" really means "created"; in dark mode the page starts light and
+   switches when its script runs. *Suspected:* several processes start in the same second (splash
+   renderer, main renderer, GPU, the PowerShell Windows Hello check); the splash may share a renderer
+   process with the main window (both `file://`); the slow first start is mostly outside our code:
+   Defender scanning the new unsigned files, cold disk cache, rebuilt GPU caches; the time before Node
+   starts is not in `startup.log`. Nothing Kasboek-specific runs on the first start (no migrations,
+   backups or network calls before 15 s).
+   *Fix order:* (0) a measurement build first: keep the previous `startup.log` as `startup.prev.log`, log
+   first-start-of-this-version, time before the log starts (`app.getAppMetrics()` creation times), "electron
+   ready", "launch window created / loaded / painted", the process ids of both windows, the main window's
+   `dom-ready`, renderer milestones, and the Hello check start; (1) splash as an inline `data:` page with
+   the theme baked in and progress set directly (no file reads, no flash, likely its own process); (2) let
+   the splash paint before importing the app bundle (cap about 300 ms); (3) start the Windows Hello check
+   after the first screen, except for device-mode accounts; (4) progress that follows real steps and
+   creeps during the long phase; (5) dynamic imports for the assistant SDK, qrcode, pdf assist, update
+   and sync in `src/main/ipc.ts`; (6) lazy-load locales and pages in the renderer (1.65 MB bundle, about
+   4 s to "interface loaded"); (7) register IPC and create the main window before `initSession`;
+   (8) only if numbers point there: Node compile cache, renderer code cache; (9) Windows code signing.
+   Rejected: bytenode or snapshots, a native launcher, `ImageView`, `ready-to-show` for the splash.
+   *Owner can check now:* copy `%APPDATA%\Kasboek\startup.log` after the first start following an
+   install, before starting again, then after the second start; time it with a phone video from
+   double-click to blank window, logo and main window; reboot without reinstalling and see if it is
+   slow again (cold disk cache) or fast (something tied to the install, such as Defender); watch
+   "Antimalware Service Executable" during the first start; note whether the PC is Windows on ARM.
 
 ## Later, maybe
 
