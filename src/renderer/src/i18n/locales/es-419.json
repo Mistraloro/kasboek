@@ -108,6 +108,10 @@
     "unconvertedHint": "No cuentan en estos totales. Agrega tipos en Configuración."
   },
   "ai": {
+    "reloadModels": "Recargar modelos",
+    "otherModel": "Otro modelo…",
+    "typeModel": "Escribe el nombre del modelo",
+    "searchModels": "Buscar modelos",
     "providerLocal": "Funciona en esta computadora o en tu red. No va nada a un servicio en línea.",
     "local": "en tu computadora",
     "baseUrlLocalHint": "Déjala vacía para usar la predeterminada ({{url}}). Cámbiala si el servidor funciona en otro puerto o computadora.",

@@ -8,6 +8,7 @@ import { PROVIDER_IDS, PROVIDERS, isCustomId, presetFor, type ProviderId } from 
 import { customProviders, providerGap, resolveProvider } from '@shared/ai-provider-store'
 import { useAssistant } from '../components/AssistantPanel'
 import { DesktopRunningWarning, SeenLine, useClaudeClients, useDesktopOverwritten, useDesktopRunning } from '../components/ClaudeApps'
+import { ModelPicker } from '../components/ModelPicker'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PasswordInput, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -61,9 +62,8 @@ export function ClaudeSection() {
       .catch((e) => toast(errText(e), 'error'))
       .finally(() => setLoadingModels(false))
   }
-  const suggestions = [...new Set([...models, ...preset.suggestedModels])]
-  const modelInput = (value: string, field: 'aiChatModel' | 'aiCsvModel', label: string, placeholder?: string) => (
-    <TextSetting key={`${preset.id}-${field}`} className="w-64!" label={label} value={value} placeholder={placeholder} list="ai-models" onSave={(v) => configure({ [field]: v })} />
+  const modelInput = (value: string, field: 'aiChatModel' | 'aiCsvModel', label: string, placeholder?: string, emptyLabel?: string) => (
+    <ModelPicker key={`${preset.id}-${field}`} value={value} loaded={models} suggested={preset.suggestedModels} label={label} placeholder={placeholder} emptyLabel={emptyLabel} loading={loadingModels} onChange={(v) => configure({ [field]: v })} onReload={loadModels} />
   )
 
   return (
@@ -120,19 +120,15 @@ export function ClaudeSection() {
       )}
       {s && !native && (
         <>
-          <datalist id="ai-models">{suggestions.map((m) => <option key={m} value={m} />)}</datalist>
           <Row label={t('claude.chat')} hint={t('ai.chatModelHint')}>
             {modelInput(s.aiChatModel, 'aiChatModel', t('claude.chat'), preset.suggestedModels[0])}
             {reasoningSelect(s.aiReasoning, (aiReasoning) => configure({ aiReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           <Row label={t('claude.csv')} hint={t('ai.csvModelHint')}>
-            {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
+            {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), undefined, t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
             {reasoningSelect(s.aiCsvReasoning, (aiCsvReasoning) => configure({ aiCsvReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           <div className="border-b border-border px-5 py-3 text-xs text-muted">{t('assistant.reasoningHint')}</div>
-          <Row label={t('ai.models')} hint={t('ai.modelsHint', { name: custom ? t('ai.theServer') : preset.name })}>
-            <Button size="sm" disabled={loadingModels} onClick={loadModels}>{loadingModels ? t('ai.loadingModels') : t('ai.loadModels')}</Button>
-          </Row>
           {gap && <div className="border-b border-border px-5 py-3 text-xs text-warning">{t(`ai.gap.${gap}`, { name: preset.name })}</div>}
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
         </>
@@ -240,7 +236,7 @@ function AddProviderModal({ open, onClose, onAdded }: { open: boolean; onClose: 
 }
 
 /** A text field that saves when it loses focus or on Enter. */
-function TextSetting({ value, onSave, label, className, placeholder, list }: { value: string; onSave: (v: string) => void; label: string; className?: string; placeholder?: string; list?: string }) {
+function TextSetting({ value, onSave, label, className, placeholder }: { value: string; onSave: (v: string) => void; label: string; className?: string; placeholder?: string }) {
   const [text, setText] = useState(value)
   useEffect(() => setText(value), [value])
   const save = (): void => {
@@ -252,7 +248,6 @@ function TextSetting({ value, onSave, label, className, placeholder, list }: { v
       aria-label={label}
       value={text}
       placeholder={placeholder}
-      list={list}
       spellCheck={false}
       onChange={(e) => setText(e.target.value)}
       onBlur={save}

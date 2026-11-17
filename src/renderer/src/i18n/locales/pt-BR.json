@@ -200,12 +200,15 @@
     "unconvertedHint": "Ficam fora destes totais. Adicione taxas nas Configurações."
   },
   "ai": {
+    "reloadModels": "Recarregar modelos",
+    "otherModel": "Outro modelo…",
+    "typeModel": "Digite o nome do modelo",
+    "searchModels": "Buscar modelos",
     "hint": "Escolha a IA que responde na conversa do Kasboek e revisa arquivos CSV. Usa a sua própria conta e chave nesse fornecedor.",
     "providerCloud": "Funciona em {{company}}, com a sua própria chave API e cobrança.",
     "baseUrlLocalHint": "Deixe vazio para o predefinido ({{url}}). Altere-o se o servidor funcionar em outra porta ou computador.",
     "keyHint": "A sua chave API da {{name}}, salva criptografada na base de dados.",
     "keyHelp": "Crie uma chave na sua conta da {{name}} e cole-a aqui. O Kasboek a verifica uma vez com a {{name}}.",
-    "loadingModels": "Carregando…",
     "note": "Escolha um modelo que suporte ferramentas (function calling); modelos locais pequenos podem responder de forma menos confiável. As alterações propostas pelo assistente continuam aguardando a sua aprovação."
   },
   "accountKind": {
