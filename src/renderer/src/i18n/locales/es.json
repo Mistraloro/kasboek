@@ -364,6 +364,7 @@
     "privacyLocal": "{{ai}} funciona en este ordenador o en tu red: tus mensajes y datos solo van allí.",
     "thinkingLive": "Pensando…",
     "thinkingShown": "Razonamiento",
+    "thinkingJump": "Ir a lo más reciente",
     "model": "Modelo",
     "effortOption": "Esfuerzo: {{level}}",
     "checkRunning": "Revisando {{file}}…",

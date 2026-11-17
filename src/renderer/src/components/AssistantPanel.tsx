@@ -1,6 +1,7 @@
 import { ArrowUp, Check, ChevronRight, FileCheck2, RotateCcw, Sparkles, Square, X } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { THINKING_START_OPEN, hasThinking, showJumpToLatest, stickToBottom, thinkingLabelKey, toggleThinking } from '@shared/thinking-view'
 import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
 import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatMessage, type Effort, type Settings } from '@shared/types'
 import { presetFor, type ProviderId } from '@shared/ai-providers'
@@ -121,18 +122,51 @@ function ModelPicker({ provider, disabled, unsupported }: { provider: ProviderId
   )
 }
 
-/** The model's reasoning: collapsed, and open while it is still thinking with no answer yet. */
+/**
+ * The model's reasoning: collapsed until the person opens it. Open, it is a bounded box in the
+ * message flow that follows the newest text (until they scroll up to read).
+ */
 function Thinking({ text, live }: { text: string; live: boolean }) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  const shown = open || live
+  const [open, setOpen] = useState(THINKING_START_OPEN)
+  const [behind, setBehind] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  const stuck = useRef(true)
+  const id = useId()
+  const body = text.trim()
+  const toBottom = (): void => {
+    const el = box.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+    stuck.current = true
+    setBehind(false)
+  }
+  useEffect(() => {
+    if (open && stuck.current) toBottom()
+  }, [body, open])
+  const onScroll = (): void => {
+    const el = box.current
+    if (!el) return
+    stuck.current = stickToBottom(el)
+    setBehind(showJumpToLatest(el))
+  }
   return (
     <div className="mb-2 rounded-lg border border-border bg-surface/60">
-      <button type="button" aria-expanded={shown} onClick={() => setOpen(!shown)} className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs text-muted hover:text-text">
-        <ChevronRight size={13} className={cx('transition-transform', shown && 'rotate-90')} />
-        <span className={cx(live && 'animate-pulse')}>{live ? t('assistant.thinkingLive') : t('assistant.thinkingShown')}</span>
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={() => { stuck.current = true; setBehind(false); setOpen(toggleThinking(open)) }} className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs text-muted hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <ChevronRight size={13} className={cx('shrink-0 transition-transform', open && 'rotate-90')} />
+        <span>{t(thinkingLabelKey(live))}</span>
+        {live && <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />}
       </button>
-      {shown && <p className="selectable max-h-56 overflow-y-auto px-3 pb-2 text-xs whitespace-pre-wrap text-muted">{text.trim()}</p>}
+      {open && (
+        <div className="relative">
+          <div ref={box} id={id} onScroll={onScroll} className="selectable max-h-[40vh] overflow-y-auto px-3 pb-2 text-xs whitespace-pre-wrap text-muted">{body}</div>
+          {behind && (
+            <button type="button" onClick={toBottom} className="absolute right-2 bottom-2 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-muted shadow-sm hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+              {t('assistant.thinkingJump')}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -181,7 +215,7 @@ function Bubble({ m }: { m: ChatMessage }) {
               : t('assistant.checkDone', { file: check.fileName, categorised: check.categorised ?? 0, renamed: check.renamed ?? 0, rules: check.rules ?? 0, existing: check.existing ?? 0 })}
         </p>
       )}
-      {m.thinking?.trim() && <Thinking text={m.thinking} live={!m.text && !m.error && (!check || !check.done)} />}
+      {hasThinking(m.thinking) && <Thinking text={m.thinking} live={!m.text && !m.error && (!check || !check.done)} />}
       {m.tools.length > 0 && (
         <p className="mb-1 text-xs text-muted">
           {[...new Set(m.tools.map((x) => t(`assistant.tool.${x.name}`, { defaultValue: x.name.replace(/_/g, ' ') })))].join(' · ')}

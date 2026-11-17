@@ -77,6 +77,7 @@
       "import_raw": "Arquivo CSV"
     },
     "thinkingLive": "Pensando…",
+    "thinkingJump": "Ir para o mais recente",
     "checkRunning": "Revisando {{file}}…",
     "checkRunningGroups": "Revisando {{file}}: {{done}} de {{total}} grupos…",
     "checkDone": "{{file}} revisado: {{categorised}} classificados, {{renamed}} renomeados, {{rules}} regras e {{existing}} grupos anteriores sugeridos. Veja a tela de importação."

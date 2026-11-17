@@ -364,6 +364,7 @@
     "privacyLocal": "{{ai}} läuft auf diesem Computer oder in deinem Netzwerk: Deine Nachrichten und Daten gehen nur dorthin.",
     "thinkingLive": "Denkt nach…",
     "thinkingShown": "Gedankengang",
+    "thinkingJump": "Zum Neuesten",
     "model": "Modell",
     "effortOption": "Aufwand: {{level}}",
     "checkRunning": "{{file}} wird geprüft…",
