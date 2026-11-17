@@ -356,6 +356,8 @@
     "privacy": "Tus mensajes, y los datos que {{ai}} consulta para responder, se envían a {{aiCompany}}. No se envía nada hasta que preguntes algo.",
     "newChat": "Nueva conversación",
     "thinking": "{{ai}} está trabajando…",
+    "thinkingTool": "{{ai}} está trabajando… ({{tool}})",
+    "waitingApproval": "Esperando tu aprobación arriba.",
     "stop": "Detener",
     "send": "Enviar",
     "wantsTo": "{{ai}} quiere",

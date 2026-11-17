@@ -216,6 +216,8 @@ export interface AssistantStatus {
   /** Who receives the data; null when the model runs on this computer or network. */
   company: string | null
   busy: boolean
+  /** What the assistant is doing while busy: waiting for the model, running a tool, or waiting for the person's approval. */
+  activity: { kind: 'model' } | { kind: 'tool'; tool: string } | { kind: 'approval' } | null
   messages: ChatMessage[]
   /** The chat model refused the reasoning setting, so it is sent without it. */
   reasoningUnsupported?: boolean

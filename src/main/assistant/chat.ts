@@ -29,6 +29,14 @@ let history: Anthropic.Beta.Messages.BetaMessageParam[] = []
 let display: ChatMessage[] = []
 let busy: AbortController | null = null
 const pending = new Map<string, (ok: boolean) => void>()
+/** The tool being run right now (named so the panel can say so), until its result is in. */
+let running: string | null = null
+
+function activity(): AssistantStatus['activity'] {
+  if (!busy) return null
+  if (pending.size) return { kind: 'approval' }
+  return running ? { kind: 'tool', tool: running } : { kind: 'model' }
+}
 
 const systemPrompt = (name: string): string => `You are ${name}, the assistant inside Kasboek, a private budgeting app on the person's own computer.
 
@@ -63,10 +71,17 @@ function status(): AssistantStatus {
   } catch {
     // Locked.
   }
-  return { configured, keyHint, provider: preset.id, providerName: preset.assistantName, company: preset.company, busy: !!busy, messages: display, reasoningUnsupported }
+  return { configured, keyHint, provider: preset.id, providerName: preset.assistantName, company: preset.company, busy: !!busy, activity: activity(), messages: display, reasoningUnsupported }
 }
 
 let timer: NodeJS.Timeout | null = null
+/** Sends the state to the page right now, ahead of work that blocks this process for a while. */
+function publishSync(): void {
+  if (timer) clearTimeout(timer)
+  timer = null
+  broadcast({ type: 'assistant.update', status: status() })
+}
+
 function publish(now = false): void {
   if (timer && !now) return
   if (timer) clearTimeout(timer)
@@ -245,6 +260,12 @@ export function send(text: string): AssistantStatus {
         return new Promise<boolean>((resolve) => pending.set(id, resolve))
       },
       onEvent: (e) => {
+        if (e.type === 'toolStart') {
+          running = e.name
+          publishSync()
+          return
+        }
+        if (e.type === 'tool') running = null
         if (e.type === 'text') current.text += e.text
         else if (e.type === 'thinking') current.thinking = (current.thinking ?? '') + e.text
         else {
@@ -274,6 +295,7 @@ export function send(text: string): AssistantStatus {
     .finally(() => {
       display = display.filter((m) => !(m.role === 'assistant' && !m.text && !m.tools.length && !m.error && !m.thinking))
       busy = null
+      running = null
       publish(true)
     })
   return status()

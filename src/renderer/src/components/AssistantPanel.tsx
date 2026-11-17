@@ -227,6 +227,18 @@ function Bubble({ m }: { m: ChatMessage }) {
   )
 }
 
+/** The line under the conversation while the assistant is busy, so there is always a sign of life, also while a tool runs. */
+function Working({ activity }: { activity: AssistantStatus['activity'] }) {
+  const { t } = useTranslation()
+  if (activity?.kind === 'approval') return <p className="text-xs text-muted">{t('assistant.waitingApproval')}</p>
+  const tool = activity?.kind === 'tool' ? t(`assistant.tool.${activity.tool}`, { defaultValue: activity.tool.replace(/_/g, ' ') }) : null
+  return (
+    <p role="status" className="animate-pulse text-xs text-muted">
+      {tool ? t('assistant.thinkingTool', { tool }) : t('assistant.thinking')}
+    </p>
+  )
+}
+
 export function AssistantPanel({ go }: { go: (p: Page) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
@@ -278,7 +290,7 @@ export function AssistantPanel({ go }: { go: (p: Page) => void }) {
             ) : (
               status.messages.map((m) => <Bubble key={m.id} m={m} />)
             )}
-            {status.busy && <p className={cx('text-xs text-muted', 'animate-pulse')}>{t('assistant.thinking')}</p>}
+            {status.busy && <Working activity={status.activity} />}
           </div>
           <form className="p-4" onSubmit={(e) => { e.preventDefault(); sendText(text) }}>
             <div className="flex items-end gap-2 rounded-xl border border-border bg-surface px-3 py-2 focus-within:border-accent">

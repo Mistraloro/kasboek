@@ -93,6 +93,8 @@
     "example3": "Coloque meus movimentos sem categoria na categoria certa.",
     "setupBody": "Conecte um assistente de IA (Claude, Mistral, Gemini, um modelo local e outros) para fazer perguntas sobre o seu orçamento, definir orçamentos, classificar movimentos e revisar arquivos CSV.",
     "thinking": "{{ai}} está trabalhando…",
+    "thinkingTool": "{{ai}} está trabalhando… ({{tool}})",
+    "waitingApproval": "Aguardando a sua aprovação acima.",
     "tool": {
       "settings_get": "Configurações",
       "import_raw": "Arquivo CSV"

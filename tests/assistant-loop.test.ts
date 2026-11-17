@@ -97,4 +97,43 @@ describe('assistant loop', () => {
     expect(m).toHaveLength(2)
     expect(JSON.stringify(m[0])).toContain('cut off')
   })
+
+  it('announces each tool before it runs, so the page can show it is working', async () => {
+    const { d, events } = deps([msg([{ type: 'text', text: 'First the transfers.' }, { type: 'tool_use', id: 't1', name: 'transfers_find', input: {} }], 'tool_use'), msg([{ type: 'text', text: 'Done.' }], 'end_turn')])
+    await runTurn([{ role: 'user', content: 'x' } as never], d, new AbortController().signal)
+    const kinds = (events as { type: string }[]).map((e) => e.type)
+    expect(kinds.indexOf('toolStart')).toBeGreaterThan(kinds.indexOf('text'))
+    expect(kinds.indexOf('toolStart')).toBeLessThan(kinds.indexOf('tool'))
+  })
+
+  it('carries on after a reply the server paused, instead of ending the turn', async () => {
+    const { d, calls } = deps([
+      msg([{ type: 'text', text: 'First I find the transfers.' }], 'pause_turn'),
+      msg([{ type: 'tool_use', id: 't1', name: 'transfers_find', input: {} }], 'tool_use'),
+      msg([{ type: 'text', text: 'Done.' }], 'end_turn')
+    ])
+    const messages: never[] = [{ role: 'user', content: 'x' } as never]
+    expect(await runTurn(messages, d, new AbortController().signal)).toBe('done')
+    expect(calls).toEqual(['transfers_find'])
+    // The paused reply goes back as it is: the model carries on from it.
+    expect(JSON.stringify(messages[1])).toContain('First I find the transfers.')
+  })
+
+  it('asks the model to carry on when it stopped for tool use but sent no usable call', async () => {
+    const { d, calls } = deps([
+      msg([{ type: 'text', text: 'First the transfers.' }], 'tool_use'),
+      msg([{ type: 'tool_use', id: 't1', name: 'transfers_find', input: {} }], 'tool_use'),
+      msg([{ type: 'text', text: 'Done.' }], 'end_turn')
+    ])
+    const messages: never[] = [{ role: 'user', content: 'x' } as never]
+    expect(await runTurn(messages, d, new AbortController().signal)).toBe('done')
+    expect(calls).toEqual(['transfers_find'])
+    expect(JSON.stringify(messages[2])).toContain('Carry on')
+  })
+
+  it('does not resume forever', async () => {
+    const stuck = () => msg([{ type: 'text', text: 'Hm.' }], 'tool_use')
+    const { d } = deps([stuck(), stuck(), stuck(), stuck()])
+    expect(await runTurn([{ role: 'user', content: 'x' } as never], d, new AbortController().signal)).toBe('done')
+  })
 })

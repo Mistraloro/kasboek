@@ -12,6 +12,7 @@ type ToolResult = Anthropic.Beta.Messages.BetaToolResultBlockParam
 export type LoopEvent =
   | { type: 'text'; text: string }
   | { type: 'thinking'; text: string }
+  | { type: 'toolStart'; name: string }
   | { type: 'tool'; name: string; ok: boolean }
 
 export interface LoopDeps {
@@ -32,6 +33,9 @@ export type TurnEnd = 'done' | 'refusal' | 'max_tokens' | 'aborted' | 'too_many_
 const MAX_STEPS = 16
 /** How often a reply that hit the length limit is picked up again before giving up. */
 const MAX_CONTINUES = 2
+/** How often a reply that stopped without finishing or asking for a tool is picked up again. */
+const MAX_RESUMES = 2
+const RESUME = 'Your previous reply stopped before you did what you said you would do. Carry on: call the tools you need now.'
 const CONTINUE =
   'Your previous reply was cut off because it got too long (any unfinished tool call was dropped). Continue from there in smaller steps: keep your reasoning brief, use rules for shops that repeat, and send at most 200 ids per tool call.'
 
@@ -47,6 +51,7 @@ function nudge(messages: MessageParam[], text: string): void {
 export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: AbortSignal): Promise<TurnEnd> {
   let retries = 0
   let continues = 0
+  let resumes = 0
   for (let step = 0; step < MAX_STEPS; step++) {
     if (signal.aborted) return 'aborted'
     let message: Message
@@ -84,7 +89,14 @@ export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: 
       if (kept.some((b) => b.type === 'text' && b.text.trim())) deps.onEvent({ type: 'text', text: '\n\n' })
       continue
     }
-    if (!uses.length) return 'done'
+    if (!uses.length) {
+      // end_turn is the only real end. A reply that stopped for another reason (the server paused it,
+      // or it announced a tool call that never came) is not finished: it is picked up again, never
+      // left as a silent dead end.
+      if (message.stop_reason === 'end_turn' || resumes++ >= MAX_RESUMES) return 'done'
+      if (message.stop_reason !== 'pause_turn') nudge(messages, RESUME)
+      continue
+    }
 
     const results: ToolResult[] = []
     for (const use of uses) {
@@ -100,6 +112,7 @@ export async function runTurn(messages: MessageParam[], deps: LoopDeps, signal: 
         deps.onEvent({ type: 'tool', name: use.name, ok: false })
         continue
       }
+      deps.onEvent({ type: 'toolStart', name: use.name })
       const r = await deps.runTool(use.name, use.input)
       deps.onEvent({ type: 'tool', name: use.name, ok: r.ok })
       results.push({ type: 'tool_result', tool_use_id: use.id, content: r.content, ...(r.ok ? {} : { is_error: true }) })

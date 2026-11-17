@@ -355,6 +355,8 @@
     "privacy": "Your messages, and the data {{ai}} looks up to answer them, are sent to {{aiCompany}}. Nothing is sent until you ask something.",
     "newChat": "New conversation",
     "thinking": "{{ai}} is working…",
+    "thinkingTool": "{{ai}} is working… ({{tool}})",
+    "waitingApproval": "Waiting for your approval above.",
     "stop": "Stop",
     "send": "Send",
     "wantsTo": "{{ai}} wants to",

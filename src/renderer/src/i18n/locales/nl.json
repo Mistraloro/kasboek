@@ -355,6 +355,8 @@
     "privacy": "Je berichten, en de gegevens die {{ai}} opzoekt om te antwoorden, worden naar {{aiCompany}} gestuurd. Er wordt niets verstuurd tot je iets vraagt.",
     "newChat": "Nieuw gesprek",
     "thinking": "{{ai}} is bezig…",
+    "thinkingTool": "{{ai}} is bezig… ({{tool}})",
+    "waitingApproval": "Wacht op je goedkeuring hierboven.",
     "stop": "Stoppen",
     "send": "Versturen",
     "wantsTo": "{{ai}} wil",
