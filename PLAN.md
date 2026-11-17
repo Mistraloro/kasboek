@@ -366,6 +366,17 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    4 s to "interface loaded"); (7) register IPC and create the main window before `initSession`;
    (8) only if numbers point there: Node compile cache, renderer code cache; (9) Windows code signing.
    Rejected: bytenode or snapshots, a native launcher, `ImageView`, `ready-to-show` for the splash.
+   *More from the owner's testing:* on an x86 PC only the small launch window is blank. On a friend's
+   Windows on ARM PC the LARGE main window is also blank for a while, longer than on x86, so the app
+   looks broken while it boots. Likely contributors (not measured): Windows on ARM draws in software by
+   default (`src/shared/graphics.ts:34`), which makes painting the 1.65 MB renderer slower; and the main
+   window is shown as soon as it exists, before the interface has painted. Add to the fix list: keep
+   the launch window on screen until the main window has really painted its first screen (create the
+   main window hidden, show it on the renderer's first-screen signal, then close the launch window),
+   and if a window must be visible earlier give it a theme-coloured background and a simple "Starting..."
+   content instead of white; on ARM measure first how long compositing in software mode takes
+   (the measurement build covers it: log the graphics mode next to the timings) and consider lazy
+   loading to shrink the first bundle (steps 5 and 6).
    *Owner can check now:* copy `%APPDATA%\Kasboek\startup.log` after the first start following an
    install, before starting again, then after the second start; time it with a phone video from
    double-click to blank window, logo and main window; reboot without reinstalling and see if it is
