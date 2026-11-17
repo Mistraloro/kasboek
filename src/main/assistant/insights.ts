@@ -1,12 +1,12 @@
 /**
  * "Get tips from the assistant" on the Overview. Only when the person presses the button, and only after
- * they agreed (once per provider, again when the list of data that is sent changes). What is sent is a short
+ * they agreed (once per provider, address and model, again when the list of data that is sent changes). What is sent is a short
  * summary of facts found locally, masked and rounded; the assistant picks and words the tips, and code
  * checks every one before it is kept (see core/insight-plan.ts). Nothing here changes bookkeeping data.
  */
 import type { Db } from '@core/database'
 import { AppError, TruncatedError } from '@core/errors'
-import { INSIGHTS_CONSENT_VERSION, SuggestionsPlan, factsPayload, insightsSystem, parseSuggestions, verifySuggestions } from '@core/insight-plan'
+import { INSIGHTS_CONSENT_VERSION, SuggestionsPlan, consentAddress, factsPayload, insightsSystem, parseSuggestions, verifySuggestions } from '@core/insight-plan'
 import { buildFacts, dismissedKeys, insightsView, saveInsights } from '@core/insights'
 import { getSettings, updateSettings } from '@core/settings'
 import { unknownFailure } from '@shared/error-text'
@@ -17,7 +17,7 @@ import { getPrefs } from '../prefs'
 import { broadcast } from '../session'
 import { TIME_LIMIT_MS, withTimeLimit } from './jobs'
 import { callJson } from './json'
-import { CHARS_PER_TOKEN, activeProvider, requireConfigured } from './provider'
+import { CHARS_PER_TOKEN, activeProvider, requireConfigured, type ActiveProvider } from './provider'
 
 /** The run in progress: one at a time. It goes on when the card is left; the card asks `insightsStatus` when it comes back. */
 let running: { controller: AbortController; month: string; startedAt: string } | null = null
@@ -27,9 +27,14 @@ export function insightsStatus(): { running: boolean; month: string | null; star
   return { running: !!running, month: running?.month ?? null, startedAt: running?.startedAt ?? null }
 }
 
-const agreed = (db: Db, provider: string): boolean => {
+/** What the person agrees to: where the summary goes (provider and address) and which model reads it. */
+const target = (p: ActiveProvider): { provider: string; baseUrl: string; model: string } => ({ provider: p.preset.id, baseUrl: consentAddress(p.baseUrl), model: p.insightsModel })
+
+/** A record from before the address and model were kept has neither, so it never matches: the person is asked once more. */
+const agreed = (db: Db, p: ActiveProvider): boolean => {
   const consent = getSettings(db).aiInsightsConsent
-  return !!consent && consent.provider === provider && consent.version === INSIGHTS_CONSENT_VERSION
+  const now = target(p)
+  return !!consent && consent.version === INSIGHTS_CONSENT_VERSION && consent.provider === now.provider && consent.baseUrl === now.baseUrl && consent.model === now.model
 }
 
 /** What would be sent for this month: shown in the dialog where the person agrees, and in the card. */
@@ -58,9 +63,9 @@ export async function runInsights(db: Db, month: string, opts: { consent?: true;
   const facts = buildFacts(db, month, today)
   // Nothing to write about: no request, so nothing to agree to.
   if (!facts.length) return insightsView(db, month, language, today)
-  if (!agreed(db, provider.preset.id)) {
+  if (!agreed(db, provider)) {
     if (!opts.consent) throw new AppError('insights.consent_needed', `Agree to send the summary to ${name} first.`)
-    updateSettings(db, { aiInsightsConsent: { provider: provider.preset.id, version: INSIGHTS_CONSENT_VERSION, at: new Date().toISOString() } })
+    updateSettings(db, { aiInsightsConsent: { ...target(provider), version: INSIGHTS_CONSENT_VERSION, at: new Date().toISOString() } })
   }
 
   const controller = new AbortController()
@@ -93,6 +98,8 @@ export async function runInsights(db: Db, month: string, opts: { consent?: true;
       throw err
     }
     startupLog(`insights: ${checked.suggestions.length} tips kept, ${checked.rejected} rejected`)
+    // Stopped (also by the app locking) while the answer came in: the database may be closed, so write nothing.
+    if (controller.signal.aborted) throw new AppError('insights.cancelled', 'Stopped.')
     saveInsights(db, month, { provider: provider.preset.id, model: provider.insightsModel, language, facts, suggestions: checked.suggestions })
     return insightsView(db, month, language, today)
   } catch (err) {

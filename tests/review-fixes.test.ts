@@ -387,6 +387,19 @@ describe('review 14, low items', () => {
 })
 
 describe('reasoning settings', () => {
+  it('sends only an effort the Haiku default for PDF reads and tips accepts, whatever the CSV setting is', async () => {
+    const { EFFORTS, claudeEfforts } = await import('@shared/reasoning')
+    const { CLAUDE_PDF_MODEL } = await import('@shared/ai-provider-store')
+    const { modelParams } = await import('../src/main/assistant/claude')
+    for (const chosen of EFFORTS) {
+      const params = modelParams(CLAUDE_PDF_MODEL, chosen)
+      expect(params.model).toBe(CLAUDE_PDF_MODEL)
+      // "off" is never sent as an effort: it stops thinking and keeps a low effort; any other level is one the model lists.
+      expect(claudeEfforts(CLAUDE_PDF_MODEL)).toContain(chosen === 'off' ? 'off' : params.output_config.effort)
+      expect(params.output_config.effort).toBe(chosen === 'off' ? 'low' : chosen)
+    }
+  })
+
   it('offers each Claude model its own levels and builds the request', async () => {
     const { claudeEfforts, claudeEffort, reasoningParams } = await import('@shared/reasoning')
     const { modelParams } = await import('../src/main/assistant/claude')

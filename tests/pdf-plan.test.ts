@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { autoMap } from '@core/csv/mapping'
 import { normalizeRows } from '@core/csv/normalize'
-import { PdfRowsPlan, applyRowsPlan, maskedLines, parsePdfPlan, partText, splitParts, tableStart, type PdfRowsPlan as Plan } from '@core/pdf-plan'
+import { PdfRowsPlan, applyRowsPlan, firstLineSent, maskedLines, parsePdfPlan, partText, splitParts, tableStart, type PdfRowsPlan as Plan } from '@core/pdf-plan'
 import type { PdfLine } from '@core/pdf/lines'
 
 // All data here is invented.
@@ -68,6 +68,27 @@ describe('masked lines', () => {
     // No header known: everything goes, masked.
     expect(tableStart([lines[0]!, lines[1]!])).toBeNull()
     expect(maskedLines(lines).map((m) => m.id)).toEqual([0, 1, 2, 3])
+  })
+
+  it('without a table header, still leaves out the name and address above the first transaction', () => {
+    const lines = [
+      line(0, [[40, 'Jan Jansen']]),
+      line(1, [[40, 'Main Street 1, Springfield']]),
+      line(2, [[40, 'Statement 01/11/2026 to 30/11/2026']]),
+      line(3, [[60, '03/11'], [140, 'Shop'], [510, '1,00-']]),
+      line(4, [[140, 'More about the shop']]),
+      line(5, [[60, '05/11'], [140, 'Salary'], [510, '2.000,00']])
+    ]
+    expect(tableStart(lines)).toBeNull()
+    expect(firstLineSent(lines)).toBe(3)
+    const text = maskedLines(lines, { skipBefore: firstLineSent(lines) }).map((m) => m.text).join('\n')
+    expect(text).not.toMatch(/Jansen|Main Street|Statement/)
+    expect(text).toMatch(/Shop[\s\S]*More about the shop[\s\S]*Salary/)
+    // Nothing that looks like a transaction on the first page: its first 8 lines go, the rest stays.
+    const odd = Array.from({ length: 12 }, (_, i) => line(i, [[40, `Words ${i}`]]))
+    expect(firstLineSent(odd)).toBe(8)
+    expect(firstLineSent([line(0, [[40, 'Only a name']])])).toBeNull()
+    expect(firstLineSent([])).toBeNull()
   })
 
   it('splits into parts of 4 pages and repeats the last 3 lines as context', () => {
@@ -224,6 +245,52 @@ describe('applyRowsPlan', () => {
     expect(r.rejected).toEqual([])
     const inRow = apply(plan([row({ lines: [3], date: '05/11', amount: '2.000,00', direction: 'in' })]))
     expect(readBack(inRow.grid, inRow.mapping)[0]!.amountCents).toBe(200000)
+  })
+
+  describe('the sign comes from the real text', () => {
+    const one = (cells: [number, string][], over: Partial<Plan['rows'][number]>) => {
+      const ls = [line(0, [[60, '03/11'], ...cells])]
+      const r = applyRowsPlan(ls, [{ own: maskedLines(ls), plan: plan([row({ lines: [0], ...over })]) }], PERIOD, OWN)
+      return { r, cents: r.accepted ? readBack(r.grid, r.mapping)[0]!.amountCents : null }
+    }
+
+    it('reads a trailing minus the assistant left off as negative', () => {
+      const { r, cents } = one([[140, 'SHOP'], [510, '45,10-']], { amount: '45,10', direction: 'in' })
+      expect(cents).toBe(-4510)
+      expect(r.grid[1]![5]).toBe('45,10-')
+      expect(r.grid[1]![2]).toBe('SHOP')
+    })
+
+    it('reads brackets, DR and CR from the text, whatever the direction says', () => {
+      expect(one([[510, '(45,10)']], { amount: '45,10', direction: 'in' }).cents).toBe(-4510)
+      expect(one([[510, '45,10 DR']], { amount: '45,10', direction: 'in' }).cents).toBe(-4510)
+      expect(one([[510, '45,10'], [560, 'EUR'], [600, 'DR']], { amount: '45,10', direction: null }).cents).toBe(-4510)
+      expect(one([[510, '45,10 CR']], { amount: '45,10', direction: 'out' }).cents).toBe(4510)
+      expect(one([[510, 'EUR -45,10']], { amount: '45,10' }).cents).toBe(-4510)
+    })
+
+    it('accepts a copy of the sign that the text has, and refuses one that it has not', () => {
+      expect(one([[510, '-45,10']], { amount: '-45,10' }).cents).toBe(-4510)
+      expect(one([[510, '45,10-']], { amount: '45,10-' }).cents).toBe(-4510)
+      expect(one([[510, '(45,10)']], { amount: '(45,10)' }).cents).toBe(-4510)
+      const added = one([[510, '45,10']], { amount: '-45,10' })
+      expect(added.r.accepted).toBe(0)
+      expect(added.r.rejected[0]!.reason).toMatch(/sign/)
+      expect(one([[510, '45,10-']], { amount: '45,10 CR' }).r.accepted).toBe(0)
+      expect(one([[510, '45,10-']], { amount: '+45,10' }).r.accepted).toBe(0)
+    })
+
+    it('does not take a separator in the description for a sign, and refuses a sign it cannot trust', () => {
+      expect(one([[140, 'SHOP - ABC'], [510, '45,10']], { amount: '45,10', direction: 'out' }).r.grid[1]![5]).toBe('45,10 DR')
+      expect(one([[510, '-45,10-']], { amount: '45,10' }).r.accepted).toBe(0)
+      expect(one([[510, '-45,10 CR']], { amount: '45,10' }).r.accepted).toBe(0)
+    })
+
+    it('still uses direction for text without a sign, as in Debit and Credit columns', () => {
+      const out = one([[400, '12,00'], [510, '988,00']], { amount: '12,00', direction: 'out' })
+      expect(out.cents).toBe(-1200)
+      expect(one([[400, '12,00'], [510, '988,00']], { amount: '12,00', direction: 'in' }).cents).toBe(1200)
+    })
   })
 
   it('shows the counterparty account unmasked, recovered from the original lines', () => {

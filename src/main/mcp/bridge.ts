@@ -88,7 +88,7 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   lastUsed = Date.now()
   lastSeen[clientKind(req.client)] = lastUsed
   if (!isUnlocked()) return { id: req.id, ok: false, error: 'Kasboek is locked. Unlock it on your computer, then try again.' }
-  if (!enabled()) return { id: req.id, ok: false, error: 'MCP access is switched off in Kasboek (Settings → Claude).' }
+  if (!enabled()) return { id: req.id, ok: false, error: 'MCP access is switched off in Kasboek (Settings → Assistant).' }
   if (req.call === 'list') return { id: req.id, ok: true, result: mcpTools().map(({ name, description, inputSchema, mutates }) => ({ name, description, inputSchema, mutates })) }
   const def = mcpTools().find((t) => t.name === String(req.name))
   if (!def) return { id: req.id, ok: false, error: `Unknown tool ${String(req.name)}.` }

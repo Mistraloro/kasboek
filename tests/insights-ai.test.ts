@@ -121,6 +121,46 @@ describe('consent', () => {
     expect(await code(runInsights(db, MONTH, { today: TODAY }))).toBe('insights.consent_needed')
   })
 
+  it('is asked again when the address of the provider changes, but not for the same address written a little differently', async () => {
+    const { runInsights } = await import('../src/main/assistant/insights')
+    const { db } = setup()
+    await mockFetch((b) => tip(b))
+    updateSettings(db, { aiProvider: 'custom-abc123', aiBaseUrl: 'http://localhost:8080/v1', aiChatModel: 'local' })
+    await runInsights(db, MONTH, { consent: true, today: TODAY })
+    expect(getSettings(db).aiInsightsConsent).toMatchObject({ provider: 'custom-abc123', baseUrl: 'http://localhost:8080/v1', model: 'file-m' })
+    await runInsights(db, MONTH, { today: TODAY })
+    updateSettings(db, { aiBaseUrl: 'HTTP://localhost:8080/v1/' })
+    await runInsights(db, MONTH, { today: TODAY })
+    expect(requests).toHaveLength(3)
+    updateSettings(db, { aiBaseUrl: 'http://192.168.1.20:8080/v1' })
+    expect(await code(runInsights(db, MONTH, { today: TODAY }))).toBe('insights.consent_needed')
+    expect(requests).toHaveLength(3)
+    await runInsights(db, MONTH, { consent: true, today: TODAY })
+    expect(getSettings(db).aiInsightsConsent?.baseUrl).toBe('http://192.168.1.20:8080/v1')
+  })
+
+  it('is asked again when the model that reads the summary changes', async () => {
+    const { runInsights } = await import('../src/main/assistant/insights')
+    const { db } = setup()
+    await mockFetch((b) => tip(b))
+    await runInsights(db, MONTH, { consent: true, today: TODAY })
+    updateSettings(db, { aiCsvModel: 'another-model' })
+    expect(await code(runInsights(db, MONTH, { today: TODAY }))).toBe('insights.consent_needed')
+    expect(requests).toHaveLength(1)
+  })
+
+  it('treats a record from before the address and model were kept as not agreed, and does not crash on it', async () => {
+    const { runInsights } = await import('../src/main/assistant/insights')
+    const { db } = setup()
+    await mockFetch((b) => tip(b))
+    updateSettings(db, { aiInsightsConsent: { provider: 'mistral', version: INSIGHTS_CONSENT_VERSION, at: '2026-01-01T00:00:00.000Z' } })
+    expect(await code(runInsights(db, MONTH, { today: TODAY }))).toBe('insights.consent_needed')
+    expect(requests).toHaveLength(0)
+    await runInsights(db, MONTH, { consent: true, today: TODAY })
+    expect(getSettings(db).aiInsightsConsent).toMatchObject({ provider: 'mistral', model: 'file-m' })
+    expect(typeof getSettings(db).aiInsightsConsent?.baseUrl).toBe('string')
+  })
+
   it('is cleared by the reset after an import', () => {
     const { db } = setup()
     db.prepare("INSERT INTO insights (month, created_at, provider, model, language, facts_hash, facts_json, suggestions_json) VALUES ('2026-11', 'x', 'mistral', 'm', 'en', 'h', '[]', '[]')").run()

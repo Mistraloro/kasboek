@@ -2,7 +2,9 @@ import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, session, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { dispatch, onAppReady, registerIpc } from './ipc'
+import { cancelPdfRead, dispatch, onAppReady, registerIpc } from './ipc'
+import { cancelAllAssists } from './assistant/jobs'
+import { cancelInsights } from './assistant/insights'
 import { stopMcpBridge, syncMcpBridge } from './mcp/bridge'
 import { paths } from './paths'
 import { hasTray, initTray, refreshTray, stopTray, syncTray } from './tray'
@@ -128,7 +130,13 @@ export async function startApp({ background }: { background: boolean }): Promise
   startupLog('opening data')
   await initSession()
   startupLog('data opened')
-  onLock(clearImportSessions)
+  // Running jobs are stopped before the database closes: their writes are all synchronous after an await that checks the signal.
+  onLock(() => {
+    cancelAllAssists()
+    cancelInsights()
+    cancelPdfRead()
+    clearImportSessions()
+  })
   splashProgress(0.55, 'Preparing…')
   registerIpc()
   const win = createWindow(background)

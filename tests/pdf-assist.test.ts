@@ -102,6 +102,16 @@ describe('reading a PDF statement with the assistant', () => {
     expect(userText(requests[0]!).split('\n').slice(2).join('\n')).toBe(info.text)
   })
 
+  it('without a table header, leaves out the name and address and keeps every transaction line', async () => {
+    const { pdfAssistPreview } = await import('../src/main/assistant/pdf')
+    const lines = statement(2).filter((l) => l.id !== 3)
+    const { sessionId } = setup(lines)
+    const info = pdfAssistPreview(sessionId)
+    expect(info.preambleLeftOut).toBe(true)
+    expect(info.text).not.toMatch(/Jansen|Main Street|Account/)
+    for (const l of lines.filter((x) => x.id > 3)) expect(info.text).toContain(`L${l.id} p${l.page} |`)
+  })
+
   it('never sends an account or card number, and brings the real account number back locally', async () => {
     const { assistPdf } = await import('../src/main/assistant/pdf')
     const { db, sessionId } = setup(statement(5))

@@ -14,6 +14,8 @@ import { useAssistant } from './AssistantPanel'
 import { Button, Card, CardHeader, Modal } from './ui'
 
 const SHOWN = 3
+/** After a data change the tips are worked out again once nothing changed for this long. */
+const RELOAD_DELAY_MS = 500
 const COLLAPSED_KEY = 'kasboek.suggestions.collapsed'
 
 const readCollapsed = (): boolean => {
@@ -93,14 +95,22 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
     setAiError(null)
     load()
   }, [collapsed, load])
-  useEffect(
-    () =>
-      window.kasboek.onEvent((e) => {
-        if (e.type === 'insights.updated') refreshStatus()
-        if ((e.type === 'data.changed' || (e.type === 'insights.updated' && e.month === month)) && !collapsed) load()
-      }),
-    [collapsed, load, month, refreshStatus]
-  )
+  // Data changes come in bursts (an import, a sync): wait for a quiet moment before working the tips out again.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const off = window.kasboek.onEvent((e) => {
+      if (e.type === 'insights.updated') refreshStatus()
+      if (collapsed) return
+      if (e.type === 'data.changed') {
+        clearTimeout(timer)
+        timer = setTimeout(load, RELOAD_DELAY_MS)
+      } else if (e.type === 'insights.updated' && e.month === month) load()
+    })
+    return () => {
+      off()
+      clearTimeout(timer)
+    }
+  }, [collapsed, load, month, refreshStatus])
 
   const toggle = (): void => {
     writeCollapsed(!collapsed)

@@ -82,6 +82,34 @@ export function tableStart(lines: PdfLine[]): number | null {
   return lines.find(isHeaderLine)?.id ?? null
 }
 
+/** A date as statements write it: 2026-11-03, 03/11/2026, 03.11.26, 03/11, 03.11. or a day with a month name. */
+const DATE_LIKE = /\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}([/.-])\d{1,2}\1\d{2,4}\b|\b\d{1,2}\/\d{1,2}\b(?!\/)|\b\d{1,2}\.\d{1,2}\.(?!\d)/
+const AMOUNT_LIKE = /\d[\d.,' ]*[.,]\d{2}(?!\d)/
+
+/** Whether a line has a date and an amount, as a transaction does and a name or address does not. */
+function looksLikeTransaction(line: PdfLine): boolean {
+  const text = cellText(line)
+  const dateless = text.replace(DATE_LIKE, ' ')
+  const hasDate = dateless !== text || (tokens(text).some(isMonthName) && /(?:^|\s)\d{1,2}(?:\s|$)/.test(text))
+  return hasDate && AMOUNT_LIKE.test(dateless)
+}
+
+/** How many lines at the top of the first page are left out when nothing better is known. */
+const GUESSED_PREAMBLE_LINES = 8
+
+/**
+ * The first line to send: the table's header, or, when there is none, a guess so that the holder's
+ * name and address at the top of the first page still stay behind: the first line of that page with
+ * a date and an amount, else after its first 8 lines (or that page, when it is shorter). Null (send
+ * everything) when there is no other line to start at.
+ */
+export function firstLineSent(lines: PdfLine[]): number | null {
+  const header = tableStart(lines)
+  if (header !== null || !lines.length) return header
+  const top = lines.filter((l) => l.page === lines[0]!.page)
+  return top.find(looksLikeTransaction)?.id ?? top[GUESSED_PREAMBLE_LINES]?.id ?? lines.find((l) => l.page !== lines[0]!.page)?.id ?? null
+}
+
 /**
  * The lines as they are sent: IBANs and runs of 13 or more digits masked, and, with `skipBefore`
  * (the table's first line), everything above the table left out: the name and address blocks and the
@@ -250,8 +278,66 @@ const spansCells = (text: string, date: string): boolean => {
   return want !== null && findTokens(tokens(text), want) !== null
 }
 
-/** A sign the text itself has: minus, plus, brackets, or DR / CR. */
-const HAS_SIGN = /[-+(]|\b(?:CR|DR)\b/i
+const CURRENCY = '(?:EUR|USD|GBP|CHF|SEK|NOK|DKK|PLN|CZK|HUF|CAD|AUD|JPY|[€$£¥])'
+/** What stands right before an amount: a sign, an opening bracket or DR / CR, and perhaps a currency between it and the number. */
+const BEFORE_AMOUNT = new RegExp(`(?:(?<!\\w)([-+])|(\\()|(?<![A-Za-z])(CR|DR)\\s)?(?:${CURRENCY}\\s?)?$`, 'i')
+/** What stands right behind an amount: perhaps a currency, then a sign attached to it, a closing bracket or DR / CR. */
+const AFTER_AMOUNT = new RegExp(`^(?:\\s?${CURRENCY})?(?:([-+)])(?!\\d)|\\s?(CR|DR)\\b)?`, 'i')
+
+type Polarity = 'neg' | 'pos' | 'none'
+
+/** The number in the assistant's amount string and the sign it carries (minus, brackets or DR count as negative; plus or CR as positive). */
+function modelAmount(model: string): { core: string; polarity: Polarity | 'unclear' } | null {
+  const m = dashes(norm(model))
+  const core = /\d(?:[\d.,' ]*\d)?/.exec(m)?.[0]
+  if (!core) return null
+  const rest = m.replace(core, ' ')
+  const neg = /[-(]|\)|\bDR\b/i.test(rest)
+  const pos = /\+|\bCR\b/i.test(rest)
+  return { core, polarity: neg && pos ? 'unclear' : neg ? 'neg' : pos ? 'pos' : 'none' }
+}
+
+/**
+ * The amount as the statement's own text writes it. The number is found in `hay` as a whole value, then
+ * the real text around it is read for a sign: minus, plus, brackets, DR or CR, with a currency between
+ * them and the number. That sign decides, never the assistant's copy of it: an amount the text signs
+ * and the assistant did not is read with the text's sign, one the assistant signed and the text did
+ * not is refused. `direction` is for unsigned text only (the caller).
+ */
+function readAmount(hay: string, model: string): { amount: string; polarity: Polarity; span: string } | { error: string } {
+  const given = modelAmount(model)
+  const missing = { error: `The amount “${norm(model)}” is not in the text of this row’s lines.` }
+  if (!given || given.polarity === 'unclear') return missing
+  let found: { amount: string; polarity: Polarity; span: string } | null = null
+  let conflict = false
+  let seen = false
+  const text = dashes(hay)
+  for (let i = text.indexOf(given.core); i >= 0 && !found; i = text.indexOf(given.core, i + 1)) {
+    const end = i + given.core.length
+    if (/[\d.,]/.test(text[i - 1] ?? '') || /^[.,]?\d/.test(text.slice(end, end + 2))) continue
+    seen = true
+    const left = BEFORE_AMOUNT.exec(text.slice(0, i))!
+    const right = AFTER_AMOUNT.exec(text.slice(end))!
+    const negs = [left[1] === '-', !!left[2], left[3]?.toUpperCase() === 'DR', right[1] === '-' || right[1] === ')', right[2]?.toUpperCase() === 'DR']
+    const nNeg = negs.filter(Boolean).length
+    const nPos = [left[1] === '+', left[3]?.toUpperCase() === 'CR', right[1] === '+', right[2]?.toUpperCase() === 'CR'].filter(Boolean).length
+    const brackets = !!left[2] || right[1] === ')'
+    // Two minus signs would cancel out in the parser, and a minus with a plus is no sign to trust.
+    if ((nNeg > 0 && nPos > 0) || nNeg > 2 || (nNeg === 2 && !(left[2] && right[1] === ')'))) {
+      conflict = true
+      continue
+    }
+    const polarity: Polarity = nNeg ? 'neg' : nPos ? 'pos' : 'none'
+    // The assistant's own sign has to be there in the text too; an unsigned copy takes the text's sign.
+    if (given.polarity !== 'none' && given.polarity !== polarity) continue
+    const amount = brackets ? `(${given.core})` : left[1] === '-' ? `-${given.core}` : right[1] === '-' ? `${given.core}-` : left[3]?.toUpperCase() === 'DR' || right[2]?.toUpperCase() === 'DR' ? `${given.core} DR` : given.core
+    const spanStart = i - (left[0]?.length ?? 0)
+    const spanEnd = end + (right[0]?.length ?? 0)
+    found = { amount, polarity, span: norm(hay.slice(spanStart, spanEnd)) }
+  }
+  if (found) return found
+  return conflict ? { error: `The sign of the amount “${norm(model)}” is not clear in the text of this row’s lines.` } : seen && given.polarity !== 'none' ? { error: `The amount “${norm(model)}” has a sign that the text of this row’s lines does not have.` } : missing
+}
 
 /** Numbers without letters and currency signs, for working out the decimal mark. */
 const bare = (s: string): string => s.replace(/[A-Za-z€$£\s]/g, '')
@@ -306,10 +392,11 @@ export function applyRowsPlan(lines: PdfLine[], parts: PlanPart[], period: State
       // A date and an amount are required; the other strings may be null (or empty) when the lines don't have them.
       const check = (value: string | null, kind: 'number' | 'date' | 'text', label: string, required = false): string | null =>
         (required || norm(value ?? '')) && !appears(text, value ?? '', kind) && !(kind === 'date' && spansCells(text, value ?? '')) ? `The ${label} “${norm(value ?? '')}” is not in the text of this row’s lines.` : null
+      const amount = readAmount(text, row.amount)
       const wrong =
-        check(row.date, 'date', 'date', true) ?? check(row.valueDate, 'date', 'value date') ?? check(row.amount, 'number', 'amount', true) ?? check(row.balance, 'number', 'balance') ?? check(row.counterparty, 'text', 'counterparty')
-      if (wrong) {
-        refuse(wrong)
+        check(row.date, 'date', 'date', true) ?? check(row.valueDate, 'date', 'value date') ?? ('error' in amount ? amount.error : null) ?? check(row.balance, 'number', 'balance') ?? check(row.counterparty, 'text', 'counterparty')
+      if (wrong || 'error' in amount) {
+        refuse(wrong ?? ('error' in amount ? amount.error : ''))
         continue
       }
       const realText = norm(ids.map((id) => cellText(real.get(id)!)).join(' '))
@@ -318,7 +405,7 @@ export function applyRowsPlan(lines: PdfLine[], parts: PlanPart[], period: State
       let counterparty = norm(row.counterparty ?? '')
       for (const iban of ibans) counterparty = counterparty.split(maskIban(iban)).join(iban)
       let description = realText
-      for (const piece of [row.date, row.valueDate, row.amount, row.balance]) {
+      for (const piece of [row.date, row.valueDate, amount.span, row.balance]) {
         if (!piece) continue
         const split = splitDate(piece)
         if (description.includes(norm(piece)) || !split) description = description.replace(norm(piece), ' ')
@@ -335,7 +422,7 @@ export function applyRowsPlan(lines: PdfLine[], parts: PlanPart[], period: State
         ids,
         date: completeYear(norm(row.date), period),
         valueDate: norm(row.valueDate ?? '') ? completeYear(norm(row.valueDate ?? ''), period) : '',
-        amount: dashes(norm(row.amount)) + (row.direction === 'out' && !HAS_SIGN.test(dashes(row.amount)) ? ' DR' : ''),
+        amount: amount.amount + (row.direction === 'out' && amount.polarity === 'none' ? ' DR' : ''),
         balance: dashes(norm(row.balance ?? '')),
         counterparty,
         description: norm(description),

@@ -7,6 +7,7 @@ import { addMonths, monthOf } from '@shared/month'
 import type { TransferPair, Category, Transaction } from '@shared/types'
 import type { Page } from '../App'
 import { DateInput } from '../components/DateInput'
+import { PromptModal } from '../components/PromptModal'
 import { Button, Card, EmptyState, Field, Input, Modal, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -46,6 +47,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   const [searchText, setSearchText] = useState(initial?.search ?? '')
   const [limit, setLimit] = useState(100)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [asking, setAsking] = useState<'search' | 'rename' | null>(null)
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null)
   const [suggest, setSuggest] = useState<{ pattern: string; categoryId: number; categoryName: string } | null>(null)
   const [transfersOpen, setTransfersOpen] = useState(false)
@@ -158,10 +160,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                 size="sm"
                 variant="ghost"
                 icon={<Bookmark size={14} />}
-                onClick={() => {
-                  const name = window.prompt(t('searches.namePrompt'), '')?.trim()
-                  if (name) void call('searches.save', { name, filter: activeFilter }).then(() => settingsOp.reload(), (e) => toast(errText(e), 'error'))
-                }}
+                onClick={() => setAsking('search')}
               >
                 {t('searches.save')}
               </Button>
@@ -210,10 +209,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
             size="sm"
             variant="ghost"
             icon={<PenLine size={14} />}
-            onClick={() => {
-              const name = window.prompt(t('transactions.renamePrompt', { count: selected.size }), '')?.trim()
-              if (name) void call('transactions.rename', { ids: [...selected], counterpartyName: name }).then(() => { setSelected(new Set()); void page.reload() }, (e) => toast(errText(e), 'error'))
-            }}
+            onClick={() => setAsking('rename')}
           >
             {t('transactions.rename')}
           </Button>
@@ -238,6 +234,25 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
             {t('transactions.delete')}
           </Button>
         </div>
+      )}
+
+      {asking === 'search' && (
+        <PromptModal
+          title={t('searches.save')}
+          label={t('searches.namePrompt')}
+          submitLabel={t('searches.save')}
+          onSubmit={(name) => void call('searches.save', { name, filter: activeFilter }).then(() => settingsOp.reload(), (e) => toast(errText(e), 'error'))}
+          onClose={() => setAsking(null)}
+        />
+      )}
+      {asking === 'rename' && (
+        <PromptModal
+          title={t('transactions.rename')}
+          label={t('transactions.renamePrompt', { count: selected.size })}
+          submitLabel={t('transactions.rename')}
+          onSubmit={(name) => void call('transactions.rename', { ids: [...selected], counterpartyName: name }).then(() => { setSelected(new Set()); void page.reload() }, (e) => toast(errText(e), 'error'))}
+          onClose={() => setAsking(null)}
+        />
       )}
 
       <Card>

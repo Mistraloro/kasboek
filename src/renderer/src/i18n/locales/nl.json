@@ -232,7 +232,9 @@
     "reset": "Herstellen",
     "apply": "Toepassen",
     "fixDate": "Vul de datum in ({{format}})",
+    "fixDateTitle": "Datum aanpassen",
     "fixAmount": "Vul het bedrag in, negatief voor geld uit (bv. -12,50)",
+    "fixAmountTitle": "Bedrag aanpassen",
     "checking": "{{ai}} kijkt na…",
     "checked": "{{ai}} heeft het bestand nagekeken. Zie de notities boven de regels.",
     "checkPrivacy": "Stuurt de regels van dit bestand naar {{aiCompany}}.",
@@ -310,7 +312,7 @@
         "sendsRemote_other": "Hiermee wordt de tekst van {{count}} pagina’s naar {{aiCompany}} gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
         "sendsLocal_one": "Hiermee wordt de tekst van {{count}} pagina alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
         "sendsLocal_other": "Hiermee wordt de tekst van {{count}} pagina’s alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
-        "hiddenTop": "Reken- en kaartnummers worden verborgen, je naam en adres bovenaan blijven weg en de pdf zelf wordt niet verstuurd.",
+        "hiddenTop": "Reken- en kaartnummers worden verborgen, de bovenkant van de eerste pagina (waar meestal je naam en adres staan) blijft weg en de pdf zelf wordt niet verstuurd.",
         "hiddenNoTop": "Reken- en kaartnummers worden verborgen en de pdf zelf wordt niet verstuurd. Kasboek kon niet zien waar de tabel begint, dus de bovenkant van de eerste pagina zit erbij en je naam en adres kunnen in de tekst staan.",
         "verify": "Kasboek leest elk bedrag uit de eigen tekst van de pdf en toont elke rij voordat er iets wordt opgeslagen.",
         "show": "Toon precies wat wordt verstuurd",
@@ -388,7 +390,8 @@
   "modal": {
     "discardAsk": "Wat je hebt ingevuld weggooien?",
     "keepEditing": "Verder bewerken",
-    "discard": "Weggooien"
+    "discard": "Weggooien",
+    "close": "Sluiten"
   },
   "settings": {
     "title": "Instellingen",
@@ -1071,6 +1074,11 @@
     "categoryIntro_one": "Zet de {{count}} betaling aan {{name}} in:",
     "categoryIntro_other": "Zet alle {{count}} betalingen aan {{name}} in:",
     "categoryRule": "Ook voor toekomstige betalingen (maakt een regel)",
+    "categoryPartial": "De betalingen zijn verplaatst, maar de regel kon niet worden opgeslagen.",
+    "ruleReach_one": "De regel past in totaal op {{count}} betaling.",
+    "ruleReach_other": "De regel past in totaal op {{count}} betalingen.",
+    "ruleReachMore_one": "{{count}} daarvan staat niet in deze lijst.",
+    "ruleReachMore_other": "{{count}} daarvan staan niet in deze lijst.",
     "categorySave": "Categorie wijzigen",
     "categoryDone_one": "{{count}} betaling naar de nieuwe categorie verplaatst.",
     "categoryDone_other": "{{count}} betalingen naar de nieuwe categorie verplaatst."

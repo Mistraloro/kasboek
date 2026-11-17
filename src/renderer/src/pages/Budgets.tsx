@@ -6,6 +6,7 @@ import { centsToInput } from '@shared/format'
 import { monthOf } from '@shared/month'
 import type { BudgetRow, RuleField, RuleMatch, RulePreview } from '@shared/types'
 import { Meter } from '../components/charts'
+import { PromptModal } from '../components/PromptModal'
 import { Badge, Button, Card, Field, Input, Modal, MonthNav, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
@@ -146,18 +147,18 @@ function CategoriesModal({ open, onClose }: { open: boolean; onClose: () => void
   const cats = useOp('categories.list')
   const [name, setName] = useState('')
   const [kind, setKind] = useState<'expense' | 'income' | 'transfer'>('expense')
+  const [renaming, setRenaming] = useState<{ id: number; name: string } | null>(null)
   const act = (p: Promise<unknown>): void => void p.then(() => cats.reload(), (e) => toast(errText(e), 'error'))
+  // While a name is typed the list gives way to that dialog, so Escape only closes one of them.
   return (
-    <Modal open={open} title={t('budgets.categories')} onClose={onClose}>
+    <>
+    <Modal open={open && !renaming} title={t('budgets.categories')} onClose={onClose}>
       <div className="flex max-h-80 flex-col overflow-y-auto">
         {(cats.data ?? []).map((c) => (
           <div key={c.id} className="flex items-center gap-2 border-b border-border py-2 text-[13px] last:border-b-0">
             <span className={cx('flex-1', c.archived && 'text-muted line-through')}>{c.name}</span>
             <Badge>{t(`categories.kind.${c.kind}`)}</Badge>
-            <Button size="sm" variant="ghost" onClick={() => {
-              const n = window.prompt(t('budgets.rename'), c.name)
-              if (n && n.trim() && n !== c.name) act(call('categories.update', { id: c.id, name: n.trim() }))
-            }}>{t('budgets.renameShort')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setRenaming(c)}>{t('budgets.renameShort')}</Button>
             <Button size="sm" variant="ghost" onClick={() => act(call('categories.update', { id: c.id, archived: !c.archived }))}>{c.archived ? t('budgets.restore') : t('budgets.archive')}</Button>
           </div>
         ))}
@@ -170,6 +171,17 @@ function CategoriesModal({ open, onClose }: { open: boolean; onClose: () => void
         <Button type="submit" variant="primary" disabled={!name.trim()}>{t('budgets.add')}</Button>
       </form>
     </Modal>
+    {renaming && (
+      <PromptModal
+        title={t('budgets.renameShort')}
+        label={t('budgets.rename')}
+        initialValue={renaming.name}
+        submitLabel={t('budgets.renameShort')}
+        onSubmit={(name) => name !== renaming.name && act(call('categories.update', { id: renaming.id, name }))}
+        onClose={() => setRenaming(null)}
+      />
+    )}
+    </>
   )
 }
 

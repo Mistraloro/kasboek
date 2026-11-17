@@ -40,6 +40,11 @@ export function cancelAssist(sessionId: string): void {
   running.get(sessionId)?.abort('cancelled')
 }
 
+/** Stops every running job (the app locking). */
+export function cancelAllAssists(): void {
+  for (const controller of running.values()) controller.abort('cancelled')
+}
+
 /**
  * Runs `work` as the job of this import (a job already running for it is stopped first) and tells the
  * import screen when it ends, also one that was opened again while the job ran.
@@ -58,9 +63,12 @@ export async function runJob(sessionId: string, kind: AssistState['kind'], work:
     throw error
   } finally {
     if (running.get(sessionId) === controller) running.delete(sessionId)
-    state.running = false
-    state.error = error?.message ?? null
-    broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message, ...(error.details && { details: error.details }) } : null })
+    // A newer job for this import owns the state and the screen now: the old one ends silently.
+    if (states.get(sessionId) === state) {
+      state.running = false
+      state.error = error?.message ?? null
+      broadcast({ type: 'import.checkDone', sessionId, error: error ? { code: error.code, message: error.message, ...(error.details && { details: error.details }) } : null })
+    }
   }
 }
 

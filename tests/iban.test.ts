@@ -22,4 +22,29 @@ describe('IBAN helpers', () => {
     expect(maskNumbers('afschrift 2026-11.pdf')).toBe('afschrift 2026-11.pdf')
     expect(maskNumbers(maskIban('BE68539007547034'))).toBe('BE…7034')
   })
+
+  it('finds an IBAN stuck to letters or digits before it, and one in lower case', () => {
+    expect(findIbans('REFNL91ABNA0417164300')).toEqual(['NL91ABNA0417164300'])
+    expect(findIbans('MANDATEBE68539007547034')).toEqual(['BE68539007547034'])
+    expect(findIbans('REF12NL91ABNA0417164300 end')).toEqual(['NL91ABNA0417164300'])
+    expect(findIbans('naar nl91 abna 0417 1643 00 voor')).toEqual(['NL91ABNA0417164300'])
+    expect(findIbans('betaling be68539007547034')).toEqual(['BE68539007547034'])
+    expect(findIbans('BE68539007547034NL91ABNA0417164300')).toEqual(['BE68539007547034', 'NL91ABNA0417164300'])
+  })
+
+  it('masks glued IBANs everywhere the masking is used', () => {
+    expect(maskIban('REFNL91ABNA0417164300 ok')).toBe('REFNL…4300 ok')
+    expect(maskNumbers('REFNL91ABNA0417164300')).toBe('REFNL…4300')
+    expect(maskNumbers('Mandate 864551BE68539007547034XYZ')).toBe('Mandate 864551BE…7034XYZ')
+    expect(maskIban('nl91abna0417164300')).toBe('NL…4300')
+    expect(maskIban('BE68539007547034NL91ABNA0417164300')).toBe('BE…7034NL…4300')
+  })
+
+  it('leaves ordinary words, references and wrong checksums alone', () => {
+    for (const text of ['REFNL91ABNA0417164301', 'BE68539007547035', 'REFERENCE2026110512345', 'INVOICE12ABCDEFGHIJK', 'PAYMENT AB12CDEFGHIJKLMNOP', 'Albert Heijn Brussel 03/11', 'REFERENTIENUMMER']) {
+      expect(findIbans(text)).toEqual([])
+      expect(maskIban(text)).toBe(text)
+    }
+    expect(maskNumbers('afschrift 2026-11.pdf')).toBe('afschrift 2026-11.pdf')
+  })
 })

@@ -232,7 +232,9 @@
     "reset": "Repor",
     "apply": "Aplicar",
     "fixDate": "Introduza a data ({{format}})",
+    "fixDateTitle": "Corrigir a data",
     "fixAmount": "Introduza o montante, negativo para uma saída (p. ex. -12,50)",
+    "fixAmountTitle": "Corrigir o montante",
     "checking": "{{ai}} está a rever…",
     "checked": "{{ai}} reviu o ficheiro. Veja as notas por cima das linhas.",
     "checkPrivacy": "Envia as linhas deste ficheiro para {{aiCompany}}.",
@@ -310,7 +312,7 @@
         "sendsRemote_other": "Isto envia o texto de {{count}} páginas para {{aiCompany}}: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
         "sendsLocal_one": "Isto envia o texto de {{count}} página apenas para {{ai}} neste computador ou nesta rede: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
         "sendsLocal_other": "Isto envia o texto de {{count}} páginas apenas para {{ai}} neste computador ou nesta rede: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
-        "hiddenTop": "Os números de conta e de cartão ficam ocultos, o seu nome e morada no topo ficam de fora e o próprio PDF não é enviado.",
+        "hiddenTop": "Os números de conta e de cartão ficam ocultos, o topo da primeira página (onde normalmente estão o seu nome e morada) fica de fora e o próprio PDF não é enviado.",
         "hiddenNoTop": "Os números de conta e de cartão ficam ocultos e o próprio PDF não é enviado. O Kasboek não conseguiu saber onde a tabela começa, por isso o topo da primeira página está incluído e o seu nome e morada podem estar no texto.",
         "verify": "O Kasboek lê cada valor do próprio texto do PDF e mostra cada linha antes de guardar o que quer que seja.",
         "show": "Mostrar exatamente o que é enviado",
@@ -388,7 +390,8 @@
   "modal": {
     "discardAsk": "Descartar o que escreveu?",
     "keepEditing": "Continuar a editar",
-    "discard": "Descartar"
+    "discard": "Descartar",
+    "close": "Fechar"
   },
   "settings": {
     "title": "Definições",
@@ -1071,6 +1074,11 @@
     "categoryIntro_one": "Pôr o {{count}} pagamento a {{name}} em:",
     "categoryIntro_other": "Pôr os {{count}} pagamentos a {{name}} em:",
     "categoryRule": "Também para pagamentos futuros (cria uma regra)",
+    "categoryPartial": "Os pagamentos foram movidos, mas não foi possível guardar a regra.",
+    "ruleReach_one": "A regra corresponde a {{count}} pagamento no total.",
+    "ruleReach_other": "A regra corresponde a {{count}} pagamentos no total.",
+    "ruleReachMore_one": "{{count}} deles não está nesta lista.",
+    "ruleReachMore_other": "{{count}} deles não estão nesta lista.",
     "categorySave": "Mudar de categoria",
     "categoryDone_one": "{{count}} pagamento movido para a nova categoria.",
     "categoryDone_other": "{{count}} pagamentos movidos para a nova categoria."

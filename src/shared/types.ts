@@ -173,8 +173,12 @@ export interface Settings {
   permissions: PermissionSettings
   /** The assistant remembers facts and preferences between conversations (this computer only). */
   memoryEnabled: boolean
-  /** The person agreed to send the tips summary to this AI provider (see core/insight-plan.ts for what is sent); null = not asked yet. */
-  aiInsightsConsent: { provider: string; version: number; at: string } | null
+  /**
+   * The person agreed to send the tips summary to this AI provider at this address with this model (see
+   * core/insight-plan.ts for what is sent); null = not asked yet. `baseUrl` (normalised) and `model` are
+   * missing in records written before they were kept: those count as not agreed.
+   */
+  aiInsightsConsent: { provider: string; version: number; at: string; baseUrl?: string; model?: string } | null
 }
 
 /** Something the assistant remembers between conversations. */

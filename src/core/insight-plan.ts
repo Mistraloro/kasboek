@@ -20,6 +20,16 @@ import { parseJsonAnswer } from './assist-plan'
  */
 export const INSIGHTS_CONSENT_VERSION = 1
 
+/** An address as compared for the agreement: the same server written a little differently (case, a trailing slash) is the same. */
+export function consentAddress(baseUrl: string): string {
+  try {
+    const url = new URL(baseUrl.trim())
+    return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}${url.search}`.toLowerCase()
+  } catch {
+    return baseUrl.trim().replace(/\/+$/, '').toLowerCase()
+  }
+}
+
 /** The most tips kept, and the most the assistant may write (one more is allowed, in case one is rejected). */
 export const MAX_TIPS = 5
 /** A name (payee, category, account) is cut to this many characters before it is sent. */

@@ -1,5 +1,5 @@
 import { Copy, KeyRound, Trash2 } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSISTANT_MODELS, type AssistantModel, type Effort } from '@shared/types'
 import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/reasoning'
@@ -14,6 +14,9 @@ import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
 import { Row } from './Settings'
+
+/** A model list that was loaded for a provider is shown again, without asking, when the person comes back to it within this time. */
+const MODELS_KEPT_MS = 60_000
 
 const isAssistantModel = (m: string): m is AssistantModel => (ASSISTANT_MODELS as readonly string[]).includes(m)
 
@@ -55,19 +58,34 @@ export function ClaudeSection() {
       {REASONING_LEVELS.map((x) => <option key={x} value={x}>{t(`assistant.reasoning.${x}`)}</option>)}
     </Select>
   )
-  const clearModels = (): void => {
-    setModels([])
-    setModelsStatus(null)
-  }
+  // The list belongs to a provider (and its address): a list that arrives after switching is not shown.
+  const modelsKey = `${preset.id}|${s?.aiBaseUrl ?? ''}`
+  const modelsKeyRef = useRef(modelsKey)
+  modelsKeyRef.current = modelsKey
+  const modelRequest = useRef(0)
+  const keptModels = useRef(new Map<string, { list: string[]; at: number }>())
+  useEffect(() => {
+    modelRequest.current++
+    setLoadingModels(false)
+    const kept = keptModels.current.get(modelsKey)
+    const fresh = kept && Date.now() - kept.at < MODELS_KEPT_MS
+    setModels(fresh ? kept.list : [])
+    setModelsStatus(fresh ? { count: kept.list.length } : null)
+  }, [modelsKey])
+  // Reload always asks the provider.
   const loadModels = (): void => {
+    const asked = ++modelRequest.current
+    const key = modelsKeyRef.current
     setLoadingModels(true)
     void call('assistant.models', {})
       .then((list) => {
+        if (asked !== modelRequest.current) return
+        keptModels.current.set(key, { list, at: Date.now() })
         setModels(list)
         setModelsStatus({ count: list.length })
       })
-      .catch((e) => setModelsStatus({ error: errText(e) }))
-      .finally(() => setLoadingModels(false))
+      .catch((e) => asked === modelRequest.current && setModelsStatus({ error: errText(e) }))
+      .finally(() => asked === modelRequest.current && setLoadingModels(false))
   }
   const warn = (g: 'key' | 'url' | 'model') => gap === g && <p className="mt-1 text-warning">{t(`ai.gap.${g}`, { name: preset.name })}</p>
   // The state of the model list, in the words of this provider.
@@ -100,7 +118,6 @@ export function ClaudeSection() {
             value={s.aiProvider}
             onChange={(e) => {
               if (e.target.value === ADD_PROVIDER) return setAddOpen(true)
-              clearModels()
               configure({ aiProvider: e.target.value as ProviderId })
             }}
           >
@@ -171,7 +188,6 @@ export function ClaudeSection() {
         onClose={() => setAddOpen(false)}
         onAdded={() => {
           setAddOpen(false)
-          clearModels()
           void settings.reload()
         }}
       />
@@ -183,7 +199,6 @@ export function ClaudeSection() {
             variant="danger"
             onClick={() => {
               setRemoveOpen(false)
-              clearModels()
               void call('assistant.removeProvider', { id: preset.id }).then(() => settings.reload(), (e) => toast(errText(e), 'error'))
             }}
           >

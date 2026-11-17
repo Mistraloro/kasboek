@@ -50,7 +50,23 @@ interface Row {
   account_name: string
 }
 
+/**
+ * The last result per database, valid while nothing in it changed (SQLite counts the rows this connection
+ * changed, so a hidden mark shows at once) and for the same day. Scanning 430 days of payments takes a
+ * moment on a big file, and one refresh of the Overview asks several times. Treat the result as read-only.
+ */
+const kept = new WeakMap<Db, { key: string; summary: RecurringSummary }>()
+
 export function findRecurring(db: Db, today = localToday()): RecurringSummary {
+  const key = `${today}|${(db.prepare('SELECT total_changes() AS n').get() as { n: number }).n}`
+  const hit = kept.get(db)
+  if (hit?.key === key) return hit.summary
+  const summary = scanRecurring(db, today)
+  kept.set(db, { key, summary })
+  return summary
+}
+
+function scanRecurring(db: Db, today: string): RecurringSummary {
   const since = addDays(today, -430)
   const rows = db
     .prepare(

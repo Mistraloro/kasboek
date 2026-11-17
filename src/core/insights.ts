@@ -54,13 +54,23 @@ const addDays = (date: string, days: number): string => {
   return d.toISOString().slice(0, 10)
 }
 
+interface Payment {
+  id: number
+  booking_date: string
+  amount_cents: number
+}
+
+/** The payments of the last days, by id: read once for all fixed costs instead of once for each. */
+function recentPayments(db: Db, today: string): Map<number, Payment> {
+  const rows = db.prepare('SELECT id, booking_date, amount_cents FROM transactions WHERE booking_date >= ? AND booking_date <= ? ORDER BY booking_date, id').all(addDays(today, -INSIGHT_LIMITS.chargedTwiceDays), today) as Payment[]
+  return new Map(rows.map((r) => [r.id, r]))
+}
+
 /** The latest calendar month in the last days with two payments near the usual amount of a monthly fixed cost. */
-function chargedTwice(db: Db, item: RecurringItem, today: string): { month: string; list: { id: number; booking_date: string; amount_cents: number }[]; last: { booking_date: string; amount_cents: number } } | null {
+function chargedTwice(recent: Map<number, Payment>, item: RecurringItem): { month: string; list: Payment[]; last: Payment } | null {
   const usual = Math.abs(item.typicalCents)
-  const rows = db
-    .prepare(`SELECT id, booking_date, amount_cents FROM transactions WHERE id IN (${item.transactionIds.map(() => '?').join(',')}) AND booking_date >= ? AND booking_date <= ? ORDER BY booking_date, id`)
-    .all(...item.transactionIds, addDays(today, -INSIGHT_LIMITS.chargedTwiceDays), today) as { id: number; booking_date: string; amount_cents: number }[]
-  const byMonth = new Map<string, typeof rows>()
+  const rows = item.transactionIds.flatMap((id) => recent.get(id) ?? []).sort((a, b) => a.booking_date.localeCompare(b.booking_date) || a.id - b.id)
+  const byMonth = new Map<string, Payment[]>()
   for (const r of rows) {
     if (Math.abs(Math.abs(r.amount_cents) - usual) > usual * INSIGHT_LIMITS.chargedTwiceShare) continue
     const m = r.booking_date.slice(0, 7)
@@ -117,6 +127,7 @@ function draftFacts(db: Db, month: string, today: string): Draft[] {
   // Fixed costs and the balance warning are about now: only for the month that is running.
   if (month === currentMonth) {
     const costs = findRecurring(db, today).items.filter((i) => i.direction === 'out')
+    const recent = recentPayments(db, today)
     const currency = (i: RecurringItem): string => currencyOf.get(i.accountId) ?? main
     const weightOf = (i: RecurringItem, cents: number): number => inMain(Math.abs(cents), currency(i)) ?? 0
     const amounts = costs.flatMap((i) => inMain(Math.abs(i.typicalCents), currency(i)) ?? [])
@@ -134,7 +145,7 @@ function draftFacts(db: Db, month: string, today: string): Draft[] {
       if (inDays >= 0 && inDays <= L.upcomingDays && (i.frequency === 'quarterly' || i.frequency === 'yearly' || big))
         add('upcoming', `${i.key}:${i.nextDate}`, { name: { text: i.name }, amount: { money: Math.abs(i.typicalCents), currency: cur }, date: { date: i.nextDate } }, weightOf(i, i.typicalCents), base)
       if (i.frequency === 'monthly') {
-        const twice = chargedTwice(db, i, today)
+        const twice = chargedTwice(recent, i)
         if (twice) add('charged_twice', `${i.key}:${twice.month}`, { name: { text: i.name }, amount: { money: Math.abs(twice.last.amount_cents), currency: cur }, count: { count: twice.list.length }, date: { date: twice.last.booking_date } }, weightOf(i, twice.last.amount_cents), { recurringKey: i.key, transactionIds: twice.list.map((r) => r.id) })
       }
     }

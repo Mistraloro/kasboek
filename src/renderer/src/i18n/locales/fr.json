@@ -232,7 +232,9 @@
     "reset": "Réinitialiser",
     "apply": "Appliquer",
     "fixDate": "Saisissez la date ({{format}})",
+    "fixDateTitle": "Corriger la date",
     "fixAmount": "Saisissez le montant, négatif pour une sortie (p. ex. -12,50)",
+    "fixAmountTitle": "Corriger le montant",
     "checking": "{{ai}} vérifie…",
     "checked": "{{ai}} a vérifié le fichier. Voir les notes au-dessus des lignes.",
     "checkPrivacy": "Envoie les lignes de ce fichier à {{aiCompany}}.",
@@ -310,7 +312,7 @@
         "sendsRemote_other": "Cela envoie le texte de {{count}} pages à {{aiCompany}} : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
         "sendsLocal_one": "Cela envoie le texte de {{count}} page uniquement à {{ai}} sur cet ordinateur ou ce réseau : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
         "sendsLocal_other": "Cela envoie le texte de {{count}} pages uniquement à {{ai}} sur cet ordinateur ou ce réseau : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
-        "hiddenTop": "Les numéros de compte et de carte sont masqués, votre nom et votre adresse en haut de page ne sont pas inclus, et le PDF lui-même n’est pas envoyé.",
+        "hiddenTop": "Les numéros de compte et de carte sont masqués, le haut de la première page (où figurent en général votre nom et votre adresse) n’est pas inclus, et le PDF lui-même n’est pas envoyé.",
         "hiddenNoTop": "Les numéros de compte et de carte sont masqués et le PDF lui-même n’est pas envoyé. Kasboek n’a pas pu repérer où commence le tableau : le haut de la première page est donc inclus et votre nom et votre adresse peuvent figurer dans le texte.",
         "verify": "Kasboek lit chaque montant dans le texte même du PDF et affiche chaque ligne avant que quoi que ce soit soit enregistré.",
         "show": "Afficher exactement ce qui est envoyé",
@@ -388,7 +390,8 @@
   "modal": {
     "discardAsk": "Abandonner ce que vous avez saisi ?",
     "keepEditing": "Continuer à modifier",
-    "discard": "Abandonner"
+    "discard": "Abandonner",
+    "close": "Fermer"
   },
   "settings": {
     "title": "Réglages",
@@ -1071,6 +1074,11 @@
     "categoryIntro_one": "Mettre le {{count}} paiement à {{name}} dans :",
     "categoryIntro_other": "Mettre les {{count}} paiements à {{name}} dans :",
     "categoryRule": "Aussi pour les paiements futurs (ajoute une règle)",
+    "categoryPartial": "Les paiements ont été déplacés, mais la règle n’a pas pu être enregistrée.",
+    "ruleReach_one": "La règle correspond à {{count}} paiement au total.",
+    "ruleReach_other": "La règle correspond à {{count}} paiements au total.",
+    "ruleReachMore_one": "{{count}} d’entre eux ne figure pas dans cette liste.",
+    "ruleReachMore_other": "{{count}} d’entre eux ne figurent pas dans cette liste.",
     "categorySave": "Changer de catégorie",
     "categoryDone_one": "{{count}} paiement déplacé vers la nouvelle catégorie.",
     "categoryDone_other": "{{count}} paiements déplacés vers la nouvelle catégorie."

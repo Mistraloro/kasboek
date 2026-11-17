@@ -232,7 +232,9 @@
     "reset": "Reset",
     "apply": "Apply",
     "fixDate": "Enter the date ({{format}})",
+    "fixDateTitle": "Fix the date",
     "fixAmount": "Enter the amount, negative for money out (e.g. -12,50)",
+    "fixAmountTitle": "Fix the amount",
     "checking": "{{ai}} is checking…",
     "checked": "{{ai}} checked the file. See the notes above the rows.",
     "checkPrivacy": "Sends the rows of this file to {{aiCompany}}.",
@@ -310,7 +312,7 @@
         "sendsRemote_other": "This sends the text of {{count}} pages to {{aiCompany}}: dates, amounts, descriptions and the names of who you paid or who paid you.",
         "sendsLocal_one": "This sends the text of {{count}} page only to {{ai}} on this computer or network: dates, amounts, descriptions and the names of who you paid or who paid you.",
         "sendsLocal_other": "This sends the text of {{count}} pages only to {{ai}} on this computer or network: dates, amounts, descriptions and the names of who you paid or who paid you.",
-        "hiddenTop": "Account and card numbers are hidden, your name and address at the top are left out, and the PDF itself is not sent.",
+        "hiddenTop": "Account and card numbers are hidden, the top of the first page (where your name and address usually are) is left out, and the PDF itself is not sent.",
         "hiddenNoTop": "Account and card numbers are hidden and the PDF itself is not sent. Kasboek couldn’t tell where the table starts, so the top of the first page is included and your name and address may be in the text.",
         "verify": "Kasboek reads every amount from the PDF’s own text and shows every row before anything is saved.",
         "show": "Show exactly what is sent",
@@ -388,7 +390,8 @@
   "modal": {
     "discardAsk": "Discard what you typed?",
     "keepEditing": "Keep editing",
-    "discard": "Discard"
+    "discard": "Discard",
+    "close": "Close"
   },
   "settings": {
     "title": "Settings",
@@ -1071,6 +1074,11 @@
     "categoryIntro_one": "Put all {{count}} payment to {{name}} in:",
     "categoryIntro_other": "Put all {{count}} payments to {{name}} in:",
     "categoryRule": "Also for future payments (adds a rule)",
+    "categoryPartial": "The payments were moved, but the rule could not be saved.",
+    "ruleReach_one": "The rule matches {{count}} payment in all.",
+    "ruleReach_other": "The rule matches {{count}} payments in all.",
+    "ruleReachMore_one": "{{count}} of them is not in this list.",
+    "ruleReachMore_other": "{{count}} of them are not in this list.",
     "categorySave": "Change category",
     "categoryDone_one": "{{count}} payment moved to the new category.",
     "categoryDone_other": "{{count}} payments moved to the new category."

@@ -21,7 +21,7 @@ if (process.arch !== 'x64' && process.arch !== 'arm64') {
 // `--mcp` was the 0.9.0 way to start the MCP server. It can't work on Windows (a windowed app has no
 // stdin), so it now points to the kasboek-mcp helper instead of starting a second copy of Kasboek.
 if (MCP_MODE) {
-  process.stderr.write('Kasboek: "--mcp" is no longer supported. In your MCP config, use the kasboek-mcp program that is installed next to Kasboek (see Kasboek → Settings → Claude).\n')
+  process.stderr.write('Kasboek: "--mcp" is no longer supported. In your MCP config, use the kasboek-mcp program that is installed next to Kasboek (see Kasboek → Settings → Assistant).\n')
   app.exit(2)
 }
 // One running copy only: two processes must never write the same database.

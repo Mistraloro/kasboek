@@ -290,7 +290,7 @@ export function Modal({
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
           <h2 className="font-semibold">{title}</h2>
           {dismissible && (
-            <button type="button" aria-label="Close" onClick={() => request('button')} className="rounded-md p-1 text-muted hover:bg-surface-2 hover:text-text">
+            <button type="button" aria-label={t('modal.close')} onClick={() => request('button')} className="rounded-md p-1 text-muted hover:bg-surface-2 hover:text-text">
               <X size={16} />
             </button>
           )}

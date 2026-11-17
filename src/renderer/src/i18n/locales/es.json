@@ -232,7 +232,9 @@
     "reset": "Restablecer",
     "apply": "Aplicar",
     "fixDate": "Escribe la fecha ({{format}})",
+    "fixDateTitle": "Corregir la fecha",
     "fixAmount": "Escribe el importe, negativo para una salida (p. ej. -12,50)",
+    "fixAmountTitle": "Corregir el importe",
     "checking": "{{ai}} está revisando…",
     "checked": "{{ai}} ha revisado el archivo. Mira las notas encima de las filas.",
     "checkPrivacy": "Envía las filas de este archivo a {{aiCompany}}.",
@@ -310,7 +312,7 @@
         "sendsRemote_other": "Esto envía el texto de {{count}} páginas a {{aiCompany}}: fechas, importes, descripciones y los nombres de a quién pagaste o quién te pagó.",
         "sendsLocal_one": "Esto envía el texto de {{count}} página solo a {{ai}} en este ordenador o esta red: fechas, importes, descripciones y los nombres de a quién pagaste o quién te pagó.",
         "sendsLocal_other": "Esto envía el texto de {{count}} páginas solo a {{ai}} en este ordenador o esta red: fechas, importes, descripciones y los nombres de a quién pagaste o quién te pagó.",
-        "hiddenTop": "Los números de cuenta y de tarjeta se ocultan, tu nombre y dirección de la parte superior se dejan fuera y el PDF en sí no se envía.",
+        "hiddenTop": "Los números de cuenta y de tarjeta se ocultan, la parte superior de la primera página (donde suelen estar tu nombre y dirección) se deja fuera y el PDF en sí no se envía.",
         "hiddenNoTop": "Los números de cuenta y de tarjeta se ocultan y el PDF en sí no se envía. Kasboek no ha podido saber dónde empieza la tabla, así que se incluye la parte superior de la primera página y tu nombre y dirección pueden aparecer en el texto.",
         "verify": "Kasboek lee cada importe del propio texto del PDF y muestra cada fila antes de guardar nada.",
         "show": "Mostrar exactamente lo que se envía",
@@ -388,7 +390,8 @@
   "modal": {
     "discardAsk": "¿Descartar lo que has escrito?",
     "keepEditing": "Seguir editando",
-    "discard": "Descartar"
+    "discard": "Descartar",
+    "close": "Cerrar"
   },
   "settings": {
     "title": "Ajustes",
@@ -1071,6 +1074,11 @@
     "categoryIntro_one": "Poner el {{count}} pago a {{name}} en:",
     "categoryIntro_other": "Poner los {{count}} pagos a {{name}} en:",
     "categoryRule": "También para pagos futuros (añade una regla)",
+    "categoryPartial": "Los pagos se han movido, pero no se ha podido guardar la regla.",
+    "ruleReach_one": "La regla coincide con {{count}} pago en total.",
+    "ruleReach_other": "La regla coincide con {{count}} pagos en total.",
+    "ruleReachMore_one": "{{count}} de ellos no está en esta lista.",
+    "ruleReachMore_other": "{{count}} de ellos no están en esta lista.",
     "categorySave": "Cambiar categoría",
     "categoryDone_one": "{{count}} pago movido a la nueva categoría.",
     "categoryDone_other": "{{count}} pagos movidos a la nueva categoría."

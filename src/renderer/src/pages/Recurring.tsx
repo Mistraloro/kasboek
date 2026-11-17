@@ -1,7 +1,7 @@
 import { MoreHorizontal, Repeat } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { RecurringItem } from '@shared/types'
+import type { RecurringItem, RulePreview } from '@shared/types'
 import type { Page } from '../App'
 import { Badge, Button, Card, CardHeader, EmptyState, Modal, PageHeader } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -71,23 +71,38 @@ function RowMenu({ label, items }: { label: string; items: { label: string; onSe
 }
 
 /** Puts all payments of one fixed cost in a category, and optionally adds a rule for later ones. */
-function CategoryDialog({ item, onClose, onDone }: { item: RecurringItem; onClose: () => void; onDone: () => void }) {
+function CategoryDialog({ item, onClose, onChanged }: { item: RecurringItem; onClose: () => void; onChanged: () => void }) {
   const { t } = useTranslation()
   const toast = useToast()
   const categories = useOp('categories.list')
   const [categoryId, setCategoryId] = useState<number | null>(item.categoryId)
   const [rule, setRule] = useState(false)
   const [busy, setBusy] = useState(false)
+  // What the rule would match, shown before it is made: the payee text can also fit other payments.
+  const [reach, setReach] = useState<RulePreview | null>(null)
+  useEffect(() => {
+    if (!rule || categoryId === null) return setReach(null)
+    let current = true
+    void call('rules.preview', { field: 'counterparty', pattern: item.name, categoryId }).then((r) => current && setReach(r), () => current && setReach(null))
+    return () => {
+      current = false
+    }
+  }, [rule, categoryId, item.name])
   const save = async (): Promise<void> => {
     setBusy(true)
+    let moved = false
     try {
       await call('transactions.categorize', { ids: item.transactionIds, categoryId })
+      moved = true
       if (rule && categoryId !== null) await call('rules.create', { field: 'counterparty', pattern: item.name, categoryId, applyToExisting: true })
-      onDone()
+      toast(t('recurring.categoryDone', { count: item.transactionIds.length }))
       onClose()
     } catch (e) {
-      toast(errText(e), 'error')
+      toast(moved ? `${t('recurring.categoryPartial')} ${errText(e)}` : errText(e), 'error')
       setBusy(false)
+    } finally {
+      // Also after a failed rule: the payments were moved, so the list is out of date.
+      if (moved) onChanged()
     }
   }
   return (
@@ -99,6 +114,12 @@ function CategoryDialog({ item, onClose, onDone }: { item: RecurringItem; onClos
           <input type="checkbox" className="accent-[var(--accent)]" checked={rule && categoryId !== null} disabled={categoryId === null} onChange={(e) => setRule(e.target.checked)} />
           {t('recurring.categoryRule')}
         </label>
+        {rule && categoryId !== null && reach && (
+          <p className="text-xs text-muted">
+            {t('recurring.ruleReach', { count: reach.matches })}
+            {reach.matches > item.transactionIds.length && ` ${t('recurring.ruleReachMore', { count: reach.matches - item.transactionIds.length })}`}
+          </p>
+        )}
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>{t('settings.cancel')}</Button>
           <Button variant="primary" disabled={busy || categories.data === null || categoryId === item.categoryId} onClick={() => void save()}>
@@ -186,7 +207,8 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
       </Card>
     )
   }
-  const hidden = r?.hidden ?? []
+  // An item just hidden has its "no longer counted" line above for a few seconds: not listed here as well.
+  const hidden = (r?.hidden ?? []).filter((i) => !justHidden.some((h) => h.key === i.key))
   return (
     <>
       <PageHeader title={t('recurring.title')} subtitle={`${t('recurring.subtitle')} ${t('recurring.hint')}`} />
@@ -231,7 +253,7 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
           )}
         </Card>
       )}
-      {recategorize && <CategoryDialog item={recategorize} onClose={() => setRecategorize(null)} onDone={() => { toast(t('recurring.categoryDone', { count: recategorize.transactionIds.length })); void data.reload() }} />}
+      {recategorize && <CategoryDialog item={recategorize} onClose={() => setRecategorize(null)} onChanged={() => void data.reload()} />}
     </>
   )
 }

@@ -38,6 +38,7 @@ import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { exportCsv, exportPdf } from './export'
 import { openPdfSession } from './pdf/open'
 import { readPdf } from './pdf/read'
+import { createReadSlot } from './pdf/handle'
 import { helperPath } from './mcp/channel'
 import { checkForUpdate, downloadUpdate, installUpdate, openReleasePage, updateStatus } from './update'
 import * as mcpSetup from './mcp/setup'
@@ -64,7 +65,12 @@ async function openDialog(opts: Electron.OpenDialogOptions): Promise<string | nu
 }
 
 /** The PDF read in progress, so the page can stop it. */
-let pdfRead: AbortController | null = null
+const pdfRead = createReadSlot()
+
+/** Stops the PDF read in progress, if any (the app locking). */
+export function cancelPdfRead(): void {
+  pdfRead.abort()
+}
 
 const kasboekFilter = [{ name: 'Kasboek export', extensions: [TRANSFER_EXTENSION] }]
 
@@ -403,8 +409,8 @@ const desktopOps: OpTable = {
     mutates: false,
     assistant: false,
     handler: async ({ db }, i) => {
-      const controller = new AbortController()
-      pdfRead = controller
+      const controller = pdfRead.claim()
+      if (!controller) throw new AppError('import.pdf_busy', 'Another PDF is still being read. Wait a moment and try again.')
       try {
         return await openPdfSession(db, {
           fileName: i.fileName,
@@ -413,7 +419,7 @@ const desktopOps: OpTable = {
           read: (bytes) => readPdf(bytes, { signal: controller.signal, onPage: (page, pages) => session.broadcast({ type: 'import.pdfProgress', page, pages }) })
         })
       } finally {
-        if (pdfRead === controller) pdfRead = null
+        pdfRead.release(controller)
       }
     }
   },
@@ -421,7 +427,7 @@ const desktopOps: OpTable = {
     mutates: false,
     assistant: false,
     handler: () => {
-      pdfRead?.abort()
+      pdfRead.abort()
       return { ok: true as const }
     }
   },

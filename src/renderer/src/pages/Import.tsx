@@ -15,6 +15,7 @@ import { formatDate, formatDateTime } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { CategorySelect } from './Transactions'
+import { PromptModal } from '../components/PromptModal'
 import { useAssistant } from '../components/AssistantPanel'
 import { ImportBalanceCheck } from '../components/BankBalance'
 
@@ -291,6 +292,8 @@ function PreviewView({
   const noTable = pdf?.tableFound === false
   const [mappingOpen, setMappingOpen] = useState(!preview.mapping && !noTable)
   const [consentOpen, setConsentOpen] = useState(false)
+  // The row whose unreadable date or amount is being typed in.
+  const [fixing, setFixing] = useState<{ index: number; field: 'date' | 'amount' } | null>(null)
   const [saveProfile, setSaveProfile] = useState(true)
   const [busy, setBusy] = useState(false)
   const s = preview.stats
@@ -483,12 +486,7 @@ function PreviewView({
                     </td>
                     <td className="num px-2 py-2 text-[13px] whitespace-nowrap">
                       {r.bookingDate ? formatDate(r.bookingDate, fmt) : (
-                        <button type="button" className="font-medium text-negative underline decoration-dotted" onClick={() => {
-                          const v = window.prompt(t('import.fixDate', { format: datePlaceholder(fmt.formats) }), '')
-                          const iso = v ? parseTypedDate(v, fmt.formats, fmt.language) : null
-                          if (iso) update([{ index: r.index, bookingDate: iso }])
-                          else if (v) toast(t('dateInput.invalid', { format: datePlaceholder(fmt.formats), example: dateExample(fmt.formats, fmt.language) }), 'error')
-                        }}>{t('import.badDate')}</button>
+                        <button type="button" className="font-medium text-negative underline decoration-dotted" onClick={() => setFixing({ index: r.index, field: 'date' })}>{t('import.badDate')}</button>
                       )}
                     </td>
                     <td className="max-w-0 px-2 py-2">
@@ -503,12 +501,7 @@ function PreviewView({
                     </td>
                     <td className={cx('num px-2 py-2 text-right font-medium whitespace-nowrap', r.status === 'ready' && (r.amountCents ?? 0) > 0 && 'text-accent', r.status === 'ready' && (r.amountCents ?? 0) <= 0 && 'text-text')}>
                       {r.amountCents === null ? (
-                        <button type="button" className="text-negative underline decoration-dotted" onClick={() => {
-                          const v = window.prompt(t('import.fixAmount'), '')
-                          const c = v ? parseAmount(v, 'auto', fmt.formats.decimal) : null
-                          if (c) update([{ index: r.index, amountCents: c }])
-                          else if (v) toast(t('budgets.invalid'), 'error')
-                        }}>{t('import.badAmount')}</button>
+                        <button type="button" className="text-negative underline decoration-dotted" onClick={() => setFixing({ index: r.index, field: 'amount' })}>{t('import.badAmount')}</button>
                       ) : money(r.amountCents, preview.currency)}
                     </td>
                     <td className="py-2 pr-5 pl-2" title={r.issues.map((i) => t(`import.issue.${i}`)).join(' · ')}>
@@ -522,6 +515,26 @@ function PreviewView({
           </Card>
           {rows.length > limit && <div className="mt-4 flex justify-center"><Button onClick={() => setLimit((l) => l + 500)}>{t('transactions.more')}</Button></div>}
         </>
+      )}
+      {fixing?.field === 'date' && (
+        <PromptModal
+          title={t('import.fixDateTitle')}
+          label={t('import.fixDate', { format: datePlaceholder(fmt.formats) })}
+          submitLabel={t('settings.save')}
+          validate={(text) => (parseTypedDate(text, fmt.formats, fmt.language) ? null : t('dateInput.invalid', { format: datePlaceholder(fmt.formats), example: dateExample(fmt.formats, fmt.language) }))}
+          onSubmit={(text) => update([{ index: fixing.index, bookingDate: parseTypedDate(text, fmt.formats, fmt.language)! }])}
+          onClose={() => setFixing(null)}
+        />
+      )}
+      {fixing?.field === 'amount' && (
+        <PromptModal
+          title={t('import.fixAmountTitle')}
+          label={t('import.fixAmount')}
+          submitLabel={t('settings.save')}
+          validate={(text) => (parseAmount(text, 'auto', fmt.formats.decimal) ? null : t('budgets.invalid'))}
+          onSubmit={(text) => update([{ index: fixing.index, amountCents: parseAmount(text, 'auto', fmt.formats.decimal)! }])}
+          onClose={() => setFixing(null)}
+        />
       )}
       <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />
       {!noTable && <MappingModal key={JSON.stringify(preview.mapping)} open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />}

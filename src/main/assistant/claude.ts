@@ -14,7 +14,7 @@ const baseURL = (): string | undefined => (app.isPackaged ? undefined : process.
 
 export function client(db: Db): Anthropic {
   const apiKey = getSecret(db, API_KEY)
-  if (!apiKey) throw new AppError('assistant.no_key', 'Add your Anthropic API key in Settings → Claude first.')
+  if (!apiKey) throw new AppError('assistant.no_key', 'Add your Anthropic API key in Settings → Assistant first.')
   return new Anthropic({ apiKey, baseURL: baseURL(), maxRetries: 2, timeout: 10 * 60 * 1000 })
 }
 
@@ -43,8 +43,8 @@ export function modelParams(model: string, level: Effort) {
 
 /** Plain-language errors for the person. */
 export function explainError(err: unknown): string {
-  if (err instanceof Anthropic.AuthenticationError) return 'The Anthropic API key was not accepted. Check it in Settings → Claude.'
-  if (err instanceof Anthropic.PermissionDeniedError) return 'This API key may not use that model. Pick another model in Settings → Claude.'
+  if (err instanceof Anthropic.AuthenticationError) return 'The Anthropic API key was not accepted. Check it in Settings → Assistant.'
+  if (err instanceof Anthropic.PermissionDeniedError) return 'This API key may not use that model. Pick another model in Settings → Assistant.'
   if (err instanceof Anthropic.RateLimitError) return 'Anthropic is rate-limiting this key right now. Try again in a minute.'
   if (err instanceof Anthropic.APIConnectionError) return 'Can’t reach Anthropic. Check your internet connection.'
   if (err instanceof Anthropic.BadRequestError) return `The request was rejected: ${err.message}`

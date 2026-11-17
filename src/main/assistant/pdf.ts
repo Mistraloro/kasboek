@@ -11,13 +11,13 @@ import {
   MAX_AI_PAGES,
   PdfRowsPlan,
   applyRowsPlan,
+  firstLineSent,
   maskedLines,
   pagesOf,
   parsePdfPlan,
   partText,
   splitPart,
   splitParts,
-  tableStart,
   type MaskedLine,
   type PdfPart
 } from '@core/pdf-plan'
@@ -59,7 +59,7 @@ const describePart = (part: PdfPart): string => `lines ${part.own[0]!.id} to ${p
 function prepare(sessionId: string): { data: NonNullable<ReturnType<typeof imp.pdfData>>; masked: MaskedLine[]; preambleLeftOut: boolean } {
   const data = imp.pdfData(sessionId)
   if (!data) throw new AppError('assistant.pdf_not_pdf', 'This import is not a PDF statement.')
-  const start = tableStart(data.lines)
+  const start = firstLineSent(data.lines)
   const masked = maskedLines(data.lines, { skipBefore: start })
   if (!masked.length) throw new AppError('assistant.pdf_empty', 'This PDF has no text to read.')
   const pages = pagesOf(masked)
