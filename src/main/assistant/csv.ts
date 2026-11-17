@@ -451,7 +451,6 @@ async function check(db: Db, sessionId: string, signal: AbortSignal, state: Assi
   }
   const provider = activeProvider(db)
   requireConfigured(provider)
-  const name = provider.preset.assistantName
   const parts = batches(groups, BATCH_GROUPS, flaggedRows(preview).map((r) => r.index)).map((b, _i, all) => ({ ...b, of: all.length }))
   // Shown in the assistant panel too: the reasoning as it comes, and the notes at the end.
   const activity = checkActivity(preview.fileName)
