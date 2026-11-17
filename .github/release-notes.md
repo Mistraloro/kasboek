@@ -1,6 +1,6 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.19 (0.19.0)
+## What’s new in 0.20 (0.20.0)
 
 **New**
 - **Import bank statements as PDF.** Drop or choose a PDF on the Import page. Kasboek reads it on your computer (nothing is sent anywhere), finds the transactions table and shows the same preview as a CSV. It checks that the amounts add up to the closing balance of the statement, and for credit card statements it offers a one-click “Flip signs” hint. Statements printed as blocks and turned landscape pages are supported. Scanned PDFs (photos without text) and password-protected PDFs are not supported; Kasboek tells you so.
@@ -10,12 +10,16 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **Fixed costs can be corrected.** On the Fixed costs page every row has a menu: “Not a fixed cost” (with Undo, and a Hidden list to count it again), “Show payments” and “Change category” (optionally with a rule for future payments).
 - **Clearer permission names for the assistant:** Ask first, Smart, Full access and Custom, each with a short description of what it does and what still always asks.
 - **The assistant’s thinking is collapsed** by default, follows the newest text when you open it, and no longer covers the chat.
+- **“Check with your assistant” on imports asks first**, like the PDF reading and the tips: you see exactly what is sent (payee and description text, your rules and the assistant’s remembered notes, all with account and card numbers hidden), and your agreement is remembered per provider, address and model.
+- **Safer AI reading of PDFs:** the sign of an amount (minus, brackets, CR, DR) is always taken from the statement’s own text, so a payment can no longer be read as income; IBANs stuck to other text are hidden too; and while the assistant reads, editing rows is switched off.
 - **A hold-to-show eye** in every password field.
 
 **Fixes**
 - Clicking next to a dialog no longer closes it and loses what you typed. Escape or the close button asks first in add/edit account, goals, bank balance and net worth value.
 - Dates you type now follow your date format setting everywhere, and hints show today’s date in your format.
 - “Install and restart” shows “Preparing the update…” right away instead of looking frozen.
+- Locking Kasboek now stops any running assistant job. Actions that opened an input box that did not work on Windows (fix a date, rename a category, save a search) now use proper dialogs. Errors from the assistant are translated and no longer show a raw placeholder.
+- Syncing between versions: changes for a table an older Kasboek does not know yet are kept and applied once it is updated (update all your computers).
 - Reviews of long imports (and PDF reading) no longer fail with “too large for one answer”: a part whose answer is cut off is split and retried, and a part that still fails keeps the others.
 
 PDF import, the assistant’s PDF reading and the tips have so far been tried on invented data (and two real PDF layouts) only. Please report anything that doesn’t read or look right.
