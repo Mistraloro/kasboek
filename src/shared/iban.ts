@@ -77,5 +77,10 @@ export function maskIban(text: string): string {
 /** The valid IBANs in a text, without spaces and in order of appearance, each once. */
 export const findIbans = (text: string): string[] => [...new Set(scan(text).map((h) => h.iban))]
 
-/** IBANs as maskIban shows them, and runs of 13 or more digits (card or account numbers) by their last four. */
-export const maskNumbers = (text: string): string => maskIban(text).replace(/\d(?:[ -]?\d){12,}/g, (m) => `…${m.replace(/\D/g, '').slice(-4)}`)
+const DATE = '(?:\\d{2}-\\d{2}-\\d{4}|\\d{4}-\\d{2}-\\d{2})'
+/** Only dates (dd-mm-yyyy or yyyy-mm-dd) side by side: 13 or more digits, but not a number. */
+const DATES_ONLY = new RegExp(`^${DATE}(?:[ -]${DATE})*$`)
+
+/** IBANs as maskIban shows them, and runs of 13 or more digits (card or account numbers) by their last four. Dates side by side stay. */
+export const maskNumbers = (text: string): string =>
+  maskIban(text).replace(/\d(?:[ -]?\d){12,}/g, (m) => (DATES_ONLY.test(m) ? m : `…${m.replace(/\D/g, '').slice(-4)}`))
