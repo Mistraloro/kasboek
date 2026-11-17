@@ -1,30 +1,52 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import type { ErrorProvider } from '@shared/error-text'
-import { FALLBACKS, LANGUAGE_CODES } from '@shared/languages'
-import de from './locales/de.json'
+import { FALLBACKS, LANGUAGE_CODES, type LanguageCode } from '@shared/languages'
 import en from './locales/en.json'
-import es from './locales/es.json'
-import es419 from './locales/es-419.json'
-import fr from './locales/fr.json'
-import nl from './locales/nl.json'
-import ptBR from './locales/pt-BR.json'
-import ptPT from './locales/pt-PT.json'
 
 export { LANGUAGES } from '@shared/languages'
+
+/** Every language except English (which is always loaded) is its own chunk, fetched when first needed. */
+const loaders: Record<Exclude<LanguageCode, 'en'>, () => Promise<{ default: object }>> = {
+  nl: () => import('./locales/nl.json'),
+  fr: () => import('./locales/fr.json'),
+  de: () => import('./locales/de.json'),
+  es: () => import('./locales/es.json'),
+  'es-419': () => import('./locales/es-419.json'),
+  'pt-PT': () => import('./locales/pt-PT.json'),
+  'pt-BR': () => import('./locales/pt-BR.json')
+}
 
 /**
  * UI languages. Regional variants (es-419, pt-BR) hold only the texts that differ and fall back
  * to their base language, then English. Keys missing from a translation fall back to English.
  */
-const resources = { en, nl, fr, de, es, 'es-419': es419, 'pt-PT': ptPT, 'pt-BR': ptBR }
 void i18n.use(initReactI18next).init({
-  resources: Object.fromEntries(LANGUAGE_CODES.map((c) => [c, { translation: resources[c] }])),
+  resources: { en: { translation: en } },
   lng: 'en',
   fallbackLng: { ...FALLBACKS, default: ['en'] },
   interpolation: { escapeValue: false, defaultVariables: { ai: 'Claude', aiCompany: 'Anthropic' } },
   returnNull: false
 })
+
+/** Makes a language (and the languages it falls back to) available. Call before switching to it. */
+export async function loadLanguage(code: string): Promise<void> {
+  const wanted = (LANGUAGE_CODES as string[]).includes(code) ? (code as LanguageCode) : 'en'
+  const codes = [wanted, ...(FALLBACKS[wanted] ?? [])]
+  await Promise.all(
+    codes.map(async (c) => {
+      if (c === 'en' || i18n.hasResourceBundle(c, 'translation')) return
+      const mod = await loaders[c]()
+      i18n.addResourceBundle(c, 'translation', mod.default, true, false)
+    })
+  )
+}
+
+/** Loads a language, then makes it the active one. */
+export async function switchLanguage(code: string): Promise<void> {
+  await loadLanguage(code)
+  await i18n.changeLanguage(code)
+}
 
 let provider: ErrorProvider | null = null
 

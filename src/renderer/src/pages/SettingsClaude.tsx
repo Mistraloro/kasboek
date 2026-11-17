@@ -13,7 +13,7 @@ import { Badge, Button, Card, CardHeader, Field, Input, Modal, PasswordInput, Se
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { errText } from './auth/parts'
-import { Row } from './Settings'
+import { Row } from './settings-sections/Row'
 
 /** A model list that was loaded for a provider is shown again, without asking, when the person comes back to it within this time. */
 const MODELS_KEPT_MS = 60_000

@@ -1,5 +1,5 @@
 import { ArrowLeftRight, CalendarRange, FileUp, LayoutDashboard, Lock as LockIcon, PanelRight, PiggyBank, Repeat, Settings as SettingsIcon, Target, TrendingUp } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AssistantPanel } from './components/AssistantPanel'
 import { Mark } from './components/Mark'
@@ -16,16 +16,18 @@ import { PrefsProvider, SettingsProvider, usePrefs } from './lib/settings'
 import { Lock } from './pages/auth/Lock'
 import { RecoveredModal } from './pages/auth/RecoveredModal'
 import { Setup } from './pages/auth/Setup'
-import { Budgets } from './pages/Budgets'
-import { ImportPage } from './pages/Import'
 import { Overview } from './pages/Overview'
-import { SettingsPage } from './pages/Settings'
-import { NetWorthPage } from './pages/NetWorth'
-import { RecurringPage } from './pages/Recurring'
-import { GoalsPage } from './pages/Goals'
-import { YearPage } from './pages/Year'
 import { Transactions, type TxFilter } from './pages/Transactions'
 import { showSetup } from '@shared/setup-rules'
+
+// Overview is the first screen and stays in the main bundle; the other pages load when first opened.
+const Budgets = lazy(() => import('./pages/Budgets').then((m) => ({ default: m.Budgets })))
+const ImportPage = lazy(() => import('./pages/Import').then((m) => ({ default: m.ImportPage })))
+const SettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.SettingsPage })))
+const NetWorthPage = lazy(() => import('./pages/NetWorth').then((m) => ({ default: m.NetWorthPage })))
+const RecurringPage = lazy(() => import('./pages/Recurring').then((m) => ({ default: m.RecurringPage })))
+const GoalsPage = lazy(() => import('./pages/Goals').then((m) => ({ default: m.GoalsPage })))
+const YearPage = lazy(() => import('./pages/Year').then((m) => ({ default: m.YearPage })))
 
 export type Page = 'overview' | 'transactions' | 'budgets' | 'recurring' | 'goals' | 'year' | 'networth' | 'import' | 'settings'
 
@@ -179,15 +181,17 @@ function Shell() {
         <div className="flex min-h-0 flex-1">
           <main className="min-w-0 flex-1 overflow-y-auto">
             <div className="mx-auto max-w-5xl px-10 pt-4 pb-16">
-              {page === 'overview' && <Overview key={navKey} go={go} />}
-              {page === 'transactions' && <Transactions key={navKey} go={setPage} initial={txFilter} />}
-              {page === 'budgets' && <Budgets key={navKey} initial={txFilter} />}
-              {page === 'year' && <YearPage key={navKey} />}
-              {page === 'networth' && <NetWorthPage key={navKey} />}
-              {page === 'recurring' && <RecurringPage key={navKey} go={go} />}
-              {page === 'goals' && <GoalsPage key={navKey} />}
-              {page === 'import' && <ImportPage go={setPage} />}
-              {page === 'settings' && <SettingsPage key={navKey} />}
+              <Suspense fallback={<div className="min-h-[60vh]" aria-busy="true" />}>
+                {page === 'overview' && <Overview key={navKey} go={go} />}
+                {page === 'transactions' && <Transactions key={navKey} go={setPage} initial={txFilter} />}
+                {page === 'budgets' && <Budgets key={navKey} initial={txFilter} />}
+                {page === 'year' && <YearPage key={navKey} />}
+                {page === 'networth' && <NetWorthPage key={navKey} />}
+                {page === 'recurring' && <RecurringPage key={navKey} go={go} />}
+                {page === 'goals' && <GoalsPage key={navKey} />}
+                {page === 'import' && <ImportPage go={setPage} />}
+                {page === 'settings' && <SettingsPage key={navKey} />}
+              </Suspense>
             </div>
           </main>
           {assistantOpen && <AssistantPanel go={setPage} />}

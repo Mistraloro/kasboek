@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { AppInfo, Prefs, PrefsPatch, Settings } from '@shared/types'
-import i18n from '../i18n'
+import { switchLanguage } from '../i18n'
 import { call } from './api'
 import { formatMoney, type Fmt } from './format'
 
@@ -25,7 +25,9 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<AppInfo | null>(null)
 
   useEffect(() => {
-    void Promise.all([call('prefs.get'), call('app.info')]).then(([p, i]) => {
+    void Promise.all([call('prefs.get'), call('app.info')]).then(async ([p, i]) => {
+      // The language is ready before the first screen, so no text shows as a key.
+      await switchLanguage(p.language).catch(() => {})
       setPrefs(p)
       setInfo(i)
       void window.kasboek.invoke('app.milestone', { name: 'prefs loaded', ms: Math.round(performance.now()) }).catch(() => {})
@@ -36,7 +38,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     if (!prefs) return
     applyThemeToDocument(prefs.theme)
     document.documentElement.lang = prefs.language
-    void i18n.changeLanguage(prefs.language)
+    void switchLanguage(prefs.language).catch(() => {})
     if (prefs.theme !== 'system') return
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = (): void => applyThemeToDocument('system')

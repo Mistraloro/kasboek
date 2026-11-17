@@ -13,8 +13,10 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **“Check with your assistant” on imports asks first**, like the PDF reading and the tips: you see exactly what is sent (payee and description text, your rules and the assistant’s remembered notes, all with account and card numbers hidden), and your agreement is remembered per provider, address and model.
 - **Safer AI reading of PDFs:** the sign of an amount (minus, brackets, CR, DR) is always taken from the statement’s own text, so a payment can no longer be read as income; IBANs stuck to other text are hidden too; and while the assistant reads, editing rows is switched off.
 - **A hold-to-show eye** in every password field.
+- **Faster, clearer start.** A launch window with a progress bar shows right away; the main window appears only once its first screen is drawn (no more blank window, also on Windows on ARM). The program loads far less code at start, pages and languages load when you need them, and the Windows Hello check runs after the first screen. A startup.log in the data folder records the timings (technical facts only).
 
 **Fixes**
+- Dates like 01-10-2026 in statement text are no longer masked in what the assistant sees.
 - Clicking next to a dialog no longer closes it and loses what you typed. Escape or the close button asks first in add/edit account, goals, bank balance and net worth value.
 - Dates you type now follow your date format setting everywhere, and hints show today’s date in your format.
 - “Install and restart” shows “Preparing the update…” right away instead of looking frozen.

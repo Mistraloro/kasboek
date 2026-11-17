@@ -9,7 +9,7 @@ import { ApiError, call, useOp } from '../lib/api'
 import { formatDate } from '../lib/format'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
-import { Row } from './Settings'
+import { Row } from './settings-sections/Row'
 
 /** What the assistant remembers between conversations: see, change, add and forget. */
 export function MemorySection() {
