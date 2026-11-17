@@ -28,6 +28,10 @@ import { ACCOUNT_KINDS } from './types'
 import type { Alert, Goal, InsightsPreview, InsightsView, McpClientsSeen, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, CheckAssistPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
+
+/** A step name for startup.log: lower-case words only, so the log can never hold anything else. */
+export const MILESTONE_NAME = /^[a-z0-9 _-]{1,40}$/
+const milestoneName = z.string().regex(MILESTONE_NAME)
 const empty = z.object({}).strict()
 const password = z
   .string()
@@ -70,6 +74,8 @@ export const contract = {
   /* ----- App & preferences (available while locked) ----- */
   'app.info': { input: empty, output: out<AppInfo>() },
   'app.ready': { input: empty, output: out<{ ok: true }>() },
+  /** A timing fact from the page for startup.log (when the page got to a step). Only a fixed kind of text, never data. */
+  'app.milestone': { input: z.object({ name: milestoneName, ms: z.number().finite().min(0).max(86_400_000) }).strict(), output: out<{ ok: true }>() },
   /** Start Kasboek again (after changing how it draws). */
   'app.restart': { input: empty, output: out<{ ok: true }>() },
   'prefs.get': { input: empty, output: out<Prefs>() },
@@ -701,6 +707,7 @@ export type OpOutput<K extends OpName> = Contract[K]['output']
 export const PUBLIC_OPS: readonly OpName[] = [
   'app.info',
   'app.ready',
+  'app.milestone',
   'prefs.get',
   'prefs.update',
   'auth.status',

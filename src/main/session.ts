@@ -5,7 +5,6 @@ import { randomBytes } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { rename } from 'node:fs/promises'
 import { BrowserWindow, powerMonitor } from 'electron'
-import QRCode from 'qrcode'
 import {
   checkThrottle,
   createAccount,
@@ -36,7 +35,7 @@ import { startupLog } from './graphics'
 import { paths } from './paths'
 import { getPrefs } from './prefs'
 import { accountExists, keyProtection, loadAccount, readLegacyDbKey, removeLegacyKeystore, saveAccount } from './security/account-store'
-import { deviceAuthKind, peekDeviceAuthKind, verifyDeviceUser } from './security/device-auth'
+import { deviceAuthKind, peekDeviceAuthKind, releaseDeviceCheck, verifyDeviceUser } from './security/device-auth'
 import { keyIsOsProtected } from './security/device-mode'
 import { listErased, purgeErased, quarantineData, restoreErased } from './quarantine'
 
@@ -64,6 +63,19 @@ export function onLock(fn: () => void): void {
   lockListeners.push(fn)
 }
 
+let startupInit: Promise<void> | null = null
+
+/** Reads the account at start-up. Operations that need it wait for it with whenSessionReady(). */
+export function startSession(): Promise<void> {
+  startupInit ??= initSession()
+  return startupInit
+}
+
+/** Resolves once the account has been read at start-up (at once when that was never started). */
+export function whenSessionReady(): Promise<void> {
+  return startupInit ? startupInit.catch(() => undefined) : Promise.resolve()
+}
+
 export async function initSession(): Promise<void> {
   loadError = null
   try {
@@ -73,7 +85,14 @@ export async function initSession(): Promise<void> {
   }
   // Erased copies are kept for 30 days, then removed.
   await purgeErased(paths).catch((err: unknown) => console.warn('[auth] could not clean up erased data:', err))
-  // Checking for Windows Hello takes a moment (PowerShell): never let the first screen wait for it.
+  // Checking for Windows Hello takes a moment (PowerShell): never let the first screen wait for it. Only a
+  // passwordless account needs it for the Lock screen; for the others it waits for startDeferredChecks().
+  peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }), { deviceMode: account?.mode === 'device' })
+}
+
+/** After the first screen: starts the Windows Hello / Touch ID check that was held back, and tells the page when it has an answer. */
+export function startDeferredChecks(): void {
+  releaseDeviceCheck()
   peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }))
 }
 
@@ -95,7 +114,7 @@ export function secrets(): { account: AccountData; master: Buffer; vault: Vault 
 export async function status(): Promise<AuthStatus> {
   // "Try again" after e.g. unlocking the system keyring.
   if (loadError && !open) await initSession()
-  const peek = peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }))
+  const peek = peekDeviceAuthKind(() => broadcast({ type: 'auth.refresh' }), { deviceMode: account?.mode === 'device' })
   const device = peek ?? null
   return {
     // An account file that can't be read is 'locked' with an error, never 'setup': setup would replace it.
@@ -304,6 +323,7 @@ export async function totpBegin(): Promise<{ secret: string; uri: string; qrSvg:
   secrets()
   pendingTotp = newTotpSecret()
   const uri = otpauthUri(pendingTotp)
+  const { default: QRCode } = await import('qrcode')
   const qrSvg = await QRCode.toString(uri, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#18201B', light: '#FFFFFF' } })
   return { secret: pendingTotp.match(/.{1,4}/g)!.join(' '), uri, qrSvg }
 }

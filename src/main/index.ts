@@ -3,10 +3,10 @@
  * Kasboek (database, assistant, sync, …) is loaded after that, while the window shows progress.
  */
 import { app, dialog } from 'electron'
-import { applyGraphicsChoice, startupLog } from './graphics'
-import { getPrefs } from './prefs'
+import { applyGraphicsChoice, startupLog, storedTheme } from './graphics'
 import { isBackgroundLaunch, mustShowOnSecondInstance } from '@shared/window-policy'
-import { showSplash, splashProgress } from './splash'
+import { showSplash, splashStep } from './splash'
+import { SPLASH_HEAD_START_MS } from './startup-plan'
 
 const MCP_MODE = process.argv.includes('--mcp')
 // Started by the kasboek-mcp helper because a Claude app wants Kasboek: only the tray icon, locked.
@@ -39,12 +39,15 @@ if (firstCopy) {
   // Before the app is ready: whether to draw with the graphics card (see graphics.ts).
   applyGraphicsChoice()
   void app.whenReady().then(async () => {
+    startupLog('electron ready')
     if (!BACKGROUND) {
-      showSplash(getPrefs().theme)
-      splashProgress(0.08, 'Starting…')
-      startupLog('launch window shown')
+      // The launch window gets a head start: the app code is a large file that blocks this thread while it loads.
+      const painted = showSplash(storedTheme())
+      await Promise.race([painted, new Promise<void>((r) => setTimeout(r, SPLASH_HEAD_START_MS))])
     } else startupLog('started in the background by a Claude app')
     const { startApp } = await import('./app')
+    startupLog('app code loaded')
+    splashStep('app-code-loaded')
     await startApp({ background: BACKGROUND })
   })
 }

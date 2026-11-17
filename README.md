@@ -218,8 +218,9 @@ npm run test:mcp    # the Go MCP helper
 - `sync.json`: this computer's sync id and folder, when syncing
 - `safety-backups/`: copies made automatically before an import and before an update
 - `updates/`: a downloaded update while it installs
-- `startup.log`: what happened during the last start (version, system, graphics card, steps), never
-  your data; useful when Kasboek doesn't open properly
+- `startup.log`: what happened during the last start (version, system, graphics card, steps with
+  timings, whether it was the first start of this version), never your data; useful when Kasboek
+  doesn't open properly or starts slowly. The start before it is kept as `startup.prev.log`.
 
 The assistant's memory, settings that sync and everything you enter live inside `kasboek.db`.
 

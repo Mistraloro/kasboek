@@ -219,7 +219,8 @@ describe('reading a PDF statement with the assistant', () => {
   })
 
   it('asks the model for JSON without tools, and tells it the text is data', async () => {
-    const { assistPdf, PDF_INSTRUCTIONS } = await import('../src/main/assistant/pdf')
+    const { assistPdf, pdfInstructions } = await import('../src/main/assistant/pdf')
+    const PDF_INSTRUCTIONS = pdfInstructions()
     const { db, sessionId } = setup(statement(1))
     await mockFetch((b) => answer(b))
     await assistPdf(db, sessionId)

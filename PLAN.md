@@ -382,6 +382,21 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    double-click to blank window, logo and main window; reboot without reinstalling and see if it is
    slow again (cold disk cache) or fast (something tied to the install, such as Defender); watch
    "Antimalware Service Executable" during the first start; note whether the PC is Windows on ARM.
+   *Done in 0.21.0 (not released), measured values pending:* (0) `startup.log` now has timings (main script,
+   Electron ready, launch window created / loaded / painted, app code loaded, main window created and
+   `dom-ready`, renderer milestones through the new `app.milestone` op, first screen), the process ids of both
+   windows, the time before the log starts, the graphics mode, first-start-of-this-version, and the previous
+   log as `startup.prev.log`; (1) the launch window is an inline `data:` page with the theme baked in and
+   progress set from the main process (`resources/splash.html` and `splash.js` stay only as a fallback if
+   the data page fails to load); (2) the app code starts loading when the launch window has painted or after
+   300 ms; (3) the Windows Hello check starts after the first screen, except for passwordless accounts;
+   (4) the main window stays hidden until the page reports its first screen (safety timeout 8 s), and the
+   bar follows the real steps and creeps between them; (5) the assistant, update, sync, export, PDF reader
+   and `qrcode` load on first use (`app-*.js` 1,825 kB -> 257 kB); (7) the account is read while the main
+   window is created, and operations other than `app.*` and `prefs.*` wait for it. Steps 6 (lazy renderer),
+   8 and 9 are not done. Still to confirm on real Windows (x64 and ARM): the timings in `startup.log`, that
+   the `data:` launch window has its own process, that the window never stays blank, the tray and second
+   launch behaviour, and the Hello check after the first screen.
 28. **Two bugs found while adding "Not a fixed cost" (not fixed yet).** (a) Fixed-cost amounts stay in
     each account's own currency but are added up across accounts and shown in the main currency
     (`src/core/recurring.ts` where the totals are summed, `src/renderer/src/pages/Recurring.tsx`

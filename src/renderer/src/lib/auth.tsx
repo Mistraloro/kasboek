@@ -12,11 +12,19 @@ interface AuthValue {
 }
 
 const Ctx = createContext<AuthValue | null>(null)
+let loadedReported = false
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus | null>(null)
   const [setupFlowActive, setSetupFlowActive] = useState(false)
-  const refresh = useCallback(async () => setStatus(await call('auth.status')), [])
+  const refresh = useCallback(async () => {
+    setStatus(await call('auth.status'))
+    // Once, for the start-up log in the data folder (fire and forget).
+    if (!loadedReported) {
+      loadedReported = true
+      void window.kasboek.invoke('app.milestone', { name: 'auth loaded', ms: Math.round(performance.now()) }).catch(() => {})
+    }
+  }, [])
   useEffect(() => {
     void refresh()
     return window.kasboek.onEvent((e) => {

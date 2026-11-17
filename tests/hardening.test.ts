@@ -795,6 +795,8 @@ describe('session', () => {
         expect(await transfer.importTransfer({ token: picked.token, password: PASSWORD })).toContain('sync')
         expect(existsSync(placeFile())).toBe(true)
         expect(existsSync(outbox())).toBe(false)
+        // The log is written in batches: write what is waiting before reading the file.
+        ;(await import('../src/main/graphics')).flushStartupLog()
         expect(readFileSync(join(mocks.dataDir, 'startup.log'), 'utf8')).toContain('could not remove')
       })
     })

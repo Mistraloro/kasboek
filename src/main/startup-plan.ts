@@ -63,6 +63,14 @@ export function shouldShowMainWindow(o: { background: boolean; showRequested: bo
   return !o.background || o.showRequested
 }
 
+/**
+ * The account is read while the main window is created, so an operation that looks at it waits for
+ * that. Only the app and preference operations (theme, language, graphics, timing facts) go ahead.
+ */
+export function opWaitsForSession(op: string): boolean {
+  return !op.startsWith('app.') && !op.startsWith('prefs.')
+}
+
 /* ---------- Renderer milestones ---------- */
 
 export const MAX_MILESTONES = 20

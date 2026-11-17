@@ -19,7 +19,6 @@ import type { BackupEntryInfo, BackupStatus, ImportReset, PickedTransfer } from 
 import { paths } from '../paths'
 import { canUseDeviceMode } from '../security/device-mode'
 import { adopt, closeForReplace, db, isUnlocked, secrets } from '../session'
-import { removeSyncLeftovers } from '../sync/service'
 
 const AUTO_FILE = new RegExp(`^kasboek-backup-[0-9_-]+\\.${TRANSFER_EXTENSION}$`)
 
@@ -244,6 +243,6 @@ export async function importTransfer(input: {
   await adopt(next, master, vault, usedRecovery)
   picked.delete(input.token)
   // The staged database has sync off; the place file (URL, user name) and outbox next to it are stale now.
-  if (!opts.joining && reset.includes('sync')) removeSyncLeftovers()
+  if (!opts.joining && reset.includes('sync')) (await import('../sync/service')).removeSyncLeftovers()
   return reset
 }

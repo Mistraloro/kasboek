@@ -28,6 +28,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     void Promise.all([call('prefs.get'), call('app.info')]).then(([p, i]) => {
       setPrefs(p)
       setInfo(i)
+      void window.kasboek.invoke('app.milestone', { name: 'prefs loaded', ms: Math.round(performance.now()) }).catch(() => {})
     })
   }, [])
 

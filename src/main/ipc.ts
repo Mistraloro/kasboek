@@ -5,7 +5,10 @@ import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/op
 import { getSettings, updateSettings } from '@core/settings'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
 import type { OpName } from '@shared/contract'
-import { graphicsStatus, markPainted } from './graphics'
+import { graphicsStatus, markPainted, startupLog } from './graphics'
+import { lazy } from './lazy'
+import { splashStep } from './splash'
+import { milestoneLine, opWaitsForSession, stepForMilestone } from './startup-plan'
 import { paths } from './paths'
 import { getPrefs, updatePrefs } from './prefs'
 import { syncTray } from './tray'
@@ -19,37 +22,78 @@ import { isTrustedFrameUrl } from './trusted-url'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
 import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
 import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
-import { afterImport as afterSyncImport, attach as attachSync, cancelJoin, changedLocally as syncChangedLocally, dismissConflicts as dismissSyncConflicts, isPendingJoin, onRemoteChanges, pickJoin, runSync, startSync, stopSync, syncStatus } from './sync/service'
 import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
-import { assistantStatus, confirm as confirmAssistant, initAssistant, publishStatus, resetChat, send, stopChat } from './assistant/chat'
-import { checkKey } from './assistant/claude'
-import { keyName } from './assistant/provider'
-import { checkProviderKey, listProviderModels } from './assistant/models'
 import { addCustomProvider, isKnownProvider, newCustomId, removeCustomProvider, renameCustomProvider, resolveProvider, switchProvider } from '@shared/ai-provider-store'
 import { isCustomId } from '@shared/ai-providers'
 import { claudeEffort } from '@shared/reasoning'
-import { assistImport, checkPreview } from './assistant/csv'
-import { assistPdf, pdfAssistPreview } from './assistant/pdf'
-import { assistStatus, cancelAssist } from './assistant/jobs'
-import { cancelInsights, insightsPreview, insightsStatus, runInsights } from './assistant/insights'
 import { insightsView } from '@core/insights'
 import { mcpClientsSeen, respondMcp } from './mcp/bridge'
-import { exportCsv, exportPdf } from './export'
-import { openPdfSession } from './pdf/open'
-import { readPdf } from './pdf/read'
 import { createReadSlot } from './pdf/handle'
 import { helperPath } from './mcp/channel'
-import { checkForUpdate, downloadUpdate, installUpdate, openReleasePage, updateStatus } from './update'
 import * as mcpSetup from './mcp/setup'
 
+/**
+ * Modules that are not needed before the first screen load on first use (see lazy.ts): the assistant
+ * (Anthropic SDK, CSV/PDF/tips checks), updates, sync, exports and the PDF reader.
+ */
+const chat = lazy(async () => {
+  const m = await import('./assistant/chat')
+  m.initAssistant((op, input, actor) => dispatch(op, input, actor))
+  return m
+})
+const claude = lazy(() => import('./assistant/claude'))
+const providerModule = lazy(() => import('./assistant/provider'))
+const models = lazy(() => import('./assistant/models'))
+const csvAssist = lazy(() => import('./assistant/csv'))
+const pdfAssist = lazy(() => import('./assistant/pdf'))
+const jobs = lazy(() => import('./assistant/jobs'))
+const insights = lazy(() => import('./assistant/insights'))
+const updates = lazy(() => import('./update'))
+const exporter = lazy(() => import('./export'))
+const pdfOpen = lazy(() => import('./pdf/open'))
+const pdfReader = lazy(() => import('./pdf/read'))
+const syncService = lazy(async () => {
+  const m = await import('./sync/service')
+  // Changes from another computer: refresh open pages.
+  m.onRemoteChanges(() => notifyChanged('system'))
+  return m
+})
+
+let syncScheduler: Promise<void> | null = null
+/** Starts the sync timer and its before-lock hook, once. Never rejects: a failure is logged. */
+export function ensureSyncScheduler(): Promise<void> {
+  syncScheduler ??= syncService.get().then(
+    (m) => m.startSyncScheduler(),
+    (err: unknown) => console.error('[sync] could not start:', err)
+  )
+  return syncScheduler
+}
+
+/** Starts the update checks (a module that is not needed before the first screen). */
+export async function startUpdateChecks(): Promise<void> {
+  ;(await updates.get()).startUpdateChecks()
+}
+
+/** Stops the assistant's running jobs (the app locking): modules that were never loaded have nothing to stop. */
+export function cancelRunningJobs(): void {
+  jobs.loaded()?.cancelAllAssists()
+  insights.loaded()?.cancelInsights()
+  pdfRead.abort()
+}
+
+let milestonesLogged = 0
+
 let readyListener: (() => void) | null = null
-/** Called once the page has drawn its first screen. */
+let pageReady = false
+/** Called once the page has drawn its first screen (at once if it already has). */
 export function onAppReady(fn: () => void): void {
-  readyListener = fn
+  if (pageReady) fn()
+  else readyListener = fn
 }
 function appReady(): void {
   markPainted()
+  pageReady = true
   readyListener?.()
   readyListener = null
 }
@@ -66,11 +110,6 @@ async function openDialog(opts: Electron.OpenDialogOptions): Promise<string | nu
 
 /** The PDF read in progress, so the page can stop it. */
 const pdfRead = createReadSlot()
-
-/** Stops the PDF read in progress, if any (the app locking). */
-export function cancelPdfRead(): void {
-  pdfRead.abort()
-}
 
 const kasboekFilter = [{ name: 'Kasboek export', extensions: [TRANSFER_EXTENSION] }]
 
@@ -95,15 +134,15 @@ const desktopOps: OpTable = {
       mcpCommand: { command: helperPath(), args: ['--data-dir', paths.dataDir] }
     })
   },
-  'update.status': { mutates: false, assistant: false, handler: () => updateStatus() },
-  'update.check': { mutates: false, assistant: false, handler: () => checkForUpdate() },
-  'update.download': { mutates: false, assistant: false, handler: () => downloadUpdate() },
-  'update.install': { mutates: false, assistant: false, handler: () => installUpdate() },
+  'update.status': { mutates: false, assistant: false, handler: async () => (await updates.get()).updateStatus() },
+  'update.check': { mutates: false, assistant: false, handler: async () => (await updates.get()).checkForUpdate() },
+  'update.download': { mutates: false, assistant: false, handler: async () => (await updates.get()).downloadUpdate() },
+  'update.install': { mutates: false, assistant: false, handler: async () => (await updates.get()).installUpdate() },
   'update.openPage': {
     mutates: false,
     assistant: false,
-    handler: () => {
-      openReleasePage()
+    handler: async () => {
+      ;(await updates.get()).openReleasePage()
       return { ok: true as const }
     }
   },
@@ -112,6 +151,21 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: () => {
       appReady()
+      return { ok: true as const }
+    }
+  },
+  // Timing facts from the page for startup.log; they also move the launch window's bar. Never any data.
+  'app.milestone': {
+    mutates: false,
+    assistant: false,
+    handler: (_c, { name, ms }) => {
+      const line = milestoneLine(name, ms, milestonesLogged)
+      if (line) {
+        milestonesLogged++
+        startupLog(line)
+      }
+      const step = stepForMilestone(name)
+      if (step) splashStep(step)
       return { ok: true as const }
     }
   },
@@ -144,6 +198,7 @@ const desktopOps: OpTable = {
     mutates: true,
     assistant: false,
     handler: async (_c, input) => {
+      await ensureSyncScheduler()
       const result = await session.setup(input.mode, input.mode === 'password' ? input.password : undefined)
       // A new database starts with its categories in the interface language.
       if (session.isUnlocked()) localizeDefaultCategories(session.db(), defaultCategoryNames(getPrefs().language))
@@ -154,6 +209,7 @@ const desktopOps: OpTable = {
     mutates: false,
     assistant: false,
     handler: async (_c, input) => {
+      await ensureSyncScheduler()
       await session.unlock(input)
       afterUnlock()
       return session.status()
@@ -163,6 +219,7 @@ const desktopOps: OpTable = {
     mutates: false,
     assistant: false,
     handler: async (_c, { recoveryKey }) => {
+      await ensureSyncScheduler()
       await session.unlockRecovery(recoveryKey)
       afterUnlock()
       return session.status()
@@ -266,14 +323,16 @@ const desktopOps: OpTable = {
     assistant: false,
     handler: async (_c, input) => {
       if ((await session.status()).state === 'locked') throw new AppError('auth.locked', 'Unlock Kasboek first.')
-      const reset = await importTransfer(input, { joining: isPendingJoin(input.token) })
+      await ensureSyncScheduler()
+      const sync = await syncService.get()
+      const reset = await importTransfer(input, { joining: sync.isPendingJoin(input.token) })
       // Joining a sync folder: from now on this computer syncs with it too.
-      await afterSyncImport(input.token).catch((err: unknown) => console.warn('[sync] join failed:', err))
+      await sync.afterImport(input.token).catch((err: unknown) => console.warn('[sync] join failed:', err))
       return { status: await session.status(), reset }
     }
   },
 
-  'assistant.status': { mutates: false, assistant: false, handler: () => assistantStatus() },
+  'assistant.status': { mutates: false, assistant: false, handler: async () => (await chat.get()).assistantStatus() },
   'assistant.setKey': {
     mutates: true,
     assistant: false,
@@ -283,62 +342,69 @@ const desktopOps: OpTable = {
       if (!isKnownProvider(settings, id)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
       // Dev/test only: skip the online check.
       if (app.isPackaged || process.env['KASBOEK_SKIP_KEY_CHECK'] !== '1') {
-        if (id === 'anthropic') await checkKey(apiKey)
+        if (id === 'anthropic') await (await claude.get()).checkKey(apiKey)
         else {
           // Check the key against this provider's own address, whether or not it is the one in use.
-          await checkProviderKey({ ...resolveProvider(settings, id), key: apiKey })
+          await (await models.get()).checkProviderKey({ ...resolveProvider(settings, id), key: apiKey })
         }
       }
-      setSecret(db, keyName(id), apiKey)
-      publishStatus()
-      return assistantStatus()
+      setSecret(db, (await providerModule.get()).keyName(id), apiKey)
+      const assistant = await chat.get()
+      assistant.publishStatus()
+      return assistant.assistantStatus()
     }
   },
   'assistant.clearKey': {
     mutates: true,
     assistant: false,
-    handler: ({ db }) => {
+    handler: async ({ db }) => {
+      const { keyName } = await providerModule.get()
       setSecret(db, keyName(getSettings(db).aiProvider), null)
-      resetChat()
-      return assistantStatus()
+      const assistant = await chat.get()
+      assistant.resetChat()
+      return assistant.assistantStatus()
     }
   },
   'assistant.addProvider': {
     mutates: true,
     assistant: false,
-    handler: ({ db }, { name, ...rest }) => {
+    handler: async ({ db }, { name, ...rest }) => {
+      const assistant = await chat.get()
       const next = updateSettings(db, addCustomProvider(getSettings(db), newCustomId(randomUUID()), { name, ...rest }))
-      resetChat()
+      assistant.resetChat()
       return next
     }
   },
   'assistant.renameProvider': {
     mutates: true,
     assistant: false,
-    handler: ({ db }, { id, name }) => {
+    handler: async ({ db }, { id, name }) => {
+      const assistant = await chat.get()
       const settings = getSettings(db)
       if (!isCustomId(id) || !isKnownProvider(settings, id)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
       const next = updateSettings(db, renameCustomProvider(settings, id, name))
-      publishStatus()
+      assistant.publishStatus()
       return next
     }
   },
   'assistant.removeProvider': {
     mutates: true,
     assistant: false,
-    handler: ({ db }, { id }) => {
+    handler: async ({ db }, { id }) => {
+      const [assistant, { keyName }] = await Promise.all([chat.get(), providerModule.get()])
       const settings = getSettings(db)
       if (!isCustomId(id) || !isKnownProvider(settings, id)) throw new AppError('assistant.unknown_provider', 'That provider is no longer in your list.')
       const next = updateSettings(db, removeCustomProvider(settings, id))
       setSecret(db, keyName(id), null)
-      resetChat()
+      assistant.resetChat()
       return next
     }
   },
   'assistant.configure': {
     mutates: true,
     assistant: false,
-    handler: ({ db }, patch) => {
+    handler: async ({ db }, patch) => {
+      const assistant = await chat.get()
       const before = getSettings(db)
       // Another provider brings back its own address and models (or its suggested model the first time).
       if (patch.aiProvider && patch.aiProvider !== before.aiProvider) {
@@ -354,55 +420,59 @@ const desktopOps: OpTable = {
       if (claudeEffort(csvModel, csvEffort) !== csvEffort) patch = { ...patch, csvEffort: claudeEffort(csvModel, csvEffort) }
       const next = updateSettings(db, patch)
       // The conversation is tied to one provider's message format.
-      if (next.aiProvider !== before.aiProvider) resetChat()
-      else publishStatus()
+      if (next.aiProvider !== before.aiProvider) assistant.resetChat()
+      else assistant.publishStatus()
       return next
     }
   },
-  'assistant.models': { mutates: false, assistant: false, handler: ({ db }) => listProviderModels(db) },
-  'assistant.send': { mutates: false, assistant: false, handler: (_c, { text }) => send(text) },
+  'assistant.models': { mutates: false, assistant: false, handler: async (ctx) => (await models.get()).listProviderModels(ctx.db) },
+  'assistant.send': { mutates: false, assistant: false, handler: async (_c, { text }) => (await chat.get()).send(text) },
   'assistant.confirm': {
     mutates: false,
     assistant: false,
-    handler: (_c, { id, approve }) => {
-      confirmAssistant(id, approve)
-      return assistantStatus()
+    handler: async (_c, { id, approve }) => {
+      const assistant = await chat.get()
+      assistant.confirm(id, approve)
+      return assistant.assistantStatus()
     }
   },
   'assistant.stop': {
     mutates: false,
     assistant: false,
-    handler: () => {
-      stopChat()
-      return assistantStatus()
+    handler: async () => {
+      const assistant = await chat.get()
+      assistant.stopChat()
+      return assistant.assistantStatus()
     }
   },
   'assistant.reset': {
     mutates: false,
     assistant: false,
-    handler: () => {
-      resetChat()
-      return assistantStatus()
+    handler: async () => {
+      const assistant = await chat.get()
+      assistant.resetChat()
+      return assistant.assistantStatus()
     }
   },
-  'import.assist': { mutates: false, assistant: false, handler: ({ db }, { sessionId, consent }) => assistImport(db, sessionId, { consent }) },
-  'import.assistPreview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => checkPreview(db, sessionId) },
-  'import.pdfAssistPreview': { mutates: false, assistant: false, handler: (_c, { sessionId }) => pdfAssistPreview(sessionId) },
-  'import.pdfAssist': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => assistPdf(db, sessionId) },
+  'import.assist': { mutates: false, assistant: false, handler: async (ctx, { sessionId, consent }) => (await csvAssist.get()).assistImport(ctx.db, sessionId, { consent }) },
+  'import.assistPreview': { mutates: false, assistant: false, handler: async (ctx, { sessionId }) => (await csvAssist.get()).checkPreview(ctx.db, sessionId) },
+  'import.pdfAssistPreview': { mutates: false, assistant: false, handler: async (_c, { sessionId }) => (await pdfAssist.get()).pdfAssistPreview(sessionId) },
+  'import.pdfAssist': { mutates: false, assistant: false, handler: async (ctx, { sessionId }) => (await pdfAssist.get()).assistPdf(ctx.db, sessionId) },
   // Tips on the Overview: the cached ones need the interface language, and the assistant writes them only when asked.
   'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsView(db, month, getPrefs().language) },
-  'insights.preview': { mutates: false, assistant: false, handler: ({ db }, { month }) => insightsPreview(db, month) },
-  'insights.run': { mutates: false, assistant: false, handler: ({ db }, { month, consent }) => runInsights(db, month, { consent }) },
-  'insights.cancel': { mutates: false, assistant: false, handler: () => cancelInsights() },
-  'insights.status': { mutates: false, assistant: false, handler: () => insightsStatus() },
-  'export.csv': { mutates: false, assistant: false, handler: (_c, { filter, labels, defaultName }) => exportCsv(filter, labels, defaultName) },
-  'export.pdf': { mutates: false, assistant: false, handler: (_c, { html, defaultName }) => exportPdf(html, defaultName) },
-  'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => assistStatus(sessionId) },
+  'insights.preview': { mutates: false, assistant: false, handler: async (ctx, { month }) => (await insights.get()).insightsPreview(ctx.db, month) },
+  'insights.run': { mutates: false, assistant: false, handler: async (ctx, { month, consent }) => (await insights.get()).runInsights(ctx.db, month, { consent }) },
+  // Nothing can be running, or be cancelled, in a module that was never loaded.
+  'insights.cancel': { mutates: false, assistant: false, handler: () => insights.loaded()?.cancelInsights() ?? { ok: true as const } },
+  'insights.status': { mutates: false, assistant: false, handler: () => insights.loaded()?.insightsStatus() ?? { running: false, month: null, startedAt: null } },
+  'export.csv': { mutates: false, assistant: false, handler: async (_c, { filter, labels, defaultName }) => (await exporter.get()).exportCsv(filter, labels, defaultName) },
+  'export.pdf': { mutates: false, assistant: false, handler: async (_c, { html, defaultName }) => (await exporter.get()).exportPdf(html, defaultName) },
+  'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => jobs.loaded()?.assistStatus(sessionId) ?? null },
   'import.assistCancel': {
     mutates: false,
     assistant: false,
     handler: (_c, { sessionId }) => {
-      cancelAssist(sessionId)
+      jobs.loaded()?.cancelAssist(sessionId)
       return { ok: true as const }
     }
   },
@@ -410,6 +480,7 @@ const desktopOps: OpTable = {
     mutates: false,
     assistant: false,
     handler: async ({ db }, i) => {
+      const [{ openPdfSession }, { readPdf }] = await Promise.all([pdfOpen.get(), pdfReader.get()])
       const controller = pdfRead.claim()
       if (!controller) throw new AppError('import.pdf_busy', 'Another PDF is still being read. Wait a moment and try again.')
       try {
@@ -490,36 +561,37 @@ const desktopOps: OpTable = {
       return { ...fxStatus(db), added }
     }
   },
-  'sync.status': { mutates: false, assistant: false, handler: () => syncStatus() },
-  'sync.start': { mutates: false, assistant: false, handler: (_c, input) => startSync(input) },
+  'sync.status': { mutates: false, assistant: false, handler: async () => (await syncService.get()).syncStatus() },
+  'sync.start': { mutates: false, assistant: false, handler: async (_c, input) => (await syncService.get()).startSync(input) },
   'sync.pickJoin': {
     mutates: false,
     assistant: false,
     handler: async (_c, input) => {
       // Same rule as transfer.pick: not on the lock screen. At first setup (no account yet) and once logged in it works.
       if ((await session.status()).state === 'locked') throw new AppError('auth.locked', 'Unlock Kasboek first.')
-      return pickJoin(input)
+      return (await syncService.get()).pickJoin(input)
     }
   },
   'sync.cancelJoin': {
     mutates: false,
     assistant: false,
-    handler: (_c, { token }) => {
-      cancelJoin(token)
+    handler: async (_c, { token }) => {
+      ;(await syncService.get()).cancelJoin(token)
       return { ok: true as const }
     }
   },
-  'sync.attach': { mutates: false, assistant: false, handler: (_c, input) => attachSync(input) },
+  'sync.attach': { mutates: false, assistant: false, handler: async (_c, input) => (await syncService.get()).attach(input) },
   'sync.now': {
     mutates: false,
     assistant: false,
     handler: async () => {
-      await runSync()
-      return syncStatus()
+      const sync = await syncService.get()
+      await sync.runSync()
+      return sync.syncStatus()
     }
   },
-  'sync.stop': { mutates: false, assistant: false, handler: () => stopSync() },
-  'sync.dismissConflicts': { mutates: false, assistant: false, handler: () => dismissSyncConflicts() },
+  'sync.stop': { mutates: false, assistant: false, handler: async () => (await syncService.get()).stopSync() },
+  'sync.dismissConflicts': { mutates: false, assistant: false, handler: async () => (await syncService.get()).dismissConflicts() },
   'backup.runNow': { mutates: false, assistant: false, handler: async () => ({ file: await runAutoBackup() }) },
   'backup.list': { mutates: false, assistant: false, handler: () => backupList() },
   'backup.pick': { mutates: false, assistant: false, handler: (_c, { name }) => pickBackup(name) },
@@ -547,6 +619,8 @@ export function opContext(actor: OpContext['actor']): OpContext {
 
 /** Runs an operation, refusing everything but the login operations while locked. */
 export async function dispatch(name: OpName, input: unknown, actor: OpContext['actor']) {
+  // The account is read while the window starts: only the operations about the app and preferences go ahead of it.
+  if (opWaitsForSession(name)) await session.whenSessionReady()
   const refusal = lockedRefusal(name, session.isUnlocked())
   if (refusal) return refusal
   const result = await runOp(allOps, opContext(actor), name, input)
@@ -554,7 +628,7 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
   if (result.ok && allOps[name]?.mutates) {
     notifyChanged(actor)
     dataChanged(name, input)
-    syncChangedLocally()
+    ;(await syncService.get()).changedLocally()
   }
   return result
 }
@@ -562,15 +636,15 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
 /** Work that waits for the database: due backups and, when switched on, fresh exchange rates. */
 function afterUnlock(): void {
   backupAfterUnlock()
-  void runSync()
+  void syncService
+    .get()
+    .then((sync) => sync.runSync())
+    .catch((err: unknown) => console.warn('[sync] could not start a sync:', err instanceof Error ? err.message : err))
   if (!session.isUnlocked() || !shouldAutoUpdate(session.db())) return
   updateEcbRates(session.db())
     .then(({ added }) => added > 0 && notifyChanged('system'))
     .catch((err: unknown) => console.warn('[fx] automatic update failed:', err instanceof Error ? err.message : err))
 }
-
-// Changes from another computer: refresh open pages.
-onRemoteChanges(() => notifyChanged('system'))
 
 let changeTimer: NodeJS.Timeout | null = null
 function notifyChanged(actor: OpContext['actor']): void {
@@ -586,8 +660,7 @@ function isTrusted(frame: WebFrameMain | null): boolean {
 }
 
 export function registerIpc(): void {
-  initAssistant((op, input, actor) => dispatch(op, input, actor))
-  session.onLock(resetChat)
+  session.onLock(() => chat.loaded()?.resetChat())
   ipcMain.handle('kasboek:op', async (event, name: unknown, input: unknown) => {
     if (!isTrusted(event.senderFrame) || typeof name !== 'string') {
       return { ok: false, error: { code: 'ipc.denied', message: 'Not allowed.' } }
