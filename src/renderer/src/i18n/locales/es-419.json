@@ -108,6 +108,12 @@
     "unconvertedHint": "No cuentan en estos totales. Agrega tipos en Configuración."
   },
   "ai": {
+    "chatTitle": "Modelo del chat",
+    "chatDesc": "Responde a tus preguntas y hace lo que le pides en el chat.",
+    "fileTitle": "Modelo para leer archivos",
+    "fileDesc": "Se usa cuando el asistente revisa una importación CSV o lee un extracto en PDF. Aquí basta un modelo más barato.",
+    "noModelList": "Este proveedor no muestra la lista de sus modelos. Escribe el nombre del modelo tal como lo escribe el proveedor.",
+    "reloadHint": "Pulsa el botón de recargar para obtener la lista de modelos.",
     "reloadModels": "Recargar modelos",
     "otherModel": "Otro modelo…",
     "typeModel": "Escribe el nombre del modelo",

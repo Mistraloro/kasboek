@@ -25,6 +25,7 @@ export function ClaudeSection() {
   const [busy, setBusy] = useState(false)
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
+  const [modelsStatus, setModelsStatus] = useState<{ count: number } | { error: string } | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
   // Changed elsewhere (e.g. "Stop Claude connection" in the tray menu).
@@ -52,18 +53,30 @@ export function ClaudeSection() {
       {REASONING_LEVELS.map((x) => <option key={x} value={x}>{t(`assistant.reasoning.${x}`)}</option>)}
     </Select>
   )
+  const clearModels = (): void => {
+    setModels([])
+    setModelsStatus(null)
+  }
   const loadModels = (): void => {
     setLoadingModels(true)
     void call('assistant.models', {})
       .then((list) => {
         setModels(list)
-        toast(t('ai.modelsLoaded', { count: list.length }))
+        setModelsStatus({ count: list.length })
       })
-      .catch((e) => toast(errText(e), 'error'))
+      .catch((e) => setModelsStatus({ error: errText(e) }))
       .finally(() => setLoadingModels(false))
   }
+  const warn = (g: 'key' | 'url' | 'model') => gap === g && <p className="mt-1 text-warning">{t(`ai.gap.${g}`, { name: preset.name })}</p>
+  // The state of the model list, in the words of this provider.
+  const modelsLine = (noList: boolean) =>
+    modelsStatus && 'error' in modelsStatus ? <span className="text-warning">{modelsStatus.error}</span>
+      : noList ? t('ai.noModelList')
+      : modelsStatus ? t('ai.modelsLoaded', { count: modelsStatus.count })
+      : models.length ? null
+      : t('ai.reloadHint')
   const modelInput = (value: string, field: 'aiChatModel' | 'aiCsvModel', label: string, placeholder?: string, emptyLabel?: string) => (
-    <ModelPicker key={`${preset.id}-${field}`} value={value} loaded={models} suggested={preset.suggestedModels} label={label} placeholder={placeholder} emptyLabel={emptyLabel} loading={loadingModels} onChange={(v) => configure({ [field]: v })} onReload={loadModels} />
+    <ModelPicker key={`${preset.id}-${field}`} value={value} loaded={models} suggested={preset.suggestedModels} label={label} placeholder={placeholder} emptyLabel={emptyLabel} loading={loadingModels} status={modelsLine(models.length === 0 && preset.suggestedModels.length === 0 && !(modelsStatus && 'error' in modelsStatus))} onChange={(v) => configure({ [field]: v })} onReload={loadModels} />
   )
 
   return (
@@ -77,7 +90,7 @@ export function ClaudeSection() {
             value={s.aiProvider}
             onChange={(e) => {
               if (e.target.value === ADD_PROVIDER) return setAddOpen(true)
-              setModels([])
+              clearModels()
               configure({ aiProvider: e.target.value as ProviderId })
             }}
           >
@@ -94,12 +107,12 @@ export function ClaudeSection() {
         </Row>
       )}
       {s && preset.editableUrl && (
-        <Row label={t('ai.baseUrl')} hint={custom ? t('ai.baseUrlCustomHint') : t('ai.baseUrlLocalHint', { url: preset.baseUrl })}>
+        <Row label={t('ai.baseUrl')} hint={<>{custom ? t('ai.baseUrlCustomHint') : t('ai.baseUrlLocalHint', { url: preset.baseUrl })}{warn('url')}</>}>
           <TextSetting key={`${preset.id}-url`} className="w-72!" label={t('ai.baseUrl')} value={s.aiBaseUrl ?? ''} placeholder={preset.baseUrl || 'https://…/v1'} onSave={(v) => configure({ aiBaseUrl: v || null })} />
         </Row>
       )}
       {(preset.needsKey || custom) && (
-        <Row label={t('claude.apiKey')} hint={native ? t('claude.apiKeyHint') : preset.needsKey ? t('ai.keyHint', { name: preset.name }) : t('ai.keyOptional')}>
+        <Row label={t('claude.apiKey')} hint={<>{native ? t('claude.apiKeyHint') : preset.needsKey ? t('ai.keyHint', { name: preset.name }) : t('ai.keyOptional')}{!native && warn('key')}</>}>
           <Badge tone={status?.keyHint ? 'accent' : 'neutral'}>{status?.keyHint ? t('claude.keySet', { hint: status.keyHint }) : t('claude.keyNotSet')}</Badge>
           <Button size="sm" icon={<KeyRound size={14} />} onClick={() => setKeyOpen(true)}>{status?.keyHint ? t('claude.replaceKey') : t('claude.addKey')}</Button>
           {status?.keyHint && <Button size="sm" variant="ghost" aria-label={t('claude.removeKey')} icon={<Trash2 size={14} />} onClick={() => void call('assistant.clearKey')} />}
@@ -120,16 +133,15 @@ export function ClaudeSection() {
       )}
       {s && !native && (
         <>
-          <Row label={t('claude.chat')} hint={t('ai.chatModelHint')}>
-            {modelInput(s.aiChatModel, 'aiChatModel', t('claude.chat'), preset.suggestedModels[0])}
+          <Row label={t('ai.chatTitle')} hint={<>{t('ai.chatDesc')}{warn('model')}</>}>
+            {modelInput(s.aiChatModel, 'aiChatModel', t('ai.chatTitle'), preset.suggestedModels[0])}
             {reasoningSelect(s.aiReasoning, (aiReasoning) => configure({ aiReasoning }), t('assistant.reasoningLabel'))}
           </Row>
-          <Row label={t('claude.csv')} hint={t('ai.csvModelHint')}>
-            {modelInput(s.aiCsvModel, 'aiCsvModel', t('claude.csv'), undefined, t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
+          <Row label={t('ai.fileTitle')} hint={t('ai.fileDesc')}>
+            {modelInput(s.aiCsvModel, 'aiCsvModel', t('ai.fileTitle'), undefined, t('ai.sameAsChat', { model: s.aiChatModel || preset.suggestedModels[0] || '' }))}
             {reasoningSelect(s.aiCsvReasoning, (aiCsvReasoning) => configure({ aiCsvReasoning }), t('assistant.reasoningLabel'))}
           </Row>
           <div className="border-b border-border px-5 py-3 text-xs text-muted">{t('assistant.reasoningHint')}</div>
-          {gap && <div className="border-b border-border px-5 py-3 text-xs text-warning">{t(`ai.gap.${gap}`, { name: preset.name })}</div>}
           <div className="border-b border-border px-5 py-4 text-xs text-muted">{t('ai.note')}</div>
         </>
       )}
@@ -140,7 +152,7 @@ export function ClaudeSection() {
         onClose={() => setAddOpen(false)}
         onAdded={() => {
           setAddOpen(false)
-          setModels([])
+          clearModels()
           void settings.reload()
         }}
       />
@@ -152,7 +164,7 @@ export function ClaudeSection() {
             variant="danger"
             onClick={() => {
               setRemoveOpen(false)
-              setModels([])
+              clearModels()
               void call('assistant.removeProvider', { id: preset.id }).then(() => settings.reload(), (e) => toast(errText(e), 'error'))
             }}
           >
