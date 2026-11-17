@@ -192,7 +192,7 @@ function columnOf(cell: PdfCell, columns: PdfCell[]): number {
 
 const cellTexts = (line: PdfLine): string[] => line.cells.map((c) => c.text)
 
-function isHeaderLine(line: PdfLine): boolean {
+export function isHeaderLine(line: PdfLine): boolean {
   const texts = cellTexts(line)
   if (texts.length < 2 || scoreHeaderRow(texts) < 2) return false
   return texts.some((t) => ['bookingDate', 'valueDate'].includes(headerField(t) ?? ''))
