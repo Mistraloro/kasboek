@@ -392,6 +392,43 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
     for the same month and category may never reach the other computer. Check with a test across two
     computers; a fix is probably to store "no budget" as a row instead of deleting it (as fixed-cost
     marks do).
+29. **Code review of everything since 0.16.1 (static review, HEAD 6ff68d4; verdict: request changes).** Fix first, in
+   this order: (1) PDF AI read can drop an amount's sign and the check still passes (`src/core/pdf-plan.ts:222-232,348`):
+   take the sign from the matched text (extend over `-`, `+`, `(`, `)`, `CR`, `DR`) and reject the row if the text has a sign
+   the model's string lacks, plus a test; (2) the CSV "Check with AI" sends raw rows, descriptions, rules and the assistant's
+   memory notes with only a tooltip (`src/main/assistant/csv.ts:97-138`): add the preview-and-consent dialog like the PDF
+   read and apply `maskNumbers`; (3) tips consent is stored per provider id only (`insights.ts` `agreed()`, `insight-plan.ts:20`):
+   also store and compare the provider's address (and model), so editing a custom provider's address asks again; (4) lock
+   only clears import sessions (`src/main/app.ts:131`): abort running PDF reads, CSV checks and tips runs on lock
+   (`cancelAssist`, `cancelInsights`, `pdfRead.abort()`); (5) `window.prompt` is used in `Import.tsx:490,510`, `Budgets.tsx:143`,
+   `Transactions.tsx:162,214` and Electron does not implement it (it throws; to be confirmed on a build): replace by small
+   modals; (6) memoise `findRecurring` per (data version, day) and debounce `insights.get` on `data.changed`.
+   *Other bugs and risks:* an IBAN glued to preceding letters is not masked (`src/shared/iban.ts:7` lookbehind); when no table
+   header is found the PDF first-page header (holder name, address) is sent whole (`pdf-plan.ts:100`, `pdf.ts:62-70`);
+   restarting a job for the same session broadcasts a stale `import.checkDone` that resets the screen (`jobs.ts:383-400`);
+   a refused second `import.analyzePdf` clears the cancel handle of the first (`ipc.ts:403-418`); an AI read replaces the grid
+   and silently drops edits made during the run (`pdf.ts:128-145`); `CLAUDE_PDF_MODEL` is hard-coded and PDF/tips calls reuse the
+   CSV effort setting: check the model id exists and accepts that effort; older synced computers skip `recurring_marks`
+   changes (`sync.ts:293`): check the cursor logic and say "update all computers" in the notes; Change category on Fixed costs
+   does not reload when the rule step fails and uses the derived item name as pattern (`Recurring.tsx`); `loadModels` has no
+   staleness guard when switching provider (`SettingsClaude.tsx`); `aria-label="Close"` is English and only 5 of 32 modals set
+   `dirty` (`ui.tsx:293`); pdf.js runs in a utility process that is isolated but not OS-sandboxed (keep it updated).
+   *Optimisations:* `findRecurring` runs several times per Overview refresh (buildFacts, listAlerts, alerts.list, recurring.list;
+   each scans about 430 days), `insights.get` reruns on every `data.changed` with 4 budget queries and 2 reviews; `chargedTwice`
+   does one query per fixed cost; zod validates up to 300k PDF items on the main thread (cap lower); PDF bytes are copied
+   about 4 times; main chunk `app-*.js` is 1.8 MB (lazy `import()` for assistant and pdf; measure first); "Install and restart"
+   still exports and encrypts the backup on the main thread (move to a worker); model lists are re-fetched on every reload click.
+   *Clean-up:* fence-stripping and JSON parsing is duplicated 5 times (`parsePlan`, `parsePdfPlan`, `parseSuggestions`,
+   `json.ts` `cutOff`, `openai.ts:464`: one `parseJsonAnswer`); duplicated `CHARS_PER_TOKEN`, `median`, `addDays` and the
+   language-label lookup; two different `parseDate` functions (`shared/format.ts` and `core/csv/normalize.ts:60`: rename one);
+   unused parameter in `pdfAssistPreview`, pointless `export { PDF_LIMITS }`, overlapping `READER_ERROR_CODES` and `PDF_ERROR_CODES`,
+   comments still saying "Settings -> Claude"; English-only messages from the main process (`pdf.ts:135-155`, notes in `csv.ts`);
+   long files to split (`Settings.tsx` 826 lines, `Import.tsx` 746, `core/import.ts` 710, `ipc.ts` 590, `SettingsClaude.tsx` 439);
+   a fixed cost shows twice for 8 s after a hide (`Recurring.tsx`); 13 `eslint-disable` comments, mostly exhaustive-deps.
+   *Tests:* `tests/extract.test.ts:77-85` accepts any outcome and only fails on time; `tests/pdf-assist.test.ts:124` does not prove
+   the parts run side by side; missing tests for a dropped sign, a job restart, lock during a job; no component tests (node
+   environment); nothing tests `reader-process.ts` against the real utility process and packaged path (only an installer
+   build shows a packaging mistake).
 
 ## Later, maybe
 
