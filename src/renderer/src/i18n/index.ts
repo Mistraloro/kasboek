@@ -42,9 +42,13 @@ export async function loadLanguage(code: string): Promise<void> {
   )
 }
 
-/** Loads a language, then makes it the active one. */
+let latestSwitch = 0
+
+/** Loads a language, then makes it the active one. A switch that was overtaken by a newer one while loading changes nothing. */
 export async function switchLanguage(code: string): Promise<void> {
+  const mine = ++latestSwitch
   await loadLanguage(code)
+  if (mine !== latestSwitch) return
   await i18n.changeLanguage(code)
 }
 

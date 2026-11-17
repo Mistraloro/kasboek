@@ -24,4 +24,12 @@ describe('locale loader', () => {
   it('treats an unknown code as English', async () => {
     await expect(loadLanguage('xx')).resolves.toBeUndefined()
   })
+
+  it('keeps the latest choice when an earlier switch finishes loading later', async () => {
+    // German has to be fetched, English is there already: the slower, older switch must not win.
+    const slow = switchLanguage('de')
+    await switchLanguage('en')
+    await slow
+    expect(i18n.language).toBe('en')
+  })
 })

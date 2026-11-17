@@ -32,6 +32,15 @@ describe('IBAN helpers', () => {
     expect(maskNumbers('mandaat 20261001000123456789')).toBe('mandaat …6789')
   })
 
+  it('masks a 16-digit number written as two date-like groups, since no real day or month fits', () => {
+    expect(maskNumbers('card 4111-11-11 1111-11-11')).toBe('card …1111')
+    expect(maskNumbers('card 9999-99-99 9999-99-99')).toBe('card …9999')
+    expect(maskNumbers('card 41-11-1111 11-11-1111')).toBe('card …1111')
+    expect(maskNumbers('ref 2026-13-01 2026-10-02')).toBe('ref …1002')
+    expect(maskNumbers('ref 2026-10-32 2026-10-02')).toBe('ref …1002')
+    expect(maskNumbers('ref 00-10-2026 02-10-2026')).toBe('ref …2026')
+  })
+
   it('finds an IBAN stuck to letters or digits before it, and one in lower case', () => {
     expect(findIbans('REFNL91ABNA0417164300')).toEqual(['NL91ABNA0417164300'])
     expect(findIbans('MANDATEBE68539007547034')).toEqual(['BE68539007547034'])

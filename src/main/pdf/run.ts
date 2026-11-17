@@ -20,15 +20,11 @@ export interface ReadOptions {
 
 export const READ_TIMEOUT_MS = 60_000
 
-let busy = false
-
 /**
  * Reads the text of a PDF in a process of its own, one file per process, and ends that process in
- * every case. One file at a time: a second request is refused.
+ * every case. Callers keep to one file at a time (see createReadSlot in handle.ts).
  */
 export async function runReader(start: () => ReaderChild, bytes: Uint8Array, opts: ReadOptions = {}): Promise<PdfText> {
-  if (busy) throw new AppError('import.pdf_busy', 'Another PDF is still being read. Wait a moment and try again.')
-  busy = true
   const started: { child: ReaderChild | null } = { child: null }
   let timer: NodeJS.Timeout | null = null
   let onAbort: (() => void) | null = null
@@ -55,10 +51,6 @@ export async function runReader(start: () => ReaderChild, bytes: Uint8Array, opt
   } finally {
     if (timer) clearTimeout(timer)
     if (onAbort) opts.signal?.removeEventListener('abort', onAbort)
-    try {
-      started.child?.kill()
-    } finally {
-      busy = false
-    }
+    started.child?.kill()
   }
 }

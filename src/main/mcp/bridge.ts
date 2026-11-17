@@ -6,7 +6,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, type Server, type Socket } from 'node:net'
-import { getSettings } from '@core/settings'
+import { getSetting, getSettings } from '@core/settings'
 import { needsApproval } from '@shared/permissions'
 import type { OpName, OpResult } from '@shared/contract'
 import type { McpClientsSeen } from '@shared/types'
@@ -56,7 +56,7 @@ export function respondMcp(id: string, approve: boolean): void {
 
 function enabled(): boolean {
   try {
-    return isUnlocked() && getSettings(db()).mcpEnabled
+    return isUnlocked() && getSetting(db(), 'mcpEnabled')
   } catch {
     return false
   }

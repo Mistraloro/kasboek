@@ -7,7 +7,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setPasswordKdfForTests } from '@core/crypto'
 import { openDatabase } from '@core/database'
 import { insertTransaction, transactionsCsv } from '@core/finance'
-import { DEFAULT_SETTINGS, getSettings, resetImportedSettings, updateSettings } from '@core/settings'
+import { DEFAULT_SETTINGS, getSetting, getSettings, resetImportedSettings, updateSettings } from '@core/settings'
 import { setSecret, getSecret } from '@core/secrets'
 import * as sync from '@core/sync'
 import { contract, PUBLIC_OPS, type OpName } from '@shared/contract'
@@ -43,6 +43,18 @@ describe('CSV export: formulas are neutralised', () => {
     const lines = transactionsCsv(d, {}, { decimal: '.', labels }).csv.replace(/^﻿/, '').trim().split('\r\n')
     expect(lines[1]).toBe(`2026-10-05,'=Main,"'=HYPERLINK(""http://x"",""y"")",,'+1+1,'@SUM(A1),,-12.50,EUR,'-2+3`)
     expect(lines[2]).toBe(`2026-10-06,'=Main,'\tTab,,Fine = ok,,,5.00,EUR,`)
+  })
+})
+
+describe('reading one setting', () => {
+  it('gives the stored value, or the default when there is none or it is damaged', () => {
+    const d = openDb()
+    expect(getSetting(d, 'mcpEnabled')).toBe(false)
+    updateSettings(d, { mcpEnabled: true })
+    expect(getSetting(d, 'mcpEnabled')).toBe(true)
+    expect(getSetting(d, 'mcpEnabled')).toBe(getSettings(d).mcpEnabled)
+    d.prepare("UPDATE settings SET value = '{broken' WHERE key = 'mcpEnabled'").run()
+    expect(getSetting(d, 'mcpEnabled')).toBe(false)
   })
 })
 

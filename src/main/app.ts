@@ -134,9 +134,6 @@ export async function startApp({ background }: { background: boolean }): Promise
   })
   registerIpc()
   const win = createWindow(background)
-  await dataOpened
-  startupLog('data opened')
-  splashStep('data-opened')
   let shown = false
   const reveal = (why: string): void => {
     if (shown || win.isDestroyed()) return
@@ -152,35 +149,39 @@ export async function startApp({ background }: { background: boolean }): Promise
     })
   }
   onAppReady(() => reveal('first screen'))
-  // Never leave the person with only the launch window.
+  // Never leave the person with only the launch window: armed before the data is awaited, so a slow or failing start still ends.
   setTimeout(() => {
     if (!shown) startupLog(`showing the window without a first screen (${MAIN_WINDOW_SAFETY_MS / 1000} s)`)
     reveal('safety timeout')
   }, MAIN_WINDOW_SAFETY_MS)
+
+  // Registered before the data is awaited, so quitting, re-opening and closing the window work during a slow start.
+  let keepInStep: NodeJS.Timeout | null = null
+  app.on('activate', showMainWindow)
+  app.on('window-all-closed', () => {
+    if (quitWhenAllWindowsClosed(process.platform)) app.quit()
+  })
+  app.on('will-quit', () => {
+    if (keepInStep) clearInterval(keepInStep)
+    stopTray()
+    stopMcpBridge()
+    lock('user', true)
+  })
+
+  await dataOpened
+  startupLog('data opened')
+  splashStep('data-opened')
   startBackupScheduler()
   startAutoLock()
   startAlertChecks()
   // Keep the MCP bridge in step with the lock state and the setting.
   initTray({ startedInTray: background, open: showMainWindow })
-  const keepInStep = setInterval(() => {
+  keepInStep = setInterval(() => {
     if (quitting) return
     syncMcpBridge(dispatch)
     syncTray()
     refreshTray()
   }, 2000)
-
-  app.on('activate', showMainWindow)
-
-  app.on('window-all-closed', () => {
-    if (quitWhenAllWindowsClosed(process.platform)) app.quit()
-  })
-
-  app.on('will-quit', () => {
-    clearInterval(keepInStep)
-    stopTray()
-    stopMcpBridge()
-    lock('user', true)
-  })
 }
 
 /** What can wait until the first screen is up: the Windows Hello check, sync and update checks (modules loaded only now). */

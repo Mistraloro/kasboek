@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { AppInfo, Prefs, PrefsPatch, Settings } from '@shared/types'
+import { DEFAULT_FORMATS } from '@shared/format'
 import { switchLanguage } from '../i18n'
 import { call } from './api'
 import { formatMoney, type Fmt } from './format'
@@ -20,18 +21,27 @@ export function applyThemeToDocument(theme: Prefs['theme']): void {
   document.documentElement.dataset['theme'] = dark ? 'dark' : 'light'
 }
 
+/** Shown when the main process can't answer, so the page still opens (and reports its first screen). */
+const FALLBACK_PREFS: Prefs = { theme: 'system', language: 'en', formats: DEFAULT_FORMATS, autoLockMinutes: 10, updateCheck: true, welcomeDone: true, graphics: 'auto', graphicsFailed: false, keepInTray: false, insights: true }
+const FALLBACK_INFO: AppInfo = { name: 'Kasboek', version: '', commit: '', platform: 'linux', dataDir: '', graphics: { hardware: true, reason: null }, mcpCommand: { command: '', args: [] } }
+
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
 
   useEffect(() => {
-    void Promise.all([call('prefs.get'), call('app.info')]).then(async ([p, i]) => {
-      // The language is ready before the first screen, so no text shows as a key.
-      await switchLanguage(p.language).catch(() => {})
-      setPrefs(p)
-      setInfo(i)
-      void window.kasboek.invoke('app.milestone', { name: 'prefs loaded', ms: Math.round(performance.now()) }).catch(() => {})
-    })
+    void Promise.all([call('prefs.get'), call('app.info')])
+      .catch((err: unknown) => {
+        console.error('[prefs] could not load:', err)
+        return [FALLBACK_PREFS, FALLBACK_INFO] as const
+      })
+      .then(async ([p, i]) => {
+        // The language is ready before the first screen, so no text shows as a key.
+        await switchLanguage(p.language).catch(() => {})
+        setPrefs(p)
+        setInfo(i)
+        void window.kasboek.invoke('app.milestone', { name: 'prefs loaded', ms: Math.round(performance.now()) }).catch(() => {})
+      })
   }, [])
 
   useEffect(() => {

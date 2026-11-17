@@ -49,6 +49,17 @@ export function getSettings(db: Db): Settings {
   return merged
 }
 
+/** One setting, read without loading the rest (for code that polls). Same fallback to the default as getSettings. */
+export function getSetting<K extends keyof Settings>(db: Db, key: K): Settings[K] {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined
+  if (!row) return DEFAULT_SETTINGS[key]
+  try {
+    return JSON.parse(row.value) as Settings[K]
+  } catch {
+    return DEFAULT_SETTINGS[key]
+  }
+}
+
 export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
   const upsert = db.prepare(
     'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'

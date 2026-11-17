@@ -128,7 +128,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
                 setAssistKind('pdf')
                 setAssisting(Date.now())
                 // Like the check: the result arrives as an event (import.checkDone).
-                void call('import.pdfAssist', { sessionId: p.sessionId }).catch((e) => {
+                void call('import.pdfAssist', { sessionId: p.sessionId, consent: true }).catch((e) => {
                   setAssisting(null)
                   if (!(e instanceof ApiError)) toast(errText(e), 'error')
                 })

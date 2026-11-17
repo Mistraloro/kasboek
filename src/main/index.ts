@@ -5,7 +5,7 @@
 import { app, dialog } from 'electron'
 import { applyGraphicsChoice, startupLog, storedTheme } from './graphics'
 import { isBackgroundLaunch, mustShowOnSecondInstance } from '@shared/window-policy'
-import { showSplash, splashStep } from './splash'
+import { closeSplash, showSplash, splashStep } from './splash'
 import { SPLASH_HEAD_START_MS } from './startup-plan'
 
 const MCP_MODE = process.argv.includes('--mcp')
@@ -38,7 +38,7 @@ if (firstCopy) {
   })
   // Before the app is ready: whether to draw with the graphics card (see graphics.ts).
   applyGraphicsChoice()
-  void app.whenReady().then(async () => {
+  app.whenReady().then(async () => {
     startupLog('electron ready')
     if (!BACKGROUND) {
       // The launch window gets a head start: the app code is a large file that blocks this thread while it loads.
@@ -49,5 +49,10 @@ if (firstCopy) {
     startupLog('app code loaded')
     splashStep('app-code-loaded')
     await startApp({ background: BACKGROUND })
+  }).catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err)
+    startupLog(`start failed: ${message}`)
+    closeSplash()
+    dialog.showErrorBox('Kasboek', `Kasboek could not start.\n\n${message}`)
   })
 }

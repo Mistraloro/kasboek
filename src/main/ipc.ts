@@ -14,20 +14,19 @@ import { getPrefs, updatePrefs } from './prefs'
 import { syncTray } from './tray'
 import { defaultCategoryNames } from './i18n-categories'
 import { localizeDefaultCategories } from '@core/finance'
-import { forgetFacts } from '@core/insights'
+import { forgetFacts, insightsView } from '@core/insights'
 import * as session from './session'
+import * as jobs from './assistant/jobs'
 import { applyTheme } from './theme'
 import { lockedRefusal } from './lock-guard'
 import { isTrustedFrameUrl } from './trusted-url'
-import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue } from './transfer/service'
+import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue, writeTransfer } from './transfer/service'
 import { dataChanged, unlocked as backupAfterUnlock } from './transfer/scheduler'
 import { shouldAutoUpdate, updateEcbRates } from './fx/ecb'
-import { writeTransfer } from './transfer/service'
 import { setSecret } from '@core/secrets'
 import { addCustomProvider, isKnownProvider, newCustomId, removeCustomProvider, renameCustomProvider, resolveProvider, switchProvider } from '@shared/ai-provider-store'
 import { isCustomId } from '@shared/ai-providers'
 import { claudeEffort } from '@shared/reasoning'
-import { insightsView } from '@core/insights'
 import { mcpClientsSeen, respondMcp } from './mcp/bridge'
 import { createReadSlot } from './pdf/handle'
 import { helperPath } from './mcp/channel'
@@ -35,7 +34,8 @@ import * as mcpSetup from './mcp/setup'
 
 /**
  * Modules that are not needed before the first screen load on first use (see lazy.ts): the assistant
- * (Anthropic SDK, CSV/PDF/tips checks), updates, sync, exports and the PDF reader.
+ * (Anthropic SDK, CSV/PDF/tips checks), updates, sync, exports and the PDF reader. A module that is only
+ * ever read with `loaded()` would never load: stopping jobs (./assistant/jobs) is imported directly instead.
  */
 const chat = lazy(async () => {
   const m = await import('./assistant/chat')
@@ -47,7 +47,6 @@ const providerModule = lazy(() => import('./assistant/provider'))
 const models = lazy(() => import('./assistant/models'))
 const csvAssist = lazy(() => import('./assistant/csv'))
 const pdfAssist = lazy(() => import('./assistant/pdf'))
-const jobs = lazy(() => import('./assistant/jobs'))
 const insights = lazy(() => import('./assistant/insights'))
 const updates = lazy(() => import('./update'))
 const exporter = lazy(() => import('./export'))
@@ -61,11 +60,14 @@ const syncService = lazy(async () => {
 })
 
 let syncScheduler: Promise<void> | null = null
-/** Starts the sync timer and its before-lock hook, once. Never rejects: a failure is logged. */
+/** Starts the sync timer and its before-lock hook, once. Never rejects: a failure is logged and the next call tries again. */
 export function ensureSyncScheduler(): Promise<void> {
   syncScheduler ??= syncService.get().then(
     (m) => m.startSyncScheduler(),
-    (err: unknown) => console.error('[sync] could not start:', err)
+    (err: unknown) => {
+      syncScheduler = null
+      console.error('[sync] could not start:', err)
+    }
   )
   return syncScheduler
 }
@@ -77,7 +79,7 @@ export async function startUpdateChecks(): Promise<void> {
 
 /** Stops the assistant's running jobs (the app locking): modules that were never loaded have nothing to stop. */
 export function cancelRunningJobs(): void {
-  jobs.loaded()?.cancelAllAssists()
+  jobs.cancelAllAssists()
   insights.loaded()?.cancelInsights()
   pdfRead.abort()
 }
@@ -467,12 +469,12 @@ const desktopOps: OpTable = {
   'insights.status': { mutates: false, assistant: false, handler: () => insights.loaded()?.insightsStatus() ?? { running: false, month: null, startedAt: null } },
   'export.csv': { mutates: false, assistant: false, handler: async (_c, { filter, labels, defaultName }) => (await exporter.get()).exportCsv(filter, labels, defaultName) },
   'export.pdf': { mutates: false, assistant: false, handler: async (_c, { html, defaultName }) => (await exporter.get()).exportPdf(html, defaultName) },
-  'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => jobs.loaded()?.assistStatus(sessionId) ?? null },
+  'import.assistStatus': { mutates: false, assistant: false, handler: (_c, { sessionId }) => jobs.assistStatus(sessionId) ?? null },
   'import.assistCancel': {
     mutates: false,
     assistant: false,
     handler: (_c, { sessionId }) => {
-      jobs.loaded()?.cancelAssist(sessionId)
+      jobs.cancelAssist(sessionId)
       return { ok: true as const }
     }
   },
@@ -628,7 +630,7 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
   if (result.ok && allOps[name]?.mutates) {
     notifyChanged(actor)
     dataChanged(name, input)
-    ;(await syncService.get()).changedLocally()
+    syncService.loaded()?.changedLocally()
   }
   return result
 }

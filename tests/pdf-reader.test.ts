@@ -167,25 +167,10 @@ describe('runReader', () => {
     expect(started).toBe(0)
   })
 
-  it('reads one file at a time and is free again afterwards', async () => {
-    const first = new FakeChild(() => undefined)
-    const running = runReader(() => first, new Uint8Array(1))
-    let started = 0
-    expect(
-      await code(
-        runReader(
-          () => {
-            started++
-            return new FakeChild(() => undefined)
-          },
-          new Uint8Array(1)
-        )
-      )
-    ).toBe('import.pdf_busy')
-    expect(started).toBe(0)
-    expect(first.killed).toBe(0)
-    first.emit('message', { ok: true, result: text() })
-    await running
+  it('is free for the next file after a read ends', async () => {
+    const first = new FakeChild((c) => c.emit('message', { ok: true, result: text() }))
+    expect(await runReader(() => first, new Uint8Array(1))).toEqual(text())
+    expect(first.killed).toBe(1)
     const next = new FakeChild((c) => c.emit('message', { ok: true, result: text() }))
     expect(await runReader(() => next, new Uint8Array(1))).toEqual(text())
   })

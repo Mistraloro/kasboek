@@ -12,10 +12,13 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - **The assistant’s thinking is collapsed** by default, follows the newest text when you open it, and no longer covers the chat.
 - **“Check with your assistant” on imports asks first**, like the PDF reading and the tips: you see exactly what is sent (payee and description text, your rules and the assistant’s remembered notes, all with account and card numbers hidden), and your agreement is remembered per provider, address and model.
 - **Safer AI reading of PDFs:** the sign of an amount (minus, brackets, CR, DR) is always taken from the statement’s own text, so a payment can no longer be read as income; IBANs stuck to other text are hidden too; and while the assistant reads, editing rows is switched off.
+- **The assistant can see the page you have open** (Transactions, Budgets, Fixed costs, Overview): ask about “this transaction” without describing it. A chip above the input shows what it sees and can be switched off; there is also a setting. Account and card numbers are hidden, and it never sees more than the rows on screen.
 - **A hold-to-show eye** in every password field.
 - **Faster, clearer start.** A launch window with a progress bar shows right away; the main window appears only once its first screen is drawn (no more blank window, also on Windows on ARM). The program loads far less code at start, pages and languages load when you need them, and the Windows Hello check runs after the first screen. A startup.log in the data folder records the timings (technical facts only).
 
 **Fixes**
+- The assistant no longer stops silently after its first message, and a “working” line shows while it runs a tool.
+- The Stop button on the assistant’s import check works again, and locking stops a running check. A backup or sync made at the very moment of locking can no longer be unreadable. A failure while starting now shows a message instead of leaving only the launch window.
 - Dates like 01-10-2026 in statement text are no longer masked in what the assistant sees.
 - Clicking next to a dialog no longer closes it and loses what you typed. Escape or the close button asks first in add/edit account, goals, bank balance and net worth value.
 - Dates you type now follow your date format setting everywhere, and hints show today’s date in your format.

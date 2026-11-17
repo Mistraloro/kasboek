@@ -76,10 +76,18 @@ export function whenSessionReady(): Promise<void> {
   return startupInit ? startupInit.catch(() => undefined) : Promise.resolve()
 }
 
-export async function initSession(): Promise<void> {
-  loadError = null
+let initRunning: Promise<void> | null = null
+
+/** Reads the account file. Calls that overlap share one read; the previous result stays in place until the new one is known. */
+export function initSession(): Promise<void> {
+  initRunning ??= readAccount().finally(() => (initRunning = null))
+  return initRunning
+}
+
+async function readAccount(): Promise<void> {
   try {
     account = await loadAccount()
+    loadError = null
   } catch (err) {
     loadError = err instanceof AppError ? err : new AppError('auth.corrupt', String(err))
   }

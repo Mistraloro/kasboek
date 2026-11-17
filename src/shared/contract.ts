@@ -247,7 +247,7 @@ export const contract = {
     output: out<{ kind: 'check' | 'pdf'; running: boolean; startedAt: number; groupsDone: number; groupsTotal: number; partsTotal: number; error: string | null } | null>()
   },
   'import.pdfAssistPreview': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<PdfAssistPreview>() },
-  'import.pdfAssist': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<ImportPreview>() },
+  'import.pdfAssist': { input: z.object({ sessionId: z.string().uuid(), consent: z.literal(true) }).strict(), output: out<ImportPreview>() },
   'import.assistCancel': { input: z.object({ sessionId: z.string().uuid() }).strict(), output: out<{ ok: true }>() },
   'mcp.setupStatus': { input: empty, output: out<McpSetupStatus>() },
   /** When each Claude app last reached Kasboek (cheap; polled while the setup is on screen). */
