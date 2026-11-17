@@ -5,6 +5,7 @@ import { coreOps } from '@core/ops'
 import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
 import { previewRule } from '@core/finance'
+import { findRecurring } from '@core/recurring'
 import { commitSummary, latestSession, sessionKind } from '@core/import'
 import type { RuleField, RuleMatch } from '@shared/types'
 import { getPrefs } from '../prefs'
@@ -186,6 +187,11 @@ export function describeChange(db: Db, op: OpName, input: Record<string, unknown
     }
     case 'goals.create':
       return `Create the savings goal “${String(input['name'])}”: ${money(db, Number(input['targetCents']))}${input['targetDate'] ? ` by ${String(input['targetDate'])}` : ''}`
+    case 'recurring.hide': {
+      const found = findRecurring(db)
+      const name = [...found.items, ...found.hidden].find((i) => i.key === input['key'])?.name ?? String(input['key']).replace(/^(in|out):/, '')
+      return input['hidden'] === false ? `Count “${name}” as a fixed cost again` : `Stop counting “${name}” as a fixed cost`
+    }
     case 'transactions.split': {
       const parts = (input['parts'] as { categoryId: number | null; amountCents: number }[] | undefined) ?? []
       if (!parts.length) return 'Remove the split of a transaction'

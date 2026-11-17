@@ -312,6 +312,21 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
       -- their exchange cost when there is no exchange rate for that day.
       ALTER TABLE accounts ADD COLUMN fx_cost_pct REAL CHECK (fx_cost_pct IS NULL OR (fx_cost_pct >= 0 AND fx_cost_pct <= 20));
     `)
+  },
+  (db) => {
+    db.exec(`
+      -- Fixed costs are found from the transactions; this only remembers the ones the person said
+      -- are not fixed (by the item's key). Rows are never deleted, see setRecurringHidden.
+      CREATE TABLE recurring_marks (
+        id INTEGER PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE CHECK (length(key) BETWEEN 4 AND 200),
+        hidden INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT ${now},
+        uid TEXT
+      );
+      CREATE UNIQUE INDEX idx_recurring_marks_uid ON recurring_marks(uid);
+    `)
+    createSyncTriggers(db, SPEC.get('recurring_marks')!)
   }
 ]
 

@@ -390,6 +390,8 @@ function defaultDescribe(table: string, data: Record<string, Value>): string {
       return `Rule “${String(data['pattern'] ?? '?')}”`
     case 'valuations':
       return `Value on ${String(data['date'] ?? '?')}`
+    case 'recurring_marks':
+      return `Fixed cost “${String(data['key'] ?? '?').replace(/^(in|out):/, '')}”`
     default:
       return table.replaceAll('_', ' ')
   }

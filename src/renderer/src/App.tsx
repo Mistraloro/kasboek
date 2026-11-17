@@ -184,7 +184,7 @@ function Shell() {
               {page === 'budgets' && <Budgets />}
               {page === 'year' && <YearPage key={navKey} />}
               {page === 'networth' && <NetWorthPage key={navKey} />}
-              {page === 'recurring' && <RecurringPage key={navKey} />}
+              {page === 'recurring' && <RecurringPage key={navKey} go={go} />}
               {page === 'goals' && <GoalsPage key={navKey} />}
               {page === 'import' && <ImportPage go={setPage} />}
               {page === 'settings' && <SettingsPage key={navKey} />}

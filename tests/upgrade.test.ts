@@ -53,4 +53,30 @@ describe('upgrading a 0.10.0 database (build 14, schema 7)', () => {
     migrate(db)
     expect(schemaVersion(db)).toBe(MIGRATIONS.length)
   })
+
+describe('upgrading from the schema before fixed-cost marks', () => {
+  it('keeps the data, adds the table and records its changes for sync', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'kb-up-')), 'k.db')
+    const key = randomBytes(32).toString('hex')
+    const previous = MIGRATIONS.length - 1
+    const old = openDatabase(file, key, { migrate: false })
+    old.transaction(() => {
+      MIGRATIONS.slice(0, previous).forEach((m) => m(old))
+      old.pragma(`user_version = ${previous}`)
+    })()
+    old.prepare("INSERT INTO accounts (name) VALUES ('Zicht')").run()
+    old.prepare('UPDATE sync_flags SET enabled = 1').run()
+    expect(old.prepare("SELECT 1 FROM sqlite_master WHERE name = 'recurring_marks'").get()).toBeUndefined()
+    old.close()
+
+    const db = openDatabase(file, key)
+    expect(schemaVersion(db)).toBe(MIGRATIONS.length)
+    expect(db.prepare('SELECT name FROM accounts').all()).toEqual([{ name: 'Zicht' }])
+    const triggers = db.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'recurring_marks' ORDER BY name").all()
+    expect(triggers).toEqual([{ name: 'sync_recurring_marks_del' }, { name: 'sync_recurring_marks_ins' }, { name: 'sync_recurring_marks_upd' }])
+    db.prepare('DELETE FROM sync_outbox').run()
+    db.prepare("INSERT INTO recurring_marks (key, hidden) VALUES ('out:streamly', 1)").run()
+    expect(db.prepare('SELECT DISTINCT tbl, uid FROM sync_outbox').all()).toEqual([{ tbl: 'recurring_marks', uid: 'out:streamly' }])
+  })
+})
 })

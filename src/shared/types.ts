@@ -431,7 +431,10 @@ export type Alert =
   | { kind: 'balance'; key: string; accountId: number; name: string; currency: string; balanceCents: number; lowestCents: number; until: string; dueCents: number }
 
 export interface RecurringSummary {
+  /** What counts as fixed (everything below is worked out from these). */
   items: RecurringItem[]
+  /** Detected, but the person said they are not fixed: left out of the totals and the warnings. */
+  hidden: RecurringItem[]
   /** Fixed costs and fixed income per month. */
   monthlyOutCents: number
   monthlyInCents: number

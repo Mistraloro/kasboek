@@ -382,6 +382,16 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    double-click to blank window, logo and main window; reboot without reinstalling and see if it is
    slow again (cold disk cache) or fast (something tied to the install, such as Defender); watch
    "Antimalware Service Executable" during the first start; note whether the PC is Windows on ARM.
+28. **Two bugs found while adding "Not a fixed cost" (not fixed yet).** (a) Fixed-cost amounts stay in
+    each account's own currency but are added up across accounts and shown in the main currency
+    (`src/core/recurring.ts` where the totals are summed, `src/renderer/src/pages/Recurring.tsx`
+    where `money()` formats the amounts): convert with the rate of the day.
+    (b) Suspected sync bug: a budget's sync id comes from category + month (`src/core/sync-schema.ts`)
+    and `setBudget(null)` deletes the row (`src/core/finance.ts`). Deletion is final for a sync id
+    (`flush` skips a row whose last synced state is deleted), so a budget removed and later set again
+    for the same month and category may never reach the other computer. Check with a test across two
+    computers; a fix is probably to store "no budget" as a row instead of deleting it (as fixed-cost
+    marks do).
 
 ## Later, maybe
 

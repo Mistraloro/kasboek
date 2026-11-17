@@ -38,6 +38,8 @@ export const SYNC_TABLES: TableSpec[] = [
   { table: 'valuations', uid: `(SELECT uid FROM accounts WHERE id = NEW.account_id) || '/' || NEW.date`, cols: ['account_id', 'date', 'value_cents', 'note'], fks: { account_id: 'accounts' } },
   { table: 'fx_rates', uid: `NEW.currency || '/' || NEW.date || '/' || NEW.source`, cols: ['currency', 'date', 'per_eur', 'source'], fks: {}, when: (r) => `${r}.source = 'manual'` },
   { table: 'goals', uid: RANDOM, cols: ['name', 'target_cents', 'target_date', 'account_id', 'saved_cents', 'archived', 'created_at'], fks: { account_id: 'accounts' } },
+  // The key is the natural id: the same item hidden on two computers is one row.
+  { table: 'recurring_marks', uid: `NEW.key`, cols: ['key', 'hidden', 'updated_at'], fks: {} },
   { table: 'csv_profiles', uid: `NEW.header_signature`, cols: ['name', 'bank', 'header_signature', 'mapping_json', 'created_at', 'updated_at'], fks: {} }
 ]
 

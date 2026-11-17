@@ -10,7 +10,7 @@ import * as fx from './fx'
 import * as wealth from './wealth'
 import { listBankBalances, setBankBalance } from './balance'
 import { findTransfers, pairTransfers, setTransferCost, transferCostInfo, unpairTransfer } from './transfers'
-import { findRecurring } from './recurring'
+import { findRecurring, setRecurringHidden } from './recurring'
 import { monthReview } from './review'
 import { listAlerts } from './alerts'
 import { createGoal, deleteGoal, listGoals, updateGoal } from './goals'
@@ -263,6 +263,7 @@ export const coreOps: OpTable = {
   'alerts.list': { mutates: false, assistant: true, handler: ({ db }) => listAlerts(db) },
   'summary.review': { mutates: false, assistant: true, handler: ({ db }, { month }) => monthReview(db, month) },
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },
+  'recurring.hide': { mutates: true, assistant: true, handler: ({ db }, { key, hidden }) => setRecurringHidden(db, key, hidden) },
   'transfers.find': { mutates: false, assistant: true, handler: ({ db }) => findTransfers(db) },
   'transfers.pair': { mutates: true, assistant: true, handler: ({ db }, { pairs }) => pairTransfers(db, pairs) },
   'transfers.cost': { mutates: false, assistant: false, handler: ({ db }, { id }) => transferCostInfo(db, id) },

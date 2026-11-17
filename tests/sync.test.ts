@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { openDatabase, snapshotEncrypted, type Db } from '@core/database'
 import { coreOps, runOp } from '@core/ops'
 import * as sync from '@core/sync'
+import { findRecurring, setRecurringHidden } from '@core/recurring'
 
 const key = randomBytes(32).toString('hex')
 const dir = mkdtempSync(join(tmpdir(), 'kb-sync-'))
@@ -142,5 +143,52 @@ describe('sync', () => {
     expect((await opB('goals.list', {}))[0]).toMatchObject({ name: 'Holiday', accountName: 'Savings' })
     expect((await opB('transactions.list', { search: 'To savings' })).items[0].transferAccount).toBe('Savings')
     expect(b.prepare("SELECT bank_description FROM transactions WHERE description = 'Receipt'").get()).toEqual({ bank_description: 'Receipt' })
+  })
+
+  describe('fixed costs marked as not fixed', () => {
+    const TODAY = '2026-11-10'
+    /** Two computers that both know a monthly payment to "Streamly". */
+    async function withFixedCost() {
+      const p = await pair()
+      for (const m of ['2026-07', '2026-08', '2026-09', '2026-10']) await p.opA('transactions.create', { accountId: p.acc.id, bookingDate: `${m}-05`, amountCents: -1200, description: 'Subscription', counterpartyName: 'Streamly' })
+      exchange(p.a, 'A', p.b, 'B')
+      const itemKey = findRecurring(p.a, TODAY).items[0]!.key
+      expect(findRecurring(p.b, TODAY).items.map((i) => i.key)).toEqual([itemKey])
+      return { ...p, itemKey }
+    }
+    const hiddenKeys = (db: Db) => findRecurring(db, TODAY).hidden.map((i) => i.key)
+
+    it('brings the mark to the other computer', async () => {
+      const { a, b, itemKey } = await withFixedCost()
+      setRecurringHidden(a, itemKey, true, TODAY)
+      expect(exchange(a, 'A', b, 'B').deferred).toBe(0)
+      expect(hiddenKeys(b)).toEqual([itemKey])
+      expect(findRecurring(b, TODAY).items).toEqual([])
+    })
+
+    it('can be hidden, shown and hidden again across two computers', async () => {
+      const { a, b, itemKey } = await withFixedCost()
+      setRecurringHidden(a, itemKey, true, TODAY)
+      exchange(a, 'A', b, 'B')
+      setRecurringHidden(b, itemKey, false, TODAY)
+      exchange(b, 'B', a, 'A')
+      expect(hiddenKeys(a)).toEqual([])
+      setRecurringHidden(a, itemKey, true, TODAY)
+      exchange(a, 'A', b, 'B')
+      expect(hiddenKeys(b)).toEqual([itemKey])
+      expect(b.prepare('SELECT count(*) AS n FROM recurring_marks').get()).toEqual({ n: 1 })
+    })
+
+    it('makes one row when both computers hide the same item', async () => {
+      const { a, b, itemKey } = await withFixedCost()
+      setRecurringHidden(a, itemKey, true, TODAY)
+      setRecurringHidden(b, itemKey, true, TODAY)
+      expect(exchange(a, 'A', b, 'B').deferred).toBe(0)
+      exchange(b, 'B', a, 'A')
+      for (const db of [a, b]) {
+        expect(db.prepare('SELECT key, hidden FROM recurring_marks').all()).toEqual([{ key: itemKey, hidden: 1 }])
+      }
+      expect((a.prepare('SELECT uid FROM recurring_marks').get() as { uid: string }).uid).toBe(itemKey)
+    })
   })
 })

@@ -175,7 +175,7 @@
       "accounts": "Agregar cuentas"
     },
     "kindHint": {
-      "organise": "Agregar una categoría, fijar un presupuesto, crear una meta de ahorro."
+      "organise": "Agregar una categoría, fijar un presupuesto, crear una meta de ahorro, marcar un gasto fijo como no fijo."
     }
   },
   "memory": {

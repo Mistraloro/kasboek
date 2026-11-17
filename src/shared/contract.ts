@@ -501,6 +501,11 @@ export const contract = {
     input: empty,
     output: out<RecurringSummary>()
   },
+  'recurring.hide': {
+    description: 'Stop counting a detected fixed cost or fixed income (by its key from recurring_list) when the person says it is not fixed, or count it again with hidden: false. Hidden items are left out of fixed-cost totals and balance warnings; transactions are not changed.',
+    input: z.object({ key: z.string().trim().regex(/^(in|out):/).max(200), hidden: z.boolean().default(true) }).strict(),
+    output: out<RecurringSummary>()
+  },
   'transfers.find': {
     description:
       'Transfers between the person’s own accounts that aren’t paired yet: money out of one account and into another within 3 days, the same amount, or between currencies its value at that day’s rate minus the bank’s cost. confidence "iban" means the account number matches (sure); "amount" only the amount and date. costCents: between currencies, the exchange cost in the sending account’s currency.',

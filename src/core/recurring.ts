@@ -7,6 +7,7 @@ import { addMonths, localToday, monthOf } from '@shared/month'
 import type { RecurringItem, RecurringSummary } from '@shared/types'
 import { groupKey } from './assist-plan'
 import type { Db } from './database'
+import { AppError } from './errors'
 
 const RHYTHMS: { frequency: RecurringItem['frequency']; days: number; months: number; perMonth: number }[] = [
   { frequency: 'weekly', days: 7, months: 0, perMonth: 52 / 12 },
@@ -115,11 +116,32 @@ export function findRecurring(db: Db, today = localToday()): RecurringSummary {
     })
   }
   items.sort((a, b) => Math.abs(b.monthlyCents) - Math.abs(a.monthlyCents))
-  const out = items.filter((i) => i.direction === 'out')
+  const hiddenKeys = new Set((db.prepare('SELECT key FROM recurring_marks WHERE hidden = 1').all() as { key: string }[]).map((r) => r.key))
+  const hidden = items.filter((i) => hiddenKeys.has(i.key))
+  const counted = items.filter((i) => !hiddenKeys.has(i.key))
+  const out = counted.filter((i) => i.direction === 'out')
   return {
-    items,
+    items: counted,
+    hidden,
     monthlyOutCents: -out.reduce((t, i) => t + i.monthlyCents, 0),
-    monthlyInCents: items.filter((i) => i.direction === 'in').reduce((t, i) => t + i.monthlyCents, 0),
+    monthlyInCents: counted.filter((i) => i.direction === 'in').reduce((t, i) => t + i.monthlyCents, 0),
     dueThisMonthCents: -out.filter((i) => i.status === 'due' || i.status === 'late').reduce((t, i) => t + i.typicalCents, 0)
   }
+}
+
+/**
+ * Stops counting a detected item (or counts it again). Only items that are detected now can be
+ * hidden, so a made-up key does nothing. A mark is never deleted: for sync a deleted row stays
+ * deleted on every computer, so showing again sets `hidden` back to 0 instead.
+ */
+export function setRecurringHidden(db: Db, key: string, hidden: boolean, today = localToday()): RecurringSummary {
+  if (hidden) {
+    const found = findRecurring(db, today)
+    if (![...found.items, ...found.hidden].some((i) => i.key === key)) throw new AppError('recurring.not_found', 'That fixed cost is not (or no longer) found.')
+  } else if (!db.prepare('SELECT 1 FROM recurring_marks WHERE key = ?').get(key)) return findRecurring(db, today)
+  db.prepare(
+    `INSERT INTO recurring_marks (key, hidden) VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET hidden = excluded.hidden, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')`
+  ).run(key, hidden ? 1 : 0)
+  return findRecurring(db, today)
 }

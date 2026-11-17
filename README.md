@@ -11,7 +11,7 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   searches, split one payment over categories), categories, rules ("Supermarket → Groceries", on text,
   whole words or the counterparty's IBAN), monthly budgets, and an overview with income, spending,
   budget left, warnings and a 6-month chart; a year view per category; net worth over time with
-  investments and loans; savings goals; fixed costs and subscriptions found from your transactions.
+  investments and loans; savings goals; fixed costs and subscriptions found from your transactions (if one is wrong, mark it "Not a fixed cost" and it stops counting).
   Refunds lower spending; transfers between your own accounts are paired and left out.
   Dark and light mode, eight languages, number and date formats chosen part by part.
 - **First start**: a welcome window sets the language, number and date style, exchange rates, the
