@@ -7,6 +7,7 @@ import { CategoryBars, MonthBars } from '../components/charts'
 import { Button, Card, CardHeader, EmptyState, MonthNav, PageHeader, cx } from '../components/ui'
 import { call, useOp } from '../lib/api'
 import { useAssistant } from '../components/AssistantPanel'
+import { Suggestions } from '../components/Suggestions'
 import { useToast } from '../components/Toast'
 import { errText } from './auth/parts'
 import { formatDate, monthLabel, monthShort } from '../lib/format'
@@ -17,7 +18,7 @@ const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.sli
 
 export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown>) => void }) {
   const { t } = useTranslation()
-  const { fmt, money, settings } = useSettings()
+  const { fmt, money, settings, prefs } = useSettings()
   const [month, setMonth] = useState(monthOf())
   const summary = useOp('summary.month', { month })
   const backup = useOp('backup.status')
@@ -92,6 +93,8 @@ export function Overview({ go }: { go: (p: Page, filter?: Record<string, unknown
           hint={s?.leftCents == null ? t('overview.noBudgets') : t('overview.ofBudget', { budget: money(s.budgetedCents) })}
         />
       </div>
+
+      {prefs.insights && <Suggestions month={month} monthText={monthLabel(toDate(month), fmt)} go={go} />}
 
       {s && s.unconverted > 0 && (
         <button type="button" onClick={() => { openSettingsTab('general'); go('settings') }} className="mt-4 flex w-full items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-left text-[13px] hover:bg-surface-2">

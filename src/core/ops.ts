@@ -13,6 +13,7 @@ import { findTransfers, pairTransfers, setTransferCost, transferCostInfo, unpair
 import { findRecurring, setRecurringHidden } from './recurring'
 import { monthReview } from './review'
 import { listAlerts } from './alerts'
+import { buildFacts, giveFeedback, restoreDismissed } from './insights'
 import { createGoal, deleteGoal, listGoals, updateGoal } from './goals'
 import { forget, forgetAll, memoryState, remember, setMemoryEnabled, updateMemory } from './memory'
 
@@ -262,6 +263,10 @@ export const coreOps: OpTable = {
   'memory.setEnabled': { mutates: true, assistant: false, handler: ({ db }, { enabled }) => setMemoryEnabled(db, enabled) },
   'alerts.list': { mutates: false, assistant: true, handler: ({ db }) => listAlerts(db) },
   'summary.review': { mutates: false, assistant: true, handler: ({ db }, { month }) => monthReview(db, month) },
+  // Tips for the Overview: found locally, never offered to the assistant; feedback stays on this computer.
+  'insights.get': { mutates: false, assistant: false, handler: ({ db }, { month }) => ({ facts: buildFacts(db, month), ai: null }) },
+  'insights.feedback': { mutates: true, assistant: false, handler: ({ db }, { key, verdict }) => giveFeedback(db, key, verdict) },
+  'insights.restoreDismissed': { mutates: true, assistant: false, handler: ({ db }) => restoreDismissed(db) },
   'recurring.list': { mutates: false, assistant: true, handler: ({ db }) => findRecurring(db) },
   'recurring.hide': { mutates: true, assistant: true, handler: ({ db }, { key, hidden }) => setRecurringHidden(db, key, hidden) },
   'transfers.find': { mutates: false, assistant: true, handler: ({ db }) => findTransfers(db) },
@@ -382,6 +387,6 @@ export async function runOp<K extends OpName>(
 
 /** Never store secrets in the audit log. */
 function redact(name: string, input: unknown): string {
-  if (/^(auth|transfer|backup|prefs)\./.test(name)) return '{}'
+  if (/^(auth|transfer|backup|prefs|insights)\./.test(name)) return '{}'
   return JSON.stringify(input)
 }

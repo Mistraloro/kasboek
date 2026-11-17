@@ -58,7 +58,7 @@ describe('upgrading from the schema before fixed-cost marks', () => {
   it('keeps the data, adds the table and records its changes for sync', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'kb-up-')), 'k.db')
     const key = randomBytes(32).toString('hex')
-    const previous = MIGRATIONS.length - 1
+    const previous = 12 // the schema just before migration 13, which added the marks
     const old = openDatabase(file, key, { migrate: false })
     old.transaction(() => {
       MIGRATIONS.slice(0, previous).forEach((m) => m(old))
@@ -77,6 +77,34 @@ describe('upgrading from the schema before fixed-cost marks', () => {
     db.prepare('DELETE FROM sync_outbox').run()
     db.prepare("INSERT INTO recurring_marks (key, hidden) VALUES ('out:streamly', 1)").run()
     expect(db.prepare('SELECT DISTINCT tbl, uid FROM sync_outbox').all()).toEqual([{ tbl: 'recurring_marks', uid: 'out:streamly' }])
+  })
+})
+
+describe('upgrading from the schema before suggestion feedback', () => {
+  it('keeps the data and adds a local table that sync does not record', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'kb-up-')), 'k.db')
+    const key = randomBytes(32).toString('hex')
+    const previous = 13 // the schema just before migration 14, which added insight_feedback
+    const old = openDatabase(file, key, { migrate: false })
+    old.transaction(() => {
+      MIGRATIONS.slice(0, previous).forEach((m) => m(old))
+      old.pragma(`user_version = ${previous}`)
+    })()
+    old.prepare("INSERT INTO accounts (name) VALUES ('Zicht')").run()
+    old.prepare('UPDATE sync_flags SET enabled = 1').run()
+    expect(old.prepare("SELECT 1 FROM sqlite_master WHERE name = 'insight_feedback'").get()).toBeUndefined()
+    old.close()
+
+    const db = openDatabase(file, key)
+    expect(schemaVersion(db)).toBe(MIGRATIONS.length)
+    expect(db.prepare('SELECT name FROM accounts').all()).toEqual([{ name: 'Zicht' }])
+    db.prepare('DELETE FROM sync_outbox').run()
+    db.prepare("INSERT INTO insight_feedback (key, verdict) VALUES ('late:out:streamly:2026-11-05', 'dismissed')").run()
+    expect(db.prepare('SELECT key, verdict, length(at) > 0 AS stamped FROM insight_feedback').all()).toEqual([{ key: 'late:out:streamly:2026-11-05', verdict: 'dismissed', stamped: 1 }])
+    expect(() => db.prepare("INSERT INTO insight_feedback (key, verdict) VALUES ('x', 'maybe')").run()).toThrow()
+    // Local only: nothing is recorded for sync, and no triggers exist on it.
+    expect(db.prepare('SELECT count(*) AS n FROM sync_outbox').get()).toEqual({ n: 0 })
+    expect(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'insight_feedback'").get()).toEqual({ n: 0 })
   })
 })
 })

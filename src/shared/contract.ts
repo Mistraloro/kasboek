@@ -24,7 +24,7 @@ const currency = z
   .transform((s) => s.toUpperCase())
   .refine((c) => CURRENCIES.includes(c), { message: 'Unknown currency code.' })
 import { ACCOUNT_KINDS } from './types'
-import type { Alert, Goal, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
+import type { Alert, Goal, InsightsView, McpClientsSeen, Memory, MemoryState, UpdateStatus, SavedSearch, MonthReview, RecurringSummary, SplitLine, TransferPair, Account, AccountWithBalance, BankBalance, BankBalanceResult, ImportCommitResult, AssistantStatus, AppInfo, AuthStatus, ImportReset, BackupEntryInfo, BackupStatus, BudgetRow, Category, FxRate, FxStatus, NetWorth, Valuation, YearSummary, ImportBatch, ImportPreview, PdfAssistPreview, McpSetupStatus, MonthSummary, PickedTransfer, Prefs, Rule, RulePreview, Settings, SyncStatus, Transaction, TransactionPage } from './types'
 
 const out = <T>() => undefined as unknown as T
 const empty = z.object({}).strict()
@@ -94,7 +94,8 @@ export const contract = {
         updateCheck: z.boolean(),
         welcomeDone: z.boolean(),
         graphics: z.enum(GRAPHICS_CHOICES),
-        keepInTray: z.boolean()
+        keepInTray: z.boolean(),
+        insights: z.boolean()
       })
       .partial()
       .strict(),
@@ -495,6 +496,21 @@ export const contract = {
     description: 'Facts for a review of one month (YYYY-MM): income and spending against the average of the three months before, each spending category against its average (biggest change first), budgets that went over, and payments that stand out (far above what that payee usually costs, or a large first payment). All in cents of the main currency.',
     input: z.object({ month }).strict(),
     output: out<MonthReview>()
+  },
+  'insights.get': {
+    description: 'Tips for the Overview found locally from the data of one month (YYYY-MM). Not offered to the assistant.',
+    input: z.object({ month }).strict(),
+    output: out<InsightsView>()
+  },
+  'insights.feedback': {
+    description: 'Remember on this computer what the person did with a tip (hidden, not useful, useful). Never synced.',
+    input: z.object({ key: z.string().trim().min(1).max(300), verdict: z.enum(['dismissed', 'not_useful', 'useful']) }).strict(),
+    output: out<{ ok: true }>()
+  },
+  'insights.restoreDismissed': {
+    description: 'Show the tips the person hid on this computer again.',
+    input: empty,
+    output: out<{ restored: number }>()
   },
   'recurring.list': {
     description: 'Payments and income that come back at a steady rhythm (subscriptions, rent, insurance, energy, salary), found from the last 14 months: usual amount, rhythm, last and next date, whether it is paid, due or late this month, and price changes. Plus fixed costs per month and what is still due this month.',

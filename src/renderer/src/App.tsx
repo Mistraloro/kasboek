@@ -181,7 +181,7 @@ function Shell() {
             <div className="mx-auto max-w-5xl px-10 pt-4 pb-16">
               {page === 'overview' && <Overview key={navKey} go={go} />}
               {page === 'transactions' && <Transactions key={navKey} go={setPage} initial={txFilter} />}
-              {page === 'budgets' && <Budgets />}
+              {page === 'budgets' && <Budgets key={navKey} initial={txFilter} />}
               {page === 'year' && <YearPage key={navKey} />}
               {page === 'networth' && <NetWorthPage key={navKey} />}
               {page === 'recurring' && <RecurringPage key={navKey} go={go} />}

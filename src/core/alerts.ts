@@ -9,7 +9,8 @@ import type { Db } from './database'
 import { listBudgets } from './finance'
 import { findRecurring } from './recurring'
 
-const NEAR = 0.8
+/** A budget is nearly used up from this share of it. */
+export const NEAR = 0.8
 
 export function listAlerts(db: Db, today = localToday()): Alert[] {
   const month = monthOf(new Date(`${today}T12:00:00`))

@@ -458,6 +458,10 @@
     "autoLockHint": "Also locks when the screen locks or the computer sleeps.",
     "keepInTray": "Keep Kasboek running in the tray when I close the window",
     "keepInTrayHint": "Off: closing the window quits Kasboek. On: Kasboek stays in the tray (the menu bar on a Mac) so Claude can keep using it. Open it again from the tray icon or its shortcut.",
+    "insights": "Suggestions on the Overview",
+    "insightsHint": "Tips found from your own data, on this computer. Nothing is sent anywhere.",
+    "insightsRestore": "Show hidden tips again",
+    "insightsRestored": "Hidden tips will show again.",
     "minutes_one": "After {{count}} minute",
     "minutes_other": "After {{count}} minutes",
     "encryptionHint": "Your budget data is encrypted on disk.",
@@ -1350,5 +1354,76 @@
     "assistant_pdf_empty": "This PDF has no text to read.",
     "assistant_pdf_too_long": "This statement has too many pages for the assistant to read (the limit is 40 pages). Try a statement for a shorter period.",
     "assistant_pdf_no_rows": "{{ai}} didn’t find transactions that could be matched to the text of this statement. Nothing was changed."
+  },
+  "insights": {
+    "title": "Suggestions",
+    "showAll": "Show all ({{n}})",
+    "showLess": "Show fewer",
+    "empty": "Nothing stands out for {{month}}.",
+    "loading": "Looking for tips…",
+    "error": "Couldn’t load the suggestions.",
+    "retry": "Try again",
+    "notUseful": "Not useful",
+    "hide": "Hide",
+    "collapse": "Collapse suggestions",
+    "expand": "Expand suggestions",
+    "severity": {
+      "warning": "Warning",
+      "tip": "Tip",
+      "info": "Note"
+    },
+    "action": {
+      "fixedCosts": "Open fixed costs",
+      "budgets": "Open budgets",
+      "setBudget": "Set a budget",
+      "payments": "Show payments",
+      "category": "Open category"
+    },
+    "price_up": {
+      "title": "{{name}} got more expensive",
+      "body": "{{from}} became {{to}} ({{change}} more) on {{date}}."
+    },
+    "charged_twice": {
+      "title": "{{name}} was charged twice",
+      "body": "{{count}} payments of about {{amount}} in the same month, the last on {{date}}."
+    },
+    "late": {
+      "title": "{{name}} is late",
+      "body": "Expected around {{date}} ({{amount}}), but not seen yet."
+    },
+    "upcoming": {
+      "title": "{{name}} is coming up",
+      "body": "About {{amount}} is due around {{date}}."
+    },
+    "over_budget": {
+      "title": "{{name}} is over budget",
+      "body": "{{spent}} spent of {{budget}} ({{percent}}%)."
+    },
+    "near_budget": {
+      "title": "{{name}} is almost at its budget",
+      "body": "{{spent}} spent of {{budget}} ({{percent}}%)."
+    },
+    "category_up": {
+      "title": "{{name}} is up {{percent}}%",
+      "body": "{{amount}}, against about {{average}} a month in the three months before."
+    },
+    "unusual": {
+      "title": "A large payment to {{name}}",
+      "bodyHigher": "{{amount}} on {{date}}, much more than the usual {{usual}}.",
+      "bodyNew": "{{amount}} on {{date}}, a large first payment."
+    },
+    "no_budget": {
+      "title": "No budget for {{name}}",
+      "body": "You spend about {{average}} a month on it. A budget helps you keep an eye on it."
+    },
+    "balance_low": {
+      "title": "{{name}} may run low",
+      "body": "The balance may drop to {{lowest}} before {{date}}, counting {{due}} of fixed costs still to come."
+    },
+    "subscriptions": {
+      "title_one": "{{count}} subscription, {{amount}} a month",
+      "title_other": "{{count}} subscriptions, {{amount}} a month",
+      "body": "Worth checking now and then whether you still use them all."
+    }
   }
 }

@@ -458,6 +458,10 @@
     "autoLockHint": "Também bloqueia quando o ecrã bloqueia ou o computador entra em suspensão.",
     "keepInTray": "Manter o Kasboek na área de notificação ao fechar a janela",
     "keepInTrayHint": "Desativado: fechar a janela fecha o Kasboek. Ativado: o Kasboek continua na área de notificação (a barra de menus no Mac) para o Claude o poder continuar a usar. Abra-o de novo pelo ícone ou pelo atalho.",
+    "insights": "Sugestões na Visão geral",
+    "insightsHint": "Dicas tiradas dos seus próprios dados, neste computador. Nada é enviado.",
+    "insightsRestore": "Mostrar novamente as dicas ocultas",
+    "insightsRestored": "As dicas ocultas voltarão a ser mostradas.",
     "minutes_one": "Após {{count}} minuto",
     "minutes_other": "Após {{count}} minutos",
     "encryptionHint": "Os dados do seu orçamento estão encriptados no disco.",
@@ -1350,5 +1354,76 @@
     "assistant_pdf_empty": "Este PDF não tem texto para ler.",
     "assistant_pdf_too_long": "Este extrato tem demasiadas páginas para o assistente (o limite é de 40 páginas). Tente um extrato de um período mais curto.",
     "assistant_pdf_no_rows": "{{ai}} não encontrou movimentos que correspondam ao texto deste extrato. Nada foi alterado."
+  },
+  "insights": {
+    "title": "Sugestões",
+    "showAll": "Mostrar tudo ({{n}})",
+    "showLess": "Mostrar menos",
+    "empty": "Nada se destaca em {{month}}.",
+    "loading": "A procurar dicas…",
+    "error": "Não foi possível carregar as sugestões.",
+    "retry": "Tentar novamente",
+    "notUseful": "Não útil",
+    "hide": "Ocultar",
+    "collapse": "Recolher sugestões",
+    "expand": "Expandir sugestões",
+    "severity": {
+      "warning": "Aviso",
+      "tip": "Dica",
+      "info": "Nota"
+    },
+    "action": {
+      "fixedCosts": "Abrir custos fixos",
+      "budgets": "Abrir orçamentos",
+      "setBudget": "Definir um orçamento",
+      "payments": "Mostrar pagamentos",
+      "category": "Abrir categoria"
+    },
+    "price_up": {
+      "title": "{{name}} ficou mais caro",
+      "body": "{{from}} passou a {{to}} (mais {{change}}) em {{date}}."
+    },
+    "charged_twice": {
+      "title": "{{name}} foi cobrado duas vezes",
+      "body": "{{count}} pagamentos de cerca de {{amount}} no mesmo mês, o último em {{date}}."
+    },
+    "late": {
+      "title": "{{name}} está atrasado",
+      "body": "Esperado por volta de {{date}} ({{amount}}), mas ainda não apareceu."
+    },
+    "upcoming": {
+      "title": "{{name}} aproxima-se",
+      "body": "Por volta de {{date}} vencem cerca de {{amount}}."
+    },
+    "over_budget": {
+      "title": "{{name}} ultrapassou o orçamento",
+      "body": "{{spent}} gastos de {{budget}} ({{percent}} %)."
+    },
+    "near_budget": {
+      "title": "{{name}} está quase no limite do orçamento",
+      "body": "{{spent}} gastos de {{budget}} ({{percent}} %)."
+    },
+    "category_up": {
+      "title": "{{name}} subiu {{percent}} %",
+      "body": "{{amount}}, contra cerca de {{average}} por mês nos três meses anteriores."
+    },
+    "unusual": {
+      "title": "Um pagamento grande a {{name}}",
+      "bodyHigher": "{{amount}} em {{date}}, muito mais do que o habitual ({{usual}}).",
+      "bodyNew": "{{amount}} em {{date}}, um primeiro pagamento grande."
+    },
+    "no_budget": {
+      "title": "Sem orçamento para {{name}}",
+      "body": "Gasta cerca de {{average}} por mês nisto. Um orçamento ajuda a acompanhar."
+    },
+    "balance_low": {
+      "title": "{{name}} pode ficar curta",
+      "body": "O saldo pode descer para {{lowest}} antes de {{date}}, com {{due}} de custos fixos ainda por vir."
+    },
+    "subscriptions": {
+      "title_one": "{{count}} subscrição, {{amount}} por mês",
+      "title_other": "{{count}} subscrições, {{amount}} por mês",
+      "body": "Vale a pena verificar de vez em quando se ainda usa todas."
+    }
   }
 }

@@ -458,6 +458,10 @@
     "autoLockHint": "Verrouille aussi quand l’écran se verrouille ou que l’ordinateur se met en veille.",
     "keepInTray": "Laisser Kasboek actif dans la zone de notification quand je ferme la fenêtre",
     "keepInTrayHint": "Désactivé : fermer la fenêtre quitte Kasboek. Activé : Kasboek reste dans la zone de notification (la barre des menus sur Mac) pour que Claude puisse continuer à l’utiliser. Rouvrez-le depuis l’icône ou son raccourci.",
+    "insights": "Suggestions sur l’aperçu",
+    "insightsHint": "Des conseils tirés de vos propres données, sur cet ordinateur. Rien n’est envoyé.",
+    "insightsRestore": "Réafficher les conseils masqués",
+    "insightsRestored": "Les conseils masqués seront de nouveau affichés.",
     "minutes_one": "Après {{count}} minute",
     "minutes_other": "Après {{count}} minutes",
     "encryptionHint": "Les données de votre budget sont chiffrées sur le disque.",
@@ -1350,5 +1354,76 @@
     "assistant_pdf_empty": "Ce PDF ne contient pas de texte à lire.",
     "assistant_pdf_too_long": "Ce relevé a trop de pages pour l’assistant (la limite est de 40 pages). Essayez un relevé couvrant une période plus courte.",
     "assistant_pdf_no_rows": "{{ai}} n’a trouvé aucune opération correspondant au texte de ce relevé. Rien n’a été modifié."
+  },
+  "insights": {
+    "title": "Suggestions",
+    "showAll": "Tout afficher ({{n}})",
+    "showLess": "Afficher moins",
+    "empty": "Rien ne ressort pour {{month}}.",
+    "loading": "Recherche de conseils…",
+    "error": "Impossible de charger les suggestions.",
+    "retry": "Réessayer",
+    "notUseful": "Pas utile",
+    "hide": "Masquer",
+    "collapse": "Réduire les suggestions",
+    "expand": "Développer les suggestions",
+    "severity": {
+      "warning": "Avertissement",
+      "tip": "Conseil",
+      "info": "Remarque"
+    },
+    "action": {
+      "fixedCosts": "Ouvrir les charges fixes",
+      "budgets": "Ouvrir les budgets",
+      "setBudget": "Définir un budget",
+      "payments": "Afficher les paiements",
+      "category": "Ouvrir la catégorie"
+    },
+    "price_up": {
+      "title": "{{name}} est devenu plus cher",
+      "body": "{{from}} est passé à {{to}} ({{change}} de plus) le {{date}}."
+    },
+    "charged_twice": {
+      "title": "{{name}} a été prélevé deux fois",
+      "body": "{{count}} paiements d’environ {{amount}} le même mois, le dernier le {{date}}."
+    },
+    "late": {
+      "title": "{{name}} est en retard",
+      "body": "Attendu vers le {{date}} ({{amount}}), mais pas encore vu."
+    },
+    "upcoming": {
+      "title": "{{name}} arrive bientôt",
+      "body": "Environ {{amount}} à payer vers le {{date}}."
+    },
+    "over_budget": {
+      "title": "{{name}} dépasse le budget",
+      "body": "{{spent}} dépensés sur {{budget}} ({{percent}} %)."
+    },
+    "near_budget": {
+      "title": "{{name}} approche de son budget",
+      "body": "{{spent}} dépensés sur {{budget}} ({{percent}} %)."
+    },
+    "category_up": {
+      "title": "{{name}} : +{{percent}} %",
+      "body": "{{amount}}, contre environ {{average}} par mois les trois mois précédents."
+    },
+    "unusual": {
+      "title": "Un gros paiement à {{name}}",
+      "bodyHigher": "{{amount}} le {{date}}, bien plus que d’habitude ({{usual}}).",
+      "bodyNew": "{{amount}} le {{date}}, un gros premier paiement."
+    },
+    "no_budget": {
+      "title": "Pas de budget pour {{name}}",
+      "body": "Vous y dépensez environ {{average}} par mois. Un budget aide à garder un œil dessus."
+    },
+    "balance_low": {
+      "title": "{{name}} risque d’être juste",
+      "body": "Le solde peut descendre à {{lowest}} avant le {{date}}, avec {{due}} de charges fixes à venir."
+    },
+    "subscriptions": {
+      "title_one": "{{count}} abonnement, {{amount}} par mois",
+      "title_other": "{{count}} abonnements, {{amount}} par mois",
+      "body": "Vérifiez de temps en temps que vous les utilisez encore tous."
+    }
   }
 }

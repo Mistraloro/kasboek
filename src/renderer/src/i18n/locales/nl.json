@@ -458,6 +458,10 @@
     "autoLockHint": "Vergrendelt ook als het scherm vergrendelt of de computer slaapt.",
     "keepInTray": "Kasboek in het systeemvak laten draaien als ik het venster sluit",
     "keepInTrayHint": "Uit: het venster sluiten sluit Kasboek af. Aan: Kasboek blijft draaien in het systeemvak (de menubalk op een Mac), zodat Claude het kan blijven gebruiken. Open het weer via het pictogram of de snelkoppeling.",
+    "insights": "Suggesties op het overzicht",
+    "insightsHint": "Tips uit je eigen gegevens, op deze computer. Er wordt niets verstuurd.",
+    "insightsRestore": "Verborgen tips opnieuw tonen",
+    "insightsRestored": "Verborgen tips worden weer getoond.",
     "minutes_one": "Na {{count}} minuut",
     "minutes_other": "Na {{count}} minuten",
     "encryptionHint": "Je budgetgegevens zijn versleuteld op de schijf.",
@@ -1350,5 +1354,76 @@
     "assistant_pdf_empty": "Deze pdf bevat geen tekst om te lezen.",
     "assistant_pdf_too_long": "Dit afschrift heeft te veel pagina’s voor de assistent (de limiet is 40 pagina’s). Probeer een afschrift van een kortere periode.",
     "assistant_pdf_no_rows": "{{ai}} vond geen transacties die bij de tekst van dit afschrift pasten. Er is niets gewijzigd."
+  },
+  "insights": {
+    "title": "Suggesties",
+    "showAll": "Alles tonen ({{n}})",
+    "showLess": "Minder tonen",
+    "empty": "Niets valt op voor {{month}}.",
+    "loading": "Tips zoeken…",
+    "error": "De suggesties konden niet worden geladen.",
+    "retry": "Opnieuw proberen",
+    "notUseful": "Niet nuttig",
+    "hide": "Verbergen",
+    "collapse": "Suggesties inklappen",
+    "expand": "Suggesties uitklappen",
+    "severity": {
+      "warning": "Waarschuwing",
+      "tip": "Tip",
+      "info": "Opmerking"
+    },
+    "action": {
+      "fixedCosts": "Vaste kosten openen",
+      "budgets": "Budgetten openen",
+      "setBudget": "Budget instellen",
+      "payments": "Betalingen tonen",
+      "category": "Categorie openen"
+    },
+    "price_up": {
+      "title": "{{name}} is duurder geworden",
+      "body": "{{from}} werd {{to}} ({{change}} meer) op {{date}}."
+    },
+    "charged_twice": {
+      "title": "{{name}} is twee keer afgeschreven",
+      "body": "{{count}} betalingen van ongeveer {{amount}} in dezelfde maand, de laatste op {{date}}."
+    },
+    "late": {
+      "title": "{{name}} is te laat",
+      "body": "Verwacht rond {{date}} ({{amount}}), maar nog niet gezien."
+    },
+    "upcoming": {
+      "title": "{{name}} komt eraan",
+      "body": "Rond {{date}} is ongeveer {{amount}} verschuldigd."
+    },
+    "over_budget": {
+      "title": "{{name}} is over budget",
+      "body": "{{spent}} uitgegeven van {{budget}} ({{percent}}%)."
+    },
+    "near_budget": {
+      "title": "{{name}} zit bijna aan het budget",
+      "body": "{{spent}} uitgegeven van {{budget}} ({{percent}}%)."
+    },
+    "category_up": {
+      "title": "{{name}} is {{percent}}% gestegen",
+      "body": "{{amount}}, tegenover ongeveer {{average}} per maand in de drie maanden ervoor."
+    },
+    "unusual": {
+      "title": "Een grote betaling aan {{name}}",
+      "bodyHigher": "{{amount}} op {{date}}, veel meer dan de gebruikelijke {{usual}}.",
+      "bodyNew": "{{amount}} op {{date}}, een grote eerste betaling."
+    },
+    "no_budget": {
+      "title": "Geen budget voor {{name}}",
+      "body": "Je geeft er ongeveer {{average}} per maand aan uit. Met een budget houd je het in de gaten."
+    },
+    "balance_low": {
+      "title": "{{name}} kan krap komen te staan",
+      "body": "Het saldo kan dalen tot {{lowest}} vóór {{date}}, met {{due}} aan vaste kosten die nog komen."
+    },
+    "subscriptions": {
+      "title_one": "{{count}} abonnement, {{amount}} per maand",
+      "title_other": "{{count}} abonnementen, {{amount}} per maand",
+      "body": "Controleer af en toe of je ze nog allemaal gebruikt."
+    }
   }
 }

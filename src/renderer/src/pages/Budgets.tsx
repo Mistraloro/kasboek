@@ -16,11 +16,11 @@ import { CategorySelect } from './Transactions'
 
 const toDate = (m: string): Date => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1)
 
-export function Budgets() {
+export function Budgets({ initial }: { initial?: { month?: string } }) {
   const { t } = useTranslation()
   const toast = useToast()
   const { fmt, money } = useSettings()
-  const [month, setMonth] = useState(monthOf())
+  const [month, setMonth] = useState(initial?.month ?? monthOf())
   const [rows, setRows] = useState<BudgetRow[] | null>(null)
   const [modal, setModal] = useState<null | 'categories' | 'rules'>(null)
   const load = (): void => void call('budgets.list', { month }).then(setRows)

@@ -14,6 +14,10 @@ See [PLAN.md](PLAN.md) for the design, the security model and what still needs t
   investments and loans; savings goals; fixed costs and subscriptions found from your transactions (if one is wrong, mark it "Not a fixed cost" and it stops counting).
   Refunds lower spending; transfers between your own accounts are paired and left out.
   Dark and light mode, eight languages, number and date formats chosen part by part.
+- **Suggestions**: a card on the Overview with tips found from your own data (a price rise, a payment
+  taken twice, a late or coming fixed cost, a budget nearly used up, a category that grew, an unusual
+  payment). Worked out on your computer; nothing is sent anywhere. Hide a tip or mark it not useful; turn
+  the card off, or show hidden tips again, in Settings → General.
 - **First start**: a welcome window sets the language, number and date style, exchange rates, the
   assistant, Claude Desktop / Claude Code and update checks, then offers a short tour of the app.
 - **Bank balance**: enter what your bank shows (or let a CSV balance column do it); the balance is

@@ -244,6 +244,8 @@ export interface Prefs {
   graphics: GraphicsChoice
   /** Closing the window keeps Kasboek running in the tray instead of quitting. Off unless chosen. */
   keepInTray: boolean
+  /** Show the Suggestions card on the Overview (tips found from the person's own data, nothing is sent anywhere). */
+  insights: boolean
   /** Set by Kasboek when the graphics card failed to show its window; "automatic" then draws in software. */
   graphicsFailed: boolean
 }
@@ -429,6 +431,44 @@ export interface Goal {
 export type Alert =
   | { kind: 'budget'; key: string; categoryId: number; name: string; budgetCents: number; spentCents: number; level: 'near' | 'over' }
   | { kind: 'balance'; key: string; accountId: number; name: string; currency: string; balanceCents: number; lowestCents: number; until: string; dueCents: number }
+
+/** What a tip on the Overview is about. */
+export type InsightKind =
+  | 'price_up'
+  | 'charged_twice'
+  | 'late'
+  | 'upcoming'
+  | 'over_budget'
+  | 'near_budget'
+  | 'category_up'
+  | 'unusual'
+  | 'no_budget'
+  | 'balance_low'
+  | 'subscriptions'
+
+/** One value of a tip. Money is in cents of its own currency, so it is never mixed with another. */
+export type InsightValue = { money: number; currency: string } | { date: string } | { count: number } | { text: string }
+
+/** A fact found from the person's own data. The tip texts are made from these on screen. */
+export interface InsightFact {
+  id: string
+  /** Stable for the same situation (same payee and month, same category and month), so a hidden tip stays hidden. */
+  key: string
+  kind: InsightKind
+  values: Record<string, InsightValue>
+  categoryId: number | null
+  recurringKey: string | null
+  /** The payments behind it (at most 20). */
+  transactionIds: number[]
+  /** How much money it is about, in cents of the main currency: the biggest come first. */
+  weight: number
+}
+
+export interface InsightsView {
+  facts: InsightFact[]
+  /** Tips written by the assistant: not part of this version. */
+  ai: null
+}
 
 export interface RecurringSummary {
   /** What counts as fixed (everything below is worked out from these). */

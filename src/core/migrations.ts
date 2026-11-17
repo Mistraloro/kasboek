@@ -327,6 +327,16 @@ export const MIGRATIONS: ((db: Db) => void)[] = [
       CREATE UNIQUE INDEX idx_recurring_marks_uid ON recurring_marks(uid);
     `)
     createSyncTriggers(db, SPEC.get('recurring_marks')!)
+  },
+  (db) => {
+    db.exec(`
+      -- What the person did with a tip on the Overview. On this computer only: not synced.
+      CREATE TABLE insight_feedback (
+        key TEXT PRIMARY KEY,
+        verdict TEXT NOT NULL CHECK (verdict IN ('dismissed', 'not_useful', 'useful')),
+        at TEXT NOT NULL DEFAULT ${now}
+      );
+    `)
   }
 ]
 

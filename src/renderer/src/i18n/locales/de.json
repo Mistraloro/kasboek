@@ -458,6 +458,10 @@
     "autoLockHint": "Sperrt auch, wenn der Bildschirm gesperrt wird oder der Computer schläft.",
     "keepInTray": "Kasboek im Infobereich weiterlaufen lassen, wenn ich das Fenster schließe",
     "keepInTrayHint": "Aus: Beim Schließen des Fensters wird Kasboek beendet. An: Kasboek bleibt im Infobereich (auf dem Mac in der Menüleiste), damit Claude es weiter nutzen kann. Öffne es wieder über das Symbol oder die Verknüpfung.",
+    "insights": "Vorschläge auf der Übersicht",
+    "insightsHint": "Tipps aus deinen eigenen Daten, auf diesem Computer. Es wird nichts versendet.",
+    "insightsRestore": "Ausgeblendete Tipps wieder anzeigen",
+    "insightsRestored": "Ausgeblendete Tipps werden wieder angezeigt.",
     "minutes_one": "Nach {{count}} Minute",
     "minutes_other": "Nach {{count}} Minuten",
     "encryptionHint": "Deine Budgetdaten sind auf der Festplatte verschlüsselt.",
@@ -1350,5 +1354,76 @@
     "assistant_pdf_empty": "Dieses PDF enthält keinen lesbaren Text.",
     "assistant_pdf_too_long": "Dieser Kontoauszug hat zu viele Seiten für den Assistenten (Grenze: 40 Seiten). Versuche einen Kontoauszug für einen kürzeren Zeitraum.",
     "assistant_pdf_no_rows": "{{ai}} hat keine Umsätze gefunden, die zum Text dieses Kontoauszugs passen. Es wurde nichts geändert."
+  },
+  "insights": {
+    "title": "Vorschläge",
+    "showAll": "Alle anzeigen ({{n}})",
+    "showLess": "Weniger anzeigen",
+    "empty": "Für {{month}} fällt nichts auf.",
+    "loading": "Tipps werden gesucht …",
+    "error": "Die Vorschläge konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "notUseful": "Nicht hilfreich",
+    "hide": "Ausblenden",
+    "collapse": "Vorschläge einklappen",
+    "expand": "Vorschläge ausklappen",
+    "severity": {
+      "warning": "Warnung",
+      "tip": "Tipp",
+      "info": "Hinweis"
+    },
+    "action": {
+      "fixedCosts": "Fixkosten öffnen",
+      "budgets": "Budgets öffnen",
+      "setBudget": "Budget festlegen",
+      "payments": "Zahlungen anzeigen",
+      "category": "Kategorie öffnen"
+    },
+    "price_up": {
+      "title": "{{name}} ist teurer geworden",
+      "body": "{{from}} wurde am {{date}} zu {{to}} ({{change}} mehr)."
+    },
+    "charged_twice": {
+      "title": "{{name}} wurde doppelt abgebucht",
+      "body": "{{count}} Zahlungen von ungefähr {{amount}} im selben Monat, die letzte am {{date}}."
+    },
+    "late": {
+      "title": "{{name}} ist überfällig",
+      "body": "Erwartet um den {{date}} ({{amount}}), aber noch nicht gesehen."
+    },
+    "upcoming": {
+      "title": "{{name}} steht an",
+      "body": "Um den {{date}} sind etwa {{amount}} fällig."
+    },
+    "over_budget": {
+      "title": "{{name}} liegt über dem Budget",
+      "body": "{{spent}} von {{budget}} ausgegeben ({{percent}} %)."
+    },
+    "near_budget": {
+      "title": "{{name}} hat fast das Budget erreicht",
+      "body": "{{spent}} von {{budget}} ausgegeben ({{percent}} %)."
+    },
+    "category_up": {
+      "title": "{{name}} ist um {{percent}} % gestiegen",
+      "body": "{{amount}}, gegenüber etwa {{average}} pro Monat in den drei Monaten davor."
+    },
+    "unusual": {
+      "title": "Eine hohe Zahlung an {{name}}",
+      "bodyHigher": "{{amount}} am {{date}}, viel mehr als üblich ({{usual}}).",
+      "bodyNew": "{{amount}} am {{date}}, eine hohe erste Zahlung."
+    },
+    "no_budget": {
+      "title": "Kein Budget für {{name}}",
+      "body": "Du gibst dafür etwa {{average}} im Monat aus. Mit einem Budget behältst du es im Blick."
+    },
+    "balance_low": {
+      "title": "{{name}} könnte knapp werden",
+      "body": "Der Kontostand kann vor dem {{date}} auf {{lowest}} sinken, mit {{due}} an noch anstehenden Fixkosten."
+    },
+    "subscriptions": {
+      "title_one": "{{count}} Abo, {{amount}} im Monat",
+      "title_other": "{{count}} Abos, {{amount}} im Monat",
+      "body": "Prüfe ab und zu, ob du alle noch nutzt."
+    }
   }
 }

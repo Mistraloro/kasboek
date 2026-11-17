@@ -69,6 +69,7 @@ export function SettingsPage() {
             <AppearanceSection />
             <FormatsSection />
             <CurrenciesSection />
+            <InsightsSection />
           </>
         )}
         {tab === 'about' && <AboutSection />}
@@ -743,6 +744,24 @@ function FormatsSection() {
 
 function sepKey(s: string): string {
   return { '.': 'dot', ',': 'comma', ' ': 'space', "'": 'apostrophe', '': 'none' }[s] ?? 'none'
+}
+
+/* ---------- Suggestions on the Overview ---------- */
+
+function InsightsSection() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { prefs, updatePrefs } = useSettings()
+  return (
+    <Card>
+      <Row label={t('settings.insights')} hint={t('settings.insightsHint')}>
+        <Button size="sm" onClick={() => void call('insights.restoreDismissed').then(() => toast(t('settings.insightsRestored')), (e) => toast(errText(e), 'error'))}>
+          {t('settings.insightsRestore')}
+        </Button>
+        <Switch label={t('settings.insights')} checked={prefs.insights} onChange={(v) => void updatePrefs({ insights: v })} />
+      </Row>
+    </Card>
+  )
 }
 
 /* ---------- Appearance ---------- */
