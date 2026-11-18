@@ -15,7 +15,7 @@ Non-goals: new features, a mobile app, changing any file format, changing the MC
 | Database | sqlite3mc **2.4.0** (SQLite 3.53.4), built from the amalgamation with the same defines, `cipher='chacha20'` + `hexkey`. |
 | PDF | pdfium (via `pdfium-render`) in a child process mode of the same binary. Line and statement logic ported 1:1. |
 | MCP helper | `tools/kasboek-mcp` (Go) unchanged. The Rust app implements the bridge server side of the same protocol. |
-| Start-up | No splash window. The first frame is the real Setup/Lock screen. Hello/Touch ID is prompted right after the first paint (section 5). |
+| Start-up | No splash window. The first frame is the real Setup/Lock screen. The Hello/Touch ID button is part of the first frame; the OS prompt opens only when the person presses it (section 5). |
 | Parity | Differential TS-vs-Rust runs on invented data, cross-opened files, and fixture-driven screenshot and geometry diffs. |
 | First step | A 2–3 week spike with go/no-go gates (section 7, M0). |
 
@@ -239,19 +239,21 @@ security changes. The first frame uses it, so the Lock screen is already in the 
 render password mode and correct it once account.json has been read.
 
 **Device-auth path (top priority, because many users unlock with Hello or Touch ID):**
-1. First frame painted.
-2. **Immediately** start the OS prompt. Windows: `IUserConsentVerifierInterop::RequestVerificationForWindowAsync`
-   with our own HWND (replaces the PowerShell child process, `device-auth.ts:189-296`). macOS: `LAContext
-   evaluatePolicy`.
+1. First frame painted. It shows the Lock screen in device mode, using the cached `lastAuth`, with the
+   "Unlock with <device>" button already visible.
+2. The OS prompt opens **only when the person presses the button**; there is no automatic prompt. Windows:
+   `IUserConsentVerifierInterop::RequestVerificationForWindowAsync` with our own HWND (replaces the PowerShell
+   child process, `device-auth.ts:189-296`). macOS: `LAContext evaluatePolicy`. The press must be answered at
+   once: background preloading must never delay the button press response, so the prompt appears right when
+   pressed.
 3. Background preloading (other locales, remaining fonts, icons, other screens' state, the updater, sync
    modules) is held back until the prompt has been shown and answered or cancelled. It runs at lower thread
    priority so it never competes with the prompt.
 4. On success: OS-unseal account.json, take the device slot (master key), open the vault, open the DB and check
    migrations. This shows as an in-place "Unlocking…" state on the Lock screen. Then the first unlocked frame
    (Overview).
-5. If 2FA is on and this computer is not remembered, the code field comes first and the prompt starts when the
-   code is complete. Owner to confirm the order; today the person presses the button (`pages/auth/Lock.tsx:91`),
-   so auto-prompting is a deliberate change.
+5. If 2FA is on and this computer is not remembered, the code field is shown first; the button stays as it is
+   today (`pages/auth/Lock.tsx:91`), and the person presses it to start the OS prompt.
 
 Safety rules kept from today:
 - Cancel or failure leaves the Lock screen with "Unlock with …" and the recovery-key link.
@@ -318,7 +320,7 @@ These are **not** loading steps; they run after the Overview is shown, in backgr
 - `kdf done (ms)`, `db opened (ms)`, `migrations checked`, `first unlocked frame`
 - `preload started` / `preload done`, renderer used (skia/femtovg/software), first start of this version
 
-Derived lines are written once per start: `time-to-first-frame`, `time-to-prompt`, `time-to-unlocked`.
+Derived lines are written once per start: `time-to-first-frame`, `time-to-prompt` (from `device prompt requested`, which is logged on button press, to `device prompt shown`), `time-to-unlocked`.
 `KASBOEK_STARTUP_TRACE=1` adds per-phase timings to the log for development.
 
 **Targets** (measured from process start, warm and cold, on Windows x64, Windows ARM64, macOS arm64, Linux x64):
@@ -326,7 +328,7 @@ Derived lines are written once per start: `time-to-first-frame`, `time-to-prompt
 | Measure | Target |
 |---|---|
 | First frame | ≤ ~0.5 s |
-| Hello / Touch ID prompt visible | ≤ ~0.7 s |
+| Hello / Touch ID prompt visible (time from button press) | ≤ ~0.7 s |
 | Unlocked after Hello success | ≤ 0.3 s plus DB open |
 | Unlocked after password submit | KDF time + ≤ 0.2 s |
 
@@ -419,7 +421,7 @@ depends mostly on owner review.
 
 | Milestone | Scope | Exit criteria | Estimate |
 |---|---|---|---|
-| **M0 Spike** (time-boxed) | Slint shell + Lock screen + Overview on fake data; open an Electron-written encrypted DB and show real totals; Hello/Touch ID from the first frame; renderer comparison (Skia vs FemtoVG vs software); CI builds for 6 targets | **G1** Overview geometry ±2 px and pixel diff ≤ 3% vs Playwright, light and dark, en and de. **G2** Inter with tnum and accents, Serif title; Narrator and VoiceOver read nav and buttons; Tab order matches. **G3** dead-key IME works. **G4** Rust opens a TS-written DB and TS re-opens a Rust-written one, on Win, mac and Linux. **G5** first frame ≤ 0.5 s and Hello prompt ≤ 0.7 s on Win x64, Win ARM64 and mac arm64, logged in startup.log; installer ≤ 25 MB. **G6** decode an Electron-sealed account.json on Windows, with a written plan for mac and Linux | 2–3 ew |
+| **M0 Spike** (time-boxed) | Slint shell + Lock screen + Overview on fake data; open an Electron-written encrypted DB and show real totals; Hello/Touch ID button in the first frame (prompt on press); renderer comparison (Skia vs FemtoVG vs software); CI builds for 6 targets | **G1** Overview geometry ±2 px and pixel diff ≤ 3% vs Playwright, light and dark, en and de. **G2** Inter with tnum and accents, Serif title; Narrator and VoiceOver read nav and buttons; Tab order matches. **G3** dead-key IME works. **G4** Rust opens a TS-written DB and TS re-opens a Rust-written one, on Win, mac and Linux. **G5** first frame ≤ 0.5 s and Hello prompt ≤ 0.7 s from button press on Win x64, Win ARM64 and mac arm64, logged in startup.log; installer ≤ 25 MB. **G6** decode an Electron-sealed account.json on Windows, with a written plan for mac and Linux | 2–3 ew |
 | **M1 Foundations** | Workspace, kb-sqlite3mc-sys, kb-crypto, kb-db (15 migrations, `fx`), account and file codecs, kb-cli, TS runner, tools.json dump, CI matrix | All cross-open tests green on 6 targets; crypto/format unit tests ported | 4–6 ew |
 | **M2 Core parity** | All 154 ops in kb-core/kb-import/kb-assistant (logic only)/kb-sync engine | Differential suites green; ~520 ported tests green; schema-dump equal | 10–16 ew |
 | **M3 Design system** (parallel with M2) | Tokens, frozen fonts, 74 icons, primitives from `ui.tsx`, 4 charts with hover tips, Modal/Popover/Tooltip/Toast, title bar per OS, shell + nav, assistant panel frame | Component gallery passes geometry and pixel diffs; components have accessibility labels | 4–6 ew |
