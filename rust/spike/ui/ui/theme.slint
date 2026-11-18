@@ -1,0 +1,35 @@
+// Design tokens: src/renderer/src/styles.css (:root and :root[data-theme='dark']).
+import "../assets/fonts/Inter-Regular.ttf";
+import "../assets/fonts/Inter-Medium.ttf";
+import "../assets/fonts/Inter-SemiBold.ttf";
+import "../assets/fonts/InterNum-Regular.ttf";
+import "../assets/fonts/InterNum-Medium.ttf";
+import "../assets/fonts/InterNum-SemiBold.ttf";
+import "../assets/fonts/SourceSerif4-Medium.ttf";
+import "../assets/fonts/SourceSerif4-SemiBold.ttf";
+
+export global Theme {
+    in property <bool> dark: false;
+
+    out property <color> bg: dark ? #0e110f : #fafaf8;
+    out property <color> surface: dark ? #161a17 : #ffffff;
+    out property <color> surface-2: dark ? #1d221f : #f3f4f1;
+    out property <color> border: dark ? #262c28 : #e6e8e4;
+    out property <color> border-strong: dark ? #343c37 : #d4d8d2;
+    out property <color> text: dark ? #e7ece8 : #18201b;
+    out property <color> muted: dark ? #8e9a92 : #5f6b63;
+    out property <color> accent: dark ? #3fcf8e : #15803d;
+    out property <color> accent-hover: dark ? #5bd9a0 : #116a33;
+    out property <color> accent-soft: dark ? #3fcf8e.with-alpha(0.12) : #e7f5ec;
+    out property <color> accent-fg: dark ? #062014 : #ffffff;
+    out property <color> negative: dark ? #f2867a : #b42318;
+    out property <color> negative-soft: dark ? #f2867a.with-alpha(0.12) : #fdecea;
+    out property <color> warning: dark ? #e9b949 : #9a6700;
+    out property <color> chart-income: dark ? #2dae74 : #15803d;
+    out property <color> chart-spending: dark ? #6b83e8 : #4f6bd8;
+
+    // font-sans / font-serif of the renderer; "Inter Num" is Inter with tnum frozen (the `.num` class).
+    out property <string> sans: "Inter";
+    out property <string> num: "Inter Num";
+    out property <string> serif: "Source Serif 4";
+}

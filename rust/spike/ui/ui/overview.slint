@@ -1,0 +1,761 @@
+// Shell (sidebar, top bar, assistant panel) from App.tsx and the Overview page: Overview.tsx + charts.tsx.
+import { Theme } from "theme.slint";
+import { Strings } from "strings.slint";
+import { Button, Card, CardHeader } from "widgets.slint";
+import { Mark } from "lock.slint";
+
+export struct CategoryRow { name: string, amount: string, fraction: float }
+export struct Step { done: bool, title-lines: [string], body: string, number: string, body-height: length }
+export struct MonthBar { label: string, income: float, spending: float }
+
+component NavItem inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active: false;
+    callback clicked();
+    height: 36px;
+    border-radius: 8px;
+    background: active ? Theme.accent-soft : (ta.has-hover ? Theme.surface-2 : transparent);
+    // Not a perfect role match: AccessKit has no "link"/"nav item"; tab + selected is the closest.
+    accessible-role: tab;
+    accessible-label: label;
+    accessible-item-selectable: true;
+    accessible-item-selected: active;
+    accessible-action-default => {
+        root.clicked();
+    }
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+    Image {
+        x: 12px;
+        y: (parent.height - self.height) / 2;
+        width: 17px;
+        height: 17px;
+        source: root.icon;
+        colorize: root.active ? Theme.accent : (ta.has-hover ? Theme.text : Theme.muted);
+    }
+    Text {
+        x: 12px + 17px + 12px;
+        height: parent.height;
+        text: root.label;
+        font-family: Theme.sans;
+        font-size: 14px;
+        font-weight: 500;
+        color: root.active ? Theme.accent : (ta.has-hover ? Theme.text : Theme.muted);
+        vertical-alignment: center;
+    }
+}
+
+component Sidebar inherits Rectangle {
+    width: 224px;
+    background: Theme.bg;
+    accessible-role: tab-list;
+    accessible-label: "Navigation";
+    // border-r
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        background: Theme.border;
+    }
+    // Header: h-11 px-5 gap-2.5
+    Mark {
+        x: 20px;
+        y: 13px;
+        size: 15px;
+    }
+    Text {
+        x: 45px;
+        y: 9.25px;
+        height: 25.5px;
+        text: Strings.app-name;
+        font-family: Theme.serif;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.17px;
+        color: Theme.text;
+        vertical-alignment: center;
+    }
+    // nav: mt-4 px-3 gap-0.5; first button at y=60
+    VerticalLayout {
+        x: 12px;
+        y: 60px;
+        width: parent.width - 1px - 24px;
+        spacing: 2px;
+        NavItem { icon: @image-url("../assets/icons/layout-dashboard.svg"); label: Strings.nav-overview; active: true; }
+        NavItem { icon: @image-url("../assets/icons/arrow-left-right.svg"); label: Strings.nav-transactions; }
+        NavItem { icon: @image-url("../assets/icons/target.svg"); label: Strings.nav-budgets; }
+        NavItem { icon: @image-url("../assets/icons/repeat.svg"); label: Strings.nav-recurring; }
+        NavItem { icon: @image-url("../assets/icons/piggy-bank.svg"); label: Strings.nav-goals; }
+        NavItem { icon: @image-url("../assets/icons/calendar-range.svg"); label: Strings.nav-year; }
+        NavItem { icon: @image-url("../assets/icons/trending-up.svg"); label: Strings.nav-networth; }
+        NavItem { icon: @image-url("../assets/icons/file-up.svg"); label: Strings.nav-import; }
+    }
+    // Bottom group: px-3 pb-4, version mt-2.
+    VerticalLayout {
+        x: 12px;
+        y: parent.height - 16px - 36px - 2px - 36px - 8px - 16.5px;
+        width: parent.width - 1px - 24px;
+        spacing: 2px;
+        NavItem { icon: @image-url("../assets/icons/settings.svg"); label: Strings.nav-settings; }
+        NavItem { icon: @image-url("../assets/icons/lock.svg"); label: Strings.nav-lock; }
+    }
+    Text {
+        x: 24px;
+        y: parent.height - 16px - 16.5px;
+        height: 16.5px;
+        text: Strings.version-short;
+        font-family: Theme.num;
+        font-size: 11px;
+        color: Theme.muted.with-alpha(0.7);
+        vertical-alignment: center;
+        accessible-role: text;
+    }
+}
+
+component AssistantPanel inherits Rectangle {
+    width: 340px;
+    background: Theme.bg;
+    accessible-role: groupbox;
+    accessible-label: Strings.assistant-title;
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 1px;
+        height: parent.height;
+        background: Theme.border;
+    }
+    Image {
+        x: 21px;
+        y: 14.5px;
+        width: 15px;
+        height: 15px;
+        source: @image-url("../assets/icons/sparkles.svg");
+        colorize: Theme.accent;
+    }
+    Text {
+        x: 44px;
+        y: 12px;
+        height: 20px;
+        text: Strings.assistant-title;
+        font-family: Theme.sans;
+        font-size: 14px;
+        font-weight: 600;
+        color: Theme.text;
+        vertical-alignment: center;
+    }
+    // Not configured: setup text, button, privacy note (px-5).
+    Text {
+        x: 21px;
+        y: 44px;
+        width: parent.width - 41px;
+        height: 78px;
+        text: Strings.assistant-setup-body;
+        font-family: Theme.sans;
+        font-size: 13px;
+        // CSS line-height 1.5 = 19.5px; Slint's factor is relative to the font's natural line height (1.21 em).
+        line-height-factor: 1.2397;
+        color: Theme.muted;
+        wrap: word-wrap;
+        vertical-alignment: top;
+    }
+    Button {
+        x: 21px;
+        y: 44px + 78px + 16px;
+        variant: "primary";
+        text: Strings.assistant-setup-button;
+    }
+    Text {
+        x: 21px;
+        y: 44px + 78px + 16px + 36px + 16px;
+        width: parent.width - 41px;
+        height: 48px;
+        text: Strings.assistant-privacy;
+        font-family: Theme.sans;
+        font-size: 12px;
+        line-height-factor: 1.1019;
+        color: Theme.muted;
+        wrap: word-wrap;
+        vertical-alignment: top;
+    }
+}
+
+component TopBar inherits Rectangle {
+    // h-11, items-center justify-end, pr-[148px] (room for the window controls overlay on Windows/Linux).
+    height: 44px;
+    Rectangle {
+        x: parent.width - 148px - self.width;
+        y: 8px;
+        width: 98.6px;
+        height: 28px;
+        border-radius: 6px;
+        accessible-role: button;
+        accessible-label: Strings.nav-toggle-assistant;
+        Image {
+            x: 10px;
+            y: 6.5px;
+            width: 15px;
+            height: 15px;
+            source: @image-url("../assets/icons/panel-right.svg");
+            colorize: Theme.accent;
+        }
+        Text {
+            x: 10px + 15px + 6px;
+            height: parent.height;
+            text: Strings.nav-assistant;
+            font-family: Theme.sans;
+            font-size: 13px;
+            font-weight: 500;
+            color: Theme.accent;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MonthNav: inline-flex rounded-lg border p-0.5 gap-1, 32px buttons, label min-w-36.
+component MonthNav inherits Rectangle {
+    width: 222px;
+    height: 38px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border;
+    background: Theme.surface;
+    for glyph[i] in ["‹", "month", "›"]: Rectangle {
+        x: i == 0 ? 3px : i == 1 ? 3px + 32px + 4px : 3px + 32px + 4px + 144px + 4px;
+        y: 3px;
+        width: i == 1 ? 144px : 32px;
+        height: 32px;
+        border-radius: 6px;
+        accessible-role: button;
+        accessible-label: i == 0 ? Strings.month-previous : i == 1 ? Strings.month-label : Strings.month-next;
+        Text {
+            width: parent.width;
+            height: parent.height;
+            text: i == 1 ? Strings.month-label : glyph;
+            font-family: Theme.sans;
+            font-size: i == 1 ? 13px : 14px;
+            font-weight: i == 1 ? 500 : 400;
+            color: i == 1 ? Theme.text : Theme.muted;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component StatCard inherits Card {
+    in property <string> label;
+    in property <string> value;
+    in property <string> hint;
+    in property <color> value-color: Theme.text;
+    height: 112.5px;
+    Text {
+        x: 21px;
+        y: 17px;
+        width: parent.width - 42px;
+        height: 19.5px;
+        text: root.label;
+        font-family: Theme.sans;
+        font-size: 13px;
+        color: Theme.muted;
+        vertical-alignment: center;
+    }
+    Text {
+        x: 21px;
+        y: 17px + 19.5px + 4px;
+        width: parent.width - 42px;
+        height: 39px;
+        text: root.value;
+        font-family: Theme.num;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.52px;
+        color: root.value-color;
+        vertical-alignment: center;
+    }
+    if root.hint != "": Text {
+        x: 21px;
+        y: 17px + 19.5px + 4px + 39px;
+        width: parent.width - 42px;
+        height: 16px;
+        text: root.hint;
+        font-family: Theme.sans;
+        font-size: 12px;
+        color: Theme.muted;
+        vertical-alignment: center;
+    }
+}
+
+// CategoryBars: grid-cols-[120px_1fr_auto] gap-3, rows 19.5px with gap-2.5.
+component CategoryBars inherits Rectangle {
+    in property <[CategoryRow]> rows;
+    in property <length> amount-width: 57.84px;
+    height: rows.length * 19.5px + (rows.length - 1) * 10px;
+    accessible-role: list;
+    accessible-label: Strings.by-category;
+    for row[i] in rows: Rectangle {
+        y: i * 29.5px;
+        height: 19.5px;
+        Text {
+            x: 0px;
+            y: 0px;
+            width: 120px;
+            height: parent.height;
+            text: row.name;
+            font-family: Theme.sans;
+            font-size: 13px;
+            color: Theme.muted;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        // The bar column is what is left after the 120px name, the amount and two 12px gaps.
+        Rectangle {
+            x: 120px + 12px;
+            y: 3.75px;
+            width: max(1.5 * (parent.width - 120px - 24px - root.amount-width) / 100, row.fraction * (parent.width - 120px - 24px - root.amount-width));
+            height: 12px;
+            background: Theme.chart-spending;
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+        Text {
+            x: parent.width - self.width;
+            width: root.amount-width;
+            height: parent.height;
+            text: row.amount;
+            font-family: Theme.num;
+            font-size: 13px;
+            font-weight: 500;
+            color: Theme.text;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// MonthBars: an SVG of viewBox 560x180 scaled to the card width (all in svg units, times `s`).
+component MonthBars inherits Rectangle {
+    in property <[MonthBar]> data;
+    in property <string> income-label;
+    in property <string> spending-label;
+    property <float> s: self.width / 1px / 560;
+    property <length> plot-top: 10px * s;
+    property <length> plot-h: (180 - 10 - 24) * 1px * s;
+    property <length> slot: 560px * s / data.length;
+    property <length> bar-w: min(22px, 560px / data.length / 3.2) * s;
+    height: 16px + 12px + 180px * s;
+    accessible-role: image;
+    accessible-label: Strings.trend;
+
+    // Legend: gap-4, swatches 10px (h-2.5 w-2.5 rounded-sm), text-xs.
+    for legend[i] in [income-label, spending-label]: Rectangle {
+        x: i == 0 ? 0px : 10px + 6px + 41.88px + 16px;
+        y: 0px;
+        width: 90px;
+        height: 16px;
+        Rectangle {
+            x: 0px;
+            y: 3px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background: i == 0 ? Theme.chart-income : Theme.chart-spending;
+        }
+        Text {
+            x: 16px;
+            height: 16px;
+            text: legend;
+            font-family: Theme.sans;
+            font-size: 12px;
+            color: Theme.muted;
+            vertical-alignment: center;
+        }
+    }
+    chart := Rectangle {
+        y: 16px + 12px;
+        height: 180px * root.s;
+        // Dashed gridlines at 50% and 100% ("2 4"), baseline in border-strong.
+        for f in [0.5, 1.0]: Rectangle {
+            y: root.plot-top + root.plot-h * (1 - f) - 0.5px;
+            height: 1px;
+            for k in 140: Rectangle {
+                x: k * 6px * root.s;
+                width: 2px * root.s;
+                background: Theme.border;
+            }
+        }
+        Rectangle {
+            y: root.plot-top + root.plot-h - 0.5px;
+            height: 1px;
+            background: Theme.border-strong;
+        }
+        for d[i] in root.data: Rectangle {
+            property <length> cx: root.slot * i + root.slot / 2;
+            property <length> h-in: max(d.income > 0 ? 2px * root.s : 0px, d.income * root.plot-h);
+            property <length> h-sp: max(d.spending > 0 ? 2px * root.s : 0px, d.spending * root.plot-h);
+            Rectangle {
+                x: cx - root.bar-w - 1px * root.s;
+                y: root.plot-top + root.plot-h - h-in;
+                width: root.bar-w;
+                height: h-in;
+                background: Theme.chart-income;
+                border-top-left-radius: min(4px * root.s, h-in / 2, root.bar-w / 2);
+                border-top-right-radius: min(4px * root.s, h-in / 2, root.bar-w / 2);
+            }
+            Rectangle {
+                x: cx + 1px * root.s;
+                y: root.plot-top + root.plot-h - h-sp;
+                width: root.bar-w;
+                height: h-sp;
+                background: Theme.chart-spending;
+                border-top-left-radius: min(4px * root.s, h-sp / 2, root.bar-w / 2);
+                border-top-right-radius: min(4px * root.s, h-sp / 2, root.bar-w / 2);
+            }
+            Text {
+                x: cx - 30px;
+                y: 180px * root.s - 6px * root.s - 11px * root.s - 2px;
+                width: 60px;
+                height: 11px * root.s * 1.5;
+                text: d.label;
+                font-family: Theme.sans;
+                font-size: 11px * root.s;
+                color: Theme.muted;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+export component OverviewPage inherits Rectangle {
+    in property <string> income;
+    in property <string> spending;
+    in property <string> left;
+    in property <string> left-hint;
+    in property <[CategoryRow]> categories;
+    in property <[Step]> steps;
+    in property <[MonthBar]> months;
+    // The main column's scroll position (0 = top).
+    in-out property <length> scroll: 0px;
+    // The content is 16px top padding + the blocks below + pb-16.
+    out property <length> content-height: 16px + 38px + 32px + 41.5px + 16px + 112.5px + 16px + 45.5px + 16px + grid.height + 16px + trend.height + 64px;
+    property <length> sc: max(0px, min(root.scroll, content-height - root.height));
+    property <length> content-w: min(1024px, root.width - 10px) - 80px;
+
+    clip: true;
+    // Scrollbar: 10px wide custom ::-webkit-scrollbar, thumb is the track minus a 3px border.
+    property <bool> scrollable: content-height > root.height;
+    property <length> thumb-h: root.height * root.height / content-height;
+    property <length> thumb-y: sc / (content-height - root.height) * (root.height - thumb-h);
+
+    TouchArea {
+        scroll-event(e) => {
+            root.scroll = max(0px, min(root.sc - e.delta-y, root.content-height - root.height));
+            accept
+        }
+    }
+    VerticalLayout {
+        y: -root.sc;
+        height: root.content-height;
+        x: (root.width - (root.scrollable ? 10px : 0px) - root.content-w) / 2;
+        width: root.content-w;
+        spacing: 0px;
+        padding-top: 16px;
+        // PageHeader: mb-8, items-end.
+        Rectangle {
+            height: 38px;
+            Text {
+                x: 0px;
+                y: 0.5px;
+                width: 300px;
+                height: 37.5px;
+                text: Strings.overview-title;
+                font-family: Theme.serif;
+                font-weight: 500;
+                font-size: 30px;
+                letter-spacing: -0.3px;
+                color: Theme.text;
+                vertical-alignment: center;
+                accessible-role: text;
+            }
+            MonthNav {
+                x: parent.width - self.width;
+            }
+        }
+        Rectangle { height: 32px; }
+        // Alert: rounded-xl border px-4 py-2.5, negative tint (budget over).
+        Rectangle {
+            height: 41.5px;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Theme.negative.with-alpha(0.3);
+            background: Theme.bg.mix(Theme.negative, 0.95);
+            accessible-role: button;
+            accessible-label: Strings.alert-text;
+            Image {
+                x: 17px;
+                y: 13.25px;
+                width: 15px;
+                height: 15px;
+                source: @image-url("../assets/icons/triangle-alert.svg");
+                colorize: Theme.negative;
+            }
+            Text {
+                x: 17px + 15px + 12px;
+                height: parent.height;
+                text: Strings.alert-text;
+                font-family: Theme.sans;
+                font-size: 13px;
+                color: Theme.text;
+                vertical-alignment: center;
+            }
+        }
+        Rectangle { height: 16px; }
+        // Stats: grid-cols-3 gap-4
+        HorizontalLayout {
+            height: 112.5px;
+            spacing: 16px;
+            StatCard { label: Strings.income; value: root.income; }
+            StatCard { label: Strings.spending; value: root.spending; }
+            StatCard { label: Strings.left; value: root.left; hint: root.left-hint; value-color: Theme.accent; }
+        }
+        Rectangle { height: 16px; }
+        // Uncategorised: mt-4 flex w-full items-center gap-2 rounded-xl border px-4 py-3
+        Rectangle {
+            height: 45.5px;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Theme.border;
+            background: Theme.surface;
+            accessible-role: button;
+            accessible-label: Strings.uncategorized-text;
+            Image {
+                x: 17px;
+                y: 15.25px;
+                width: 15px;
+                height: 15px;
+                source: @image-url("../assets/icons/tags.svg");
+                colorize: Theme.accent;
+            }
+            Text {
+                x: 17px + 15px + 8px;
+                height: parent.height;
+                text: Strings.uncategorized-text;
+                font-family: Theme.sans;
+                font-size: 13px;
+                color: Theme.text;
+                vertical-alignment: center;
+            }
+            Text {
+                x: parent.width - 17px - self.width;
+                height: parent.height;
+                text: Strings.review;
+                font-family: Theme.sans;
+                font-size: 13px;
+                font-weight: 500;
+                color: Theme.accent;
+                vertical-alignment: center;
+            }
+        }
+        Rectangle { height: 16px; }
+        // grid-cols-5 gap-4: 3 + 2 columns
+        grid := Rectangle {
+            property <length> col-w: (root.content-w - 64px) / 5;
+            height: right-card.height;
+            left-card := Card {
+                x: 0px;
+                y: 0px;
+                width: 3 * col-w + 32px;
+                height: parent.height;
+                CardHeader {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    title: Strings.by-category;
+                    description: Strings.month-label;
+                }
+                categories := CategoryBars {
+                    x: 21px;
+                    y: 1px + 77px + 16px;
+                    width: parent.width - 42px;
+                    rows: root.categories;
+                }
+            }
+            right-card := Card {
+                x: 3 * col-w + 48px;
+                y: 0px;
+                width: 2 * col-w + 16px;
+                height: 1px + 96.5px + steps-height + 1px;
+                property <length> steps-height: 80.5px + 116px + 150.5px - 1px;
+                CardHeader {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    title: Strings.get-started;
+                    description: Strings.get-started-hint;
+                    description-height: 39px;
+                }
+                accessible-role: groupbox;
+                accessible-label: Strings.get-started;
+                for st[i] in root.steps: Rectangle {
+                    x: 1px;
+                    y: 1px + 96.5px + (i == 0 ? 0px : i == 1 ? 80.5px : 80.5px + 116px);
+                    width: parent.width - 2px;
+                    height: i == 0 ? 80.5px : i == 1 ? 116px : 150.5px - 1px;
+                    Rectangle {
+                        y: 14px + 2px;
+                        x: 20px;
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 10px;
+                        background: st.done ? Theme.accent : transparent;
+                        border-width: st.done ? 0px : 1px;
+                        border-color: Theme.border-strong;
+                        if st.done: Image {
+                            x: 4px;
+                            y: 4px;
+                            width: 12px;
+                            height: 12px;
+                            source: @image-url("../assets/icons/check-3.svg");
+                            colorize: Theme.accent-fg;
+                        }
+                        if !st.done: Text {
+                            width: parent.width;
+                            height: parent.height;
+                            text: st.number;
+                            font-family: Theme.sans;
+                            font-size: 11px;
+                            font-weight: 600;
+                            color: Theme.muted;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    // No text-decoration in Slint 1.19 and no per-line geometry for wrapped text: the title comes
+                    // pre-split into lines and the strike-through is a 1px rectangle per line.
+                    for line[k] in st.title-lines: Rectangle {
+                        x: 20px + 20px + 12px;
+                        y: 14px + k * 19.5px;
+                        height: 19.5px;
+                        line-text := Text {
+                            x: 0px;
+                            y: 0px;
+                            width: parent.width;
+                            height: parent.height;
+                            text: line;
+                            font-family: Theme.sans;
+                            font-size: 13px;
+                            font-weight: 500;
+                            color: st.done ? Theme.muted : Theme.text;
+                            vertical-alignment: center;
+                            accessible-role: text;
+                        }
+                        if st.done: Rectangle {
+                            x: 0px;
+                            y: 9.75px;
+                            width: line-text.preferred-width;
+                            height: 1px;
+                            background: Theme.border-strong;
+                        }
+                    }
+                    Text {
+                        x: 20px + 20px + 12px;
+                        y: 14px + st.title-lines.length * 19.5px;
+                        width: parent.width - 40px - 32px - (st.done ? 0px : 57.5px + 12px);
+                        height: st.body-height;
+                        text: st.body;
+                        font-family: Theme.sans;
+                        font-size: 12px;
+                        line-height-factor: 1.1019;
+                        color: Theme.muted;
+                        wrap: word-wrap;
+                        vertical-alignment: top;
+                    }
+                    if !st.done: Button {
+                        x: parent.width - 20px - self.width;
+                        y: 14px + 0.75px;
+                        small: true;
+                        variant: "ghost";
+                        text: Strings.open;
+                    }
+                    if i < 2: Rectangle {
+                        y: parent.height - 1px;
+                        height: 1px;
+                        background: Theme.border;
+                    }
+                }
+            }
+        }
+        Rectangle { height: 16px; }
+        trend := Card {
+            height: 1px + 77px + 16px + chart.height + 16px + 1px;
+            accessible-role: groupbox;
+            accessible-label: Strings.trend;
+            CardHeader {
+                x: 1px;
+                y: 1px;
+                width: parent.width - 2px;
+                title: Strings.trend;
+                description: Strings.trend-hint;
+            }
+            chart := MonthBars {
+                x: 21px;
+                y: 1px + 77px + 16px;
+                width: parent.width - 42px;
+                data: root.months;
+                income-label: Strings.income;
+                spending-label: Strings.spending;
+            }
+        }
+        Rectangle { height: 64px; }
+    }
+    if root.scrollable: Rectangle {
+        x: root.width - 10px + 3px;
+        y: root.thumb-y;
+        width: 4px;
+        height: root.thumb-h;
+        border-radius: 10px;
+        background: Theme.border-strong;
+    }
+}
+
+export component OverviewScreen inherits Rectangle {
+    in property <string> income;
+    in property <string> spending;
+    in property <string> left;
+    in property <string> left-hint;
+    in property <[CategoryRow]> categories;
+    in property <[Step]> steps;
+    in property <[MonthBar]> months;
+    in-out property <length> scroll: 0px;
+    background: Theme.bg;
+    Sidebar {
+        x: 0px;
+        height: parent.height;
+    }
+    TopBar {
+        x: 224px;
+        y: 0px;
+        width: parent.width - 224px;
+    }
+    OverviewPage {
+        x: 224px;
+        y: 44px;
+        width: parent.width - 224px - 340px;
+        height: parent.height - 44px;
+        income: root.income;
+        spending: root.spending;
+        left: root.left;
+        left-hint: root.left-hint;
+        categories: root.categories;
+        steps: root.steps;
+        months: root.months;
+        scroll <=> root.scroll;
+    }
+    AssistantPanel {
+        x: parent.width - 340px;
+        y: 44px;
+        height: parent.height - 44px;
+    }
+}

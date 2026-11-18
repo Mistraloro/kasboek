@@ -1,0 +1,197 @@
+// Primitives ported from src/renderer/src/components/ui.tsx (Button, Card, CardHeader, Field/Input, PasswordInput).
+import { Theme } from "theme.slint";
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> has-icon: false;
+    // "primary" | "secondary" | "ghost" | "danger"
+    in property <string> variant: "secondary";
+    in property <bool> enabled: true;
+    // size="sm": 32px high, 13px text, px-3. size="md": 36px, 14px, px-4.
+    in property <bool> small: false;
+    callback clicked();
+
+    property <color> face-bg: variant == "primary" ? (ta.has-hover ? Theme.accent-hover : Theme.accent) : variant == "secondary" ? (ta.has-hover ? Theme.surface-2 : Theme.surface) : variant == "danger" ? (ta.has-hover ? Theme.negative-soft : Theme.surface) : (ta.has-hover ? Theme.surface-2 : transparent);
+    property <color> face-fg: variant == "primary" ? Theme.accent-fg : variant == "ghost" ? (ta.has-hover ? Theme.text : Theme.muted) : variant == "danger" ? Theme.negative : Theme.text;
+    property <bool> bordered: variant == "secondary" || variant == "danger";
+    // disabled:opacity-50, as a blend with the card behind it (the only place this is used).
+    property <color> dim-bg: Theme.surface;
+
+    // Natural width from the content, unless the caller sets one.
+    width: face.preferred-width;
+    height: small ? 32px : 36px;
+    border-radius: 8px;
+    background: enabled ? face-bg : face-bg.mix(dim-bg, 0.5);
+    border-width: bordered ? 1px : 0px;
+    border-color: enabled ? Theme.border : Theme.border.mix(dim-bg, 0.5);
+
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.clicked();
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    face := HorizontalLayout {
+        alignment: center;
+        padding-left: root.small ? 12px : 16px;
+        padding-right: root.small ? 12px : 16px;
+        spacing: 8px;
+        if root.has-icon: VerticalLayout {
+            alignment: center;
+            Image {
+                source: root.icon;
+                width: 14px;
+                height: 14px;
+                colorize: root.enabled ? root.face-fg : root.face-fg.mix(root.dim-bg, 0.5);
+            }
+        }
+        Text {
+            text: root.text;
+            font-family: Theme.sans;
+            font-weight: 500;
+            font-size: root.small ? 13px : 14px;
+            color: root.enabled ? root.face-fg : root.face-fg.mix(root.dim-bg, 0.5);
+            vertical-alignment: center;
+            horizontal-alignment: center;
+            overflow: clip;
+        }
+    }
+}
+
+export component Card inherits Rectangle {
+    background: Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Theme.border;
+}
+
+// px-5 py-4 border-b; title text-[15px] semibold; description 13px muted (mt-0.5).
+export component CardHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    // Description height in px, 19.5 per line (wrapped descriptions are set by the caller).
+    in property <length> description-height: 19.5px;
+    height: 16px + 22.5px + 2px + description-height + 16px + 1px;
+
+    Text {
+        x: 20px;
+        y: 16px;
+        width: parent.width - 40px;
+        height: 22.5px;
+        text: root.title;
+        font-family: Theme.sans;
+        font-size: 15px;
+        font-weight: 600;
+        color: Theme.text;
+        vertical-alignment: center;
+    }
+    Text {
+        x: 20px;
+        y: 16px + 22.5px + 2px;
+        width: parent.width - 40px;
+        height: root.description-height;
+        text: root.description;
+        font-family: Theme.sans;
+        font-size: 13px;
+        color: Theme.muted;
+        wrap: word-wrap;
+        line-height-factor: 1.2397;
+        vertical-alignment: center;
+    }
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+}
+
+// Label above a control (Field in ui.tsx): 13px medium, gap-1.5.
+export component Field inherits Rectangle {
+    in property <string> label;
+    height: 19.5px + 6px + 36px;
+
+    Text {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: 19.5px;
+        text: root.label;
+        font-family: Theme.sans;
+        font-size: 13px;
+        font-weight: 500;
+        color: Theme.text;
+        vertical-alignment: center;
+    }
+    @children
+}
+
+// PasswordInput: 36px high, 1px border (accent while focused), text px-3 with pr-10 for the eye button.
+export component PasswordInput inherits Rectangle {
+    in-out property <string> text;
+    in property <string> label;
+    in property <string> eye-label;
+    // The reference page has autoFocus on this field, so its border is accent in the screenshots.
+    in property <bool> force-focus-look: false;
+    height: 36px;
+    border-radius: 8px;
+    border-width: 1px;
+    background: Theme.surface;
+    border-color: (input.has-focus || root.force-focus-look) ? Theme.accent : Theme.border;
+
+    // Chromium's focus-visible outline (2px, accent) around the focused field.
+    if input.has-focus || root.force-focus-look: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 11px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+    input := TextInput {
+        x: 12px;
+        width: parent.width - 12px - 40px;
+        height: parent.height;
+        text <=> root.text;
+        input-type: password;
+        font-family: Theme.sans;
+        font-size: 14px;
+        color: Theme.text;
+        vertical-alignment: center;
+        single-line: true;
+        accessible-role: text-input;
+        accessible-label: root.label;
+    }
+    // Hold to show: the real behaviour (reveal while pressed, hide on blur/Escape) is not ported in the spike.
+    Rectangle {
+        x: parent.width - 2px - 32px - 1px;
+        y: (parent.height - 32px) / 2 - 1px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: eye.has-hover ? Theme.surface-2 : transparent;
+        accessible-role: button;
+        accessible-label: root.eye-label;
+        eye := TouchArea { }
+        Image {
+            source: @image-url("../assets/icons/eye.svg");
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: 16px;
+            height: 16px;
+            colorize: eye.has-hover ? Theme.text : Theme.muted;
+        }
+    }
+}

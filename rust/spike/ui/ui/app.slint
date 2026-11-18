@@ -1,0 +1,43 @@
+import { Theme } from "theme.slint";
+import { Strings } from "strings.slint";
+import { LockScreen } from "lock.slint";
+import { OverviewScreen, CategoryRow, Step, MonthBar } from "overview.slint";
+export { Strings, Theme, CategoryRow, Step, MonthBar }
+
+export component App inherits Window {
+    // "lock-password" | "lock-hello" | "overview"
+    in property <string> screen: "lock-password";
+    in property <string> income;
+    in property <string> spending;
+    in property <string> left;
+    in property <string> left-hint;
+    in property <[CategoryRow]> categories;
+    in property <[Step]> steps;
+    in property <[MonthBar]> months;
+    in-out property <length> scroll: 0px;
+    callback unlock(string);
+
+    preferred-width: 1280px;
+    preferred-height: 820px;
+    title: "Kasboek";
+    background: Theme.bg;
+    default-font-family: Theme.sans;
+    default-font-size: 14px;
+
+    if root.screen == "lock-password" || root.screen == "lock-hello": LockScreen {
+        mode: root.screen == "lock-hello" ? "device" : "password";
+        unlock(p) => {
+            root.unlock(p);
+        }
+    }
+    if root.screen == "overview": OverviewScreen {
+        income: root.income;
+        spending: root.spending;
+        left: root.left;
+        left-hint: root.left-hint;
+        categories: root.categories;
+        steps: root.steps;
+        months: root.months;
+        scroll <=> root.scroll;
+    }
+}

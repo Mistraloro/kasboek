@@ -1,0 +1,153 @@
+// Lock screen: src/renderer/src/pages/auth/Lock.tsx + AuthLayout.tsx (password mode and Windows Hello mode).
+import { Theme } from "theme.slint";
+import { Strings } from "strings.slint";
+import { Button, Field, PasswordInput } from "widgets.slint";
+
+export component Mark inherits Image {
+    // The Kasboek mark (assets/brand/mark.svg); 520x624 viewBox scaled to `size` wide.
+    in property <length> size: 20px;
+    source: @image-url("../assets/icons/mark.svg");
+    width: size;
+    height: size * 624 / 520;
+    colorize: Theme.accent;
+}
+
+export component LockScreen inherits Rectangle {
+    // "password" or "device" (Windows Hello).
+    in property <string> mode: "password";
+    in property <string> device-label: "Windows Hello";
+    in-out property <string> password;
+    callback unlock(string);
+    background: Theme.bg;
+
+    property <bool> device: mode == "device";
+
+    // AuthLayout: 44px drag strip, then the card centered in the rest (pb-16), max-w-sm = 384px.
+    Rectangle {
+        y: 44px;
+        height: parent.height - 44px - 64px;
+        card := VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                VerticalLayout {
+                    width: min(384px, root.width - 48px);
+                    // Logo row: mb-8, 24px serif semibold, gap-2.5, line height 36px.
+                    HorizontalLayout {
+                        height: 36px;
+                        alignment: center;
+                        spacing: 10px;
+                        VerticalLayout {
+                            alignment: center;
+                            Mark { size: 20px; }
+                        }
+                        Text {
+                            text: Strings.app-name;
+                            font-family: Theme.serif;
+                            font-weight: 600;
+                            font-size: 24px;
+                            letter-spacing: -0.24px;
+                            color: Theme.text;
+                            vertical-alignment: center;
+                        }
+                    }
+                    Rectangle { height: 32px; }
+                    // AuthCard: rounded-xl border bg-surface p-6.
+                    Rectangle {
+                        background: Theme.surface;
+                        border-radius: 12px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        height: 1px + 24px + 27.5px + (root.device ? 6px + 19.5px : 0px) + 20px + (root.device ? 36px : 113.5px) + 20px + 19.5px + 24px + 1px;
+
+                        Text {
+                            x: 25px;
+                            y: 25px;
+                            width: parent.width - 50px;
+                            height: 27.5px;
+                            text: Strings.unlock-title;
+                            font-family: Theme.serif;
+                            font-weight: 500;
+                            font-size: 22px;
+                            color: Theme.text;
+                            vertical-alignment: center;
+                            accessible-role: text;
+                        }
+                        if root.device: Text {
+                            x: 25px;
+                            y: 25px + 27.5px + 6px;
+                            width: parent.width - 50px;
+                            height: 19.5px;
+                            text: Strings.unlock-body;
+                            font-family: Theme.sans;
+                            font-size: 13px;
+                            color: Theme.muted;
+                            vertical-alignment: center;
+                        }
+                        form := Rectangle {
+                            x: 25px;
+                            y: 25px + 27.5px + (root.device ? 6px + 19.5px : 0px) + 20px;
+                            width: parent.width - 50px;
+                            height: root.device ? 36px : 113.5px;
+
+                            if !root.device: Field {
+                                x: 0px;
+                                y: 0px;
+                                width: parent.width;
+                                label: Strings.password;
+                                PasswordInput {
+                                    x: 0px;
+                                    width: parent.width;
+                                    y: 19.5px + 6px;
+                                    text <=> root.password;
+                                    label: Strings.password;
+                                    eye-label: Strings.hold-to-show;
+                                    force-focus-look: true;
+                                }
+                            }
+                            Button {
+                                x: 0px;
+                                y: root.device ? 0px : 61.5px + 16px;
+                                width: parent.width;
+                                variant: "primary";
+                                text: root.device ? Strings.unlock-with : Strings.unlock-button;
+                                has-icon: true;
+                                icon: root.device ? @image-url("../assets/icons/scan-face.svg") : @image-url("../assets/icons/lock.svg");
+                                enabled: root.device || root.password != "";
+                                clicked => {
+                                    root.unlock(root.password);
+                                }
+                            }
+                        }
+                        // Forgot password? / Erase data (mt-5, text-[13px]).
+                        Text {
+                            x: 25px;
+                            y: form.y + form.height + 20px;
+                            height: 19.5px;
+                            text: Strings.forgot;
+                            font-family: Theme.sans;
+                            font-weight: 500;
+                            font-size: 13px;
+                            color: Theme.accent;
+                            vertical-alignment: center;
+                            accessible-role: button;
+                            accessible-label: self.text;
+                        }
+                        Text {
+                            x: parent.width - 25px - self.width;
+                            y: form.y + form.height + 20px;
+                            height: 19.5px;
+                            text: Strings.erase-link;
+                            font-family: Theme.sans;
+                            font-size: 13px;
+                            color: Theme.muted;
+                            vertical-alignment: center;
+                            accessible-role: button;
+                            accessible-label: self.text;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
