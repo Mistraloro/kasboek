@@ -1,0 +1,19 @@
+[package]
+name = "kb-spike-pdf"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+hayro-interpret = "0.9"
+hayro-syntax = "0.9"
+kurbo = "0.13"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

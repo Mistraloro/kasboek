@@ -1,0 +1,25 @@
+# Evaluation of storytold/pdfcraft's text extraction (pdfcraft-render is not on crates.io: git dependency).
+# Its workspace patches vendored copies of hayro and lopdf, which a git dependency does not inherit, so they are repeated here.
+[package]
+name = "kb-eval-pdfcraft"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+pdfcraft-render = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[patch.crates-io]
+hayro-interpret = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+hayro = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+hayro-syntax = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+hayro-cmap = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+hayro-postscript = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+hayro-jbig2 = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+lopdf = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+vello_common = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
+vello_cpu = { git = "https://github.com/storytold/pdfcraft", rev = "bad6ac7fa2ced2f522c557b793bd4ee169a6a485" }
