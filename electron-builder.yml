@@ -1,6 +1,6 @@
 appId: app.kasboek
 productName: Kasboek
-copyright: Copyright © 2026 Mistraloro
+copyright: Copyright © 2026 divemost
 directories:
   buildResources: build
   output: release/${version}
