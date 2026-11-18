@@ -472,6 +472,7 @@
     "keyStorageWeakHint": "On Linux, install and unlock GNOME Keyring or KWallet, then restart Kasboek.",
     "dataFolder": "Data folder",
     "version": "Version {{version}}",
+    "license": "License",
     "signIn": "Sign-in",
     "signInPassword": "Unlock with your password.",
     "signInDevice": "Passwordless: unlock with {{name}}.",

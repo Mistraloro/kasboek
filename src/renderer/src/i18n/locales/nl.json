@@ -472,6 +472,7 @@
     "keyStorageWeakHint": "Installeer en ontgrendel op Linux GNOME Keyring of KWallet, en start Kasboek opnieuw.",
     "dataFolder": "Gegevensmap",
     "version": "Versie {{version}}",
+    "license": "Licentie",
     "signIn": "Aanmelden",
     "signInPassword": "Ontgrendelen met je wachtwoord.",
     "signInDevice": "Zonder wachtwoord: ontgrendelen met {{name}}.",
