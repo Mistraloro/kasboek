@@ -1,0 +1,26 @@
+[package]
+name = "kb-spike-db"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[patch.crates-io]
+libsqlite3-sys = { path = "sqlite3mc-sys" }
+
+[dependencies]
+rusqlite = { version = "0.43", default-features = false, features = ["functions"] }
+argon2 = "0.5"
+aes-gcm = "0.10"
+unicode-normalization = "0.1"
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+hex = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

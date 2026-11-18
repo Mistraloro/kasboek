@@ -10,3 +10,6 @@ release/
 *.db-shm
 *.tsbuildinfo
 build/mcp/
+
+# Rust build output
+rust/**/target/
