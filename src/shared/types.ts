@@ -793,6 +793,9 @@ export interface Reconciliation {
 }
 
 /** A remark about a PDF statement, as a code the screen words in the person's language. */
+/** A remark about a CAMT (XML) statement, as a code the screen words in the person's language. */
+export type XmlNote = { code: 'other_account'; iban: string } | { code: 'accounts_left_out'; count: number } | { code: 'not_booked'; count: number }
+
 export type PdfNote = { code: 'other_account'; iban: string } | { code: 'dates_without_year' } | { code: 'pages_without_text'; count: number } | { code: 'no_table'; pages: number; lines: number }
 
 export interface ImportPreview {
@@ -830,7 +833,7 @@ export interface ImportPreview {
   /** Rows the person changed by hand (what an assistant's check changed is not counted). */
   edited: number
   check: CheckSummary | null
-  fileKind: 'csv' | 'pdf'
+  fileKind: 'csv' | 'pdf' | 'xml'
   /** Only for a PDF statement. */
   pdf: {
     pages: number
@@ -839,6 +842,11 @@ export interface ImportPreview {
     tableFound: boolean
     reconciliation: Reconciliation | null
     notes: PdfNote[]
+  } | null
+  /** Only for an XML (CAMT) statement. */
+  xml: {
+    reconciliation: Reconciliation | null
+    notes: XmlNote[]
   } | null
 }
 

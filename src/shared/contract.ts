@@ -37,7 +37,7 @@ const empty = z.object({}).strict()
 const password = z
   .string()
   .max(256)
-  .refine((p) => checkPassword(p).ok, 'This password doesn’t meet the requirements: at least 16 characters, three kinds of characters, and not a common or predictable password.')
+  .refine((p) => checkPassword(p).ok, 'This password doesn’t meet the requirements: at least 12 characters, three kinds of characters, and not a common or predictable password.')
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD.')
 const month = z.string().regex(MONTH, 'Use YYYY-MM.')
 const id = z.number().int().positive()
@@ -629,6 +629,10 @@ export const contract = {
   },
   'import.analyzePdf': {
     input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(14_000_000), accountId: id }).strict(),
+    output: out<ImportPreview>()
+  },
+  'import.analyzeXml': {
+    input: z.object({ fileName: z.string().min(1).max(260), contentBase64: z.string().min(1).max(28_000_000), accountId: id }).strict(),
     output: out<ImportPreview>()
   },
   'import.pdfCancel': { input: empty, output: out<{ ok: true }>() },

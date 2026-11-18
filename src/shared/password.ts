@@ -2,12 +2,12 @@
  * Password rules and a strength estimate, shared by the setup screens (live meter) and by the main
  * process (which refuses anything that doesn't pass).
  *
- * Rules: at least 16 characters; at least three of lowercase, uppercase, digits, symbols; not a
+ * Rules: at least 12 characters; at least three of lowercase, uppercase, digits, symbols; not a
  * common password or built from one; doesn't contain "kasboek"; no runs like "aaaa" or "1234".
  * Length counts most: a phrase of several random words passes easily and is easy to remember.
  */
 
-export const MIN_PASSWORD_LENGTH = 16
+export const MIN_PASSWORD_LENGTH = 12
 
 export type PasswordIssue = 'length' | 'variety' | 'common' | 'appName' | 'pattern'
 export type Strength = 0 | 1 | 2 | 3 | 4 // very weak … strong
@@ -92,6 +92,6 @@ export function checkPassword(pw: string): PasswordCheck {
   if (issues.includes('common') || issues.includes('appName')) bits *= 0.3
   bits = Math.round(bits)
 
-  const strength: Strength = bits >= 90 ? 4 : bits >= 70 ? 3 : bits >= 50 ? 2 : bits >= 30 ? 1 : 0
+  const strength: Strength = bits >= 70 ? 4 : bits >= 55 ? 3 : bits >= 40 ? 2 : bits >= 30 ? 1 : 0
   return { ok: issues.length === 0 && strength === 4, issues, strength, bits, classes }
 }

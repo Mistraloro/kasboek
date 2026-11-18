@@ -158,7 +158,7 @@
     "intoAccount": "Importar en",
     "needAccount": "Añade primero la cuenta bancaria, para que Kasboek sepa a dónde pertenecen estos movimientos.",
     "addAccount": "Añadir una cuenta",
-    "choose": "Elegir archivo CSV o PDF…",
+    "choose": "Elegir archivo CSV, PDF o XML…",
     "recent": "Importaciones recientes",
     "rows_one": "{{count}} fila",
     "rows_other": "{{count}} filas",
@@ -239,7 +239,7 @@
     "checked": "{{ai}} ha revisado el archivo. Mira las notas encima de las filas.",
     "checkPrivacy": "Muestra lo que se envía a {{aiCompany}} y pregunta antes de la primera revisión.",
     "claudeOff": "Configura un asistente en Ajustes para que revise los archivos.",
-    "anyBank": "Funciona con archivos CSV de cualquier banco: Kasboek lee los nombres de las columnas (neerlandés, francés, inglés o alemán) y recuerda cada formato tras la primera importación. Los extractos en PDF con una tabla de movimientos se leen en este ordenador; no se envía nada a ninguna parte. Si un PDF no se puede leer así, puedes pedir al asistente que lea su texto; solo se envía después de que lo aceptes.",
+    "anyBank": "Funciona con archivos CSV de cualquier banco: Kasboek lee los nombres de las columnas (neerlandés, francés, inglés o alemán) y recuerda cada formato tras la primera importación. Los extractos en PDF con una tabla de movimientos se leen en este ordenador; no se envía nada a ninguna parte. Si un PDF no se puede leer así, puedes pedir al asistente que lea su texto; solo se envía después de que lo aceptes. Los extractos XML (CAMT.053, que ofrecen muchos bancos europeos) también se leen en este ordenador: los importes, fechas, nombres y saldos salen directamente del archivo.",
     "layoutRecognised": "Formato reconocido",
     "checkPrivacyLocal": "Muestra lo que se envía a {{ai}} en este ordenador o esta red y pregunta antes de la primera revisión.",
     "stopCheck": "Detener",
@@ -342,6 +342,15 @@
       "show": "Mostrar exactamente lo que se envía",
       "send": "Enviar a {{aiCompany}}",
       "sendLocal": "Enviar a {{ai}}"
+    },
+    "xml": {
+      "note": {
+        "other_account": "Este extracto parece ser de {{iban}}, no de esta cuenta. Comprueba que has elegido la cuenta correcta.",
+        "accounts_left_out_one": "Se ha omitido {{count}} otra cuenta de este archivo.",
+        "accounts_left_out_other": "Se han omitido {{count}} otras cuentas de este archivo.",
+        "not_booked_one": "Se ha omitido {{count}} movimiento no contabilizado (pendiente o solo informativo).",
+        "not_booked_other": "Se han omitido {{count}} movimientos no contabilizados (pendientes o solo informativos)."
+      }
     }
   },
   "assistant": {
@@ -591,7 +600,7 @@
     "chooseImportBody": "Abrir una exportación hecha con Kasboek, con sus datos de acceso.",
     "windowsHello": "Windows Hello",
     "touchId": "Touch ID",
-    "passwordIntro": "Usa al menos 16 caracteres. Lo más fácil: unas palabras al azar con una mayúscula y un número, como grulla-tulipan-Ebro-7-bici-niebla. No la uses en ningún otro sitio.",
+    "passwordIntro": "Usa al menos 12 caracteres. Lo más fácil: unas palabras al azar con una mayúscula y un número, como grulla-tulipan-Ebro-7-bici-niebla. No la uses en ningún otro sitio.",
     "newPassword": "Nueva contraseña",
     "repeatPassword": "Repite la contraseña",
     "currentPassword": "Contraseña actual",
@@ -1405,7 +1414,15 @@
     "assistant_failed_server": "{{ai}} devolvió un error ({{status}}){{detail}}. Inténtalo de nuevo.",
     "assistant_failed_model_not_found": "{{ai}} no conoce este modelo o esta dirección{{detail}}. Compruébalos en Ajustes → Asistente.",
     "assistant_failed_bad_request": "{{ai}} rechazó la solicitud{{detail}}. Puede que este modelo no admita lo necesario; prueba con otro modelo.",
-    "assistant_failed_unknown": "Algo salió mal al comunicarse con {{ai}}{{detail}}. Inténtalo de nuevo."
+    "assistant_failed_unknown": "Algo salió mal al comunicarse con {{ai}}{{detail}}. Inténtalo de nuevo.",
+    "import_xml_not_camt": "Este archivo XML no es un extracto bancario (CAMT.053). Pide a tu banco el extracto en formato CAMT.053.",
+    "import_xml_broken": "No se ha podido leer este archivo XML. Puede que el archivo esté dañado. Vuelve a descargarlo de tu banco.",
+    "import_xml_dtd": "Este archivo XML contiene un DTD o definiciones de entidades, que Kasboek no lee. Un extracto bancario no los necesita.",
+    "import_xml_too_large": "Este archivo XML supera los 20 MB o tiene demasiadas filas. Prueba con un periodo más corto.",
+    "import_xml_version": "Esta versión del formato CAMT no es compatible. Pide a tu banco CAMT.053 en versión 001.02 o posterior.",
+    "import_xml_accounts": "Este archivo contiene extractos de más de una cuenta y ninguna es la cuenta elegida. Añade el IBAN de la cuenta en Ajustes → Cuentas, elige esa cuenta y abre el archivo de nuevo.",
+    "import_xml_iban_mismatch": "El IBAN de este archivo no es el IBAN de la cuenta elegida. Elige la cuenta a la que pertenece el archivo o corrige el IBAN en Ajustes → Cuentas.",
+    "import_xml_currency": "Este archivo está en otra moneda que la cuenta elegida. Elige la cuenta en esa moneda."
   },
   "insights": {
     "title": "Sugerencias",

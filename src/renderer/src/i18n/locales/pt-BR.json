@@ -31,7 +31,7 @@
     "subtitle": "Traga arquivos CSV ou extratos em PDF do seu banco. Nada é salvo sem a sua aprovação.",
     "dropTitle": "Solte aqui um arquivo CSV ou um extrato em PDF",
     "dropBody": "O Kasboek lê o arquivo, reconhece o formato, marca duplicados e problemas e sugere categorias. Você revisa tudo antes de ser salvo.",
-    "choose": "Escolher arquivo CSV ou PDF…",
+    "choose": "Escolher arquivo CSV, PDF ou XML…",
     "undo": "Desfazer",
     "reviewTitle": "Revisar importação",
     "source": {
@@ -57,7 +57,7 @@
     "checked": "{{ai}} revisou o arquivo. Veja as notas por cima das linhas.",
     "checkPrivacy": "Mostra o que é enviado para {{aiCompany}} e pergunta antes da primeira verificação.",
     "claudeOff": "Configure um assistente nas Configurações para revisar arquivos.",
-    "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação.",
+    "anyBank": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação. Os extratos XML (CAMT.053, oferecidos por muitos bancos europeus) também são lidos neste computador.",
     "checkPrivacyLocal": "Mostra o que é enviado para {{ai}} neste computador ou nesta rede e pergunta antes da primeira verificação.",
     "checkSlowHint": "Os arquivos grandes são revistos por partes, algumas de cada vez. Cada parte para sozinha ao fim de 4 minutos.",
     "allKnown": "Tudo neste arquivo já está no Kasboek ({{from}} – {{to}}).",

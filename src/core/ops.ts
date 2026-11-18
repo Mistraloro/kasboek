@@ -6,6 +6,7 @@ import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
 import * as fin from './finance'
 import * as imp from './import'
+import { openXmlSession } from './camt/open'
 import * as fx from './fx'
 import * as wealth from './wealth'
 import { listBankBalances, setBankBalance } from './balance'
@@ -306,6 +307,11 @@ export const coreOps: OpTable = {
     mutates: false,
     assistant: false,
     handler: ({ db }, i) => imp.analyze(db, { fileName: i.fileName, accountId: i.accountId, bytes: new Uint8Array(Buffer.from(i.contentBase64, 'base64')) })
+  },
+  'import.analyzeXml': {
+    mutates: false,
+    assistant: false,
+    handler: ({ db }, i) => openXmlSession(db, { fileName: i.fileName, accountId: i.accountId, bytes: new Uint8Array(Buffer.from(i.contentBase64, 'base64')) })
   },
   'import.preview': { mutates: false, assistant: false, handler: ({ db }, { sessionId }) => imp.preview(db, sessionId) },
   'import.current': {

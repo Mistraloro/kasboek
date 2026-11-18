@@ -19,6 +19,8 @@ const MONTHS = ['2026-07', '2026-08', '2026-09', '2026-10']
 
 function setup(currency = 'EUR') {
   const d = openDatabase(join(mkdtempSync(join(tmpdir(), 'kb-tips-')), 'k.db'), randomBytes(32).toString('hex'))
+  // Nothing here needs to survive a crash; skipping the disk flush per statement keeps slow disks (Windows CI) fast.
+  d.pragma('synchronous = OFF')
   const a = Number(d.prepare("INSERT INTO accounts (name, kind, currency) VALUES ('Current', 'current', ?)").run(currency).lastInsertRowid)
   const pay = (date: string, cents: number, name: string, extra: Record<string, unknown> = {}, account = a) =>
     insertTransaction(d, { accountId: account, bookingDate: date, amountCents: cents, description: `${name} ${date}`, counterpartyName: name, ...extra })
@@ -334,11 +336,13 @@ describe('currencies', () => {
 describe('the list of facts', () => {
   it('is sorted by size and holds at most 30', () => {
     const { d, pay, category } = setup()
-    for (let i = 0; i < 35; i++) {
-      const c = category(`Cat ${i}`)
-      pay(`2026-11-03`, -(9000 + i * 10), `Shop ${i}`, { categoryId: c, description: `buy ${i}` })
-      setBudget(d, { categoryId: c, month: NOW, amountCents: 10000 })
-    }
+    d.transaction(() => {
+      for (let i = 0; i < 35; i++) {
+        const c = category(`Cat ${i}`)
+        pay(`2026-11-03`, -(9000 + i * 10), `Shop ${i}`, { categoryId: c, description: `buy ${i}` })
+        setBudget(d, { categoryId: c, month: NOW, amountCents: 10000 })
+      }
+    })()
     const facts = buildFacts(d, NOW, TODAY)
     expect(facts).toHaveLength(INSIGHT_LIMITS.maxFacts)
     expect(facts.map((f) => f.weight)).toEqual([...facts.map((f) => f.weight)].sort((x, y) => y - x))

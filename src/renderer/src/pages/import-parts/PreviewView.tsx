@@ -95,7 +95,10 @@ export function PreviewView({
   const update = (changes: Parameters<typeof call<'import.updateRows'>>[1]['changes']): void =>
     void call('import.updateRows', { sessionId: preview.sessionId, changes }).then(onChange, (e) => toast(errText(e), 'error'))
 
-  const banner = reconciliationBanner(pdf?.reconciliation ?? null)
+  const xml = preview.xml
+  // Only a PDF can have its signs wrong; an XML statement states them, so it is a plain mismatch.
+  const shown = reconciliationBanner((pdf ?? xml)?.reconciliation ?? null)
+  const banner = !pdf && shown.kind === 'maybeFlip' ? ({ kind: 'mismatch', differenceCents: shown.differenceCents } as const) : shown
   const running = pdf?.reconciliation?.runningMismatches ?? 0
   const notes = [
     ...preview.notes,
@@ -109,6 +112,16 @@ export function PreviewView({
           return t('import.pdf.note.pages_without_text', { count: n.count })
         case 'no_table':
           return t('import.pdf.note.no_table', { pages: n.pages, lines: n.lines })
+      }
+    }),
+    ...(xml?.notes ?? []).map((n) => {
+      switch (n.code) {
+        case 'other_account':
+          return t('import.xml.note.other_account', { iban: n.iban })
+        case 'accounts_left_out':
+          return t('import.xml.note.accounts_left_out', { count: n.count })
+        case 'not_booked':
+          return t('import.xml.note.not_booked', { count: n.count })
       }
     })
   ]
@@ -151,6 +164,7 @@ export function PreviewView({
             <span className="selectable font-medium text-text">{preview.fileName}</span> → {preview.accountName}
             {preview.layout && <Badge tone="accent">{t('import.layoutRecognised')}</Badge>}
             {pdf && <Badge>PDF</Badge>}
+            {xml && <Badge>XML</Badge>}
             {pdf?.readBy === 'assistant' && <Badge tone="accent">{t('import.pdf.readBy', { ai: assistant?.providerName ?? 'Claude' })}</Badge>}
             {!noTable && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
           </span>
@@ -212,8 +226,8 @@ export function PreviewView({
               <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.balanceMismatch', { amount: money(banner.differenceCents, preview.currency) })}</p>
             )}
             {running > 0 && <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.runningMismatch', { count: running })}</p>}
-            {(banner.kind === 'mismatch' || banner.kind === 'maybeFlip') && <div className="flex items-center gap-2">{aiRead}</div>}
-            {banner.kind === 'maybeFlip' && preview.mapping && (
+            {pdf && (banner.kind === 'mismatch' || banner.kind === 'maybeFlip') && <div className="flex items-center gap-2">{aiRead}</div>}
+            {pdf && banner.kind === 'maybeFlip' && preview.mapping && (
               <p className="flex items-center gap-2 text-muted">{t('import.pdf.flipHint')} <Button size="sm" disabled={locked} onClick={flipSigns}>{t('import.pdf.flip')}</Button></p>
             )}
           </div>

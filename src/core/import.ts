@@ -1,10 +1,10 @@
 /**
- * Import sessions for CSV files and PDF statements (a PDF's table is read into the same grid of text
- * a CSV file gives, so everything after that is shared). Nothing is written until commit; the person (or the assistant, with
+ * Import sessions for CSV files, PDF statements and XML (CAMT) statements (a PDF's table or the entries of an XML
+ * statement are read into the same grid of text a CSV file gives, so everything after that is shared). Nothing is written until commit; the person (or the assistant, with
  * confirmation) can change the mapping, skip rows and set categories first.
  */
 import { randomUUID } from 'node:crypto'
-import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow, PdfNote, Reconciliation } from '@shared/types'
+import type { CheckPart, CheckSummary, ImportBatch, ImportCommitResult, ImportPreview, ImportRow, PdfNote, Reconciliation, XmlNote } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { categorizeTransactions, createRule, insertTransaction, listRules, matchRule } from './finance'
@@ -41,12 +41,22 @@ export interface PdfSessionData {
   notes?: PdfNote[]
 }
 
+/** What an XML (CAMT) statement adds to its session: the balances it states and its remarks. */
+export interface XmlSessionData {
+  balances: StatementBalances
+  /** Whether the closing balance is the real closing balance (CLBD); only then is it recorded as the bank's balance. */
+  closingIsFinal: boolean
+  period: StatementPeriod
+  notes: XmlNote[]
+}
+
 interface Session {
   id: string
   fileName: string
   accountId: number
-  kind: 'csv' | 'pdf'
+  kind: 'csv' | 'pdf' | 'xml'
   pdf?: PdfSessionData
+  xml?: XmlSessionData
   encoding: string
   rows: string[][]
   mapping: CsvMapping | null
@@ -120,9 +130,13 @@ function detectMapping(db: Db, rows: string[][], kind: Session['kind'], delimite
 }
 
 /** Opens the session for rows of text, however they were read: one open session per account. */
-function openSession(db: Db, input: { fileName: string; accountId: number; encoding: string; rows: string[][]; kind: Session['kind']; delimiter: CsvMapping['delimiter']; pdf?: PdfSessionData }): ImportPreview {
+function openSession(
+  db: Db,
+  input: { fileName: string; accountId: number; encoding: string; rows: string[][]; kind: Session['kind']; delimiter: CsvMapping['delimiter']; pdf?: PdfSessionData; xml?: XmlSessionData; mapping?: CsvMapping }
+): ImportPreview {
   if (input.rows.length > MAX_ROWS) throw new AppError('import.too_many', 'This file has more than 50,000 rows.')
-  const { mapping, source } = detectMapping(db, input.rows, input.kind, input.delimiter)
+  // An XML statement has fixed fields: its columns are known, not detected.
+  const { mapping, source } = input.mapping ? { mapping: input.mapping, source: 'detected' as const } : detectMapping(db, input.rows, input.kind, input.delimiter)
   for (const s of sessions.values()) if (s.accountId === input.accountId) sessions.delete(s.id)
   const s: Session = {
     id: randomUUID(),
@@ -130,6 +144,7 @@ function openSession(db: Db, input: { fileName: string; accountId: number; encod
     accountId: input.accountId,
     kind: input.kind,
     ...(input.pdf ? { pdf: input.pdf } : {}),
+    ...(input.xml ? { xml: input.xml } : {}),
     encoding: input.encoding,
     rows: input.rows,
     mapping,
@@ -165,6 +180,16 @@ export function analyzeGrid(db: Db, input: { fileName: string; accountId: number
 }
 
 /**
+ * Opens a session for the rows of an XML (CAMT) statement, already turned into a grid with the
+ * given mapping (the grid's first row is its header).
+ */
+export function analyzeXmlGrid(db: Db, input: { fileName: string; accountId: number; grid: string[][]; mapping: CsvMapping; xml: XmlSessionData }): ImportPreview {
+  requireAccount(db, input.accountId)
+  if (input.grid.length < 2) throw new AppError('import.empty', 'This file has no rows to import.')
+  return openSession(db, { fileName: input.fileName, accountId: input.accountId, encoding: 'xml', rows: input.grid, kind: 'xml', delimiter: ',', xml: input.xml, mapping: input.mapping })
+}
+
+/**
  * Puts a new table in an open session (a PDF read again): the changes made to the old rows and the
  * last check no longer apply. A mapping is detected when none is given; `pdf` updates what the
  * statement says about itself.
@@ -194,13 +219,15 @@ export function pdfData(id: string): PdfSessionData | null {
   return session(id).pdf ?? null
 }
 
-export function sessionKind(id: string): 'csv' | 'pdf' {
+export function sessionKind(id: string): 'csv' | 'pdf' | 'xml' {
   return session(id).kind
 }
 
 export function remap(db: Db, id: string, mapping: unknown, source: ImportPreview['mappingSource'] = 'manual'): ImportPreview {
   const s = session(id)
   const parsed = mappingSchema.parse(mapping)
+  // An XML statement states its signs (credit/debit) itself: they are never flipped.
+  if (s.kind === 'xml') parsed.invertSign = false
   const width = Math.max(...s.rows.map((r) => r.length))
   const cols = parsed.columns
   const all = [cols.bookingDate, cols.valueDate, cols.amount, cols.debit, cols.credit, cols.direction, cols.currency, cols.counterpartyName, cols.counterpartyIban, cols.communication, cols.bankReference, cols.status, ...cols.description]
@@ -528,15 +555,16 @@ export function preview(db: Db, id: string): ImportPreview {
     edited: editedRows(s),
     check: s.check ? checkSummary(s.check) : null,
     fileKind: s.kind,
-    pdf: s.pdf ? { pages: s.pdf.pages, readBy: s.pdf.readBy, tableFound: s.rows.length >= 2, reconciliation: s.rows.length >= 2 ? reconciliation(s.pdf, built) : null, notes: s.pdf.notes ?? [] } : null
+    pdf: s.pdf ? { pages: s.pdf.pages, readBy: s.pdf.readBy, tableFound: s.rows.length >= 2, reconciliation: s.rows.length >= 2 ? reconciliation(s.pdf, built) : null, notes: s.pdf.notes ?? [] } : null,
+    xml: s.xml ? { reconciliation: reconciliation(s.xml, built), notes: s.xml.notes } : null
   }
 }
 
 /** The statement's printed balances against the rows (rows the person skipped are left out). */
-function reconciliation(pdf: PdfSessionData, built: ReturnType<typeof buildRows>): Reconciliation {
+function reconciliation(statement: { balances: StatementBalances }, built: ReturnType<typeof buildRows>): Reconciliation {
   return reconcile(
     built.filter((b) => b.row.status !== 'skipped').map((b) => ({ amountCents: b.clean.amountCents, balanceCents: b.raw.balanceCents })),
-    pdf.balances
+    statement.balances
   )
 }
 
@@ -597,7 +625,8 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
         bankDescription: raw.description || row.description || '(no description)'
       }, rules)
     }
-    if (saveProfile) {
+    // An XML statement has fixed columns: there is no layout to remember.
+    if (saveProfile && s.kind !== 'xml') {
       const header = s.rows[s.mapping!.headerRow] ?? []
       db.prepare(
         `INSERT INTO csv_profiles (name, bank, header_signature, mapping_json) VALUES (?, ?, ?, ?)
@@ -622,7 +651,7 @@ export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitRe
   let balanceNote: string | null = null
   if (fromFile && kind !== 'investment') {
     try {
-      bankBalance = setBankBalance(db, { accountId: s.accountId, date: fromFile.date, balanceCents: fromFile.cents, note: s.kind === 'pdf' ? 'From the PDF' : 'From the CSV' })
+      bankBalance = setBankBalance(db, { accountId: s.accountId, date: fromFile.date, balanceCents: fromFile.cents, note: s.kind === 'pdf' ? 'From the PDF' : s.kind === 'xml' ? 'From the XML' : 'From the CSV' })
     } catch (err) {
       console.warn('[import] closing balance from the file not recorded:', err instanceof Error ? err.message : err)
       balanceNote = err instanceof Error ? err.message : 'The closing balance in the file could not be recorded.'
@@ -667,13 +696,19 @@ export function commitSummary(
 
 /**
  * The bank's balance at the end of the file: from a balance column, else the closing balance printed
- * on a PDF statement, dated at the end of the statement period (else the last booking date).
+ * on a PDF or XML statement, dated at the end of the statement period (else the last booking date).
  */
 function bankClosing(s: Session, built: ReturnType<typeof buildRows>, lastDate: string | null): { date: string; cents: number } | null {
   const fromColumn = fileBalance(built.map((b) => b.raw))
   if (fromColumn) return fromColumn
-  const closing = s.pdf?.balances.closing ?? null
-  const date = s.pdf?.period.to ?? lastDate
+  if (s.xml) {
+    // Only the real closing balance, on the date the file gives for it, is recorded; no fallbacks.
+    const { balances, period } = s.xml
+    return s.xml.closingIsFinal && balances.closing !== null && period.to ? { date: period.to, cents: balances.closing } : null
+  }
+  const statement = s.pdf
+  const closing = statement?.balances.closing ?? null
+  const date = statement?.period.to ?? lastDate
   return closing !== null && date ? { date, cents: closing } : null
 }
 

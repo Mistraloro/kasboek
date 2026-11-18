@@ -158,7 +158,7 @@
     "intoAccount": "Import into",
     "needAccount": "Add the bank account first, so Kasboek knows where these transactions belong.",
     "addAccount": "Add an account",
-    "choose": "Choose CSV or PDF file…",
+    "choose": "Choose CSV, PDF or XML file…",
     "recent": "Recent imports",
     "rows_one": "{{count}} row",
     "rows_other": "{{count}} rows",
@@ -239,7 +239,7 @@
     "checked": "{{ai}} checked the file. See the notes above the rows.",
     "checkPrivacy": "Shows what is sent to {{aiCompany}} and asks before the first check.",
     "claudeOff": "Set up an assistant in Settings to have it check files.",
-    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere. If a PDF can’t be read that way, you can choose to have the assistant read its text; that is only sent after you agree.",
+    "anyBank": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere. If a PDF can’t be read that way, you can choose to have the assistant read its text; that is only sent after you agree. XML statements (CAMT.053, offered by many European banks) are read on this computer too: amounts, dates, names and balances come straight from the file.",
     "layoutRecognised": "Layout recognised",
     "checkPrivacyLocal": "Shows what is sent to {{ai}} on this computer or network and asks before the first check.",
     "stopCheck": "Stop",
@@ -341,6 +341,15 @@
       "show": "Show exactly what is sent",
       "send": "Send to {{aiCompany}}",
       "sendLocal": "Send to {{ai}}"
+    },
+    "xml": {
+      "note": {
+        "other_account": "This statement seems to be for {{iban}}, not this account. Check that you chose the right account.",
+        "accounts_left_out_one": "{{count}} other account in this file was left out.",
+        "accounts_left_out_other": "{{count}} other accounts in this file were left out.",
+        "not_booked_one": "{{count}} entry that is not booked (pending or for information only) was left out.",
+        "not_booked_other": "{{count}} entries that are not booked (pending or for information only) were left out."
+      }
     }
   },
   "assistant": {
@@ -590,7 +599,7 @@
     "chooseImportBody": "Open an export made with Kasboek, using its login details.",
     "windowsHello": "Windows Hello",
     "touchId": "Touch ID",
-    "passwordIntro": "Use at least 16 characters. Easiest: a few random words with a capital and a number, like kraan-tulp-Ober-7-fiets-mist. Don’t use it anywhere else.",
+    "passwordIntro": "Use at least 12 characters. Easiest: a few random words with a capital and a number, like kraan-tulp-Ober-7-fiets-mist. Don’t use it anywhere else.",
     "newPassword": "New password",
     "repeatPassword": "Repeat password",
     "currentPassword": "Current password",
@@ -1404,7 +1413,15 @@
     "assistant_failed_server": "{{ai}} returned an error ({{status}}){{detail}}. Try again.",
     "assistant_failed_model_not_found": "{{ai}} doesn’t know this model or address{{detail}}. Check them in Settings → Assistant.",
     "assistant_failed_bad_request": "{{ai}} rejected the request{{detail}}. This model may not support what is needed; try another model.",
-    "assistant_failed_unknown": "Something went wrong talking to {{ai}}{{detail}}. Try again."
+    "assistant_failed_unknown": "Something went wrong talking to {{ai}}{{detail}}. Try again.",
+    "import_xml_not_camt": "This XML file is not a bank statement (CAMT.053). Ask your bank for the statement as CAMT.053.",
+    "import_xml_broken": "This XML file could not be read. The file may be damaged. Download it again from your bank.",
+    "import_xml_dtd": "This XML file contains a DTD or entity definitions, which Kasboek does not read. A bank statement does not need them.",
+    "import_xml_too_large": "This XML file is larger than 20 MB or has too many rows. Try a shorter period.",
+    "import_xml_version": "This version of the CAMT format is not supported. Ask your bank for CAMT.053 in version 001.02 or later.",
+    "import_xml_accounts": "This file holds statements for more than one account, and none of them is the chosen account. Add the account’s IBAN under Settings → Accounts, choose that account and open the file again.",
+    "import_xml_iban_mismatch": "The IBAN in this file is not the IBAN of the chosen account. Choose the account this file belongs to, or correct the IBAN under Settings → Accounts.",
+    "import_xml_currency": "This file is in another currency than the chosen account. Choose the account in that currency."
   },
   "insights": {
     "title": "Suggestions",

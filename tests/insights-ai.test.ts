@@ -54,6 +54,8 @@ const tip = (b: Body, extra: Record<string, unknown> = {}): Response => {
 
 function setup(): { db: Db; pay: (date: string, cents: number, name: string) => void } {
   const db = openDatabase(join(mkdtempSync(join(tmpdir(), 'kb-ai-')), 'k.db'), randomBytes(32).toString('hex'))
+  // Nothing here needs to survive a crash; skipping the disk flush per statement keeps slow disks (Windows CI) fast.
+  db.pragma('synchronous = OFF')
   const account = Number(db.prepare("INSERT INTO accounts (name, kind, currency, iban) VALUES ('Joint account', 'current', 'EUR', 'BE68539007547034')").run().lastInsertRowid)
   const pay = (date: string, cents: number, name: string): void => void insertTransaction(db, { accountId: account, bookingDate: date, amountCents: cents, description: `${name} ${date}`, counterpartyName: name })
   for (const m of MONTHS.slice(0, 3)) pay(`${m}-05`, -1200, 'Streamly')

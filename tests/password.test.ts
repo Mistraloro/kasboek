@@ -15,6 +15,12 @@ describe('password rules', () => {
     expect(checkPassword('Aaaa1111bbbb!!!!xyz').issues).toContain('pattern')
     expect(checkPassword('Qwerty!234567890Ab').issues).toContain('pattern')
   })
+  it('enforces the 12-character minimum at the boundary', () => {
+    expect(checkPassword('Vh9#qL2!mZp').issues).toContain('length') // 11
+    expect(checkPassword('Vh9#qL2!mZp4')).toMatchObject({ ok: true, issues: [] }) // 12
+    expect(checkPassword('Vh9#qL2mZp4k').ok).toBe(true) // 12, letters and digits only in three classes
+    expect(checkPassword('qhvjzpmwnbkd').issues).toContain('variety') // 12 lowercase only
+  })
   it('rates strength from very weak to strong', () => {
     expect(checkPassword('').strength).toBe(0)
     expect(checkPassword('abc').strength).toBeLessThan(2)

@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFile
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setPasswordKdfForTests } from '@core/crypto'
 import { openDatabase } from '@core/database'
 import { insertTransaction, transactionsCsv } from '@core/finance'
@@ -479,7 +479,13 @@ describe('session', () => {
     mocks.verify.mockReset().mockResolvedValue(true)
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vi.resetModules()
+    // resetModules gives session a fresh crypto module, so the cheap test parameters must be set again.
+    ;(await import('@core/crypto')).setPasswordKdfForTests({ m: 1024, t: 1, p: 1 })
     session = await import('../src/main/session')
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    mocks.failRename.mockReset().mockReturnValue(false)
   })
   const failures = () => session.secrets().account.attempts.failed
 

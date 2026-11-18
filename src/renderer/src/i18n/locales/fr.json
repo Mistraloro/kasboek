@@ -158,7 +158,7 @@
     "intoAccount": "Importer dans",
     "needAccount": "Ajoutez d’abord le compte bancaire, pour que Kasboek sache à quel compte appartiennent ces opérations.",
     "addAccount": "Ajouter un compte",
-    "choose": "Choisir un fichier CSV ou PDF…",
+    "choose": "Choisir un fichier CSV, PDF ou XML…",
     "recent": "Imports récents",
     "rows_one": "{{count}} ligne",
     "rows_other": "{{count}} lignes",
@@ -239,7 +239,7 @@
     "checked": "{{ai}} a vérifié le fichier. Voir les notes au-dessus des lignes.",
     "checkPrivacy": "Montre ce qui est envoyé à {{aiCompany}} et demande avant la première vérification.",
     "claudeOff": "Configurez un assistant dans les Réglages pour faire vérifier les fichiers.",
-    "anyBank": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import. Les relevés PDF contenant un tableau d’opérations sont lus sur cet ordinateur ; rien n’est envoyé nulle part. Si un PDF ne peut pas être lu ainsi, vous pouvez faire lire son texte par l’assistant ; il n’est envoyé qu’après votre accord.",
+    "anyBank": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import. Les relevés PDF contenant un tableau d’opérations sont lus sur cet ordinateur ; rien n’est envoyé nulle part. Si un PDF ne peut pas être lu ainsi, vous pouvez faire lire son texte par l’assistant ; il n’est envoyé qu’après votre accord. Les relevés XML (CAMT.053, proposés par de nombreuses banques européennes) sont eux aussi lus sur cet ordinateur : montants, dates, noms et soldes viennent directement du fichier.",
     "layoutRecognised": "Mise en page reconnue",
     "checkPrivacyLocal": "Montre ce qui est envoyé à {{ai}} sur cet ordinateur ou ce réseau et demande avant la première vérification.",
     "stopCheck": "Arrêter",
@@ -342,6 +342,15 @@
       "show": "Afficher exactement ce qui est envoyé",
       "send": "Envoyer à {{aiCompany}}",
       "sendLocal": "Envoyer à {{ai}}"
+    },
+    "xml": {
+      "note": {
+        "other_account": "Ce relevé semble concerner {{iban}}, pas ce compte. Vérifiez que vous avez choisi le bon compte.",
+        "accounts_left_out_one": "{{count}} autre compte de ce fichier a été ignoré.",
+        "accounts_left_out_other": "{{count}} autres comptes de ce fichier ont été ignorés.",
+        "not_booked_one": "{{count}} opération non comptabilisée (en attente ou à titre d’information) a été ignorée.",
+        "not_booked_other": "{{count}} opérations non comptabilisées (en attente ou à titre d’information) ont été ignorées."
+      }
     }
   },
   "assistant": {
@@ -591,7 +600,7 @@
     "chooseImportBody": "Ouvrir un export fait avec Kasboek, avec ses identifiants.",
     "windowsHello": "Windows Hello",
     "touchId": "Touch ID",
-    "passwordIntro": "Utilisez au moins 16 caractères. Le plus simple : quelques mots au hasard avec une majuscule et un chiffre, comme grue-tulipe-Rhin-7-velo-brume. Ne l’utilisez nulle part ailleurs.",
+    "passwordIntro": "Utilisez au moins 12 caractères. Le plus simple : quelques mots au hasard avec une majuscule et un chiffre, comme grue-tulipe-Rhin-7-velo-brume. Ne l’utilisez nulle part ailleurs.",
     "newPassword": "Nouveau mot de passe",
     "repeatPassword": "Répétez le mot de passe",
     "currentPassword": "Mot de passe actuel",
@@ -1405,7 +1414,15 @@
     "assistant_failed_server": "{{ai}} a renvoyé une erreur ({{status}}){{detail}}. Réessayez.",
     "assistant_failed_model_not_found": "{{ai}} ne connaît pas ce modèle ou cette adresse{{detail}}. Vérifiez-les dans Réglages → Assistant.",
     "assistant_failed_bad_request": "{{ai}} a refusé la demande{{detail}}. Ce modèle ne prend peut-être pas en charge ce qu’il faut ; essayez un autre modèle.",
-    "assistant_failed_unknown": "Un problème est survenu lors de l’échange avec {{ai}}{{detail}}. Réessayez."
+    "assistant_failed_unknown": "Un problème est survenu lors de l’échange avec {{ai}}{{detail}}. Réessayez.",
+    "import_xml_not_camt": "Ce fichier XML n’est pas un relevé bancaire (CAMT.053). Demandez à votre banque le relevé au format CAMT.053.",
+    "import_xml_broken": "Ce fichier XML n’a pas pu être lu. Le fichier est peut-être endommagé. Téléchargez-le de nouveau depuis votre banque.",
+    "import_xml_dtd": "Ce fichier XML contient une DTD ou des définitions d’entités, que Kasboek ne lit pas. Un relevé bancaire n’en a pas besoin.",
+    "import_xml_too_large": "Ce fichier XML dépasse 20 Mo ou compte trop de lignes. Essayez une période plus courte.",
+    "import_xml_version": "Cette version du format CAMT n’est pas prise en charge. Demandez à votre banque du CAMT.053 en version 001.02 ou ultérieure.",
+    "import_xml_accounts": "Ce fichier contient des relevés de plusieurs comptes, et aucun n’est le compte choisi. Ajoutez l’IBAN du compte dans Réglages → Comptes, choisissez ce compte et rouvrez le fichier.",
+    "import_xml_iban_mismatch": "L’IBAN de ce fichier n’est pas celui du compte choisi. Choisissez le compte auquel le fichier appartient, ou corrigez l’IBAN dans Réglages → Comptes.",
+    "import_xml_currency": "Ce fichier est dans une autre devise que le compte choisi. Choisissez le compte dans cette devise."
   },
   "insights": {
     "title": "Suggestions",

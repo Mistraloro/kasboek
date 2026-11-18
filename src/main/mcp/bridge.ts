@@ -95,7 +95,7 @@ async function handle(req: BridgeRequest, run: Run): Promise<BridgeResponse> {
   const invalid = precheck(def.name, req.input)
   if (invalid) return { id: req.id, ok: false, error: invalid }
   // Changes wait for the person unless their permissions let Claude apps make them too.
-  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp', { pdfImport: isPdfCommit(def.op, req.input) })) {
+  if (def.mutates && needsApproval(getSettings(db()).permissions, def.op, req.input, 'mcp', { pdfImport: isPdfCommit(def.op, req.input, db()) })) {
     const approved = await askPerson(def.op, describeChange(db(), def.op, (req.input ?? {}) as Record<string, unknown>))
     if (!approved) return { id: req.id, ok: false, error: 'The person declined this change in Kasboek. Do not retry it unless they ask.' }
   }
