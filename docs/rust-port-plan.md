@@ -13,7 +13,8 @@ Non-goals: new features, a mobile app, changing any file format, changing the MC
 | Layout | A Rust workspace in `rust/` next to the TS sources. TS stays runnable as the reference for differential tests until cut-over. |
 | Operation list | `kb-core::dispatch(op, json)` over the same 154 op names, inputs, outputs and error codes as `src/shared/contract.ts`. |
 | Database | sqlite3mc **2.4.0** (SQLite 3.53.4), built from the amalgamation with the same defines, `cipher='chacha20'` + `hexkey`. |
-| PDF | pdfium (via `pdfium-render`) in a child process mode of the same binary. Line and statement logic ported 1:1. |
+| Storage engine | sqlite3mc now, kept for compatibility with existing encrypted databases, backups, exports and sync files. Behind a swappable `Store` trait in `kb-db` (section 3). |
+| PDF | **Pure-Rust PDF text reader under evaluation (spike C); its result decides.** pdfium (via `pdfium-render`) in a child process mode of the same binary stays the fallback until the pure-Rust reader passes the parity suite (section 6, item 3). Line and statement logic ported 1:1. |
 | MCP helper | `tools/kasboek-mcp` (Go) unchanged. The Rust app implements the bridge server side of the same protocol. |
 | Start-up | No splash window. The first frame is the real Setup/Lock screen. The Hello/Touch ID button is part of the first frame; the OS prompt opens only when the person presses it (section 5). |
 | Parity | Differential TS-vs-Rust runs on invented data, cross-opened files, and fixture-driven screenshot and geometry diffs. |
@@ -141,7 +142,7 @@ crates/kb-core                  contract (typed op inputs/outputs, validation, e
                                 fx, memory, settings, sync engine (HLC merge), backup tiers, quarantine, update helpers,
                                 `dispatch()`; Clock + Rng injected
 crates/kb-import                csv (decode, mapping, normalize), camt (own XML reader), pdf lines/statement, fingerprint
-crates/kb-pdf                   pdfium-render wrapper producing the same PdfText items as src/core/pdf/extract.ts
+crates/kb-pdf                   PDF text reader producing the same PdfText items as src/core/pdf/extract.ts (pdfium-render fallback; pure-Rust reader under evaluation)
 crates/kb-assistant             Anthropic + OpenAI-compatible streaming clients (reqwest + SSE), tool loop, csv/pdf
                                 assist plans, insight plan, page context, permissions, masking
 crates/kb-sync                  folder + WebDAV stores, sync service orchestration
@@ -155,6 +156,21 @@ apps/kasboek                    the app binary (`--background`, `--pdf-reader` c
 apps/kb-cli                     dev only: run ops/scenarios from JSON for the parity harness (never shipped)
 parity/                         harness: TS runner, scenarios, fixtures, UI screenshot/geometry diff scripts
 ```
+
+**Storage boundary (`kb-db`).** Only `kb-db` talks to the engine. It exposes a `Store` trait with: open/unlock with
+key; transactions; migrations keyed by schema version; prepared query helpers; user-defined function registration
+(`fx`); change hooks used by the sync triggers; backup (VACUUM INTO equivalent); integrity check. All SQL lives in
+`kb-db` (or a `queries` module behind the trait), never in `kb-core`, which depends on the trait only. Migrations are
+written engine-neutrally, with a note on every SQL dialect difference (sqlite3mc today).
+
+A `store-conformance` suite must pass for any engine: the same invented datasets, cross-open, migration paths 1 to 15,
+sync trigger behaviour, and the performance benchmark (`kb-bench`).
+
+Future engine (e.g. Turso/limbo, only if mature, with encryption at rest and import of existing data): a one-time
+export/import with verification, and the old file kept as a backup. Screens and business logic do not change.
+
+Caveats: the abstraction adds code and some cost; SQL dialect will leak through; no pure-Rust engine is known to be
+mature enough today (unverified).
 
 **Interfaces** (new):
 
@@ -209,7 +225,7 @@ fancy-regex (13 lookaround/backreference uses in core), reqwest + rustls with ru
 store), tokio, interprocess (named pipe / Unix socket), windows (DPAPI, UserConsentVerifier interop with our own
 HWND, idle, session/power notifications, toasts), objc2 + objc2-local-authentication + security-framework (Touch
 ID, Keychain), zbus/oo7 (Secret Service, logind, screensaver idle), rfd (xdg-portal on Linux), tray-icon/muda,
-ksni, notify-rust, arboard, sys-locale, dark-light, qrcode, pdfium-render plus bundled pdfium binaries
+ksni, notify-rust, arboard, sys-locale, dark-light, qrcode, pdfium-render plus bundled pdfium binaries (fallback PDF reader; a pure-Rust reader is under evaluation)
 (bblanchon/pdfium-binaries cover all 6 targets).
 
 **Printing the year report to PDF** (`export.pdf` uses Chromium `printToPDF`): generate the PDF directly
