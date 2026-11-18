@@ -1,19 +1,14 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.21 (0.21.0)
-
-**New**
-- **Import bank statements as XML (CAMT.053).** Many banks (ING, Argenta, Keytrade, Hello bank and others) offer this file next to CSV and PDF. Drop or choose the .xml file on the Import page. Kasboek reads it on your computer (nothing is sent anywhere, no assistant needed): dates, amounts, who paid or received, the description, and the opening and closing balance for the “amounts add up” check. The sign always comes from the file itself. Batch payments become one row per payment, and the same preview, duplicate check, rules and “Flip signs” as for CSV apply. If the file holds several accounts, the one matching the account you chose is used.
+## What’s new in 0.21.1
 
 **Changes**
-- **The minimum password length is now 12 characters** (it was 16). The other rules stay: a mix of character types, no common passwords or patterns. Existing passwords keep working. Long passphrases are still the best choice, because your file can be copied and attacked offline.
-- XML files are only read when they are safe: files with external definitions, huge files and files for another account or currency than the one you chose are refused with a clear message. The assistant cannot change how an XML file is read, and asks you before saving an XML import that does not add up.
-- Faster, more reliable tests behind the scenes (no change to the app).
-- Reading unusual XML is safe: files with external definitions are refused, and very large files are rejected with a clear message.
+- **Kasboek is now open source under the GPL-3.0 licence.** The licence is in the repository, in the app (Settings → About, and a copy in the installed files) and in the README. The copyright holder is divemost.
+- **The project has moved to a new GitHub address: `github.com/divemost/kasboek`.** The old address redirects for now.
 
-PDF import and XML import have so far been tried on invented data (and two real PDF layouts) only. Please report anything that doesn’t read or look right, and which bank it came from.
+**Important if you installed 0.20.0 or 0.21.0:** because of the new address, the “Update” button in those two versions may not be able to download this update. If that happens, download the installer once from this page (below) and run it; your data is kept. From this version on, updating works normally again.
 
-Everything that came in 0.20 is listed on the 0.20.0 release.
+Everything that came in 0.21 (XML statement import, a minimum password length of 12) is listed on the 0.21.0 release, and 0.20 on the 0.20.0 release. Note: for XML files, “Flip signs” is not offered, because the signs come from the file itself.
 
 ## Download
 
