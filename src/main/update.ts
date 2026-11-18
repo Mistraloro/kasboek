@@ -23,7 +23,7 @@ import { stamp, writeTransfer } from './transfer/service'
 import { updateTexts } from './update-texts'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
 
-const REPO = 'Mistraloro/kasboek'
+const REPO = 'divemost/kasboek'
 const LATEST = `https://api.github.com/repos/${REPO}/releases/latest`
 const RELEASES = `https://github.com/${REPO}/releases/latest`
 const DAY = 24 * 60 * 60 * 1000

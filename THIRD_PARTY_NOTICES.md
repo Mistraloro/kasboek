@@ -1,6 +1,6 @@
 # Third-party notices
 
-Kasboek includes the open-source software below. Each project keeps its own licence and copyright.
+Kasboek itself is licensed under GPL-3.0-only (see LICENSE). It includes the open-source software below. Each project keeps its own licence and copyright; all of them are permissive licences that can be combined with GPL-3.0.
 
 ## pdf.js (pdfjs-dist 6.5.438)
 
@@ -24,4 +24,4 @@ Unless required by applicable law or agreed to in writing, software distributed 
 | Inter (@fontsource-variable/inter) | 5.3.0 | OFL-1.1 |
 | Source Serif 4 (@fontsource-variable/source-serif-4) | 5.3.1 | OFL-1.1 |
 
-Electron and the Chromium and Node.js components it contains come with their own notices (LICENSE and LICENSES.chromium.html in the application folder).
+Electron and the Chromium and Node.js components it contains come with their own notices (LICENSE and LICENSES.chromium.html in the application folder; they are part of every installer and must stay in it).

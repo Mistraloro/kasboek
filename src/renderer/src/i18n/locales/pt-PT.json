@@ -473,6 +473,7 @@
     "keyStorageWeakHint": "No Linux, instale e desbloqueie o GNOME Keyring ou o KWallet e reinicie o Kasboek.",
     "dataFolder": "Pasta de dados",
     "version": "Versão {{version}}",
+    "license": "Licença",
     "signIn": "Acesso",
     "signInPassword": "Desbloquear com a sua palavra-passe.",
     "signInDevice": "Sem palavra-passe: desbloquear com {{name}}.",

@@ -1,6 +1,6 @@
 appId: app.kasboek
 productName: Kasboek
-copyright: Copyright © 2026 Kasboek
+copyright: Copyright © 2026 divemost
 directories:
   buildResources: build
   output: release/${version}
@@ -24,6 +24,9 @@ extraResources:
   - from: build/mcp/${platform}-${arch}
     to: .
     filter: ['kasboek-mcp*']
+  # Kasboek's own licence text (GPL-3.0-only), in the resources folder.
+  - from: LICENSE
+    to: LICENSE.txt
 asarUnpack:
   - resources/**
   - '**/*.node'

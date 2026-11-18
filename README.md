@@ -262,3 +262,12 @@ Copy `src/renderer/src/i18n/locales/en.json` to e.g. `it.json`, translate the va
 `LANGUAGES` in `src/shared/languages.ts` and to the resources in `src/renderer/src/i18n/index.ts`.
 A regional variant can hold only the texts that differ (see `scripts/regional-locales.py`).
 `npm run check:i18n` lists missing keys and placeholder mistakes.
+
+## License
+
+Kasboek is free software under the [GNU General Public License v3.0 only](LICENSE) (`GPL-3.0-only`):
+you may use, study, share and change it, and if you share a changed version you must do so under the
+same licence, with its source. There is no warranty. Third-party components keep their own licences
+(see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+
+Copyright (C) 2026 divemost

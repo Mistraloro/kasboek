@@ -472,6 +472,7 @@
     "keyStorageWeakHint": "Installiere und entsperre unter Linux GNOME Keyring oder KWallet und starte Kasboek neu.",
     "dataFolder": "Datenordner",
     "version": "Version {{version}}",
+    "license": "Lizenz",
     "signIn": "Anmeldung",
     "signInPassword": "Mit deinem Passwort entsperren.",
     "signInDevice": "Ohne Passwort: mit {{name}} entsperren.",

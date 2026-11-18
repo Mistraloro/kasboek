@@ -17,6 +17,9 @@ export function AboutSection() {
       <Row label={t('settings.dataFolder')} hint={<span className="selectable break-all">{info.dataDir}</span>}>
         <span className="text-[13px] text-muted">{t('settings.version', { version: info.commit ? `${info.version} (${info.commit})` : info.version })}</span>
       </Row>
+      <Row label={t('settings.license')}>
+        <span className="text-[13px] text-muted">GPL-3.0-only</span>
+      </Row>
       <UpdateRow />
       <Row label={t('tour.settingsLabel')} hint={t('tour.settingsHint')}>
         <Button size="sm" onClick={startTour}>{t('tour.show')}</Button>

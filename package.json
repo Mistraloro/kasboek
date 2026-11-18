@@ -1,11 +1,11 @@
 {
   "name": "kasboek",
   "productName": "Kasboek",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "description": "A simple, local-first budget app you can run with Claude.",
   "main": "./out/main/index.js",
   "author": "Kasboek",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-only",
   "private": true,
   "type": "module",
   "scripts": {
