@@ -96,7 +96,9 @@ export function PreviewView({
     void call('import.updateRows', { sessionId: preview.sessionId, changes }).then(onChange, (e) => toast(errText(e), 'error'))
 
   const xml = preview.xml
-  const banner = reconciliationBanner((pdf ?? xml)?.reconciliation ?? null)
+  // Only a PDF can have its signs wrong; an XML statement states them, so it is a plain mismatch.
+  const shown = reconciliationBanner((pdf ?? xml)?.reconciliation ?? null)
+  const banner = !pdf && shown.kind === 'maybeFlip' ? ({ kind: 'mismatch', differenceCents: shown.differenceCents } as const) : shown
   const running = pdf?.reconciliation?.runningMismatches ?? 0
   const notes = [
     ...preview.notes,
@@ -225,7 +227,7 @@ export function PreviewView({
             )}
             {running > 0 && <p className="flex items-center gap-2 text-warning"><AlertTriangle size={14} className="shrink-0" />{t('import.pdf.runningMismatch', { count: running })}</p>}
             {pdf && (banner.kind === 'mismatch' || banner.kind === 'maybeFlip') && <div className="flex items-center gap-2">{aiRead}</div>}
-            {banner.kind === 'maybeFlip' && preview.mapping && (
+            {pdf && banner.kind === 'maybeFlip' && preview.mapping && (
               <p className="flex items-center gap-2 text-muted">{t('import.pdf.flipHint')} <Button size="sm" disabled={locked} onClick={flipSigns}>{t('import.pdf.flip')}</Button></p>
             )}
           </div>

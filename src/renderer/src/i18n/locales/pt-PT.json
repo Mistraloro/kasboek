@@ -348,8 +348,8 @@
         "other_account": "Este extrato parece ser de {{iban}}, não desta conta. Verifique se escolheu a conta certa.",
         "accounts_left_out_one": "{{count}} outra conta deste ficheiro foi ignorada.",
         "accounts_left_out_other": "{{count}} outras contas deste ficheiro foram ignoradas.",
-        "not_booked_one": "{{count}} movimento ainda não contabilizado (pendente) foi ignorado.",
-        "not_booked_other": "{{count}} movimentos ainda não contabilizados (pendentes) foram ignorados."
+        "not_booked_one": "{{count}} movimento não contabilizado (pendente ou apenas informativo) foi ignorado.",
+        "not_booked_other": "{{count}} movimentos não contabilizados (pendentes ou apenas informativos) foram ignorados."
       }
     }
   },
@@ -1418,9 +1418,11 @@
     "import_xml_not_camt": "Este ficheiro XML não é um extrato bancário (CAMT.053). Peça ao seu banco o extrato em CAMT.053.",
     "import_xml_broken": "Não foi possível ler este ficheiro XML. O ficheiro pode estar danificado. Transfira-o de novo do seu banco.",
     "import_xml_dtd": "Este ficheiro XML contém um DTD ou definições de entidades, que o Kasboek não lê. Um extrato bancário não precisa deles.",
-    "import_xml_too_large": "Este ficheiro XML tem mais de 20 MB. Tente um período mais curto.",
+    "import_xml_too_large": "Este ficheiro XML tem mais de 20 MB ou demasiadas linhas. Tente um período mais curto.",
     "import_xml_version": "Esta versão do formato CAMT não é suportada. Peça ao seu banco CAMT.053 na versão 001.02 ou posterior.",
-    "import_xml_accounts": "Este ficheiro contém extratos de mais de uma conta e nenhuma é a conta escolhida. Adicione o IBAN da conta em Definições → Contas, escolha essa conta e abra o ficheiro de novo."
+    "import_xml_accounts": "Este ficheiro contém extratos de mais de uma conta e nenhuma é a conta escolhida. Adicione o IBAN da conta em Definições → Contas, escolha essa conta e abra o ficheiro de novo.",
+    "import_xml_iban_mismatch": "O IBAN deste ficheiro não é o IBAN da conta escolhida. Escolha a conta a que o ficheiro pertence ou corrija o IBAN em Definições → Contas.",
+    "import_xml_currency": "Este ficheiro está noutra moeda que a conta escolhida. Escolha a conta nessa moeda."
   },
   "insights": {
     "title": "Sugestões",

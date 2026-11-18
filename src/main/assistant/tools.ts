@@ -6,7 +6,7 @@ import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
 import { previewRule } from '@core/finance'
 import { findRecurring } from '@core/recurring'
-import { commitSummary, latestSession, sessionKind } from '@core/import'
+import { commitSummary, latestSession, preview, sessionKind } from '@core/import'
 import type { RuleField, RuleMatch } from '@shared/types'
 import { getPrefs } from '../prefs'
 import { contract, type ContractEntry, type OpName } from '@shared/contract'
@@ -139,13 +139,21 @@ export function fitJson(data: unknown, max: number): string {
   return build(lo)
 }
 
-/** Whether this change saves an import that was read from a PDF (those always wait for the person). */
-export function isPdfCommit(op: OpName, input: unknown): boolean {
+/**
+ * Whether this change saves an import that must wait for the person: one read from a PDF (always), or
+ * from an XML statement that seems to be for another account or whose balances do not add up.
+ */
+export function isPdfCommit(op: OpName, input: unknown, db?: Db): boolean {
   if (op !== 'import.commit') return false
   const given = (input as { sessionId?: unknown } | null | undefined)?.sessionId
   const id = typeof given === 'string' ? given : latestSession()
   try {
-    return !!id && sessionKind(id) === 'pdf'
+    if (!id) return false
+    const kind = sessionKind(id)
+    if (kind === 'pdf') return true
+    if (kind !== 'xml' || !db) return false
+    const xml = preview(db, id).xml
+    return !!xml && (xml.notes.some((n) => n.code === 'other_account') || (xml.reconciliation?.differenceCents ?? 0) !== 0)
   } catch {
     return false
   }

@@ -347,8 +347,8 @@
         "other_account": "Dieser Kontoauszug scheint zu {{iban}} zu gehören, nicht zu diesem Konto. Prüfe, ob du das richtige Konto gewählt hast.",
         "accounts_left_out_one": "{{count}} weiteres Konto in dieser Datei wurde ausgelassen.",
         "accounts_left_out_other": "{{count}} weitere Konten in dieser Datei wurden ausgelassen.",
-        "not_booked_one": "{{count}} noch nicht gebuchter Eintrag (ausstehend) wurde ausgelassen.",
-        "not_booked_other": "{{count}} noch nicht gebuchte Einträge (ausstehend) wurden ausgelassen."
+        "not_booked_one": "{{count}} nicht gebuchter Eintrag (ausstehend oder nur zur Information) wurde ausgelassen.",
+        "not_booked_other": "{{count}} nicht gebuchte Einträge (ausstehend oder nur zur Information) wurden ausgelassen."
       }
     }
   },
@@ -1417,9 +1417,11 @@
     "import_xml_not_camt": "Diese XML-Datei ist kein Kontoauszug (CAMT.053). Frag deine Bank nach dem Kontoauszug als CAMT.053.",
     "import_xml_broken": "Diese XML-Datei konnte nicht gelesen werden. Die Datei ist vielleicht beschädigt. Lade sie erneut bei deiner Bank herunter.",
     "import_xml_dtd": "Diese XML-Datei enthält eine DTD oder Entity-Definitionen, die Kasboek nicht liest. Ein Kontoauszug braucht sie nicht.",
-    "import_xml_too_large": "Diese XML-Datei ist größer als 20 MB. Versuche einen kürzeren Zeitraum.",
+    "import_xml_too_large": "Diese XML-Datei ist größer als 20 MB oder hat zu viele Zeilen. Versuche einen kürzeren Zeitraum.",
     "import_xml_version": "Diese Version des CAMT-Formats wird nicht unterstützt. Frag deine Bank nach CAMT.053 in Version 001.02 oder neuer.",
-    "import_xml_accounts": "Diese Datei enthält Kontoauszüge für mehr als ein Konto, und keines davon ist das gewählte Konto. Trage die IBAN des Kontos unter Einstellungen → Konten ein, wähle das Konto und öffne die Datei erneut."
+    "import_xml_accounts": "Diese Datei enthält Kontoauszüge für mehr als ein Konto, und keines davon ist das gewählte Konto. Trage die IBAN des Kontos unter Einstellungen → Konten ein, wähle das Konto und öffne die Datei erneut.",
+    "import_xml_iban_mismatch": "Die IBAN in dieser Datei ist nicht die IBAN des gewählten Kontos. Wähle das Konto, zu dem die Datei gehört, oder korrigiere die IBAN unter Einstellungen → Konten.",
+    "import_xml_currency": "Diese Datei ist in einer anderen Währung als das gewählte Konto. Wähle das Konto in dieser Währung."
   },
   "insights": {
     "title": "Vorschläge",

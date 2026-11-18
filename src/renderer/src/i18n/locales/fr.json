@@ -348,8 +348,8 @@
         "other_account": "Ce relevé semble concerner {{iban}}, pas ce compte. Vérifiez que vous avez choisi le bon compte.",
         "accounts_left_out_one": "{{count}} autre compte de ce fichier a été ignoré.",
         "accounts_left_out_other": "{{count}} autres comptes de ce fichier ont été ignorés.",
-        "not_booked_one": "{{count}} opération pas encore comptabilisée (en attente) a été ignorée.",
-        "not_booked_other": "{{count}} opérations pas encore comptabilisées (en attente) ont été ignorées."
+        "not_booked_one": "{{count}} opération non comptabilisée (en attente ou à titre d’information) a été ignorée.",
+        "not_booked_other": "{{count}} opérations non comptabilisées (en attente ou à titre d’information) ont été ignorées."
       }
     }
   },
@@ -1418,9 +1418,11 @@
     "import_xml_not_camt": "Ce fichier XML n’est pas un relevé bancaire (CAMT.053). Demandez à votre banque le relevé au format CAMT.053.",
     "import_xml_broken": "Ce fichier XML n’a pas pu être lu. Le fichier est peut-être endommagé. Téléchargez-le de nouveau depuis votre banque.",
     "import_xml_dtd": "Ce fichier XML contient une DTD ou des définitions d’entités, que Kasboek ne lit pas. Un relevé bancaire n’en a pas besoin.",
-    "import_xml_too_large": "Ce fichier XML dépasse 20 Mo. Essayez une période plus courte.",
+    "import_xml_too_large": "Ce fichier XML dépasse 20 Mo ou compte trop de lignes. Essayez une période plus courte.",
     "import_xml_version": "Cette version du format CAMT n’est pas prise en charge. Demandez à votre banque du CAMT.053 en version 001.02 ou ultérieure.",
-    "import_xml_accounts": "Ce fichier contient des relevés de plusieurs comptes, et aucun n’est le compte choisi. Ajoutez l’IBAN du compte dans Réglages → Comptes, choisissez ce compte et rouvrez le fichier."
+    "import_xml_accounts": "Ce fichier contient des relevés de plusieurs comptes, et aucun n’est le compte choisi. Ajoutez l’IBAN du compte dans Réglages → Comptes, choisissez ce compte et rouvrez le fichier.",
+    "import_xml_iban_mismatch": "L’IBAN de ce fichier n’est pas celui du compte choisi. Choisissez le compte auquel le fichier appartient, ou corrigez l’IBAN dans Réglages → Comptes.",
+    "import_xml_currency": "Ce fichier est dans une autre devise que le compte choisi. Choisissez le compte dans cette devise."
   },
   "insights": {
     "title": "Suggestions",

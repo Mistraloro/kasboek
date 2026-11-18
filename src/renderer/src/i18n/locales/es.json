@@ -348,8 +348,8 @@
         "other_account": "Este extracto parece ser de {{iban}}, no de esta cuenta. Comprueba que has elegido la cuenta correcta.",
         "accounts_left_out_one": "Se ha omitido {{count}} otra cuenta de este archivo.",
         "accounts_left_out_other": "Se han omitido {{count}} otras cuentas de este archivo.",
-        "not_booked_one": "Se ha omitido {{count}} movimiento aún no contabilizado (pendiente).",
-        "not_booked_other": "Se han omitido {{count}} movimientos aún no contabilizados (pendientes)."
+        "not_booked_one": "Se ha omitido {{count}} movimiento no contabilizado (pendiente o solo informativo).",
+        "not_booked_other": "Se han omitido {{count}} movimientos no contabilizados (pendientes o solo informativos)."
       }
     }
   },
@@ -1418,9 +1418,11 @@
     "import_xml_not_camt": "Este archivo XML no es un extracto bancario (CAMT.053). Pide a tu banco el extracto en formato CAMT.053.",
     "import_xml_broken": "No se ha podido leer este archivo XML. Puede que el archivo esté dañado. Vuelve a descargarlo de tu banco.",
     "import_xml_dtd": "Este archivo XML contiene un DTD o definiciones de entidades, que Kasboek no lee. Un extracto bancario no los necesita.",
-    "import_xml_too_large": "Este archivo XML supera los 20 MB. Prueba con un periodo más corto.",
+    "import_xml_too_large": "Este archivo XML supera los 20 MB o tiene demasiadas filas. Prueba con un periodo más corto.",
     "import_xml_version": "Esta versión del formato CAMT no es compatible. Pide a tu banco CAMT.053 en versión 001.02 o posterior.",
-    "import_xml_accounts": "Este archivo contiene extractos de más de una cuenta y ninguna es la cuenta elegida. Añade el IBAN de la cuenta en Ajustes → Cuentas, elige esa cuenta y abre el archivo de nuevo."
+    "import_xml_accounts": "Este archivo contiene extractos de más de una cuenta y ninguna es la cuenta elegida. Añade el IBAN de la cuenta en Ajustes → Cuentas, elige esa cuenta y abre el archivo de nuevo.",
+    "import_xml_iban_mismatch": "El IBAN de este archivo no es el IBAN de la cuenta elegida. Elige la cuenta a la que pertenece el archivo o corrige el IBAN en Ajustes → Cuentas.",
+    "import_xml_currency": "Este archivo está en otra moneda que la cuenta elegida. Elige la cuenta en esa moneda."
   },
   "insights": {
     "title": "Sugerencias",

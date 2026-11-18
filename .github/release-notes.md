@@ -5,7 +5,10 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 **New**
 - **Import bank statements as XML (CAMT.053).** Many banks (ING, Argenta, Keytrade, Hello bank and others) offer this file next to CSV and PDF. Drop or choose the .xml file on the Import page. Kasboek reads it on your computer (nothing is sent anywhere, no assistant needed): dates, amounts, who paid or received, the description, and the opening and closing balance for the “amounts add up” check. The sign always comes from the file itself. Batch payments become one row per payment, and the same preview, duplicate check, rules and “Flip signs” as for CSV apply. If the file holds several accounts, the one matching the account you chose is used.
 
-**Fixes and changes**
+**Changes**
+- **The minimum password length is now 12 characters** (it was 16). The other rules stay: a mix of character types, no common passwords or patterns. Existing passwords keep working. Long passphrases are still the best choice, because your file can be copied and attacked offline.
+- XML files are only read when they are safe: files with external definitions, huge files and files for another account or currency than the one you chose are refused with a clear message. The assistant cannot change how an XML file is read, and asks you before saving an XML import that does not add up.
+- Faster, more reliable tests behind the scenes (no change to the app).
 - Reading unusual XML is safe: files with external definitions are refused, and very large files are rejected with a clear message.
 
 PDF import and XML import have so far been tried on invented data (and two real PDF layouts) only. Please report anything that doesn’t read or look right, and which bank it came from.

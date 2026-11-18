@@ -22,29 +22,43 @@ const compact = (iban: string | null): string => (iban ?? '').replace(/\s+/g, ''
 
 /**
  * Opens an import session from an XML (CAMT) statement. A file can hold several accounts: the
- * statements of the chosen account are used (matched by IBAN); a file of one account is used as it is
- * (with a remark when its IBAN is not the chosen account's); a file of several accounts none of which
- * is the chosen one is refused, so rows never land in the wrong account.
+ * statements of the chosen account are used (matched by IBAN). When both IBANs are known and differ the
+ * file is refused, so rows never land in the wrong account; when only the chosen account's IBAN is not
+ * known, the file is used with a remark. Statements are also kept apart by currency: only those in the
+ * chosen account's currency are used, and currencies are never merged.
  */
 export function openXmlSession(db: Db, input: { fileName: string; accountId: number; bytes: Uint8Array }): ImportPreview {
-  const account = db.prepare('SELECT iban FROM accounts WHERE id = ?').get(input.accountId) as { iban: string | null } | undefined
+  const account = db.prepare('SELECT iban, currency FROM accounts WHERE id = ?').get(input.accountId) as { iban: string | null; currency: string } | undefined
   if (!account) throw new AppError('accounts.not_found', 'Choose an account first.')
   const own = compact(account.iban)
 
   const { statements } = readCamt(input.bytes)
-  const groups = new Map<string, CamtStatement[]>()
-  for (const st of statements) groups.set(st.account, [...(groups.get(st.account) ?? []), st])
+  const accounts = new Map<string, CamtStatement[]>()
+  for (const st of statements) {
+    const list = accounts.get(st.account)
+    if (list) list.push(st)
+    else accounts.set(st.account, [st])
+  }
 
   const notes: XmlSessionData['notes'] = []
-  let chosen: CamtStatement[]
-  if (own && groups.has(own)) {
-    chosen = groups.get(own)!
-    if (groups.size > 1) notes.push({ code: 'accounts_left_out', count: groups.size - 1 })
-  } else if (groups.size === 1) {
-    chosen = [...groups.values()][0]!
-    const [first] = chosen
-    if (own && first!.isIban && first!.account) notes.push({ code: 'other_account', iban: maskIban(first!.account) })
+  let ofAccount: CamtStatement[]
+  if (own && accounts.has(own)) {
+    ofAccount = accounts.get(own)!
+    if (accounts.size > 1) notes.push({ code: 'accounts_left_out', count: accounts.size - 1 })
+  } else if (accounts.size === 1) {
+    ofAccount = [...accounts.values()][0]!
+    const first = ofAccount[0]!
+    if (first.isIban && first.account) {
+      if (own) throw new AppError('import.xml_iban_mismatch', 'The IBAN in this file is not the IBAN of the chosen account. Choose the account this file belongs to.')
+      notes.push({ code: 'other_account', iban: maskIban(first.account) })
+    }
   } else throw new AppError('import.xml_accounts', 'This file holds statements for more than one account, and none of them is the chosen account. Add the account’s IBAN in Settings, choose that account and open the file again.')
+
+  // One currency only: the chosen account's (a statement that does not name its currency counts as that).
+  const currency = account.currency.toUpperCase()
+  const exact = ofAccount.filter((st) => st.currency === currency)
+  const chosen = exact.length ? exact : ofAccount.filter((st) => st.currency === '')
+  if (!chosen.length) throw new AppError('import.xml_currency', 'This file is in another currency than the chosen account. Choose the account in that currency.')
 
   // Statements of one account in date order: the first one's opening and the last one's closing balance count.
   const ordered = [...chosen].sort((a, b) => (a.from ?? a.rows[0]?.bookingDate ?? '').localeCompare(b.from ?? b.rows[0]?.bookingDate ?? ''))
@@ -59,6 +73,7 @@ export function openXmlSession(db: Db, input: { fileName: string; accountId: num
     mapping: MAPPING,
     xml: {
       balances: { opening: ordered[0]!.opening, closing: ordered.at(-1)!.closing },
+      closingIsFinal: ordered.at(-1)!.closingIsFinal,
       period: { from: dates('from').sort()[0] ?? null, to: dates('to').sort().at(-1) ?? null },
       notes
     }

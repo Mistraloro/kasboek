@@ -347,8 +347,8 @@
         "other_account": "Dit afschrift lijkt voor {{iban}} te zijn, niet voor deze rekening. Controleer of je de juiste rekening hebt gekozen.",
         "accounts_left_out_one": "{{count}} andere rekening in dit bestand is overgeslagen.",
         "accounts_left_out_other": "{{count}} andere rekeningen in dit bestand zijn overgeslagen.",
-        "not_booked_one": "{{count}} nog niet geboekte (openstaande) transactie is overgeslagen.",
-        "not_booked_other": "{{count}} nog niet geboekte (openstaande) transacties zijn overgeslagen."
+        "not_booked_one": "{{count}} niet geboekte transactie (openstaand of alleen ter informatie) is overgeslagen.",
+        "not_booked_other": "{{count}} niet geboekte transacties (openstaand of alleen ter informatie) zijn overgeslagen."
       }
     }
   },
@@ -1417,9 +1417,11 @@
     "import_xml_not_camt": "Dit xml-bestand is geen bankafschrift (CAMT.053). Vraag je bank om het afschrift als CAMT.053.",
     "import_xml_broken": "Dit xml-bestand kon niet gelezen worden. Het bestand is mogelijk beschadigd. Download het opnieuw bij je bank.",
     "import_xml_dtd": "Dit xml-bestand bevat een DTD of entiteitsdefinities, die Kasboek niet leest. Een bankafschrift heeft die niet nodig.",
-    "import_xml_too_large": "Dit xml-bestand is groter dan 20 MB. Probeer een kortere periode.",
+    "import_xml_too_large": "Dit xml-bestand is groter dan 20 MB of heeft te veel regels. Probeer een kortere periode.",
     "import_xml_version": "Deze versie van het CAMT-formaat wordt niet ondersteund. Vraag je bank om CAMT.053 in versie 001.02 of nieuwer.",
-    "import_xml_accounts": "Dit bestand bevat afschriften van meer dan één rekening en geen daarvan is de gekozen rekening. Voeg het IBAN van de rekening toe onder Instellingen → Rekeningen, kies die rekening en open het bestand opnieuw."
+    "import_xml_accounts": "Dit bestand bevat afschriften van meer dan één rekening en geen daarvan is de gekozen rekening. Voeg het IBAN van de rekening toe onder Instellingen → Rekeningen, kies die rekening en open het bestand opnieuw.",
+    "import_xml_iban_mismatch": "Het IBAN in dit bestand is niet het IBAN van de gekozen rekening. Kies de rekening waar dit bestand bij hoort, of corrigeer het IBAN onder Instellingen → Rekeningen.",
+    "import_xml_currency": "Dit bestand is in een andere valuta dan de gekozen rekening. Kies de rekening in die valuta."
   },
   "insights": {
     "title": "Suggesties",

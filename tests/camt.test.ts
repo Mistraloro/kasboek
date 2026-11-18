@@ -58,6 +58,10 @@ describe('xml reader', () => {
     expect(() => parseXml('<a>&x;</a>')).toThrowError(expect.objectContaining({ failure: 'broken' }))
     expect(() => parseXml('<a>&#0;</a>')).toThrowError(XmlError)
   })
+  it('knows only the five built-in entities, not names of Object.prototype', () => {
+    expect(parseXml('<a>&lt;&amp;&gt;&quot;&apos;</a>').text).toBe('<&>"\'')
+    for (const name of ['constructor', 'toString', 'hasOwnProperty']) expect(() => parseXml(`<a>&${name};</a>`), name).toThrowError(XmlError)
+  })
   it('refuses malformed input', () => {
     for (const bad of ['', 'not xml', '<a>', '<a></b>', '<a><b></a></b>', '<a x=1/>', '<a x="1/>', '<a/><b/>', '<a>text</a>trailing', '<a><!-- open</a>', '<a><![CDATA[x</a>', '<a b></a>']) {
       expect(() => parseXml(bad), bad).toThrowError(XmlError)
@@ -79,6 +83,13 @@ describe('amounts', () => {
     expect(centsOf('0.1')).toBe(10)
     expect(centsOf('1234567890123.45')).toBe(123456789012345)
     expect(centsOf('0.005')).toBe(1)
+    expect(centsOf('.5')).toBe(50)
+    expect(centsOf('+1.00')).toBe(100)
+    expect(centsOf('1.')).toBe(100)
+    expect(centsOf('.')).toBeNull()
+    expect(centsOf('+')).toBeNull()
+    expect(centsOf('-.5')).toBeNull()
+    expect(centsOf('1,234.50')).toBeNull()
     expect(centsOf('-5')).toBeNull()
     expect(centsOf('1,5')).toBeNull()
     expect(centsOf('')).toBeNull()
@@ -110,9 +121,23 @@ describe('CAMT.053 entries', () => {
     ])
   })
 
-  it('takes a debit balance as negative, PRCD and CLAV as fallbacks', () => {
-    const xml = doc(stmt([], { bals: [bal('PRCD', '80.00', 'DBIT', '2026-02-28'), bal('CLAV', '10.00', 'CRDT', '2026-03-31')] }))
-    expect(readCamt(bytes(xml)).statements[0]).toMatchObject({ opening: -8000, closing: 1000 })
+  it('takes a debit balance as negative, PRCD as the opening fallback and ITBD as the closing fallback', () => {
+    const xml = doc(stmt([], { bals: [bal('PRCD', '80.00', 'DBIT', '2026-02-28'), bal('ITBD', '10.00', 'CRDT', '2026-03-31')] }))
+    expect(readCamt(bytes(xml)).statements[0]).toMatchObject({ opening: -8000, closing: 1000, closingIsFinal: false })
+  })
+
+  it('never takes the available balance (CLAV, with a credit line) as the closing balance', () => {
+    const xml = doc(stmt([], { bals: [bal('OPBD', '80.00', 'CRDT', '2026-03-01'), bal('CLAV', '10.00', 'CRDT', '2026-03-31')] }))
+    expect(readCamt(bytes(xml)).statements[0]).toMatchObject({ closing: null, closingIsFinal: false })
+    const both = doc(stmt([], { bals: [bal('CLAV', '10.00', 'CRDT', '2026-03-31'), bal('ITBD', '20.00', 'CRDT', '2026-03-30'), bal('CLBD', '30.00', 'CRDT', '2026-03-31')] }))
+    expect(readCamt(bytes(both)).statements[0]).toMatchObject({ closing: 3000, closingIsFinal: true })
+  })
+
+  it('reads decimal forms of xs:decimal in balances and entries', () => {
+    const xml = doc(stmt([ntry({ amt: '.50' }), ntry({ amt: '+2.' })], { bals: [bal('OPBD', '+10.5', 'CRDT', '2026-03-01')] }))
+    const [s] = readCamt(bytes(xml)).statements
+    expect(s!.opening).toBe(1050)
+    expect(s!.rows.map((r) => r.amount)).toEqual(['-0.50', '-2.00'])
   })
 
   it('keeps the direction the file states for a reversal (RvslInd) and never guesses a missing one', () => {
@@ -125,6 +150,19 @@ describe('CAMT.053 entries', () => {
     const [s] = readCamt(bytes(xml)).statements
     expect(s!.rows).toHaveLength(1)
     expect(s!.notBooked).toBe(2)
+  })
+
+  it('reads the status of version 10 and later: Sts/Cd and Sts/Prtry/Cd; a missing one is booked', () => {
+    const withSts = (sts: string): string => ntry({ amt: '1.00' }).replace('<Sts>BOOK</Sts>', sts)
+    const xml = doc(stmt([withSts('<Sts><Prtry><Cd>BOOK</Cd></Prtry></Sts>'), withSts('<Sts><Prtry><Cd>INFO</Cd></Prtry></Sts>'), withSts('<Sts><Cd>PDNG</Cd></Sts>'), withSts('')]))
+    const [s] = readCamt(bytes(xml)).statements
+    expect(s!.rows).toHaveLength(2)
+    expect(s!.notBooked).toBe(2)
+  })
+
+  it('takes the booking date as written, the date of a date-time without conversion', () => {
+    const entry = `<Ntry><Amt Ccy="EUR">1.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><BookgDt><DtTm>2026-03-31T23:30:00-05:00</DtTm></BookgDt></Ntry>`
+    expect(readCamt(bytes(doc(stmt([entry])))).statements[0]!.rows[0]!.bookingDate).toBe('2026-03-31')
   })
 
   it('reads the newer layout: Sts/Cd, Pty/Nm, DtTm dates', () => {
@@ -156,10 +194,18 @@ describe('CAMT.053 entries', () => {
     expect(row.description).toBe('Factuur 2026-17')
   })
 
-  it('uses an end-to-end id as a reference only together with the booking date', () => {
+  it('uses only the bank’s own reference as the reference, never an end-to-end id', () => {
     const e2e = (date: string) => ntry({ amt: '700.00', date, inner: tx('<Refs><EndToEndId>RENT</EndToEndId></Refs>') })
-    const rows = readCamt(bytes(doc(stmt([e2e('2026-03-01'), e2e('2026-04-01')])))).statements[0]!.rows
-    expect(rows.map((r) => r.reference)).toEqual(['RENT 2026-03-01', 'RENT 2026-04-01'])
+    const own = ntry({ amt: '5.00', inner: tx('<Refs><AcctSvcrRef>BANK-1</AcctSvcrRef><EndToEndId>RENT</EndToEndId></Refs>') })
+    const rows = readCamt(bytes(doc(stmt([e2e('2026-03-01'), e2e('2026-04-01'), own])))).statements[0]!.rows
+    expect(rows.map((r) => r.reference)).toEqual(['', '', 'BANK-1'])
+  })
+
+  it('takes the party that is not the statement account, also for a reversal that lists the parties the other way round', () => {
+    const parties = `<RltdPties><Dbtr><Nm>Me Myself</Nm></Dbtr><DbtrAcct><Id><IBAN>${OWN}</IBAN></Id></DbtrAcct><Cdtr><Nm>Shop Vandenberghe</Nm></Cdtr><CdtrAcct><Id><IBAN>${OTHER}</IBAN></Id></CdtrAcct></RltdPties>`
+    // A reversal credits the account, yet the parties are those of the original payment.
+    const rows = readCamt(bytes(doc(stmt([ntry({ amt: '5.00', dir: 'CRDT', rvsl: true, inner: tx(parties) }), ntry({ amt: '5.00', dir: 'DBIT', inner: tx(parties) })])))).statements[0]!.rows
+    expect(rows.map((r) => [r.counterparty, r.counterpartyIban])).toEqual([['Shop Vandenberghe', OTHER], ['Shop Vandenberghe', OTHER]])
   })
 
   it('splits a batch into one row per transaction when the amounts add up', () => {
@@ -245,7 +291,19 @@ describe('refused files', () => {
     expect(code(bytes(doc(stmt([ntry({ amt: '1.00' })]).slice(0, -20))))).toBe('import.xml_broken')
   })
   it('refuses more than 50,000 entries', () => {
-    expect(code(bytes(doc(stmt(Array.from({ length: 50_001 }, () => ntry({ amt: '1.00' }))))))).toBe('import.too_many')
+    expect(code(bytes(doc(stmt(Array.from({ length: 50_001 }, () => ntry({ amt: '1.00' }))))))).toBe('import.xml_too_large')
+  })
+  it('counts rows, not only entries, before building them: one entry with very many transactions', () => {
+    const t = '<TxDtls><RmtInf><Ustrd>x</Ustrd></RmtInf></TxDtls>'
+    const batch = ntry({ amt: '1.00', inner: `<NtryDtls>${t.repeat(3000)}</NtryDtls>` })
+    const xml = bytes(doc(stmt([batch])))
+    expect(() => readCamt(xml, 2000)).toThrowError(expect.objectContaining({ code: 'import.xml_too_large' }))
+    expect(readCamt(xml, 5000).statements[0]!.rows).toHaveLength(1)
+  })
+  it('reads a root with 200,000 children without spreading them, and caps the number of statements', () => {
+    const many = `<Document><X/>${'<Y/>'.repeat(200_000)}${stmt([ntry({ amt: '1.00' })])}</Document>`
+    expect(readCamt(bytes(many)).statements).toHaveLength(1)
+    expect(code(bytes(doc(stmt([]).repeat(1001))))).toBe('import.xml_too_large')
   })
   it('has a text in every language for every error the screen words', () => {
     const dir = join(__dirname, '..', 'src', 'renderer', 'src', 'i18n', 'locales')
@@ -312,14 +370,21 @@ describe('XML import session', () => {
     expect(again.stats).toMatchObject({ duplicates: 3, ready: 0 })
   })
 
-  it('lets the columns be changed and the signs flipped like any import', () => {
+  it('never flips the signs of an XML statement: they are the file’s own', () => {
     const { d, own } = setup()
     const p = openXmlSession(d, { fileName: 's.xml', accountId: own, bytes: bytes(file()) })
     expect(p.mapping!.invertSign).toBe(false)
-    const flipped = remap(d, p.sessionId, { ...p.mapping!, invertSign: true })
-    expect(flipped.rows.map((r) => r.amountCents)).toEqual([4510, -250000, 999])
-    // Opposite signs no longer add up to the balances, which the banner shows.
-    expect(flipped.xml!.reconciliation!.differenceCents).not.toBe(0)
+    const again = remap(d, p.sessionId, { ...p.mapping!, invertSign: true })
+    expect(again.mapping!.invertSign).toBe(false)
+    expect(again.rows.map((r) => r.amountCents)).toEqual([-4510, 250000, -999])
+  })
+
+  it('records only a real closing balance (CLBD), never a fallback', () => {
+    const { d, own } = setup()
+    const intraday = doc(stmt([ntry({ amt: '1.00' })], { bals: [bal('ITBD', '50.00', 'CRDT', '2026-03-10'), bal('CLAV', '999.00', 'CRDT', '2026-03-10')] }))
+    const p = openXmlSession(d, { fileName: 'i.xml', accountId: own, bytes: bytes(intraday) })
+    expect(commit(d, p.sessionId, false).bankBalance).toBeNull()
+    expect(d.prepare('SELECT COUNT(*) AS n FROM valuations').get()).toEqual({ n: 0 })
   })
 
   it('picks the statements of the chosen account from a file with several', () => {
@@ -341,10 +406,31 @@ describe('XML import session', () => {
   it('notes a file for another account, and refuses several accounts none of which is the chosen one', () => {
     const { d, own, plain } = setup()
     const other = doc(stmt([ntry({ amt: '1.00' })], { iban: OTHER }))
-    expect(openXmlSession(d, { fileName: 'o.xml', accountId: own, bytes: bytes(other) }).xml!.notes).toEqual([{ code: 'other_account', iban: 'NL…4300' }])
-    expect(openXmlSession(d, { fileName: 'o.xml', accountId: plain, bytes: bytes(other) }).xml!.notes).toEqual([])
+    // Both IBANs known and different: refused. Only the file's known: imported with a remark.
+    expect(() => openXmlSession(d, { fileName: 'o.xml', accountId: own, bytes: bytes(other) })).toThrowError(expect.objectContaining({ code: 'import.xml_iban_mismatch' }))
+    expect(openXmlSession(d, { fileName: 'o.xml', accountId: plain, bytes: bytes(other) }).xml!.notes).toEqual([{ code: 'other_account', iban: 'NL…4300' }])
+    const noIban = doc('<Stmt><Acct><Id><Othr><Id>123-4567890-12</Id></Othr></Id></Acct>' + ntry({ amt: '1.00' }) + '</Stmt>')
+    expect(openXmlSession(d, { fileName: 'o.xml', accountId: own, bytes: bytes(noIban) }).xml!.notes).toEqual([])
     const several = doc(stmt([ntry({ amt: '1.00' })], { iban: OTHER }) + stmt([ntry({ amt: '1.00' })], { iban: THIRD }))
     expect(() => openXmlSession(d, { fileName: 'x.xml', accountId: own, bytes: bytes(several) })).toThrowError(expect.objectContaining({ code: 'import.xml_accounts' }))
+  })
+
+  it('keeps currencies apart: only the statement in the chosen account’s currency is used', () => {
+    const { d, own } = setup()
+    const usd = stmt([ntry({ amt: '7.00', ccy: 'USD' })]).replace('<Ccy>EUR</Ccy>', '<Ccy>USD</Ccy>')
+    const eur = stmt([ntry({ amt: '2.00' })])
+    const p = openXmlSession(d, { fileName: 'c.xml', accountId: own, bytes: bytes(doc(usd + eur)) })
+    expect(p.rows.map((r) => r.amountCents)).toEqual([-200])
+    expect(() => openXmlSession(d, { fileName: 'c.xml', accountId: own, bytes: bytes(doc(usd)) })).toThrowError(expect.objectContaining({ code: 'import.xml_currency' }))
+  })
+
+  it('sees an XML of CSV-imported history as duplicates, also with an end-to-end id, and keeps standing orders apart', () => {
+    const { d, own } = setup()
+    const rent = (date: string): string => ntry({ amt: '700.00', date, inner: tx(payTo('Landlord Peeters', OTHER, 'Huur', '<EndToEndId>RENT</EndToEndId>')) })
+    const first = openXmlSession(d, { fileName: 'a.xml', accountId: own, bytes: bytes(doc(stmt([rent('2026-03-01')]))) })
+    commit(d, first.sessionId, false)
+    const again = openXmlSession(d, { fileName: 'b.xml', accountId: own, bytes: bytes(doc(stmt([rent('2026-03-01'), rent('2026-04-01')]))) })
+    expect(again.rows.map((r) => r.status)).toEqual(['duplicate', 'ready'])
   })
 
   it('reports not booked entries and an empty file', () => {

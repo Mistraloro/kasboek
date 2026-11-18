@@ -44,6 +44,8 @@ export interface PdfSessionData {
 /** What an XML (CAMT) statement adds to its session: the balances it states and its remarks. */
 export interface XmlSessionData {
   balances: StatementBalances
+  /** Whether the closing balance is the real closing balance (CLBD); only then is it recorded as the bank's balance. */
+  closingIsFinal: boolean
   period: StatementPeriod
   notes: XmlNote[]
 }
@@ -224,6 +226,8 @@ export function sessionKind(id: string): 'csv' | 'pdf' | 'xml' {
 export function remap(db: Db, id: string, mapping: unknown, source: ImportPreview['mappingSource'] = 'manual'): ImportPreview {
   const s = session(id)
   const parsed = mappingSchema.parse(mapping)
+  // An XML statement states its signs (credit/debit) itself: they are never flipped.
+  if (s.kind === 'xml') parsed.invertSign = false
   const width = Math.max(...s.rows.map((r) => r.length))
   const cols = parsed.columns
   const all = [cols.bookingDate, cols.valueDate, cols.amount, cols.debit, cols.credit, cols.direction, cols.currency, cols.counterpartyName, cols.counterpartyIban, cols.communication, cols.bankReference, cols.status, ...cols.description]
@@ -697,7 +701,12 @@ export function commitSummary(
 function bankClosing(s: Session, built: ReturnType<typeof buildRows>, lastDate: string | null): { date: string; cents: number } | null {
   const fromColumn = fileBalance(built.map((b) => b.raw))
   if (fromColumn) return fromColumn
-  const statement = s.pdf ?? s.xml
+  if (s.xml) {
+    // Only the real closing balance, on the date the file gives for it, is recorded; no fallbacks.
+    const { balances, period } = s.xml
+    return s.xml.closingIsFinal && balances.closing !== null && period.to ? { date: period.to, cents: balances.closing } : null
+  }
+  const statement = s.pdf
   const closing = statement?.balances.closing ?? null
   const date = statement?.period.to ?? lastDate
   return closing !== null && date ? { date, cents: closing } : null

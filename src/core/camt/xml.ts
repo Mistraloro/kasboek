@@ -35,7 +35,7 @@ function decode(text: string): string {
   if (!text.includes('&')) return text
   return text.replace(/&(#x[0-9a-fA-F]{1,6}|#\d{1,7}|[a-zA-Z]+);/g, (_m, ref: string) => {
     if (ref[0] !== '#') {
-      const named = NAMED[ref]
+      const named = Object.hasOwn(NAMED, ref) ? NAMED[ref] : undefined
       if (named === undefined) throw new XmlError('broken', `Unknown entity &${ref};`)
       return named
     }

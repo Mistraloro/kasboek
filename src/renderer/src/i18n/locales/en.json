@@ -347,8 +347,8 @@
         "other_account": "This statement seems to be for {{iban}}, not this account. Check that you chose the right account.",
         "accounts_left_out_one": "{{count}} other account in this file was left out.",
         "accounts_left_out_other": "{{count}} other accounts in this file were left out.",
-        "not_booked_one": "{{count}} entry that is not booked yet (pending) was left out.",
-        "not_booked_other": "{{count}} entries that are not booked yet (pending) were left out."
+        "not_booked_one": "{{count}} entry that is not booked (pending or for information only) was left out.",
+        "not_booked_other": "{{count}} entries that are not booked (pending or for information only) were left out."
       }
     }
   },
@@ -1417,9 +1417,11 @@
     "import_xml_not_camt": "This XML file is not a bank statement (CAMT.053). Ask your bank for the statement as CAMT.053.",
     "import_xml_broken": "This XML file could not be read. The file may be damaged. Download it again from your bank.",
     "import_xml_dtd": "This XML file contains a DTD or entity definitions, which Kasboek does not read. A bank statement does not need them.",
-    "import_xml_too_large": "This XML file is larger than 20 MB. Try a shorter period.",
+    "import_xml_too_large": "This XML file is larger than 20 MB or has too many rows. Try a shorter period.",
     "import_xml_version": "This version of the CAMT format is not supported. Ask your bank for CAMT.053 in version 001.02 or later.",
-    "import_xml_accounts": "This file holds statements for more than one account, and none of them is the chosen account. Add the account’s IBAN under Settings → Accounts, choose that account and open the file again."
+    "import_xml_accounts": "This file holds statements for more than one account, and none of them is the chosen account. Add the account’s IBAN under Settings → Accounts, choose that account and open the file again.",
+    "import_xml_iban_mismatch": "The IBAN in this file is not the IBAN of the chosen account. Choose the account this file belongs to, or correct the IBAN under Settings → Accounts.",
+    "import_xml_currency": "This file is in another currency than the chosen account. Choose the account in that currency."
   },
   "insights": {
     "title": "Suggestions",
