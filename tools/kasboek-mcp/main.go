@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 Kasboek contributors
+// Copyright (C) 2026 Mistraloro
 //
 // kasboek-mcp: the Model Context Protocol server for Kasboek, for Claude Desktop, Claude Code or
 // any MCP client.

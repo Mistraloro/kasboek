@@ -270,4 +270,4 @@ you may use, study, share and change it, and if you share a changed version you 
 same licence, with its source. There is no warranty. Third-party components keep their own licences
 (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 
-Copyright (C) 2026 Kasboek contributors
+Copyright (C) 2026 Mistraloro
