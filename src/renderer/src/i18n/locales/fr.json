@@ -600,7 +600,7 @@
     "chooseImportBody": "Ouvrir un export fait avec Kasboek, avec ses identifiants.",
     "windowsHello": "Windows Hello",
     "touchId": "Touch ID",
-    "passwordIntro": "Utilisez au moins 16 caractères. Le plus simple : quelques mots au hasard avec une majuscule et un chiffre, comme grue-tulipe-Rhin-7-velo-brume. Ne l’utilisez nulle part ailleurs.",
+    "passwordIntro": "Utilisez au moins 12 caractères. Le plus simple : quelques mots au hasard avec une majuscule et un chiffre, comme grue-tulipe-Rhin-7-velo-brume. Ne l’utilisez nulle part ailleurs.",
     "newPassword": "Nouveau mot de passe",
     "repeatPassword": "Répétez le mot de passe",
     "currentPassword": "Mot de passe actuel",

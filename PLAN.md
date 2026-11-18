@@ -215,7 +215,7 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    one per month for 12 months. Every copy stays a complete, independent encrypted export (no
    chains of incremental pieces, which break if one piece is lost); the database is small enough
    that full copies are fast. Show the backup list with dates in Settings, with restore.
-6. **Stronger password rules.** Minimum 16 characters, at least three of: lowercase, uppercase,
+6. **Stronger password rules.** Minimum 12 characters, at least three of: lowercase, uppercase,
    digits, symbols; refused if it is on a built-in list of common/breached passwords, contains
    "kasboek", or is mostly one repeated character/sequence; a live strength meter (zxcvbn-style)
    that must reach "strong". Long passphrases (several random words) pass easily and are

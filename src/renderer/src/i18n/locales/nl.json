@@ -599,7 +599,7 @@
     "chooseImportBody": "Open een export van Kasboek met de bijhorende logingegevens.",
     "windowsHello": "Windows Hello",
     "touchId": "Touch ID",
-    "passwordIntro": "Gebruik minstens 16 tekens. Het makkelijkst: een paar willekeurige woorden met een hoofdletter en een cijfer, zoals kraan-tulp-Ober-7-fiets-mist. Gebruik het nergens anders.",
+    "passwordIntro": "Gebruik minstens 12 tekens. Het makkelijkst: een paar willekeurige woorden met een hoofdletter en een cijfer, zoals kraan-tulp-Ober-7-fiets-mist. Gebruik het nergens anders.",
     "newPassword": "Nieuw wachtwoord",
     "repeatPassword": "Herhaal wachtwoord",
     "currentPassword": "Huidig wachtwoord",

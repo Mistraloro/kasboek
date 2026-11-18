@@ -600,7 +600,7 @@
     "chooseImportBody": "Abrir uma exportação feita com o Kasboek, com os respetivos dados de acesso.",
     "windowsHello": "Windows Hello",
     "touchId": "Touch ID",
-    "passwordIntro": "Use pelo menos 16 caracteres. O mais fácil: algumas palavras ao acaso com uma maiúscula e um número, como grua-tulipa-Tejo-7-bicla-nevoa. Não a use em mais lado nenhum.",
+    "passwordIntro": "Use pelo menos 12 caracteres. O mais fácil: algumas palavras ao acaso com uma maiúscula e um número, como grua-tulipa-Tejo-7-bicla-nevoa. Não a use em mais lado nenhum.",
     "newPassword": "Nova palavra-passe",
     "repeatPassword": "Repita a palavra-passe",
     "currentPassword": "Palavra-passe atual",
