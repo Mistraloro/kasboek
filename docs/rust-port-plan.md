@@ -275,6 +275,42 @@ Safety rules kept from today:
 - No vault, DB key or DB handle exists before unlock. Locking drops and zeroizes all of them (as `session.ts`
   does now).
 
+**After the unlock: loading screen with real progress (owner requirement).**
+- When the unlock succeeds (Hello success or password accepted), a timer of **180 ms** starts.
+- If the first useful screen (the Overview with totals) is ready before the timer runs out, it is shown directly, with no loading screen.
+- Otherwise the Lock card is replaced in place by a loading view: a progress bar and the name of the current step. Once shown, it stays at least 300 ms, so it never flickers.
+- The bar is **real**. Each step has a fixed share of the bar. Inside a step the bar moves only on reported progress. It never creeps on a timer, unlike today's launch window.
+
+| Step (new i18n key) | Progress source |
+|---|---|
+| `loading.opening` "Opening your data" | Not countable. Done when OS unseal + vault + DB open + quick probe have finished |
+| `loading.migrating` "Updating your data" (only when `user_version` is below the latest) | Migrations i of n. Migrations that rebuild a table report rows copied of total |
+| `loading.transactions` "Loading transactions" | Rows scanned of rows in the Overview's 14-month window (recurring and alerts inputs) |
+| `loading.overview` "Preparing the overview" | Overview queries done of total (summary.month, accounts, alerts, budgets) |
+
+Progress travels as `AppEvent::LoadProgress { step, done, total }` from the DB worker to the UI, at most 30 per second.
+
+These are **not** loading steps; they run after the Overview is shown, in background tasks that can be cancelled:
+- local insights tips
+- sync pull and apply
+- update check
+- ECB rates
+- other pages
+
+**Responsive with big datasets:**
+- **One DB worker thread** owns the connection. It has a two-level queue: visible-screen queries first, background jobs second.
+- Background jobs (insights, recurring cache refresh, transfers.find, sync apply, backups) run in chunks of about 20 ms or 2k rows. They yield to the UI queue between chunks and are cancelled on lock, like `cancelRunningJobs` today.
+- The UI thread never touches SQLite.
+- **The Overview is computed first.** Other pages load on demand when opened. Their results are cached per data version, and the existing `data.changed` event invalidates the cache.
+- **Transactions list:**
+  - Shown in a Slint virtualised `ListView`, backed by a paged model of 200-row pages, keeping at most about 10 pages (LRU).
+  - The op contract keeps `limit`/`offset` for parity.
+  - Internally, deep pages use keyset seeks on `(booking_date, id)`. A differential test proves the results are identical to the offset version.
+  - Totals for the whole filter come from one aggregate query, never from loaded rows.
+- The import preview grid and the year/net-worth tables are virtualised the same way. No screen keeps all transactions in memory.
+
+**Note for translators and implementers:** the four loading step names above (`loading.opening`, `loading.migrating`, `loading.transactions`, `loading.overview`) are new texts. They need keys in all 8 locale files. The progress bar is real: it differs from today's launch window, where the bar creeps forward on a timer between steps (the creep timer in `src/main/splash.ts`).
+
 **Measurement hooks:** startup.log keeps its format, plus these milestones:
 - `process start` (OS creation time), `main entered`, `prefs read`
 - `window created`, `first frame painted`, `window shown`
@@ -348,6 +384,34 @@ locally; results and files are never committed.
    modals, screen reader (Narrator, VoiceOver, Orca), IME dead keys (é ü ç ã ñ ß), drag and snap of the window,
    tray, notifications. Run at M4 and M7 on real hardware including Windows on ARM.
 
+**7. Performance benchmark (`kb-bench`, invented data only).**
+A seeded generator builds encrypted DBs with **10k, 100k and 500k transactions**. It includes 3, 8 and 20 accounts, multi-currency rows with FX rates, 30 categories, 50, 200 and 1,000 rules, budgets, splits, paired transfers and recurring patterns over 14 months. Fake counterparties and invented IBANs. It never imports real files.
+
+It also builds one schema-1 DB at 100k rows to time the migrations.
+
+Measured, from process start and from the unlock moment:
+- time-to-unlocked (KDF reported separately)
+- time-to-first-useful-screen (Overview with totals painted)
+- Transactions first page
+- p95 frame time while scrolling at full speed
+- filter and search latency
+- import commit of a 5k-row CSV
+- sync flush and apply of 10k changes
+- migrations time
+- peak and steady RSS
+
+The same scenarios run through the TS runner, so the Electron baseline is measured too.
+
+Reference machines: one Windows ARM64 laptop, one 2020-era x64 laptop, one Apple-silicon Mac, one Linux x64 machine. The thresholds below are targets to confirm at M2, not promises:
+
+| Dataset | Unlocked (excl. KDF) | First useful screen | Transactions first page | Scroll p95 | Filter/search | Peak RSS |
+|---|---|---|---|---|---|---|
+| 10k | ≤ 0.2 s | ≤ 0.5 s | ≤ 50 ms | ≤ 16 ms | ≤ 100 ms | ≤ 120 MB |
+| 100k | ≤ 0.3 s | ≤ 0.8 s | ≤ 80 ms | ≤ 16 ms | ≤ 200 ms | ≤ 180 MB |
+| 500k | ≤ 0.5 s | ≤ 1.5 s | ≤ 150 ms | ≤ 16 ms | ≤ 300 ms | ≤ 300 MB |
+
+A migration from schema 1 at 100k rows must finish in ≤ 3 s and show "Updating your data" with real progress.
+
 ## 7. Roadmap
 
 Estimates are for one experienced Rust engineer with agent help, counted in engineer-weeks (ew). Calendar time
@@ -363,6 +427,11 @@ depends mostly on owner review.
 | **M5 Platform** (partly parallel with M4) | OS seal + legacy migration, Hello/Touch ID, idle/lock/suspend auto-lock, single instance + `--background`, tray, notifications, dialogs, theme following, startup.log, quarantine, backup scheduler, sync service + WebDAV, ECB fetch, MCP bridge (Go helper unchanged), updater (GitHub + SHA256SUMS, MSI via Go helper, AppImage replace) | Real-hardware checklist on 6 targets; security review closed; mixed-fleet sync with the Electron app | 6–9 ew |
 | **M6 Installers** | MSI (WiX, same UpgradeCode, per-user, same path and exe, shortcuts, art), dmg (`app.kasboek`, ad-hoc or Developer ID), AppImage + deb (same name), `kasboek-mcp` in the same place, assets named for `pickAsset` | Electron → Rust upgrade by the in-app updater on all 6; downgrade to Electron keeps data (`account.electron.json`); installers ≤ 25 MB | 3–5 ew |
 | **M7 Beta + cut-over** | GitHub pre-releases (the Electron updater reads only `releases/latest`, so it never sees them); owner dogfooding ≥ 4 weeks; merge to `main`, release as the next minor or 1.0; remove Electron code one release later | No open parity bugs of severity ≥ medium; start-up targets met on real machines; owner go | 4–8 ew |
+
+- **M0 exit criteria**, add: **G7** On the 100k bench DB, the loading view appears only after 180 ms. It shows the real step names, and the bar matches the reported done/total. On the 10k DB, the Overview appears with no loading view.
+- **M2 exit criteria**, add: kb-bench runs nightly in CI on Linux x64 and macOS arm64, plus a weekly manual run on Windows x64 and ARM64. The thresholds above hold at 10k and 100k. A regression above 20% fails the run.
+- **M4 exit criteria for Transactions and Import**, add: the 500k thresholds hold, including scroll p95 ≤ 16 ms and RSS ≤ 300 MB.
+- **M7 exit criteria**, add: the full benchmark is met on all four reference machines, and the results are recorded in the release notes.
 
 **Total: about 45–75 ew** (roughly 8–14 months of calendar time with parallel agents). Treat the low end as
 optimistic.
@@ -381,6 +450,7 @@ optimistic.
 10. HTTP stack differences (system proxy, PAC, OS trust store) compared with Chromium `net`.
 11. Linux desktop dependencies (tray, portal, Secret Service) and Wayland idle detection.
 12. Owner review bandwidth.
+13. SQLite aggregate queries at 500k may miss the targets with today's indexes (`idx_tx_account_date`, `idx_tx_category`). Any new index is a migration, so it must ship in both apps (schema lockstep).
 
 **I would recommend stopping if:**
 - Any of G1, G2 or G4 still fails one week after the M0 time box. In that case keep improving the Electron
@@ -411,6 +481,8 @@ dedicated integration tasks.
   codecs, zeroizing and locking, the pdf child process, the MCP bridge (token, socket permissions), the updater
   (checksums, paths, helper plan), WebDAV, AI request bodies and masking, the start-up rule "nothing decrypted
   before authentication".
+- **Performance benchmark and loading screen** (security-reviewer): progress events carry only step ids and counts, never data. That matches today's rule that startup.log holds only technical facts.
+
 - **docs-writer**: keeps `docs/FORMATS.md` canonical (unchanged formats), updates README build/run instructions,
   release notes, `parity/coverage.md`. Follows the CLAUDE.md version rule for every installer build.
 
@@ -422,6 +494,8 @@ dedicated integration tasks.
 | B: UI | design tokens + fonts + icons → primitives → charts → shell, then screens one per task, once lane A has that screen's ops |
 | C: platform | OS seal + legacy decoder · Hello/Touch ID + start-up pipeline · tray/notifications/idle · MCP bridge · updater · sync stores/WebDAV |
 | D: CI/packaging | 6-target build matrix · sqlite3mc/pdfium bundling · MSI/dmg/AppImage/deb · parity CI (Playwright + offscreen Slint) |
+
+**Performance task (lane A):** "kb-bench generator + DB worker queue + paged model". test-writer builds the generator and thresholds; implementer builds the worker and model; code-reviewer reviews. Lane D runs the nightly benchmark.
 
 **Sequential dependencies:**
 - kb-crypto and kb-db come before account/session and before all of lane C's unlock work.
