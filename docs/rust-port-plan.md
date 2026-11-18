@@ -17,6 +17,7 @@ Non-goals: new features, a mobile app, changing any file format, changing the MC
 | MCP helper | `tools/kasboek-mcp` (Go) unchanged. The Rust app implements the bridge server side of the same protocol. |
 | Start-up | No splash window. The first frame is the real Setup/Lock screen. The Hello/Touch ID button is part of the first frame; the OS prompt opens only when the person presses it (section 5). |
 | Parity | Differential TS-vs-Rust runs on invented data, cross-opened files, and fixture-driven screenshot and geometry diffs. |
+| Agent control | Owner requirement: a connected agent can operate the whole app (see the screen, press, type, navigate, read), not only call the 154 ops. Off by default, opt-in in Settings, never while locked; sensitive actions need a human click (section 9). **Open decision.** |
 | First step | A 2–3 week spike with go/no-go gates (section 7, M0). |
 
 ## 1. Inventory of the current app
@@ -453,6 +454,9 @@ optimistic.
 11. Linux desktop dependencies (tray, portal, Secret Service) and Wayland idle detection.
 12. Owner review bandwidth.
 13. SQLite aggregate queries at 500k may miss the targets with today's indexes (`idx_tx_account_date`, `idx_tx_category`). Any new index is a migration, so it must ship in both apps (schema lockstep).
+14. Agent control widens the attack surface. Text from imported files (CSV, PDF, bank descriptions) can carry prompt
+    injection that steers an agent into clicks. Mitigation: sensitive confirmations are answered by a human only,
+    the locked state is refused, and sensitive actions are not exposed to agents at all (section 9).
 
 **I would recommend stopping if:**
 - Any of G1, G2 or G4 still fails one week after the M0 time box. In that case keep improving the Electron
@@ -504,6 +508,56 @@ dedicated integration tasks.
 - The op table comes before UI wiring.
 - Tokens come before screens.
 - The Lock screen and start-up pipeline come first in lane B, because they are gate G5.
+
+## 9. Agent control (full MCP support)
+
+**Requirement (owner).** An AI agent connected through MCP must be able to operate the whole app like a person:
+see what is on screen, press any button, type into any field, open any page or dialog, and read the results. Today
+it can only call the 154 data ops. The owner pointed to products that let agents drive every control; this section
+describes the capability generically.
+
+**Today (kept as is).** Op tools with zod-generated schemas (`src/main/assistant/tools.ts`); the approval flow
+(`needsApproval`, `src/shared/permissions.ts`) with modes ask / smart / trust / custom; `mcpAlwaysAsk` (default on);
+the bridge (`src/main/mcp/bridge.ts`) on a named pipe (Windows) or Unix socket, found through `mcp-bridge.json`
+and checked against a per-session token; the Go `kasboek-mcp` stdio helper.
+
+**Design.**
+1. **Keep the op tools.** Nothing in section 1 changes.
+2. **Add UI tools on the same bridge** (same helper, new tool names):
+   - `ui_snapshot`: accessibility-style tree of the current window. Each node has a stable id, role, label, value,
+     state (enabled, focused, selected), bounding box and children. Compact text form for LLMs; JSON on request.
+   - `ui_click(id)`, `ui_type(id, text)`, `ui_set_value(id, value)`, `ui_select(id, option)`, `ui_press_key(combo)`,
+     `ui_scroll`.
+   - `ui_wait_for(condition, timeout)`, `ui_screenshot` (PNG of the window, opt-in), `ui_navigate(page)`
+     (convenience over the nav), `ui_find(text | role)`.
+3. **Implementation.**
+   - Every interactive Slint element gets a stable automation id plus an accessibility label and role. AccessKit
+     (screen readers) needs the same data, so this is one investment, not two.
+   - The UI thread exposes the tree and runs synthetic events through the same handlers as real input. An agent
+     never calls an op behind the UI's back.
+   - The same layer drives the UI parity and geometry tests, so they need no Playwright.
+4. **Security model.**
+   - **Off by default.** The owner turns it on in Settings → Assistant/MCP with "Let connected agents operate the
+     app". Each connection still needs approval, as today.
+   - **Never while locked, and never able to unlock.** Password, Hello and recovery fields are masked in snapshots
+     and refuse agent typing and clicks. Unlock stays human-only.
+   - **Sensitive actions** are either not exposed to agents, or always raise a confirmation dialog that only a human
+     click can answer. The agent's synthetic click cannot press that dialog's confirm button. Covered: erase data,
+     change or remove the password, new recovery key, 2FA changes, change MCP/assistant permissions or provider
+     keys/addresses, install update, sync join/leave, export/backup to new places, quarantine/restore.
+   - **Typed text is not logged.** The action log records what was done, never the data.
+   - **Numbers.** Snapshots mask account and card numbers the way AI previews do (`maskNumbers`) and honour "hide
+     numbers".
+   - **Limits and visibility.** Rate limits. A visible "Agent is controlling Kasboek" banner with a Stop button.
+   - **Audit.** Every agent action is logged, without data.
+   - **Open decision (owner must confirm).** This deliberately extends today's rule that the assistant can never
+     change settings, keys or permissions. The sensitive-action list above is the proposal; nothing in it is built.
+5. **Milestones.**
+   - **M3 Design system:** automation ids, labels and roles on every control; read-only `ui_snapshot`.
+   - **M4 Screens:** scripted agent scenarios per screen (snapshot, act, check result), run in the fixture matrix.
+   - **M5 Platform:** UI tools on the bridge, the policy above, rate limits, banner, audit log.
+   - **Security review is mandatory** (security-reviewer) before M5 closes, and before any sensitive action is
+     exposed.
 
 ## Appendix: not verified offline (each is a spike or M1 task)
 
