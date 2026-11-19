@@ -282,7 +282,11 @@ describe('writing tips', () => {
     await runInsights(db, MONTH, { consent: true, today: TODAY })
     const before = row(db)
     await mockFetch(() => Promise.reject(new TypeError('fetch failed')))
-    const err = await runInsights(db, MONTH, { today: TODAY }).catch((e: unknown) => e as { code: string; message: string })
+    // The client retries a network error after 1 s and 3 s; fake timers skip those waits.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const run = runInsights(db, MONTH, { today: TODAY }).catch((e: unknown) => e as { code: string; message: string })
+    await vi.advanceTimersByTimeAsync(10_000)
+    const err = await run.finally(() => vi.useRealTimers())
     expect(err).toMatchObject({ code: 'assistant.failed', details: { kind: 'network', status: 0 } })
     expect(row(db)).toEqual(before)
     expect(insightsView(db, MONTH, 'en', TODAY).ai!.suggestions).toHaveLength(1)
