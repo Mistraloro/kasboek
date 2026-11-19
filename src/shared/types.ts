@@ -860,8 +860,6 @@ export interface PdfAssistPreview {
   approxTokens: number
   /** Exactly the text that is sent, masked. */
   text: string
-  /** Whether the part above the table of transactions (name and address blocks, the first page's header) is left out. */
-  preambleLeftOut: boolean
 }
 
 export interface ImportBatch {

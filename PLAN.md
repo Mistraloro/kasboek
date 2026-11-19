@@ -427,8 +427,10 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    (`cancelAssist`, `cancelInsights`, `pdfRead.abort()`); (5) `window.prompt` is used in `Import.tsx:490,510`, `Budgets.tsx:143`,
    `Transactions.tsx:162,214` and Electron does not implement it (it throws; to be confirmed on a build): replace by small
    modals; (6) memoise `findRecurring` per (data version, day) and debounce `insights.get` on `data.changed`.
-   *Other bugs and risks:* an IBAN glued to preceding letters is not masked (`src/shared/iban.ts:7` lookbehind); when no table
-   header is found the PDF first-page header (holder name, address) is sent whole (`pdf-plan.ts:100`, `pdf.ts:62-70`);
+   *Other bugs and risks:* an IBAN glued to preceding letters is not masked (`src/shared/iban.ts:7` lookbehind); ~~when no table
+   header is found the PDF first-page header (holder name, address) is sent whole~~ (fixed: without a table header, sending starts at the first
+   line with a date and an amount, and nothing is sent when there is none; e-mail addresses and phone numbers are masked; the preview
+   and the calls both come from `linesToSend`);
    restarting a job for the same session broadcasts a stale `import.checkDone` that resets the screen (`jobs.ts:383-400`);
    a refused second `import.analyzePdf` clears the cancel handle of the first (`ipc.ts:403-418`); an AI read replaces the grid
    and silently drops edits made during the run (`pdf.ts:128-145`); `CLAUDE_PDF_MODEL` is hard-coded and PDF/tips calls reuse the

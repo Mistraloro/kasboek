@@ -313,7 +313,6 @@
         "sendsLocal_one": "Hiermee wordt de tekst van {{count}} pagina alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
         "sendsLocal_other": "Hiermee wordt de tekst van {{count}} pagina’s alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
         "hiddenTop": "Reken- en kaartnummers worden verborgen, de bovenkant van de eerste pagina (waar meestal je naam en adres staan) blijft weg en de pdf zelf wordt niet verstuurd.",
-        "hiddenNoTop": "Reken- en kaartnummers worden verborgen en de pdf zelf wordt niet verstuurd. Kasboek kon niet zien waar de tabel begint, dus de bovenkant van de eerste pagina zit erbij en je naam en adres kunnen in de tekst staan.",
         "verify": "Kasboek leest elk bedrag uit de eigen tekst van de pdf en toont elke rij voordat er iets wordt opgeslagen.",
         "show": "Toon precies wat wordt verstuurd",
         "stats": "Pagina’s: {{pages}} · ongeveer {{tokens}} tokens · verzoeken: {{parts}}",

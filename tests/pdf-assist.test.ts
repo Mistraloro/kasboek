@@ -87,7 +87,7 @@ describe('reading a PDF statement with the assistant', () => {
     const { pdfAssistPreview, assistPdf } = await import('../src/main/assistant/pdf')
     const { db, sessionId } = setup(statement(2))
     const info = pdfAssistPreview(sessionId)
-    expect(info).toMatchObject({ pages: 2, parts: 1, preambleLeftOut: true })
+    expect(info).toMatchObject({ pages: 2, parts: 1 })
     expect(info.chars).toBe(info.text.length)
     expect(info.approxTokens).toBeGreaterThan(info.chars / 4)
     // Name, address and account number above the table are not in it; numbers are masked.
@@ -107,9 +107,17 @@ describe('reading a PDF statement with the assistant', () => {
     const lines = statement(2).filter((l) => l.id !== 3)
     const { sessionId } = setup(lines)
     const info = pdfAssistPreview(sessionId)
-    expect(info.preambleLeftOut).toBe(true)
     expect(info.text).not.toMatch(/Jansen|Main Street|Account/)
     for (const l of lines.filter((x) => x.id > 3)) expect(info.text).toContain(`L${l.id} p${l.page} |`)
+  })
+
+  it('without a table header or a transaction-like line, sends nothing and says so', async () => {
+    const { pdfAssistPreview, assistPdf } = await import('../src/main/assistant/pdf')
+    const { db, sessionId } = setup([line(0, 1, [[40, 'Jan Jansen']]), line(1, 1, [[40, 'Main Street 1, Springfield']])])
+    expect(() => pdfAssistPreview(sessionId)).toThrow(/no text to read/)
+    await mockFetch((b) => answer(b))
+    await expect(assistPdf(db, sessionId)).rejects.toThrow(/no text to read/)
+    expect(requests).toHaveLength(0)
   })
 
   it('never sends an account or card number, and brings the real account number back locally', async () => {

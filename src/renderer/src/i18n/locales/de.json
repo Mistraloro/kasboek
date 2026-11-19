@@ -313,7 +313,6 @@
         "sendsLocal_one": "Dabei wird der Text von {{count}} Seite nur an {{ai}} auf diesem Computer oder in diesem Netzwerk gesendet: Datumsangaben, Beträge, Beschreibungen und die Namen derer, die du bezahlt hast oder die dich bezahlt haben.",
         "sendsLocal_other": "Dabei wird der Text von {{count}} Seiten nur an {{ai}} auf diesem Computer oder in diesem Netzwerk gesendet: Datumsangaben, Beträge, Beschreibungen und die Namen derer, die du bezahlt hast oder die dich bezahlt haben.",
         "hiddenTop": "Konto- und Kartennummern werden verborgen, der Anfang der ersten Seite (wo meist dein Name und deine Adresse stehen) bleibt weg, und das PDF selbst wird nicht gesendet.",
-        "hiddenNoTop": "Konto- und Kartennummern werden verborgen, und das PDF selbst wird nicht gesendet. Kasboek konnte nicht erkennen, wo die Tabelle beginnt; der Anfang der ersten Seite ist daher dabei, und dein Name und deine Adresse können im Text stehen.",
         "verify": "Kasboek liest jeden Betrag aus dem eigenen Text des PDFs und zeigt jede Zeile, bevor etwas gespeichert wird.",
         "show": "Genau anzeigen, was gesendet wird",
         "stats": "Seiten: {{pages}} · etwa {{tokens}} Tokens · Anfragen: {{parts}}",

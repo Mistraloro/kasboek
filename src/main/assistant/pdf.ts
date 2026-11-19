@@ -11,11 +11,11 @@ import {
   MAX_AI_PAGES,
   PdfRowsPlan,
   applyRowsPlan,
-  firstLineSent,
-  maskedLines,
+  linesToSend,
   pagesOf,
   parsePdfPlan,
   partText,
+  previewText,
   splitPart,
   splitParts,
   type MaskedLine,
@@ -57,23 +57,22 @@ How to fill it in:
 /** Where a part is, for the message when it can't be read. */
 const describePart = (part: PdfPart): string => `lines ${part.own[0]!.id} to ${part.own.at(-1)!.id} (page ${part.own[0]!.page}${part.own.at(-1)!.page !== part.own[0]!.page ? ` to ${part.own.at(-1)!.page}` : ''})`
 
-/** The lines to send, split in parts, or a clear error. */
-function prepare(sessionId: string): { data: NonNullable<ReturnType<typeof imp.pdfData>>; masked: MaskedLine[]; preambleLeftOut: boolean } {
+/** The lines to send, or a clear error. */
+function prepare(sessionId: string): { data: NonNullable<ReturnType<typeof imp.pdfData>>; masked: MaskedLine[] } {
   const data = imp.pdfData(sessionId)
   if (!data) throw new AppError('assistant.pdf_not_pdf', 'This import is not a PDF statement.')
-  const start = firstLineSent(data.lines)
-  const masked = maskedLines(data.lines, { skipBefore: start })
+  const masked = linesToSend(data.lines)
   if (!masked.length) throw new AppError('assistant.pdf_empty', 'This PDF has no text to read.')
   const pages = pagesOf(masked)
   if (pages > MAX_AI_PAGES) throw new AppError('assistant.pdf_too_long', `This statement has ${pages} pages with text. The assistant reads at most ${MAX_AI_PAGES} pages; try a shorter period.`)
-  return { data, masked, preambleLeftOut: start !== null && data.lines.some((l) => l.id < start) }
+  return { data, masked }
 }
 
 /** What would be sent for this import: shown in the dialog where the person agrees. */
 export function pdfAssistPreview(sessionId: string): PdfAssistPreview {
-  const { masked, preambleLeftOut } = prepare(sessionId)
-  const text = masked.map((m) => m.text).join('\n')
-  return { pages: pagesOf(masked), parts: splitParts(masked).length, chars: text.length, approxTokens: Math.ceil(text.length / CHARS_PER_TOKEN), text, preambleLeftOut }
+  const { masked } = prepare(sessionId)
+  const text = previewText(masked)
+  return { pages: pagesOf(masked), parts: splitParts(masked).length, chars: text.length, approxTokens: Math.ceil(text.length / CHARS_PER_TOKEN), text }
 }
 
 export function assistPdf(db: Db, sessionId: string): Promise<ImportPreview> {

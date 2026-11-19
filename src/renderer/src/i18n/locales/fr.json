@@ -313,7 +313,6 @@
         "sendsLocal_one": "Cela envoie le texte de {{count}} page uniquement à {{ai}} sur cet ordinateur ou ce réseau : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
         "sendsLocal_other": "Cela envoie le texte de {{count}} pages uniquement à {{ai}} sur cet ordinateur ou ce réseau : dates, montants, libellés et noms de ceux que vous avez payés ou qui vous ont payé.",
         "hiddenTop": "Les numéros de compte et de carte sont masqués, le haut de la première page (où figurent en général votre nom et votre adresse) n’est pas inclus, et le PDF lui-même n’est pas envoyé.",
-        "hiddenNoTop": "Les numéros de compte et de carte sont masqués et le PDF lui-même n’est pas envoyé. Kasboek n’a pas pu repérer où commence le tableau : le haut de la première page est donc inclus et votre nom et votre adresse peuvent figurer dans le texte.",
         "verify": "Kasboek lit chaque montant dans le texte même du PDF et affiche chaque ligne avant que quoi que ce soit soit enregistré.",
         "show": "Afficher exactement ce qui est envoyé",
         "stats": "Pages : {{pages}} · environ {{tokens}} jetons · requêtes : {{parts}}",

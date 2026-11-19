@@ -313,7 +313,6 @@
         "sendsLocal_one": "Esto envía el texto de {{count}} página solo a {{ai}} en este ordenador o esta red: fechas, importes, descripciones y los nombres de a quién pagaste o quién te pagó.",
         "sendsLocal_other": "Esto envía el texto de {{count}} páginas solo a {{ai}} en este ordenador o esta red: fechas, importes, descripciones y los nombres de a quién pagaste o quién te pagó.",
         "hiddenTop": "Los números de cuenta y de tarjeta se ocultan, la parte superior de la primera página (donde suelen estar tu nombre y dirección) se deja fuera y el PDF en sí no se envía.",
-        "hiddenNoTop": "Los números de cuenta y de tarjeta se ocultan y el PDF en sí no se envía. Kasboek no ha podido saber dónde empieza la tabla, así que se incluye la parte superior de la primera página y tu nombre y dirección pueden aparecer en el texto.",
         "verify": "Kasboek lee cada importe del propio texto del PDF y muestra cada fila antes de guardar nada.",
         "show": "Mostrar exactamente lo que se envía",
         "stats": "Páginas: {{pages}} · unos {{tokens}} tokens · solicitudes: {{parts}}",

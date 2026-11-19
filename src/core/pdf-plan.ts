@@ -94,33 +94,30 @@ function looksLikeTransaction(line: PdfLine): boolean {
   return hasDate && AMOUNT_LIKE.test(dateless)
 }
 
-/** How many lines at the top of the first page are left out when nothing better is known. */
-const GUESSED_PREAMBLE_LINES = 8
-
 /**
- * The first line to send: the table's header, or, when there is none, a guess so that the holder's
- * name and address at the top of the first page still stay behind: the first line of that page with
- * a date and an amount, else after its first 8 lines (or that page, when it is shorter). Null (send
- * everything) when there is no other line to start at.
+ * The first line to send: the table's header, or, when there is none, the first line with a date and
+ * an amount, so that the holder's name, address and other free text above the transactions never go
+ * out. Null when there is neither: then there is nothing to read and nothing is sent.
  */
 export function firstLineSent(lines: PdfLine[]): number | null {
-  const header = tableStart(lines)
-  if (header !== null || !lines.length) return header
-  const top = lines.filter((l) => l.page === lines[0]!.page)
-  return top.find(looksLikeTransaction)?.id ?? top[GUESSED_PREAMBLE_LINES]?.id ?? lines.find((l) => l.page !== lines[0]!.page)?.id ?? null
+  return tableStart(lines) ?? lines.find(looksLikeTransaction)?.id ?? null
 }
 
+/** An e-mail address, or a phone number written with a + or 00 prefix. Cheap and not exhaustive. */
+const EMAIL = /[^\s@<>()|]+@[^\s@<>()|]+\.[^\s@<>()|]+/g
+const PHONE = /(?:\+|\b00)\d[\d ./()-]{6,}\d/g
+const maskContacts = (text: string): string => text.replace(EMAIL, '…@…').replace(PHONE, '…phone…')
+
 /**
- * The lines as they are sent: IBANs and runs of 13 or more digits masked, and, with `skipBefore`
- * (the table's first line), everything above the table left out: the name and address blocks and the
- * header of the first page.
+ * The lines as they are sent: IBANs, runs of 13 or more digits, e-mail addresses and phone numbers
+ * masked, and, with `skipBefore` (the first line to send), everything above it left out.
  */
 export function maskedLines(lines: PdfLine[], opts: { skipBefore?: number | null } = {}): MaskedLine[] {
   const skip = opts.skipBefore ?? null
   return lines
     .filter((l) => skip === null || l.id >= skip)
     .map((l) => {
-      const cells = l.cells.map((c) => ({ x: Math.round(c.x0), text: maskNumbers(c.text).slice(0, MAX_LINE_CHARS) }))
+      const cells = l.cells.map((c) => ({ x: Math.round(c.x0), text: maskNumbers(maskContacts(c.text)).slice(0, MAX_LINE_CHARS) }))
       // An account number cut over two cells by wide spacing is only recognised as a whole: then the line is sent as one piece.
       const joined = cells.map((c) => c.text).join(' ')
       const whole = maskIban(joined)
@@ -133,6 +130,19 @@ export function maskedLines(lines: PdfLine[], opts: { skipBefore?: number | null
       }
     })
 }
+
+/**
+ * Everything that is sent for a statement, masked: from the table's header (or else the first
+ * transaction-like line) onward. Empty when there is no such line. The preview and the calls to the
+ * assistant are both made from this one list.
+ */
+export const linesToSend = (lines: PdfLine[]): MaskedLine[] => {
+  const start = firstLineSent(lines)
+  return start === null ? [] : maskedLines(lines, { skipBefore: start })
+}
+
+/** The text the person is shown before agreeing: the lines of every part, as they are sent. */
+export const previewText = (masked: MaskedLine[]): string => masked.map((m) => m.text).join('\n')
 
 /** At most this many pages and characters go to the assistant in one call. */
 export const MAX_PART_PAGES = 4
