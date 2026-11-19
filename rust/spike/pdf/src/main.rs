@@ -1,9 +1,11 @@
+//! `kb-spike-pdf summary FOLDER_OR_FILE...` prints one line of numbers per PDF (src/summary.rs), never any text.
 //! `kb-spike-pdf [backend] FILE`: reads a PDF and prints PdfText as JSON on stdout (or {"error": code}); a JSON line with
 //! the time and peak memory goes to stderr. Panics and hangs are contained: the work runs on its own thread under
 //! catch_unwind with a 60 s deadline, like the reader process in src/main/pdf/run.ts.
 mod cap;
 mod model;
 mod reader;
+mod summary;
 
 #[global_allocator]
 static ALLOC: cap::Capped = cap::Capped;
@@ -25,6 +27,10 @@ fn peak_rss_mb() -> f64 {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("summary") {
+        return summary::run(&args[1..]);
+    }
     let path = std::env::args()
         .next_back()
         .expect("usage: kb-spike-pdf [backend] FILE");

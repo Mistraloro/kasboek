@@ -1,5 +1,5 @@
 //! Invented data. Keep in sync with tools/fixtures.json, which feeds the Electron reference screenshots.
-use crate::strings::En;
+use crate::strings::Locale;
 use crate::{App, Strings};
 use slint::{ComponentHandle, ModelRc, VecModel};
 
@@ -42,7 +42,7 @@ const HISTORY: [(&str, i64, i64); 6] = [
     ("Mar", 325_000, 214_380),
 ];
 
-pub fn apply(ui: &App, en: &En, screen: &str, dark: bool) {
+pub fn apply(ui: &App, en: &Locale, screen: &str, dark: bool) {
     ui.global::<crate::Theme>().set_dark(dark);
     ui.set_screen(screen.into());
     let s = ui.global::<Strings>();
@@ -192,4 +192,19 @@ pub fn apply(ui: &App, en: &En, screen: &str, dark: bool) {
         })
         .collect();
     ui.set_months(ModelRc::new(VecModel::from(months)));
+}
+
+/// Names the device in the two Lock texts: Windows Hello (the default of `apply`) or Touch ID on a Mac.
+pub fn set_device(ui: &App, en: &Locale, touch_id: bool) {
+    let name = en.t(
+        if touch_id {
+            "auth.touchId"
+        } else {
+            "auth.windowsHello"
+        },
+        &[],
+    );
+    let s = ui.global::<Strings>();
+    s.set_unlock_body(en.t("auth.unlockDeviceBody", &[("name", &name)]).into());
+    s.set_unlock_with(en.t("auth.unlockWith", &[("name", &name)]).into());
 }

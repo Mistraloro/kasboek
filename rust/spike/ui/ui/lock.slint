@@ -1,7 +1,7 @@
 // Lock screen: src/renderer/src/pages/auth/Lock.tsx + AuthLayout.tsx (password mode and Windows Hello mode).
 import { Theme } from "theme.slint";
 import { Strings } from "strings.slint";
-import { Button, Field, PasswordInput } from "widgets.slint";
+import { Button, Field, PasswordInput, PlainInput } from "widgets.slint";
 
 export component Mark inherits Image {
     // The Kasboek mark (assets/brand/mark.svg); 520x624 viewBox scaled to `size` wide.
@@ -18,9 +18,19 @@ export component LockScreen inherits Rectangle {
     in property <string> device-label: "Windows Hello";
     in-out property <string> password;
     callback unlock(string);
+    // Spike D: pressing the device button asks the OS (Windows Hello / Touch ID); the answer is shown as text.
+    callback device-pressed();
+    in property <string> device-result;
+    in property <bool> device-busy: false;
+    in property <bool> typing: false;
+    in property <string> typing-label;
+    in-out property <string> typing-text;
     background: Theme.bg;
 
     property <bool> device: mode == "device";
+    // Height of the wrapped body text under the title: one line is the DOM's 19.5px exactly (the measured height
+    // of a line is a little different), two or more lines are measured from the text.
+    property <length> body-h: body.preferred-height < 24px ? 19.5px : body.preferred-height;
 
     // AuthLayout: 44px drag strip, then the card centered in the rest (pb-16), max-w-sm = 384px.
     Rectangle {
@@ -58,7 +68,7 @@ export component LockScreen inherits Rectangle {
                         border-radius: 12px;
                         border-width: 1px;
                         border-color: Theme.border;
-                        height: 1px + 24px + 27.5px + (root.device ? 6px + 19.5px : 0px) + 20px + (root.device ? 36px : 113.5px) + 20px + 19.5px + 24px + 1px;
+                        height: 1px + 24px + 27.5px + (root.device ? 6px + root.body-h : 0px) + 20px + (root.device ? 36px : 113.5px) + 20px + 19.5px + 24px + 1px;
 
                         Text {
                             x: 25px;
@@ -73,20 +83,24 @@ export component LockScreen inherits Rectangle {
                             vertical-alignment: center;
                             accessible-role: text;
                         }
-                        if root.device: Text {
+                        // Always present so that its wrapped height can be measured; hidden in password mode.
+                        body := Text {
+                            visible: root.device;
                             x: 25px;
                             y: 25px + 27.5px + 6px;
                             width: parent.width - 50px;
-                            height: 19.5px;
+                            height: root.device ? root.body-h : 0px;
                             text: Strings.unlock-body;
                             font-family: Theme.sans;
                             font-size: 13px;
                             color: Theme.muted;
+                            wrap: word-wrap;
+                            line-height-factor: 1.2397;
                             vertical-alignment: center;
                         }
                         form := Rectangle {
                             x: 25px;
-                            y: 25px + 27.5px + (root.device ? 6px + 19.5px : 0px) + 20px;
+                            y: 25px + 27.5px + (root.device ? 6px + root.body-h : 0px) + 20px;
                             width: parent.width - 50px;
                             height: root.device ? 36px : 113.5px;
 
@@ -113,9 +127,13 @@ export component LockScreen inherits Rectangle {
                                 text: root.device ? Strings.unlock-with : Strings.unlock-button;
                                 has-icon: true;
                                 icon: root.device ? @image-url("../assets/icons/scan-face.svg") : @image-url("../assets/icons/lock.svg");
-                                enabled: root.device || root.password != "";
+                                enabled: root.device ? !root.device-busy : root.password != "";
                                 clicked => {
-                                    root.unlock(root.password);
+                                    if (root.device) {
+                                        root.device-pressed();
+                                    } else {
+                                        root.unlock(root.password);
+                                    }
                                 }
                             }
                         }
@@ -148,6 +166,39 @@ export component LockScreen inherits Rectangle {
                     }
                 }
             }
+        }
+    }
+
+    // Spike D: result of the device prompt and the typing test, under the card at the bottom of the window.
+    if root.device-result != "" || root.typing: VerticalLayout {
+        width: min(384px, root.width - 48px);
+        x: (root.width - self.width) / 2;
+        y: root.height - self.preferred-height - 16px;
+        spacing: 8px;
+        if root.device-result != "": Text {
+            text: root.device-result;
+            font-family: Theme.sans;
+            font-size: 13px;
+            color: Theme.text;
+            wrap: word-wrap;
+            horizontal-alignment: center;
+            accessible-role: text;
+        }
+        if root.typing: Field {
+            label: root.typing-label;
+            PlainInput {
+                y: 19.5px + 6px;
+                text <=> root.typing-text;
+                label: root.typing-label;
+            }
+        }
+        if root.typing: Text {
+            text: root.typing-text == "" ? "" : "\u{2192} " + root.typing-text;
+            font-family: Theme.sans;
+            font-size: 20px;
+            color: Theme.text;
+            wrap: word-wrap;
+            accessible-role: text;
         }
     }
 }

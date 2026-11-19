@@ -1,5 +1,5 @@
 //! Offscreen rendering with Slint's software renderer, no windowing system needed.
-use crate::{App, fixtures, strings::En};
+use crate::{App, fixtures, strings::Locale};
 use slint::platform::software_renderer::{MinimalSoftwareWindow, RepaintBufferType};
 use slint::platform::{Platform, WindowAdapter, WindowEvent};
 use slint::{ComponentHandle, PhysicalSize, Rgb8Pixel};
@@ -16,13 +16,15 @@ impl Platform for Headless {
 pub const W: u32 = 1280;
 pub const H: u32 = 820;
 
-pub fn render(screen: &str, dark: bool, out: &str, scroll: f32) {
+pub fn render(screen: &str, dark: bool, out: &str, scroll: f32, lang: &str, typing: bool) {
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
     slint::platform::set_platform(Box::new(Headless(window.clone()))).expect("platform");
     let ui = App::new().expect("ui");
     window.set_size(PhysicalSize::new(W, H));
     window.dispatch_event(WindowEvent::ScaleFactorChanged { scale_factor: 1.0 });
-    fixtures::apply(&ui, &En::load(), screen, dark);
+    fixtures::apply(&ui, &Locale::load_lang(lang), screen, dark);
+    ui.set_typing(typing);
+    ui.set_typing_label("Type here to test accents and dead keys".into());
     ui.set_scroll(scroll);
     ui.show().expect("show");
     slint::platform::update_timers_and_animations();

@@ -17,4 +17,4 @@ for i in $(seq "$runs"); do
   e=$(date +%s%N)
   echo "run $i: $(( (e - s) / 1000000 )) ms total process wall time"
 done
-"$bin" --screen "$screen" --exit-after-first-frame
+"$bin" --screen "$screen" --exit-after-first-frame --log /dev/stdout

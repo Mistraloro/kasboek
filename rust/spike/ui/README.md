@@ -44,7 +44,18 @@ cargo build --release --features skia --target-dir target-skia    # see "Rendere
 tools/a11y-dump.sh overview
 ```
 
-Window: `target/release/kasboek-ui-spike --screen lock-password|lock-hello|overview [--theme dark] [--renderer R]`.
+Window: `target/release/kasboek-ui-spike --screen lock-password|lock-hello|overview [--theme light|dark] [--scale 1|2]
+[--lang en|de|fr] [--typing] [--renderer R] [--exit-after-first-frame] [--log FILE]`. The last occurrence of an option wins.
+
+- `startup.log` is written next to the binary (the previous run becomes `startup.prev.log`; `--log FILE` writes just that file;
+  `KASBOEK_STARTUP_TRACE=1` also prints to stderr). Times count from the OS creation time of the process on Windows, Linux and macOS.
+  Milestones: `process start`, `main entered`, `first frame painted`, `time-to-first-frame`, and on the lock-hello screen
+  `device prompt requested` (button press), `device prompt shown`, `time-to-prompt`, `device answered (...)`.
+- The button of `lock-hello` asks the OS (`src/device.rs`): Windows Hello through `IUserConsentVerifierInterop` (falls back to
+  `UserConsentVerifier::RequestVerificationAsync`), Touch ID through `LAContext`. It only shows the answer; nothing is unlocked.
+  Linux answers "unavailable".
+- `--typing` adds a plain text field with an echo line, for accents, dead keys and IME. `shot` accepts `--lang` and `--typing` too.
+- The tools for owner testing on real machines are in `../ci/` and `../TESTING.md`; `.github/workflows/rust-spike.yml` builds them.
 
 ## Fonts
 
@@ -59,5 +70,6 @@ freezing. Latin only: add `latin-ext` (and merge) if a language needs it.
 
 - Hover, focus rings (except the password field), pressed states, tooltips, the real hold-to-show password, wheel scrolling
   polish and the other 9 pages are not ported. Heights of wrapped texts and step rows are fixed for this fixture.
-- Only English (`en`); the German run of G1 was not done.
+- The pixel comparison (G1) was done for English only. `--lang de|fr` renders the two screens with those locale files; the body text
+  of the Lock card is measured, the wrapped texts of the Overview still have fixed heights, so long languages can overflow there.
 - The reference has the 10 px styled scrollbar of the Electron window, drawn by hand in Slint (thumb only).

@@ -1,69 +1,93 @@
-//! Real window with start-up milestones in the style of startup.log.
-use crate::{App, fixtures, strings::En};
+//! Real window with start-up milestones in the style of startup.log, the device prompt and the typing test.
+use crate::device::{self, Event, Outcome, Report};
+use crate::{App, fixtures, log, strings::Locale};
 use slint::ComponentHandle;
 use std::cell::RefCell;
-use std::io::Write;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Instant;
 
-struct Log {
-    t0: Instant,
-    lines: Vec<String>,
-}
-
-impl Log {
-    fn mark(&mut self, what: &str) {
-        let ms = self.t0.elapsed().as_secs_f64() * 1000.0;
-        let line = format!("{ms:8.1} ms  {what}");
-        // KASBOEK_STARTUP_TRACE=1: print each milestone as it happens (also shows where a start hangs).
-        if std::env::var_os("KASBOEK_STARTUP_TRACE").is_some() {
-            eprintln!("{line}");
-        }
-        self.lines.push(line);
-    }
+/// The value after `name`; the last one wins, so a script can put defaults first and the owner's options after them.
+fn arg(args: &[String], name: &str) -> Option<String> {
+    args.iter()
+        .rposition(|a| a == name)
+        .and_then(|i| args.get(i + 1))
+        .cloned()
 }
 
 pub fn run(args: &[String]) {
-    let log = Rc::new(RefCell::new(Log {
-        t0: Instant::now(),
-        lines: vec![],
+    let t0 = Instant::now();
+    let gap = log::ms_since_process_creation();
+    let custom_log = arg(args, "--log");
+    // startup.log next to the binary, the previous run kept as startup.prev.log. `--log FILE` writes just that file.
+    match &custom_log {
+        Some(path) => log::init(t0, gap, Some(path.into()), false),
+        None => log::init(t0, gap, log::default_path(), true),
+    }
+    std::panic::set_hook(Box::new(|info| {
+        log::mark(&format!("PANIC: {info}"));
+        log::flush();
     }));
-    // Times are from `main`; the loader and runtime start-up before it are measured from outside (tools/startup-bench.sh).
-    log.borrow_mut().mark("main entered");
-    let arg = |name: &str| {
-        args.iter()
-            .position(|a| a == name)
-            .and_then(|i| args.get(i + 1))
-            .cloned()
-    };
-    let screen = arg("--screen").unwrap_or_else(|| "lock-password".into());
-    let dark = arg("--theme").as_deref() == Some("dark");
-    let exit = args.iter().any(|a| a == "--exit-after-first-frame");
+    match gap {
+        Some(g) => log::mark(&format!(
+            "process start (OS creation time; main entered {g:.0} ms later)"
+        )),
+        None => log::mark("process start (not known on this OS: times count from main)"),
+    }
+    log::mark("main entered");
 
-    let renderer = arg("--renderer").unwrap_or_else(|| "software".into());
+    let screen = arg(args, "--screen").unwrap_or_else(|| "lock-password".into());
+    let dark = arg(args, "--theme").as_deref() == Some("dark");
+    let lang = arg(args, "--lang").unwrap_or_else(|| "en".into());
+    let scale = arg(args, "--scale");
+    let typing = args.iter().any(|a| a == "--typing");
+    let exit = args.iter().any(|a| a == "--exit-after-first-frame");
+    let renderer = arg(args, "--renderer").unwrap_or_else(|| "software".into());
+    log::mark(&format!(
+        "settings: os={} arch={} screen={screen} theme={} lang={lang} scale={} typing={typing}",
+        std::env::consts::OS,
+        std::env::consts::ARCH,
+        if dark { "dark" } else { "light" },
+        scale.as_deref().unwrap_or("system"),
+    ));
+
+    if let Some(s) = &scale {
+        // SAFETY: nothing else runs yet (no threads, the event loop is not created), so setting the environment is safe.
+        unsafe { std::env::set_var("SLINT_SCALE_FACTOR", s) };
+    }
     slint::BackendSelector::new()
         .backend_name("winit".into())
         .renderer_name(renderer.clone())
         .select()
         .expect("backend");
-    log.borrow_mut()
-        .mark(&format!("backend selected (renderer {renderer})"));
+    log::mark(&format!("backend selected (renderer {renderer})"));
 
-    let en = En::load();
-    log.borrow_mut().mark("texts read (en.json)");
+    let en = Locale::load_lang(&lang);
+    log::mark(&format!("texts read ({lang}.json)"));
     let ui = App::new().expect("ui");
     fixtures::apply(&ui, &en, &screen, dark);
-    log.borrow_mut().mark("window created");
+    if device::is_touch_id() {
+        fixtures::set_device(&ui, &en, true);
+    }
+    if typing {
+        ui.set_typing(true);
+        ui.set_typing_label("Type here to test accents and dead keys".into());
+    }
+    ui.on_device_pressed({
+        let weak = ui.as_weak();
+        move || press_device(&weak)
+    });
+    log::mark("window created");
 
     // First frame: the rendering notifier (GL renderers) or, for the software renderer, the first timer tick after show().
     let first = Rc::new(RefCell::new(false));
     let notifier_ok = {
-        let (log, first, weak) = (log.clone(), first.clone(), ui.as_weak());
+        let (first, weak) = (first.clone(), ui.as_weak());
         ui.window()
             .set_rendering_notifier(move |state, _| {
                 if matches!(state, slint::RenderingState::AfterRendering) && !*first.borrow() {
                     *first.borrow_mut() = true;
-                    log.borrow_mut().mark("first frame painted");
+                    first_frame("first frame painted");
                     if exit {
                         let _ = weak.upgrade_in_event_loop(|_| {});
                         let _ = slint::quit_event_loop();
@@ -73,15 +97,16 @@ pub fn run(args: &[String]) {
             .is_ok()
     };
     ui.show().expect("show");
-    log.borrow_mut().mark("window shown (show() returned)");
+    log::mark("window shown (show() returned)");
     if !notifier_ok {
-        log.borrow_mut()
-            .mark("rendering notifier unsupported by this renderer");
-        let (log, weak) = (log.clone(), ui.as_weak());
+        log::mark("rendering notifier unsupported by this renderer");
+        let weak = ui.as_weak();
         // Software renderer: this runs on the event loop after the first pass, which renders and presents.
         // The first redraw is handled before this timer fires, so this is an upper bound (+16 ms).
         slint::Timer::single_shot(std::time::Duration::from_millis(16), move || {
-            log.borrow_mut().mark("first frame painted (software renderer has no hook: 16 ms timer after show, upper bound)");
+            first_frame(
+                "first frame painted (software renderer has no hook: 16 ms timer after show, upper bound)",
+            );
             let _ = weak.upgrade();
             if exit {
                 let _ = slint::quit_event_loop();
@@ -89,13 +114,66 @@ pub fn run(args: &[String]) {
         });
     }
     slint::run_event_loop().expect("event loop");
-    log.borrow_mut().mark("event loop ended");
-    let text = log.borrow().lines.join("\n");
-    match arg("--log") {
-        Some(path) => {
-            let mut f = std::fs::File::create(path).expect("log file");
-            writeln!(f, "{text}").ok();
+    log::mark("event loop ended");
+    log::flush();
+}
+
+fn first_frame(what: &str) {
+    log::mark(what);
+    log::mark(&format!("time-to-first-frame {:.0} ms", log::now_ms()));
+    // A start that is killed or crashes later still leaves its milestones.
+    slint::Timer::single_shot(std::time::Duration::from_millis(300), log::flush);
+}
+
+/// The press of the "Unlock with Windows Hello / Touch ID" button: ask the OS, log the milestones, show the answer.
+fn press_device(weak: &slint::Weak<App>) {
+    let pressed = Instant::now();
+    log::mark("device prompt requested");
+    let Some(ui) = weak.upgrade() else { return };
+    ui.set_device_busy(true);
+    ui.set_device_result("Waiting for the system prompt...".into());
+    let name = if device::is_touch_id() {
+        "Touch ID"
+    } else {
+        "Windows Hello"
+    };
+    let window = device::window_id(ui.window());
+    let weak = weak.clone();
+    let report: Report = Arc::new(move |event| {
+        let since = pressed.elapsed().as_millis();
+        match event {
+            Event::Info(text) => log::mark(&format!("device: {text}")),
+            Event::Shown(how) => {
+                log::mark(&format!(
+                    "device prompt shown ({how}), {since} ms after press"
+                ));
+                log::mark(&format!("time-to-prompt {since} ms"));
+            }
+            Event::Answered(outcome, detail) => {
+                log::mark(&format!(
+                    "device answered ({}), {since} ms after press: {detail}",
+                    outcome.word()
+                ));
+                log::flush();
+                let text = match outcome {
+                    Outcome::Verified => {
+                        format!("{name}: verified. Nothing is unlocked in this spike.")
+                    }
+                    other => format!("{name}: {}. {detail}", other.word()),
+                };
+                let weak = weak.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = weak.upgrade() {
+                        ui.set_device_result(text.into());
+                        ui.set_device_busy(false);
+                    }
+                });
+            }
         }
-        None => println!("{text}"),
-    }
+    });
+    device::request(
+        window,
+        "Kasboek spike: confirm that it is you (nothing is unlocked)",
+        report,
+    );
 }

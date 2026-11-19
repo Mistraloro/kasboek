@@ -16,6 +16,13 @@ export component App inherits Window {
     in property <[MonthBar]> months;
     in-out property <length> scroll: 0px;
     callback unlock(string);
+    // Spike D: the device button (Windows Hello or Touch ID), its result text, and the typing test field.
+    callback device-pressed();
+    in-out property <string> device-result;
+    in-out property <bool> device-busy: false;
+    in property <bool> typing: false;
+    in property <string> typing-label;
+    in-out property <string> typing-text;
 
     preferred-width: 1280px;
     preferred-height: 820px;
@@ -29,6 +36,14 @@ export component App inherits Window {
         unlock(p) => {
             root.unlock(p);
         }
+        device-pressed => {
+            root.device-pressed();
+        }
+        device-result <=> root.device-result;
+        device-busy: root.device-busy;
+        typing: root.typing;
+        typing-label: root.typing-label;
+        typing-text <=> root.typing-text;
     }
     if root.screen == "overview": OverviewScreen {
         income: root.income;

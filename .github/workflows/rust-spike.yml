@@ -1,0 +1,292 @@
+name: Rust spikes
+
+# Builds the three Rust spikes of the port plan (docs/rust-port-plan.md, section 10) on real machines so the owner can
+# test them: rust/spike/ui (Slint window), rust/spike/db (database and crypto), rust/spike/pdf (PDF reader).
+#   Windows x64 + ARM64, macOS Apple Silicon + Intel, Linux x64 + ARM64.
+# Per machine it builds, runs the checks that need no person (cross-open with the app's own database code, the PDF
+# robustness run, offscreen screenshots, a start-up measurement) and uploads three artifacts:
+#   kasboek-spike-ui-<os>-<arch>, kasboek-spike-db-<os>-<arch>, kasboek-spike-pdf-<os>-<arch>
+# Steps marked continue-on-error never turn the run red; the run summary lists their outcome. What a person has to
+# check on real hardware (Windows Hello, Touch ID, dead keys, screen readers) is in rust/spike/TESTING.md.
+on:
+  push:
+    branches: [rust-native]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust-spike.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned to exact commits (the comment shows the version), as in build.yml. Only actions/cache is new here: its
+# pin is the commit of the v6.1.0 tag (dependabot.yml proposes updates for all of them).
+env:
+  # Edition 2024 (ui) and hayro 0.9 (pdf, needs 1.92 or newer); this is the version the spikes were built and run with.
+  RUST_VERSION: 1.97.0
+  CARGO_TERM_COLOR: never
+
+jobs:
+  spike:
+    name: ${{ matrix.os_name }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-latest, os_name: windows, arch: x64, exe: .exe }
+          # Free for public repositories only.
+          - { runner: windows-11-arm, os_name: windows, arch: arm64, exe: .exe }
+          - { runner: macos-latest, os_name: macos, arch: arm64, exe: '' }
+          # macos-13 was retired in December 2025; macos-15-intel is the Intel image now (offered until August 2027).
+          - { runner: macos-15-intel, os_name: macos, arch: x64, exe: '' }
+          - { runner: ubuntu-latest, os_name: linux, arch: x64, exe: '' }
+          - { runner: ubuntu-24.04-arm, os_name: linux, arch: arm64, exe: '' }
+    env:
+      UI_BIN: rust/spike/ui/target/release/kasboek-ui-spike${{ matrix.exe }}
+      DB_BIN: rust/spike/db/target/release/spike${{ matrix.exe }}
+      PDF_BIN: rust/spike/pdf/target/release/kb-spike-pdf${{ matrix.exe }}
+      TAG: ${{ matrix.os_name }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            # Some images (Windows ARM64) may come without rustup.
+            curl --proto '=https' --tlsv1.2 -sSf -o rustup-init.exe https://win.rustup.rs/aarch64
+            ./rustup-init.exe -y --default-toolchain none --profile minimal
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$USERPROFILE/.cargo/bin:$PATH"
+          fi
+          rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update
+          rustup default "$RUST_VERSION"
+          rustc -Vv
+          cargo -V
+
+      # Slint needs fontconfig to build; xvfb gives the window tests a display; libxkbcommon-x11 is loaded at run time.
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libfontconfig1-dev libxkbcommon-x11-0 libxcb-xkb1 libx11-xcb1
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/spike/ui/target
+            rust/spike/db/target
+            rust/spike/pdf/target
+          key: rust-spike-${{ env.TAG }}-${{ env.RUST_VERSION }}-${{ hashFiles('rust/spike/*/Cargo.lock') }}
+          restore-keys: rust-spike-${{ env.TAG }}-${{ env.RUST_VERSION }}-
+
+      # Node: the db spike builds sqlite3mc from the amalgamation inside better-sqlite3-multiple-ciphers, and its cross-open
+      # test and the PDF corpus use the app's own code. Scripts are skipped (no Electron download); the package ships
+      # prebuilt binaries for all six targets, so nothing is compiled.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      - name: Build ui (software renderer, release)
+        run: cargo build --release --locked --manifest-path rust/spike/ui/Cargo.toml
+      - name: Build db (release)
+        run: cargo build --release --locked --manifest-path rust/spike/db/Cargo.toml
+      - name: Build pdf (release)
+        run: cargo build --release --locked --manifest-path rust/spike/pdf/Cargo.toml
+
+      # ---- db: Rust alone, then the app's own core against the Rust binary ----
+      - name: db - Rust self-check (write, wrong key rejected, key derivation)
+        id: db_rust
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ci-out
+          KEY=$(printf 'a1%.0s' $(seq 32))
+          WRONG=$(printf '00%.0s' $(seq 32))
+          {
+            "$DB_BIN" write-db "$RUNNER_TEMP/rust-made.db" "$KEY"
+            "$DB_BIN" wrong-key "$RUNNER_TEMP/rust-made.db" "$WRONG"
+            "$DB_BIN" bench-kdf 3
+          } 2>&1 | tee ci-out/db-rust-check.log
+      - name: db - cross-open and password slot against the app's own code (vitest)
+        id: db_cross
+        continue-on-error: true
+        shell: bash
+        env:
+          KB_SPIKE_TMP: ${{ runner.temp }}
+        run: |
+          mkdir -p ci-out
+          KB_SPIKE_BIN="$PWD/$DB_BIN" npx vitest run --config rust/spike/db/node/vitest.config.ts --disableConsoleIntercept 2>&1 | tee ci-out/db-cross-open.log
+
+      # ---- pdf: invented corpus through the Rust reader, then the hostile files ----
+      - name: pdf - invented statements through the summary mode
+        id: pdf_corpus
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ci-out "$RUNNER_TEMP/pdf/corpus"
+          if [ "$RUNNER_OS" = Windows ]; then PY=python; VENV=Scripts; else PY=python3; VENV=bin; fi
+          $PY -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/$VENV/python" -m pip install --quiet reportlab
+          "$RUNNER_TEMP/venv/$VENV/python" rust/spike/pdf/tools/gen_py.py "$RUNNER_TEMP/pdf/corpus" > /dev/null
+          "$PDF_BIN" summary "$RUNNER_TEMP/pdf/corpus" 2>&1 | tee ci-out/pdf-corpus.log
+      - name: pdf - hostile and mutated files (no crash, no hang)
+        id: pdf_hostile
+        if: runner.os != 'Windows'
+        continue-on-error: true
+        shell: bash
+        env:
+          # The address-space limit of run_hostile.py is not enforced on macOS.
+          NOLIMIT: ${{ runner.os == 'macOS' && '1' || '' }}
+          KB_PDF_TIMEOUT_MS: '10000'
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" rust/spike/pdf/tools/gen_hostile.py "$RUNNER_TEMP/pdf/corpus" "$RUNNER_TEMP/pdf/hostile" > /dev/null
+          "$RUNNER_TEMP/venv/bin/python" rust/spike/pdf/tools/run_hostile.py "$RUNNER_TEMP/pdf/hostile" -- "$PDF_BIN" hayro 2>&1 | tee ci-out/pdf-hostile.log
+
+      # ---- ui: offscreen screenshots and a start-up measurement ----
+      - name: ui - offscreen screenshots (shot mode)
+        id: ui_shots
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ci-out/shots
+          for combo in "lock-hello light en" "lock-hello dark de" "lock-password light fr" "overview light en" "overview dark de"; do
+            set -- $combo
+            "$UI_BIN" shot "$1" "$2" "ci-out/shots/$1-$2-$3.png" --lang "$3"
+            test -s "ci-out/shots/$1-$2-$3.png"
+          done
+          ls -l ci-out/shots
+      - name: ui - start-up measurement (real window, 5 runs, exits after the first frame)
+        id: ui_startup
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          mkdir -p ci-out
+          BIN="$PWD/$UI_BIN"
+          PREFIX=""
+          if [ "$RUNNER_OS" = Linux ]; then PREFIX="xvfb-run -a"; fi
+          for i in 1 2 3 4 5; do
+            $PREFIX "$BIN" --screen lock-hello --exit-after-first-frame
+            echo "=== run $i" >> ci-out/startup-ci.log
+            cat "$(dirname "$BIN")/startup.log" >> ci-out/startup-ci.log
+          done
+          cat ci-out/startup-ci.log
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Rust spikes on $TAG"
+            echo
+            echo "| Check | Outcome |"
+            echo "|---|---|"
+            echo "| db: Rust self-check | ${{ steps.db_rust.outcome }} |"
+            echo "| db: cross-open and slot against the app's code | ${{ steps.db_cross.outcome }} |"
+            echo "| pdf: invented corpus | ${{ steps.pdf_corpus.outcome }} |"
+            echo "| pdf: hostile files | ${{ steps.pdf_hostile.outcome }} |"
+            echo "| ui: offscreen screenshots | ${{ steps.ui_shots.outcome }} |"
+            echo "| ui: start-up measurement | ${{ steps.ui_startup.outcome }} |"
+            echo
+            echo "First frame of the 5 runs (software renderer, from process start):"
+            echo '```'
+            grep 'time-to-first-frame' ci-out/startup-ci.log 2>/dev/null || echo "no start-up log"
+            echo '```'
+            echo "Key derivation (Argon2id, m=131072 KiB, t=3, p=4):"
+            echo '```'
+            grep argon2id ci-out/db-rust-check.log 2>/dev/null || echo "no key derivation log"
+            echo '```'
+            echo "PDF corpus:"
+            echo '```'
+            tail -n 1 ci-out/pdf-corpus.log 2>/dev/null || echo "no corpus log"
+            echo '```'
+            echo "Hostile files:"
+            echo '```'
+            grep -E 'not clean|slower than' ci-out/pdf-hostile.log 2>/dev/null || echo "not run or no log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ---- artifacts. Windows: loose files (the zip is the download). macOS and Linux: a tar file, because a zip loses the
+      # executable bit. ----
+      - name: Collect artifacts
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p ci-out stage/ui/shots stage/db stage/pdf
+          cp "$UI_BIN" rust/spike/ci/start-ui.* rust/spike/TESTING.md stage/ui/
+          cp -R ci-out/shots/. stage/ui/shots/ 2>/dev/null || true
+          cp ci-out/startup-ci.log stage/ui/ 2>/dev/null || true
+          cp "$DB_BIN" stage/db/
+          cp ci-out/db-*.log stage/db/ 2>/dev/null || true
+          cp "$PDF_BIN" rust/spike/ci/check-pdfs.* rust/spike/ci/PDF-README.txt stage/pdf/
+          cp ci-out/pdf-*.log stage/pdf/ 2>/dev/null || true
+          if [ "$RUNNER_OS" = Windows ]; then
+            rm -f stage/ui/start-ui.sh stage/pdf/check-pdfs.sh
+          else
+            rm -f stage/ui/start-ui.cmd stage/pdf/check-pdfs.cmd
+            for part in ui db pdf; do
+              tar -cf "stage/kasboek-spike-$part-$TAG.tar" -C stage "$part"
+            done
+          fi
+          ls -R stage | head -60
+      - name: Upload ui
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-spike-ui-${{ env.TAG }}
+          path: stage/ui
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload db
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-spike-db-${{ env.TAG }}
+          path: stage/db
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload pdf
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-spike-pdf-${{ env.TAG }}
+          path: stage/pdf
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload ui (tar)
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-spike-ui-${{ env.TAG }}
+          path: stage/kasboek-spike-ui-${{ env.TAG }}.tar
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload db (tar)
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-spike-db-${{ env.TAG }}
+          path: stage/kasboek-spike-db-${{ env.TAG }}.tar
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload pdf (tar)
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-spike-pdf-${{ env.TAG }}
+          path: stage/kasboek-spike-pdf-${{ env.TAG }}.tar
+          retention-days: 30
+          if-no-files-found: error

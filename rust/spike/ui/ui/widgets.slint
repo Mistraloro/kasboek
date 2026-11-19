@@ -195,3 +195,28 @@ export component PasswordInput inherits Rectangle {
         }
     }
 }
+
+// A plain single-line text field (Input of ui.tsx), used by the typing test of the Lock spike.
+export component PlainInput inherits Rectangle {
+    in-out property <string> text;
+    in property <string> label;
+    height: 36px;
+    border-radius: 8px;
+    border-width: 1px;
+    background: Theme.surface;
+    border-color: input.has-focus ? Theme.accent : Theme.border;
+
+    input := TextInput {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        text <=> root.text;
+        font-family: Theme.sans;
+        font-size: 14px;
+        color: Theme.text;
+        vertical-alignment: center;
+        single-line: true;
+        accessible-role: text-input;
+        accessible-label: root.label;
+    }
+}
