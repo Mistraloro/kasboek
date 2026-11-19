@@ -151,6 +151,46 @@ describe('masked lines', () => {
   })
 })
 
+describe('a statement of three pages with the name and address repeated on every page', () => {
+  const HEADER = [
+    line(0, [[40, 'Ilse Vermeulen']], 1),
+    line(1, [[40, 'Kerkstraat 12, 8000 Gent']], 1),
+    line(2, [[60, 'Date'], [140, 'Description'], [510, 'Amount']], 1),
+    line(3, [[60, '03/11'], [140, 'ALBERT HEIJN'], [510, '45,10-']], 1),
+    line(4, [[140, 'continued on next page']], 1),
+    line(5, [[40, 'Ilse Vermeulen']], 2),
+    line(6, [[40, 'Kerkstraat 12, 8000 Gent']], 2),
+    line(7, [[40, 'Customer 4455667']], 2),
+    line(8, [[60, 'Date'], [140, 'Description'], [510, 'Amount']], 2),
+    line(9, [[60, '05/11'], [140, 'SALARY NOVEMBER'], [510, '2.000,00']], 2),
+    line(10, [[40, 'Ilse Vermeulen']], 3),
+    line(11, [[40, 'Kerkstraat 12, 8000 Gent']], 3),
+    line(12, [[60, '07/11'], [140, 'TRAM TICKET'], [510, '2,40-']], 3),
+    line(13, [[140, 'Thank you for banking with us']], 3)
+  ]
+
+  it('sends only the table rows: nothing above the table on page one, nothing above the first transaction on later pages', () => {
+    const sentLines = linesToSend(HEADER)
+    expect(sentLines.map((m) => m.id)).toEqual([2, 3, 4, 9, 12, 13])
+    const text = previewText(sentLines)
+    expect(text).not.toMatch(/Ilse|Vermeulen|Kerkstraat|Gent|Customer|4455667/)
+    expect(text).toContain('ALBERT HEIJN')
+    expect(text).toContain('SALARY NOVEMBER')
+    expect(text).toContain('TRAM TICKET')
+  })
+
+  it('drops a later page that has no transaction-like line and no table header whole, and keeps one that has only the header', () => {
+    const quiet = [...HEADER.slice(0, 5), line(5, [[40, 'Ilse Vermeulen']], 2), line(6, [[40, 'Kerkstraat 12']], 2), line(7, [[60, 'Date'], [140, 'Description'], [510, 'Amount']], 3), line(8, [[140, 'carried over']], 3)]
+    expect(linesToSend(quiet).map((m) => m.id)).toEqual([2, 3, 4, 7, 8])
+  })
+
+  it('still lets the people see which lines belong to a row, so splitting into parts works over pages', () => {
+    const parts = splitParts(linesToSend(HEADER))
+    expect(parts).toHaveLength(1)
+    expect(parts[0]!.own.map((m) => m.page)).toEqual([1, 1, 1, 2, 3, 3])
+  })
+})
+
 describe('dates over several cells or lines (block layouts)', () => {
   const BLOCK = [
     line(0, [[40, 'Relevé du 1 mars au 31 mars 2026']]),

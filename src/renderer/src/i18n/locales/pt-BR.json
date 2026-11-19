@@ -134,6 +134,7 @@
     "hideNumbers": "Ocultar os números de conta na tela",
     "hideNumbersHint": "Mostrar apenas o país e os últimos 4 caracteres de um número de conta (BE…1234), caso alguém esteja olhando. Mantenha pressionado o olho ao lado de um número para vê-lo enquanto pressiona. As exportações e os backups não mudam.",
     "holdToShowNumber": "Mantenha pressionado para mostrar o número",
+    "holdToShowNumberOf": "Mantenha pressionado para mostrar o número da conta de {{name}}",
     "encryptionHint": "Os dados do seu orçamento estão criptografados no disco.",
     "keyStorageOsHint": "Os dados estão vinculados a este computador e a esta conta de usuário.",
     "rememberedHint": "Lembrado neste computador até {{date}}. Outros computadores, importações e exportações continuam pedindo o código.",

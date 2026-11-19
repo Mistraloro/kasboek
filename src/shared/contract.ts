@@ -589,11 +589,14 @@ export const contract = {
     output: out<{ rule: Rule; applied: number }>()
   },
   'rules.preview': {
-    description: 'Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples.',
+    description:
+      'Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples. For field iban, give fromTransactionId (a transaction with that counterparty) instead of a pattern, as with rules_create.',
     input: z
       .object({
         field: z.enum(['counterparty', 'description', 'any', 'iban']),
-        pattern: z.string().trim().min(1).max(100),
+        pattern: z.string().trim().min(1).max(100).optional(),
+        /** For field iban: look for this transaction’s counterparty account number. */
+        fromTransactionId: id.optional(),
         match: z.enum(['contains', 'word', 'starts']).default('contains'),
         categoryId: id.nullable().default(null)
       })

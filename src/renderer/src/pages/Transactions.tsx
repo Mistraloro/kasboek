@@ -13,7 +13,7 @@ import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { exportTransactions } from '../lib/export'
 import { formatDate, monthLabel } from '../lib/format'
-import { Iban, Masked } from '../lib/hide-numbers'
+import { Iban, Masked, MaskedInput, useMasked, useRevealable } from '../lib/hide-numbers'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { localToday } from '@shared/month'
@@ -42,6 +42,28 @@ export function CategorySelect({ value, categories, onChange, className, allowNo
   )
 }
 
+/**
+ * The title of a row: opens the edit dialog. The eyes that reveal a hidden number are next to the button, not inside it
+ * (a button can't hold a button), so holding one never opens the dialog.
+ */
+function TxTitle({ tx, onOpen }: { tx: Transaction; onOpen: () => void }) {
+  const { t } = useTranslation()
+  const title = useRevealable(tx.counterpartyName || tx.description)
+  const description = useRevealable(tx.description, tx.counterpartyName || tx.description)
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      <button type="button" className="min-w-0 truncate text-left" onClick={onOpen}>
+        {tx.transferAccount && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted" title={t('transfers.pairedHint')}>⇄ {tx.transferAccount}</span>}
+        {tx.splitCount > 0 && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{t('splits.badge', { count: tx.splitCount })}</span>}
+        <span className="font-medium">{title.text}</span>
+        {tx.counterpartyName && <span className="ml-2 text-[13px] text-muted">{description.text}</span>}
+      </button>
+      {title.eye}
+      {tx.counterpartyName && description.eye}
+    </div>
+  )
+}
+
 export function Transactions({ go, initial }: { go: (p: Page) => void; initial?: TxFilter }) {
   const { t } = useTranslation()
   const toast = useToast()
@@ -54,6 +76,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
   const [editing, setEditing] = useState<Transaction | 'new' | null>(null)
   const [suggest, setSuggest] = useState<{ pattern: string; categoryId: number; categoryName: string } | null>(null)
   const [transfersOpen, setTransfersOpen] = useState(false)
+  const suggestName = useMasked(suggest?.pattern ?? '')
   const accounts = useOp('accounts.list')
   const categories = useOp('categories.list')
   const page = useOp('transactions.list', { ...filter, limit, offset: 0 })
@@ -120,7 +143,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative w-64">
           <Search size={15} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-          <Input placeholder={t('transactions.search')} className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} aria-label={t('transactions.search')} />
+          <MaskedInput placeholder={t('transactions.search')} className="pl-9" value={searchText} onChange={setSearchText} label={t('transactions.search')} />
         </div>
         <Select className="w-48!" aria-label={t('transactions.account')} value={filter.accountId ?? ''} onChange={(e) => setFilter({ ...filter, accountId: e.target.value ? Number(e.target.value) : undefined })}>
           <option value="">{t('transactions.allAccounts')}</option>
@@ -189,7 +212,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
       {suggest && (
         <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-accent-soft px-4 py-2.5 text-[13px]">
           <Wand2 size={15} className="text-accent" />
-          <span className="flex-1">{t('transactions.ruleSuggest', { name: suggest.pattern, category: suggest.categoryName })}</span>
+          <span className="flex-1">{t('transactions.ruleSuggest', { name: suggestName, category: suggest.categoryName })}</span>
           <Button size="sm" variant="ghost" onClick={() => setSuggest(null)}>{t('auth.notNow')}</Button>
           <Button
             size="sm"
@@ -305,12 +328,7 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                   </td>
                   <td className="num px-3 py-2.5 text-[13px] whitespace-nowrap text-muted">{formatDate(tx.bookingDate, fmt)}</td>
                   <td className="max-w-0 px-3 py-2.5">
-                    <button type="button" className="block w-full truncate text-left" onClick={() => setEditing(tx)}>
-                      {tx.transferAccount && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted" title={t('transfers.pairedHint')}>⇄ {tx.transferAccount}</span>}
-                      {tx.splitCount > 0 && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{t('splits.badge', { count: tx.splitCount })}</span>}
-                      <span className="font-medium"><Masked text={tx.counterpartyName || tx.description} /></span>
-                      {tx.counterpartyName && <span className="ml-2 text-[13px] text-muted"><Masked text={tx.description} /></span>}
-                    </button>
+                    <TxTitle tx={tx} onOpen={() => setEditing(tx)} />
                   </td>
                   <td className="px-3 py-1.5">
                     {tx.splitCount > 0 ? (
@@ -427,16 +445,16 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
         )}
         <Field label={t('transactions.date')}>{(id) => <DateInput id={id} value={form.bookingDate} onChange={(bookingDate) => setForm({ ...form, bookingDate })} />}</Field>
         <Field label={t('transactions.amount')} hint={t('transactions.amountHint')}>{(id) => <Input id={id} className="num" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="-12,50" />}</Field>
-        <div className="col-span-2"><Field label={t('transactions.counterparty')}>{(id) => <Input id={id} value={form.counterpartyName} onChange={(e) => setForm({ ...form, counterpartyName: e.target.value })} />}</Field></div>
-        <div className="col-span-2"><Field label={t('transactions.description')}>{(id) => <Input id={id} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />}</Field></div>
+        <div className="col-span-2"><Field label={t('transactions.counterparty')}>{(id) => <MaskedInput id={id} value={form.counterpartyName} onChange={(counterpartyName) => setForm({ ...form, counterpartyName })} />}</Field></div>
+        <div className="col-span-2"><Field label={t('transactions.description')}>{(id) => <MaskedInput id={id} value={form.description} onChange={(description) => setForm({ ...form, description })} />}</Field></div>
         <div className="col-span-2">
           <Field label={t('transactions.category')} hint={cents !== null && cents > 0 && categories.find((c) => c.id === form.categoryId)?.kind === 'expense' ? t('transactions.refundHint') : undefined}>
             {(id) => <CategorySelect id={id} label={t('transactions.category')} value={form.categoryId} categories={categories} onChange={(c) => setForm({ ...form, categoryId: c })} />}
           </Field>
         </div>
-        <div className="col-span-2"><Field label={t('transactions.notes')}>{(id) => <Input id={id} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}</Field></div>
+        <div className="col-span-2"><Field label={t('transactions.notes')}>{(id) => <MaskedInput id={id} value={form.notes} onChange={(notes) => setForm({ ...form, notes })} />}</Field></div>
         {base?.communication && <p className="selectable col-span-2 text-xs text-muted">{t('transactions.communication')}: <Masked text={base.communication} /></p>}
-        {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: <Iban value={base.counterpartyIban} /></p>}
+        {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: <Iban value={base.counterpartyIban} name={base.counterpartyName || base.description} /></p>}
         {base && <div className="col-span-2"><SplitEditor tx={base} categories={categories} onSaved={onSaved} /></div>}
         {base?.transferAccount && (
           <div className="col-span-2 flex flex-col gap-1.5">

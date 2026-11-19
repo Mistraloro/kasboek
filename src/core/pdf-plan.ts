@@ -7,7 +7,7 @@
  */
 import { z } from 'zod'
 import { parseAmount } from '@shared/amount'
-import { findIbans, maskContacts, maskIban, maskNumbers } from '@shared/iban'
+import { findIbans, maskIban, maskPrivate } from '@shared/iban'
 import type { ImportMapping } from '@shared/types'
 import { parseJsonAnswer } from './assist-plan'
 import { detectDateOrder, detectDecimal } from './csv/mapping'
@@ -105,18 +105,19 @@ export function firstLineSent(lines: PdfLine[]): number | null {
 
 /**
  * The lines as they are sent: IBANs, runs of 13 or more digits, e-mail addresses and phone numbers
- * masked, and, with `skipBefore` (the first line to send), everything above it left out.
+ * masked (each text cut at MAX_LINE_CHARS first, so a huge one can't make the masking slow), and, with
+ * `skipBefore` (the first line to send), everything above it left out.
  */
 export function maskedLines(lines: PdfLine[], opts: { skipBefore?: number | null } = {}): MaskedLine[] {
   const skip = opts.skipBefore ?? null
   return lines
     .filter((l) => skip === null || l.id >= skip)
     .map((l) => {
-      const cells = l.cells.map((c) => ({ x: Math.round(c.x0), text: maskNumbers(maskContacts(c.text)).slice(0, MAX_LINE_CHARS) }))
+      const cells = l.cells.map((c) => ({ x: Math.round(c.x0), text: maskPrivate(c.text, MAX_LINE_CHARS) }))
       // An account number cut over two cells by wide spacing is only recognised as a whole: then the line is sent as one piece.
       const joined = cells.map((c) => c.text).join(' ')
-      const whole = maskIban(joined)
-      const pieces = whole === joined ? cells : [{ x: cells[0]?.x ?? 0, text: whole.slice(0, MAX_LINE_CHARS) }]
+      const whole = maskPrivate(joined, MAX_LINE_CHARS)
+      const pieces = whole === joined ? cells : [{ x: cells[0]?.x ?? 0, text: whole }]
       return {
         id: l.id,
         page: l.page,
@@ -127,13 +128,29 @@ export function maskedLines(lines: PdfLine[], opts: { skipBefore?: number | null
 }
 
 /**
- * Everything that is sent for a statement, masked: from the table's header (or else the first
- * transaction-like line) onward. Empty when there is no such line. The preview and the calls to the
- * assistant are both made from this one list.
+ * The lines of the table on the pages after the first: from the first line with a date and an amount
+ * (else from the table's header, else none). What is above it on a later page is a repeated page header:
+ * the holder's name and address, a logo line, the account number again.
+ */
+function laterPageLines(page: PdfLine[]): PdfLine[] {
+  const start = page.find(looksLikeTransaction) ?? page.find(isHeaderLine)
+  return start ? page.filter((l) => l.id >= start.id) : []
+}
+
+/**
+ * Everything that is sent for a statement, masked: only the table's rows. On the first page that is
+ * from the table's header (or else the first transaction-like line) onward; on every later page from
+ * the first transaction-like line (see laterPageLines). Empty when there is no such line. The preview
+ * and the calls to the assistant are both made from this one list.
  */
 export const linesToSend = (lines: PdfLine[]): MaskedLine[] => {
   const start = firstLineSent(lines)
-  return start === null ? [] : maskedLines(lines, { skipBefore: start })
+  if (start === null) return []
+  const from = lines.find((l) => l.id === start)!.page
+  const pages = new Map<number, PdfLine[]>()
+  for (const l of lines) if (l.id >= start) pages.set(l.page, [...(pages.get(l.page) ?? []), l])
+  const kept = [...pages].flatMap(([page, own]) => (page === from ? own : laterPageLines(own)))
+  return maskedLines(kept)
 }
 
 /** The text the person is shown before agreeing: the lines of every part, as they are sent. */

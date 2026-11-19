@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { contract, type OpName, type OpOutput, type OpParsedInput, type OpResult } from '@shared/contract'
-import type { Account, AccountWithBalance, Actor, Category, FxStatus } from '@shared/types'
+import type { Account, AccountWithBalance, Actor, Category, FxStatus, ImportPreview } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
@@ -293,12 +293,24 @@ export const coreOps: OpTable = {
       return fin.createRule(db, { ...i, pattern: p })
     }
   },
-  'rules.preview': { mutates: false, assistant: true, handler: ({ db }, i) => fin.previewRule(db, i) },
+  'rules.preview': {
+    mutates: false,
+    assistant: true,
+    handler: ({ db, actor }, { fromTransactionId, pattern, ...i }) => {
+      const p = fin.rulePattern(db, { field: i.field, pattern, fromTransactionId }, actor === 'assistant')
+      if (p === undefined) throw new AppError('rules.pattern', 'Give the text the rule looks for (pattern).')
+      return fin.previewRule(db, { ...i, pattern: p })
+    }
+  },
   'rules.update': {
     mutates: true,
     assistant: true,
     handler: ({ db, actor }, { fromTransactionId, pattern, ...i }) => {
-      const field = i.field ?? fin.listRules(db).find((r) => r.id === i.id)?.field
+      const old = fin.listRules(db).find((r) => r.id === i.id)
+      const field = i.field ?? old?.field
+      // The assistant can't see the stored account number: moving the rule to another field without a new text would keep it as that text.
+      if (actor === 'assistant' && old?.field === 'iban' && field !== 'iban' && pattern === undefined)
+        throw new AppError('rules.iban_field', 'This rule looks for an account number, which is hidden from you. To change where it looks, also give the new text (pattern).')
       return fin.updateRule(db, { ...i, pattern: fin.rulePattern(db, { field, pattern, fromTransactionId }, actor === 'assistant') })
     }
   },
@@ -332,21 +344,24 @@ export const coreOps: OpTable = {
   'import.current': {
     mutates: false,
     assistant: true,
-    handler: ({ db }) => {
+    handler: ({ db, actor }) => {
       const id = imp.latestSession()
-      return id ? imp.preview(db, id) : null
+      return id ? forActor(actor, imp.preview(db, id)) : null
     }
   },
   'import.raw': { mutates: false, assistant: true, handler: (_c, { from, count }) => imp.rawWindow(openSession(), from, count) },
-  'import.remap': { mutates: false, assistant: true, handler: ({ db, actor }, i) => imp.remap(db, i.sessionId ?? openSession(), i.mapping, actor === 'assistant' ? 'assistant' : 'manual') },
+  'import.remap': { mutates: false, assistant: true, handler: ({ db, actor }, i) => forActor(actor, imp.remap(db, i.sessionId ?? openSession(), i.mapping, actor === 'assistant' ? 'assistant' : 'manual')) },
   'import.updateRows': {
     mutates: false,
     assistant: true,
     handler: ({ db, actor }, i) =>
-      imp.updateRows(
-        db,
-        i.sessionId ?? openSession(),
-        i.changes.map((c) => ({ ...c, ...(c.categoryId !== undefined ? { categorySource: actor === 'assistant' ? ('assistant' as const) : ('user' as const) } : {}) }))
+      forActor(
+        actor,
+        imp.updateRows(
+          db,
+          i.sessionId ?? openSession(),
+          i.changes.map((c) => ({ ...c, ...(c.categoryId !== undefined ? { categorySource: actor === 'assistant' ? ('assistant' as const) : ('user' as const) } : {}) }))
+        )
       )
   },
   'import.commit': { mutates: true, assistant: true, handler: ({ db }, i) => imp.commit(db, i.sessionId ?? openSession(), i.saveProfile) },
@@ -363,6 +378,9 @@ export const coreOps: OpTable = {
   'import.batches': { mutates: false, assistant: false, handler: ({ db }) => imp.listBatches(db) },
   'import.undo': { mutates: true, assistant: false, handler: ({ db }, { batchId }) => imp.undoBatch(db, batchId) }
 }
+
+/** An import preview as the caller may see it: the assistant gets nothing from above the header row found on opening. */
+const forActor = (actor: OpContext['actor'], p: ImportPreview): ImportPreview => (actor === 'assistant' ? imp.assistantView(p) : p)
 
 function openSession(): string {
   const id = imp.latestSession()

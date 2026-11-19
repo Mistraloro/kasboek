@@ -3,13 +3,15 @@
  * person allows it. Everything in it is data from the app (payees and descriptions come from bank
  * files), so it is framed as data, account and card numbers are masked and the size is capped.
  */
-import { maskNumbers } from '@shared/iban'
+import { maskPrivate } from '@shared/iban'
 import { MAX_CONTEXT_ROWS, MAX_CONTEXT_SELECTED, PageContextSchema, type PageContext } from '@shared/page-context'
 
 const TEXT_LIMIT = 80
+/** Longer texts are cut before masking, so a huge text can't make the masking slow. */
+const TEXT_CAP = 2000
 
 /** One line of text: numbers masked, line breaks and the like folded, cut at a fixed length. */
-const clean = (text: string): string => [...maskNumbers(text).replace(/\s+/g, ' ').trim()].slice(0, TEXT_LIMIT).join('')
+const clean = (text: string): string => [...maskPrivate(text, TEXT_CAP).replace(/\s+/g, ' ').trim()].slice(0, TEXT_LIMIT).join('')
 
 const cleanCells = (o: Record<string, string | number | null>): Record<string, string | number | null> =>
   Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === 'string' ? clean(v) : v]))

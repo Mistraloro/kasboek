@@ -19,6 +19,7 @@ import { localToday } from '@shared/month'
 import { reasoningParams } from '@shared/reasoning'
 import { needsApproval } from '@shared/permissions'
 import { withPageContext } from '@core/page-context'
+import { maskPrivate } from '@shared/iban'
 
 type Run = (op: OpName, input: unknown, actor: 'assistant') => Promise<OpResult<unknown>>
 let run: Run | null = null
@@ -186,6 +187,8 @@ export function settleTurn(history: Anthropic.Beta.Messages.BetaMessageParam[], 
   else history.length = before
 }
 
+const MAX_MESSAGE = 20_000
+
 export function send(text: string, pageContext?: unknown): AssistantStatus {
   if (busy) throw new AppError('assistant.busy', 'The assistant is still answering.')
   if (!run) throw new Error('assistant not initialised')
@@ -204,7 +207,8 @@ export function send(text: string, pageContext?: unknown): AssistantStatus {
   let current: Extract<ChatMessage, { role: 'assistant' }> = { id: randomUUID(), role: 'assistant', text: '', tools: [] }
   display.push(current)
   const before = history.length
-  const sent = withPageContext(text, pageContext, settings.pageContextEnabled, lastPageBlock)
+  // What the person typed may hold an account number or an address too: it is masked before it leaves, like everything else.
+  const sent = withPageContext(maskPrivate(text, MAX_MESSAGE), pageContext, settings.pageContextEnabled, lastPageBlock)
   const prevBlock = lastPageBlock
   lastPageBlock = sent.block
   history.push({ role: 'user', content: sent.content })

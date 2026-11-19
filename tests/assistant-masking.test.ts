@@ -7,11 +7,12 @@ import { openDatabase, type Db } from '@core/database'
 import { openXmlSession } from '@core/camt/open'
 import { analyze, remap } from '@core/import'
 import { insertTransaction, listRules } from '@core/finance'
+import { findRecurring } from '@core/recurring'
 import { coreOps, runOp } from '@core/ops'
 import { extractText } from '@core/pdf/extract'
 import { updateSettings } from '@core/settings'
 import type { OpName } from '@shared/contract'
-import { maskContacts } from '@shared/iban'
+import { maskContacts, maskPrivate } from '@shared/iban'
 import { compactResult, describeChange, maskResult } from '../src/main/assistant/tools'
 import { openPdfSession } from '../src/main/pdf/open'
 import { makePdf } from './helpers/make-pdf'
@@ -97,7 +98,7 @@ describe('what the assistant gets from operations', () => {
     for (const v of [null, undefined, 3, true, [], [null, [undefined]], { iban: null, pattern: 5, field: 'iban' }, { iban: 'x' }, { iban: '' }]) {
       expect(() => compactResult('budgets.list' as OpName, v)).not.toThrow()
     }
-    expect(maskResult({ iban: 'XX12' })).toEqual({ iban: 'XX12' })
+    expect(maskResult({ iban: 'XX12' })).toEqual({ iban: '…' })
   })
 
   it('keeps the result within its cap and says where to continue', async () => {
@@ -222,6 +223,143 @@ describe('imports the assistant sees', () => {
       noSecrets(r.text)
     }
     expect((await asAssistant(db, 'import.raw')).text).toContain('NL…4300')
+  })
+})
+
+describe('what the assistant gets, in the hard cases', () => {
+  it('hides spaced IBANs with 00 groups, and keeps dates and amounts', async () => {
+    const id = insertTransaction(db, { accountId, bookingDate: '2026-10-03', amountCents: -2500, description: 'Rent to DE89 3704 0044 0532 0130 00 and BE38 0014 7710 5230, ref 01-10-2026 02-10-2026 1250, 1.234.567,89', counterpartyName: 'Landlord', notes: 'NL91\nABNA 0417\u00a01643 00' })
+    const r = await asAssistant(db, 'transactions.list', { search: 'Landlord' })
+    expect(r.ok, r.text).toBe(true)
+    expect(r.text).toContain(`${id}`)
+    for (const s of ['DE89', '3704', '0532', 'BE38', '7710', 'ABNA', '1643']) expect(r.text).not.toContain(s)
+    for (const s of ['DE…3000', 'BE…5230', 'NL…4300', '01-10-2026 02-10-2026 1250', '1.234.567,89']) expect(r.text).toContain(s)
+  })
+
+  it('cuts long texts before masking, and masks very large ones quickly', () => {
+    for (const unit of ['x', '@', '1', '1 ', 'ab12', 'a@']) {
+      const started = performance.now()
+      const out = maskResult({ description: unit.repeat(200_000 / unit.length), nested: [{ text: unit.repeat(100_000 / unit.length) }] }) as { description: string }
+      expect(out.description.length).toBeLessThanOrEqual(2001)
+      expect(performance.now() - started, JSON.stringify(unit)).toBeLessThan(50)
+    }
+  })
+
+  it('does not pass on what lies too deep to look through', () => {
+    let deep: unknown = { description: OTHER }
+    for (let i = 0; i < 40; i++) deep = { child: deep }
+    expect(JSON.stringify(maskResult(deep))).not.toContain('NL91')
+    expect(JSON.stringify(maskResult(deep))).toContain('…')
+    let list: unknown = [OTHER]
+    for (let i = 0; i < 40; i++) list = [list]
+    expect(JSON.stringify(maskResult(list))).not.toContain('NL91')
+  })
+
+  it('keeps recurring names raw in core (a rule made from one matches) and masks them for the assistant', async () => {
+    const name = `Landlord ${OTHER_SPACED}`
+    for (const m of ['2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01']) insertTransaction(db, { accountId, bookingDate: m, amountCents: -999, description: 'Rent', counterpartyName: name })
+    const item = findRecurring(db).items.find((i) => i.name.startsWith('Landlord'))!
+    expect(item.name).toBe(name)
+    const rec = await asAssistant(db, 'recurring.list')
+    expect(rec.text).not.toMatch(/NL91|ABNA|0417|1643/)
+    expect(rec.text).toContain('Landlord NL…4300')
+    const user = { db, actor: 'user' as const }
+    const groceries = (db.prepare("SELECT id FROM categories WHERE name = 'Groceries'").get() as { id: number }).id
+    const preview = await runOp(coreOps, user, 'rules.preview', { field: 'counterparty', pattern: item.name, categoryId: groceries })
+    expect(preview.ok && preview.data.matches).toBe(5)
+    const made = await runOp(coreOps, user, 'rules.create', { field: 'counterparty', pattern: item.name, categoryId: groceries, applyToExisting: true })
+    expect(made.ok && made.data.applied).toBeGreaterThan(0)
+    if (preview.ok) expect(preview.data.examples.join('')).toContain('ABNA')
+    const shown = await asAssistant(db, 'rules.preview', { field: 'counterparty', pattern: 'Landlord' })
+    expect(shown.text).not.toMatch(/ABNA|0417/)
+  })
+
+  it('masks what the person typed before it is sent', () => {
+    expect(maskPrivate(`pay ${OTHER_SPACED} or call ${PHONE}, mail ${MAIL}`)).not.toMatch(/ABNA|475|ilse/)
+  })
+})
+
+describe('rules the assistant previews and changes', () => {
+  const groceries = (): number => (db.prepare("SELECT id FROM categories WHERE name = 'Groceries'").get() as { id: number }).id
+
+  it('preview takes fromTransactionId for an account number rule', async () => {
+    const r = await asAssistant(db, 'rules.preview', { field: 'iban', fromTransactionId: txId })
+    expect(r.ok, r.text).toBe(true)
+    expect(JSON.parse(r.text)).toMatchObject({ matches: 1 })
+    noSecrets(r.text)
+    expect((await asAssistant(db, 'rules.preview', { field: 'iban' })).ok).toBe(false)
+    expect((await asAssistant(db, 'rules.preview', { field: 'iban', pattern: 'NL…4300' })).text).toContain('fromTransactionId')
+    expect((await asAssistant(db, 'rules.preview', { field: 'description', fromTransactionId: txId })).ok).toBe(false)
+  })
+
+  it('update refuses to move an account number rule to another field without a new text, and masks the pattern', async () => {
+    await asAssistant(db, 'rules.create', { field: 'iban', fromTransactionId: txId, categoryId: groceries(), applyToExisting: false })
+    const id = listRules(db)[0]!.id
+    const refused = await asAssistant(db, 'rules.update', { id, field: 'description' })
+    expect(refused.ok).toBe(false)
+    expect(refused.text).toContain('pattern')
+    expect(listRules(db)[0]).toMatchObject({ field: 'iban', pattern: OTHER })
+    const fine = await asAssistant(db, 'rules.update', { id, field: 'description', pattern: 'Bakery' })
+    expect(fine.ok, fine.text).toBe(true)
+    // Changing only the category keeps the field and shows the pattern masked.
+    const second = await asAssistant(db, 'rules.create', { field: 'iban', fromTransactionId: txId, categoryId: groceries(), applyToExisting: false })
+    expect(second.text).toContain('NL…4300')
+    const other = listRules(db).find((r) => r.field === 'iban')!
+    const same = await asAssistant(db, 'rules.update', { id: other.id, categoryId: groceries() })
+    expect(same.ok, same.text).toBe(true)
+    noSecrets(same.text)
+    // The person may move it, as before.
+    const byUser = await runOp(coreOps, { db, actor: 'user' }, 'rules.update', { id: other.id, field: 'description' })
+    expect(byUser.ok).toBe(true)
+  })
+
+  it('a pattern that is still an account number is masked in every result, whatever the field now is', async () => {
+    db.prepare("INSERT INTO rules (field, pattern, match, category_id) VALUES ('description', ?, 'contains', ?)").run(OTHER, groceries())
+    const list = await asAssistant(db, 'rules.list')
+    noSecrets(list.text)
+    expect(list.text).toContain('NL…4300')
+  })
+})
+
+describe('the header of a CSV is a floor for the assistant', () => {
+  const CSV = [...HOLDER, `Account ${OWN}`, 'Date;Payee;Memo;Amount', '2026-10-01;Cafe;lunch;-4,00', '2026-10-02;Shop;things;-5,00'].join('\n')
+  const open = (): { sessionId: string; headerRow: number } => {
+    const p = analyze(db, { fileName: 'export.csv', bytes: new TextEncoder().encode(CSV), accountId })
+    return { sessionId: p.sessionId, headerRow: p.mapping!.headerRow }
+  }
+  const mapping = (headerRow: number) => ({ delimiter: ';', headerRow, dateOrder: 'YMD', decimal: ',', invertSign: false, columns: { bookingDate: 0, counterpartyName: 1, description: [2], amount: 3 } })
+
+  it('is found when the file is opened, and a remap by the assistant cannot go above it', async () => {
+    const { headerRow } = open()
+    expect(headerRow).toBe(5)
+    const r = await asAssistant(db, 'import.remap', { mapping: mapping(0) })
+    expect(r.ok).toBe(false)
+    expect(r.text).toContain('headerRow at 5')
+    for (const op of ['import.raw', 'import.current'] as const) {
+      const text = (await asAssistant(db, op)).text
+      expect(text).not.toMatch(/Klantnummer|Kerkstraat|Ilse|Vermeulen|8000 Gent/)
+    }
+    // The same rows as before, nothing lost.
+    expect(JSON.parse((await asAssistant(db, 'import.raw')).text)).toMatchObject({ headerRow: 5, totalRows: 2 })
+    expect((await asAssistant(db, 'import.remap', { mapping: mapping(5) })).ok).toBe(true)
+  })
+
+  it('also holds when the person has put the header higher: no rows or header names from above the floor', async () => {
+    const { sessionId } = open()
+    remap(db, sessionId, mapping(0), 'manual')
+    for (const op of ['import.raw', 'import.current'] as const) {
+      const text = (await asAssistant(db, op)).text
+      expect(text, op).not.toMatch(/Klantnummer|Kerkstraat|Ilse|Vermeulen|8000 Gent/)
+    }
+    const raw = JSON.parse((await asAssistant(db, 'import.raw', { from: 0, count: 50 })).text) as { rows: { index: number; cells: string[] }[]; header: string[] }
+    expect(raw.header).toEqual([])
+    // Indexes count from the row after headerRow 0: the first row below the real header is index 5.
+    expect(raw.rows.map((r) => r.index)).toEqual([5, 6])
+    expect(raw.rows[0]!.cells[1]).toBe('Cafe')
+    expect((await asAssistant(db, 'import.raw', { from: 0, count: 3 })).text).not.toContain('Shop')
+    // The person themselves still see everything in the preview.
+    const own = await runOp(coreOps, { db, actor: 'user' }, 'import.current', {})
+    expect(own.ok && own.data && JSON.stringify(own.data)).toContain('Klantnummer')
   })
 })
 

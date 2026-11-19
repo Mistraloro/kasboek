@@ -37,6 +37,14 @@ describe('assistant memory', () => {
     expect(() => remember(d, 'One more', 'person')).toThrow(/full/)
   })
 
+  it('masks numbers, addresses and phone numbers in notes saved earlier, in the prompt', () => {
+    const d = db()
+    d.prepare("INSERT INTO memories (text, source) VALUES (?, 'person')").run('Rent goes to DE89 3704 0044 0532 0130 00, mail ilse@example.test, call +32 475 12 34 56')
+    const prompt = memoryPrompt(d)
+    expect(prompt).toContain('DE…3000')
+    expect(prompt).not.toMatch(/DE89|3704|0532|ilse@|475 12/)
+  })
+
   it('goes into the prompt only when on, and the assistant cannot save while off', () => {
     const d = db()
     remember(d, 'Answer in Dutch', 'person')

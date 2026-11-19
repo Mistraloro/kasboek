@@ -114,9 +114,9 @@ describe('reading a PDF statement with the assistant', () => {
   it('without a table header or a transaction-like line, sends nothing and says so', async () => {
     const { pdfAssistPreview, assistPdf } = await import('../src/main/assistant/pdf')
     const { db, sessionId } = setup([line(0, 1, [[40, 'Jan Jansen']]), line(1, 1, [[40, 'Main Street 1, Springfield']])])
-    expect(() => pdfAssistPreview(sessionId)).toThrow(/no text to read/)
+    expect(() => pdfAssistPreview(sessionId)).toThrow(/No transaction rows were found.*nothing was sent/)
     await mockFetch((b) => answer(b))
-    await expect(assistPdf(db, sessionId)).rejects.toThrow(/no text to read/)
+    await expect(assistPdf(db, sessionId)).rejects.toThrow(/nothing was sent/)
     expect(requests).toHaveLength(0)
   })
 

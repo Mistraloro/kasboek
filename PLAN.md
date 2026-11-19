@@ -130,6 +130,27 @@ names and amounts; the column layout is what matters.
   examples, recurring names and review names mask before cutting. Rules on an account number are made
   with `fromTransactionId` (filled locally); the assistant cannot pass a masked or invalid number.
   Test: `tests/assistant-masking.test.ts`.
+* **Review of the 0.22.0 masking (fixed)**: one `maskPrivate(text, max?)` in `shared/iban.ts` (numbers and
+  IBANs first, then e-mail and phone: the other way round the phone rule ate groups of spaced IBANs) is used
+  for tool results, the PDF text, the CSV check, the page context, tips names, the memory in the system
+  prompt and the typed chat message. Texts are folded first (NFKC, one space, zero-width gone, one hyphen);
+  IBAN and card groups may be separated by space, dot, hyphen or slash; dates and amounts stay;
+  `maskAccount` shows at most `CC…1234` (`…1234` for a local number). E-mail is a scan from each `@` with
+  limits (it was quadratic) and strings are cut at 2,000 characters before masking; `maskResult` no longer
+  passes a subtree deeper than 30 levels (it gives `…`). Recurring and review names stay raw in core (rules
+  and searches are made from them; cut by `cutText` so no number is cut in two) and are masked in
+  `compactResult` and, on screen, by `<Masked>`. Transaction rows no longer nest the eye in a button,
+  the eye stops click propagation and says what it reveals; text fields show masked until focused
+  (`MaskedInput`); `rules.preview` takes `fromTransactionId`; the assistant cannot move an account number
+  rule to another field without a new pattern; the assistant gets no CSV row above the header found on
+  opening (`headerFloor` in `core/import.ts`) and cannot remap above it; a PDF sends only table rows
+  (later pages from their first transaction line); "no transaction rows found" is its own message.
+  `hideAccountNumbers` is switched back ON after restoring a backup or export or joining sync (also for
+  the person's own backup), like the other settings a file must not bring.
+  Accepted: masked text can be guessed back by searching (the search runs on the real data and the
+  assistant can see how many rows match); a CSV where no header is detected has no floor, so rows below
+  the first line are visible to the assistant; a typed `+`/`00` rule means only international phone
+  numbers are hidden.
 * **Other LLMs later**: everything goes through the operation contract, whose input schemas are
   plain JSON Schema for tools. MCP already works with any MCP-capable client; an in-app adapter
   for another provider would replace `src/main/assistant/claude.ts`.

@@ -96,6 +96,19 @@ describe('what a check sends', () => {
     expect(body).toContain('Bakery Roos')
   })
 
+  it('also hides e-mail, phone numbers, spaced IBANs with 00 groups and the account number of a rule', async () => {
+    const { assistImport } = await import('../src/main/assistant/csv')
+    const { db, sessionId } = setup()
+    db.prepare("INSERT INTO memories (text, source) VALUES (?, 'person')").run('Mail ilse@example.test or call +32 475 12 34 56, rent to DE89 3704 0044 0532 0130 00')
+    createRule(db, { field: 'iban', pattern: IBAN, categoryId: (db.prepare("SELECT id FROM categories WHERE name = 'Groceries'").get() as { id: number }).id, applyToExisting: false })
+    await mockFetch()
+    await assistImport(db, sessionId, { consent: true })
+    const body = userText(requests[0]!)
+    for (const secret of ['ilse@', 'example.test', '475 12', 'DE89', '3704', '0532', 'ABNA', '0417']) expect(body).not.toContain(secret)
+    expect(body).toContain('DE…3000')
+    expect(JSON.parse(body).rules).toContain('iban contains "NL…4300" → ' + (db.prepare("SELECT category_id FROM rules WHERE field = 'iban'").get() as { category_id: number }).category_id)
+  })
+
   it('leaves out the lines above the header, in the request and in the preview', async () => {
     const { checkPreview, assistImport } = await import('../src/main/assistant/csv')
     const { db, sessionId } = setup(HOLDER.map((l) => `${l};;;`))

@@ -1,6 +1,6 @@
 /** Transactions, categories, rules, budgets and monthly summaries. */
 import { addMonths, monthRange } from '@shared/month'
-import { maskNumbers, validIban } from '@shared/iban'
+import { cutText, validIban } from '@shared/iban'
 import type { BudgetRow, MonthSummary, Rule, RuleField, RuleMatch, RulePreview, Transaction, TransactionPage } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
@@ -354,7 +354,7 @@ export function previewRule(db: Db, input: { field: RuleField; pattern: string; 
   const rule = { field: input.field, pattern: input.pattern.trim(), match }
   const rows = db.prepare(`SELECT ${RULE_COLUMNS}, category_id FROM transactions`).all() as (RuleRowText & { category_id: number | null })[]
   const hits = rows.filter((r) => ruleMatches(rule, ruleText(r)))
-  const examples = [...new Set(hits.map((h) => h.counterparty_name || h.description))].slice(0, 3).map((e) => maskNumbers(e).slice(0, 60))
+  const examples = [...new Set(hits.map((h) => h.counterparty_name || h.description))].slice(0, 3).map((e) => cutText(e, 60))
   return {
     matches: hits.length,
     uncategorised: hits.filter((h) => h.category_id === null).length,

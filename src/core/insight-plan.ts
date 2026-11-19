@@ -8,7 +8,7 @@
  */
 import { z } from 'zod'
 import { languageName } from '@shared/languages'
-import { maskNumbers } from '@shared/iban'
+import { maskPrivate } from '@shared/iban'
 import { PLACEHOLDER, severityOf } from '@shared/insights'
 import type { InsightFact, InsightKind, InsightSuggestion, InsightValue } from '@shared/types'
 import { AppError } from './errors'
@@ -103,7 +103,7 @@ const NOT_SENT: Partial<Record<InsightKind, string[]>> = { balance_low: ['balanc
 export const sentFields = (f: InsightFact): string[] => Object.keys(f.values).filter((k) => !NOT_SENT[f.kind]?.includes(k))
 
 /** A name as it is sent: no line breaks or separators (it can't pose as another fact), numbers hidden, cut short. */
-const sendName = (text: string): string => [...maskNumbers(text).replace(/[\r\n\t|]+/g, ' ').replace(/\s+/g, ' ').trim()].slice(0, NAME_LIMIT).join('')
+const sendName = (text: string): string => [...maskPrivate(text, 2000).replace(/[\r\n\t|]+/g, ' ').replace(/\s+/g, ' ').trim()].slice(0, NAME_LIMIT).join('')
 
 /**
  * The text to send for the facts, and the fields of each that can be named. The one source for what the

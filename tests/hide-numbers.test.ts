@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { setPasswordKdfForTests } from '@core/crypto'
 import { openDatabase } from '@core/database'
 import { DEFAULT_SETTINGS, getSettings, resetImportedSettings, updateSettings } from '@core/settings'
-import { shownAccount, shownText } from '@shared/hide-numbers'
+import { fieldView, shownAccount, shownText } from '@shared/hide-numbers'
 
 beforeAll(() => setPasswordKdfForTests({ m: 1024, t: 1, p: 1 }))
 
@@ -17,11 +17,40 @@ describe('hiding account numbers on screen', () => {
     expect(shownAccount('BE68539007547034', true)).toBe('BE…7034')
     expect(shownAccount('BE68 5390 0754 7034', true)).toBe('BE…7034')
     expect(shownAccount('XX1234567890123', true)).toBe('XX…0123')
-    expect(shownAccount('1234', true)).toBe('1234')
+    expect(shownAccount('1234', true)).toBe('…')
   })
 
   it('shows the whole number in groups of four when not hidden', () => {
     expect(shownAccount('BE68539007547034', false)).toBe('BE68 5390 0754 7034')
+  })
+
+  it('groups only valid IBANs when not hidden, and leaves any other number as it is', () => {
+    expect(shownAccount('BE68 5390 0754 7034', false)).toBe('BE68 5390 0754 7034')
+    expect(shownAccount('123-4567890-12', false)).toBe('123-4567890-12')
+    expect(shownAccount('XX1234567890123', false)).toBe('XX1234567890123')
+    expect(shownAccount('BE68539007547035', false)).toBe('BE68539007547035')
+  })
+
+  it('shows at most the country and the last four of any account value when hidden', () => {
+    expect(shownAccount('123-4567890-12', true)).toBe('…9012')
+    expect(shownAccount('12345678', true)).toBe('…5678')
+    expect(shownAccount('GB29NWBK60161331926819', true)).toBe('GB…6819')
+  })
+
+  it('a field is masked and read-only until focused or the eye is held, so the saved value is never the masked text', () => {
+    const value = 'Transfer to BE68 5390 0754 7034 thanks'
+    const hidden = { hidden: true, focused: false, shown: false }
+    expect(fieldView(value, hidden)).toEqual({ text: 'Transfer to BE…7034 thanks', readOnly: true })
+    expect(fieldView(value, { ...hidden, focused: true })).toEqual({ text: value, readOnly: false })
+    expect(fieldView(value, { ...hidden, shown: true })).toEqual({ text: value, readOnly: false })
+    expect(fieldView(value, { ...hidden, hidden: false })).toEqual({ text: value, readOnly: false })
+    // Nothing to hide: the field is an ordinary one.
+    expect(fieldView('Bakery Roos', hidden)).toEqual({ text: 'Bakery Roos', readOnly: false })
+    // Whenever the shown text is not the value, the field cannot be edited: a blur or focus without typing sends no change.
+    for (const v of [value, 'card 4111 1111 1111 1111', 'plain', '']) {
+      const view = fieldView(v, hidden)
+      expect(view.readOnly).toBe(view.text !== v)
+    }
   })
 
   it('hides account and card numbers inside a text, and leaves the rest', () => {
@@ -64,8 +93,8 @@ describe('account numbers in the renderer', () => {
   it('shows none of them without <Iban>, <IbanInput> or <Masked>', () => {
     const bad: string[] = []
     for (const f of files) {
-      const rel = f.slice(root.length + 1)
-      readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
+      const rel = f.slice(root.length + 1).replace(/\\/g, '/')
+      readFileSync(f, 'utf8').split(/\r?\n/).forEach((line, i) => {
         if (!mention.test(line) || wrapped.test(line)) return
         if (allowed.some(([file, re]) => rel === file && re.test(line))) return
         bad.push(`${rel}:${i + 1}: ${line.trim()}`)

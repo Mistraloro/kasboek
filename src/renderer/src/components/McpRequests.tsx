@@ -2,6 +2,7 @@ import { Check, CheckCheck, PlugZap, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { call } from '../lib/api'
+import { Masked } from '../lib/hide-numbers'
 import { Button, Modal } from './ui'
 
 interface Request {
@@ -38,7 +39,7 @@ export function McpRequests() {
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"><PlugZap size={17} /></span>
         <div>
           <p className="text-[13px] text-muted">{current?.expired ? t('mcp.requestExpired') : t('mcp.requestBody')}</p>
-          <p className={`mt-2 font-medium ${current?.expired ? 'text-muted line-through' : ''}`}>{current?.summary}</p>
+          <p className={`mt-2 font-medium ${current?.expired ? 'text-muted line-through' : ''}`}>{current && <Masked text={current.summary} />}</p>
           {queue.length > 1 && <p className="mt-2 text-xs text-muted">{t('mcp.waiting', { count: queue.length - 1 })}</p>}
         </div>
       </div>

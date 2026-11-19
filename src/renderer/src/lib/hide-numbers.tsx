@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { shownAccount, shownText } from '@shared/hide-numbers'
+import { fieldView, shownAccount, shownText } from '@shared/hide-numbers'
 import { revealedAfter, type RevealEvent } from '@shared/password-reveal'
 import { Input, cx } from '../components/ui'
 import { useSettings } from './settings'
@@ -15,7 +15,7 @@ import { useSettings } from './settings'
 export const useHideNumbers = (): boolean => useSettings().settings.hideAccountNumbers
 
 /** Hold-to-reveal state: `shown` is true only while the eye is held (same rules as the password field). */
-function useHoldReveal() {
+function useHoldReveal(name?: string) {
   const { t } = useTranslation()
   const [shown, setShown] = useState(false)
   const apply = (event: RevealEvent): void => setShown((s) => revealedAfter(s, event))
@@ -30,13 +30,16 @@ function useHoldReveal() {
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [shown])
-  const label = t('settings.holdToShowNumber')
+  // The label says what the eye reveals; the name in it is masked, so the label itself never shows a number.
+  const label = name ? t('settings.holdToShowNumberOf', { name: shownText(name, true).slice(0, 60) }) : t('settings.holdToShowNumber')
   const button = (className?: string): ReactNode => (
     <button
       type="button"
       aria-label={label}
       title={label}
       aria-pressed={shown}
+      // The eye can sit in a clickable row: releasing it must not also click the row.
+      onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.preventDefault()}
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
@@ -44,7 +47,10 @@ function useHoldReveal() {
         e.currentTarget.setPointerCapture(e.pointerId)
         apply({ kind: 'pointerdown' })
       }}
-      onPointerUp={() => apply({ kind: 'pointerup' })}
+      onPointerUp={(e) => {
+        e.stopPropagation()
+        apply({ kind: 'pointerup' })
+      }}
       onPointerCancel={() => apply({ kind: 'pointercancel' })}
       onPointerLeave={() => apply({ kind: 'pointerleave' })}
       onBlur={() => apply({ kind: 'blur' })}
@@ -61,10 +67,10 @@ function useHoldReveal() {
   return { shown, button }
 }
 
-/** One account number (an IBAN): BE…1234 until the eye is held. */
-export function Iban({ value, className }: { value: string; className?: string }) {
+/** One account number (an IBAN): BE…1234 until the eye is held. `name` (whose number it is) goes in the eye's label. */
+export function Iban({ value, className, name }: { value: string; className?: string; name?: string }) {
   const hidden = useHideNumbers()
-  const { shown, button } = useHoldReveal()
+  const { shown, button } = useHoldReveal(name)
   const text = shownAccount(value, hidden && !shown)
   return (
     <span className={cx('num', className)}>
@@ -74,16 +80,25 @@ export function Iban({ value, className }: { value: string; className?: string }
   )
 }
 
-/** A free text that may hold account or card numbers: they show as BE…1234 / …1234 until the eye is held. The eye only appears when something is hidden. */
-export function Masked({ text, className }: { text: string; className?: string }) {
+/**
+ * A free text that may hold account or card numbers, for a place where the text sits in a button or link: the text to show
+ * and the eye to put next to it (null when nothing is hidden). The eye must not be inside the button.
+ */
+export function useRevealable(text: string, name?: string): { text: string; eye: ReactNode } {
   const hidden = useHideNumbers()
-  const { shown, button } = useHoldReveal()
+  const { shown, button } = useHoldReveal(name ?? text)
   const masked = shownText(text, hidden)
   const changed = masked !== text
+  return { text: changed && !shown ? masked : text, eye: changed ? button() : null }
+}
+
+/** A free text that may hold account or card numbers: they show as BE…1234 / …1234 until the eye is held. The eye only appears when something is hidden. */
+export function Masked({ text, className, name }: { text: string; className?: string; name?: string }) {
+  const { text: shown, eye } = useRevealable(text, name)
   return (
     <span className={className}>
-      {changed && !shown ? masked : text}
-      {changed && <span className="ml-1">{button()}</span>}
+      {shown}
+      {eye && <span className="ml-1">{eye}</span>}
     </span>
   )
 }
@@ -113,6 +128,25 @@ export function IbanInput({ value, onChange, id, placeholder, className }: { val
         className={cx(hidden && 'pr-10', className)}
       />
       {hidden && <span className="absolute top-1/2 right-1.5 -translate-y-1/2">{button('h-7 w-7')}</span>}
+    </div>
+  )
+}
+
+/**
+ * A text field (a name, a description, a note) that may hold account numbers: they are hidden until the field is focused or the eye
+ * is held. While masked the field is read-only, so only the real value is ever edited and passed to onChange; focusing and leaving it
+ * without typing changes nothing. The eye only appears when something in the text is hidden.
+ */
+export function MaskedInput({ value, onChange, id, className, placeholder, label }: { value: string; onChange: (v: string) => void; id?: string; className?: string; placeholder?: string; label?: string }) {
+  const hidden = useHideNumbers()
+  const { shown, button } = useHoldReveal(value)
+  const [focused, setFocused] = useState(false)
+  const view = fieldView(value, { hidden, focused, shown })
+  const hasHidden = hidden && fieldView(value, { hidden, focused: false, shown: false }).readOnly
+  return (
+    <div className="relative">
+      <Input id={id} aria-label={label} placeholder={placeholder} value={view.text} readOnly={view.readOnly} onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className={cx(hasHidden && 'pr-10', className)} />
+      {hasHidden && <span className="absolute top-1/2 right-1.5 -translate-y-1/2">{button('h-7 w-7')}</span>}
     </div>
   )
 }

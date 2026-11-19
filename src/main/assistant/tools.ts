@@ -4,7 +4,7 @@ import type { Db } from '@core/database'
 import { coreOps } from '@core/ops'
 import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
-import { maskAccount, maskContacts, maskNumbers } from '@shared/iban'
+import { maskAccount, maskPrivate } from '@shared/iban'
 import { previewRule, rulePattern } from '@core/finance'
 import { findRecurring } from '@core/recurring'
 import { commitSummary, latestSession, preview, sessionKind } from '@core/import'
@@ -72,20 +72,25 @@ function assistantSettings(data: unknown): unknown {
   return Object.fromEntries(Object.entries(data).filter(([k]) => !HIDDEN_SETTINGS.has(k)).map(([k, v]) => [k, assistantSettings(v)]))
 }
 
+const MAX_TEXT = 2000
+const MAX_DEPTH = 30
 const KEEP_KEYS = new Set(['uid', 'sessionId', 'fingerprint'])
 const IBAN_KEYS = new Set(['iban', 'counterpartyIban'])
 
 /**
  * Everything the assistant gets goes through here: every text in the result (also deep inside) has
- * account and card numbers, e-mail addresses and phone numbers hidden. Numbers, dates, ids and the
+ * account and card numbers, e-mail addresses and phone numbers hidden (maskPrivate), and is cut at a fixed length. Numbers, dates, ids and the
  * like are not texts and stay as they are.
  */
 export function maskResult(data: unknown, key?: string, depth = 0): unknown {
   if (typeof data === 'string') {
     if (key && KEEP_KEYS.has(key)) return data
-    return key && IBAN_KEYS.has(key) ? maskAccount(data) : maskNumbers(maskContacts(data))
+    // Cut before masking: a huge text can't make the masking slow (and what is cut off is never shown).
+    return key && IBAN_KEYS.has(key) ? maskAccount(data.slice(0, MAX_TEXT)) : maskPrivate(data, MAX_TEXT)
   }
-  if (!data || typeof data !== 'object' || depth > 30) return data
+  if (!data || typeof data !== 'object') return data
+  // Too deep to look through: nothing of it is passed on.
+  if (depth > MAX_DEPTH) return '…'
   if (Array.isArray(data)) return data.map((v) => maskResult(v, key, depth + 1))
   const o = data as Record<string, unknown>
   const out: Record<string, unknown> = {}
