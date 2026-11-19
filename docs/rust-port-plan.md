@@ -549,9 +549,13 @@ invented. Rerun steps are in `rust/spike/db/README.md`, `rust/spike/ui/README.md
   fixture), no text-decoration, no dash arrays, no variable fonts (static instances needed).
 - Fonts: 8 static TTFs, 474 KB, OFL-1.1. `cv11`/`ss01` do not exist in the shipped latin subsets; `tnum` is frozen
   into "Inter Num".
-- Accessibility: the AT-SPI tree was checked on Linux. Custom components need an explicit role and label. Gaps:
-  decorative icons show as unlabelled images, no aria-hidden equivalent, TouchArea is not focusable (needs
-  FocusScope), Tab order not verified. Narrator, VoiceOver, IME and dead keys were not tested.
+- Accessibility: the AT-SPI tree was checked on Linux. Custom components need an explicit role and label, and a
+  TouchArea is not focusable (every control needs a FocusScope). Windows test 1 (Narrator on the first CI build):
+  only the window title and the typing field were read, no button was reachable by Tab. Fixed in the spike, not yet
+  confirmed on Windows: every control is a FocusScope with role, label and Invoke action, a 2 px focus ring,
+  decorative icons are removed from the tree (`accessible-role: none` works on a plain Image, not on a component whose
+  root is an Image), stat cards and chart summaries are single items; a CI step reads the window with UI Automation.
+  Tab order checked offscreen (`shot --tab N`). VoiceOver, IME and dead keys were not tested.
 - Size: 12.57 MB release binary (software renderer) for these two screens; femtovg 13.17 MB, skia 19.56 MB. 445
   crates; clean build 252 s.
 - Start-up: 37–43 ms to first frame under Xvfb with the software renderer. That renderer has no first-paint hook,
@@ -580,7 +584,7 @@ invented. Rerun steps are in `rust/spike/db/README.md`, `rust/spike/ui/README.md
 | Gate | Status | Evidence |
 |---|---|---|
 | G1 Overview geometry and pixels | Partial (pass for en) | landmarks 0 px; diff 0.2% / 0.8% / 2.0% vs 3%; German not run |
-| G2 Fonts and accessibility | Partial | fonts pass; AT-SPI tree on Linux; Narrator, VoiceOver and Tab order unverified |
+| G2 Fonts and accessibility | Partial | fonts pass; AT-SPI tree and Tab order on Linux; Narrator found only the text field in test 1, fixed but not re-tested; VoiceOver unverified |
 | G3 Dead-key IME | Unverified | not run |
 | G4 Cross-open DB | Partial | Linux x64 both directions; Windows, macOS and ARM not built |
 | G5 First frame, Hello prompt, installer size | Partial | first frame 37–43 ms (Linux, Xvfb); no Hello prompt test; UI binary 12.57 MB for two screens |

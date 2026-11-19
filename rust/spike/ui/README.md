@@ -42,10 +42,12 @@ cargo build --release --features skia --target-dir target-skia    # see "Rendere
 
 # 4. Accessibility tree as a Linux screen reader sees it (apt: at-spi2-core python3-pyatspi dbus xvfb)
 tools/a11y-dump.sh overview
+# Focus ring and Tab order without a window manager: shot renders after N presses of Tab (the ring shows where the focus is)
+target/release/kasboek-ui-spike shot overview light /tmp/tab3.png --tab 3
 ```
 
 Window: `target/release/kasboek-ui-spike --screen lock-password|lock-hello|overview [--theme light|dark] [--scale 1|2]
-[--lang en|de|fr] [--typing] [--renderer R] [--exit-after-first-frame] [--log FILE]`. The last occurrence of an option wins.
+[--lang en|de|fr] [--typing] [--renderer R] [--exit-after-first-frame] [--exit-after-ms N] [--log FILE]`. The last occurrence of an option wins.
 
 - `startup.log` is written next to the binary (the previous run becomes `startup.prev.log`; `--log FILE` writes just that file;
   `KASBOEK_STARTUP_TRACE=1` also prints to stderr). Times count from the OS creation time of the process on Windows, Linux and macOS.
@@ -55,6 +57,10 @@ Window: `target/release/kasboek-ui-spike --screen lock-password|lock-hello|overv
   `UserConsentVerifier::RequestVerificationAsync`), Touch ID through `LAContext`. It only shows the answer; nothing is unlocked.
   Linux answers "unavailable".
 - `--typing` adds a plain text field with an echo line, for accents, dead keys and IME. `shot` accepts `--lang` and `--typing` too.
+- Accessibility: every control is a `FocusScope` (Tab, Space/Enter, screen reader Invoke) with role, label and a 2 px accent focus
+  ring; decorative icons and the texts inside controls have `accessible-role: none`. `../ci/uia-dump.ps1` reads the window with
+  Windows UI Automation in CI (`--exit-after-ms N` keeps the window open for it). Forgot password, Erase data, the eye, the
+  assistant toggle, month buttons and the alert row can be invoked but do nothing (Forgot and Erase print a note under the card).
 - The tools for owner testing on real machines are in `../ci/` and `../TESTING.md`; `.github/workflows/rust-spike.yml` builds them.
 
 ## Fonts

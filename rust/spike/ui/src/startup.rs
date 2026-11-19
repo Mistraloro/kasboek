@@ -1,6 +1,6 @@
 //! Real window with start-up milestones in the style of startup.log, the device prompt and the typing test.
 use crate::device::{self, Event, Outcome, Report};
-use crate::{App, fixtures, log, strings::Locale};
+use crate::{App, Startup, fixtures, log, strings::Locale};
 use slint::ComponentHandle;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -42,6 +42,8 @@ pub fn run(args: &[String]) {
     let scale = arg(args, "--scale");
     let typing = args.iter().any(|a| a == "--typing");
     let exit = args.iter().any(|a| a == "--exit-after-first-frame");
+    // Keeps the window open for N ms and then closes it (the CI step that dumps the UI Automation tree needs this).
+    let exit_after_ms: Option<u64> = arg(args, "--exit-after-ms").and_then(|v| v.parse().ok());
     let renderer = arg(args, "--renderer").unwrap_or_else(|| "software".into());
     log::mark(&format!(
         "settings: os={} arch={} screen={screen} theme={} lang={lang} scale={} typing={typing}",
@@ -66,6 +68,7 @@ pub fn run(args: &[String]) {
     log::mark(&format!("texts read ({lang}.json)"));
     let ui = App::new().expect("ui");
     fixtures::apply(&ui, &en, &screen, dark);
+    ui.global::<Startup>().set_autofocus(true);
     if device::is_touch_id() {
         fixtures::set_device(&ui, &en, true);
     }
@@ -77,6 +80,12 @@ pub fn run(args: &[String]) {
         let weak = ui.as_weak();
         move || press_device(&weak)
     });
+    // These two links do nothing in the spike; the answer is a live text so that a screen reader says it.
+    ui.on_forgot_pressed(say(&ui, "Forgot password: not part of this spike."));
+    ui.on_erase_pressed(say(
+        &ui,
+        "Erase data: not part of this spike, nothing was erased.",
+    ));
     log::mark("window created");
 
     // First frame: the rendering notifier (GL renderers) or, for the software renderer, the first timer tick after show().
@@ -113,9 +122,24 @@ pub fn run(args: &[String]) {
             }
         });
     }
+    if let Some(ms) = exit_after_ms {
+        slint::Timer::single_shot(std::time::Duration::from_millis(ms), || {
+            let _ = slint::quit_event_loop();
+        });
+    }
     slint::run_event_loop().expect("event loop");
     log::mark("event loop ended");
     log::flush();
+}
+
+/// A callback that shows `text` in the result line under the card.
+fn say(ui: &App, text: &'static str) -> impl Fn() + 'static {
+    let weak = ui.as_weak();
+    move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.set_device_result(text.into());
+        }
+    }
 }
 
 fn first_frame(what: &str) {

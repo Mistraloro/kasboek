@@ -185,6 +185,38 @@ jobs:
           done
           cat ci-out/startup-ci.log
 
+      # What a Windows screen reader sees: the app is started, read with UI Automation (the API behind Narrator) and the
+      # names, focus and Invoke of the controls are checked (rust/spike/ci/uia-dump.ps1). A runner without an interactive
+      # desktop may not show the window to UI Automation; the script then says so (exit code 3) and the step stays green.
+      - name: "ui - UI Automation tree (Windows, names, focus, Invoke)"
+        id: ui_uia
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force ci-out | Out-Null
+          $exe = (Resolve-Path $env:UI_BIN).Path
+          $runs = @(
+            @{ screen = 'lock-hello'; require = @('Unlock with Windows Hello', 'Forgot password', 'Erase data'); edit = '' },
+            @{ screen = 'lock-password'; require = @('Forgot password', 'Erase data'); edit = 'Password' },
+            @{ screen = 'overview'; require = @('Overview', 'Transactions', 'Budgets'); edit = '' }
+          )
+          $failed = $false
+          foreach ($r in $runs) {
+            $out = "ci-out/uia-$($r.screen).txt"
+            & ./rust/spike/ci/uia-dump.ps1 -Exe $exe -Screen $r.screen -Require $r.require -RequireEdit $r.edit -OutFile $out
+            $code = $LASTEXITCODE
+            $verdict = switch ($code) { 0 { 'passed' } 3 { 'informational: UI Automation did not see the window' } default { 'FAILED' } }
+            if ($code -eq 1) { $failed = $true }
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### UI Automation, screen $($r.screen): $verdict"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '<details><summary>tree, checks and Tab walk</summary>'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '', '```'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value (Get-Content $out)
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value '```', '</details>', ''
+          }
+          if ($failed) { exit 1 }
+
       - name: Summary
         if: always()
         shell: bash
@@ -200,6 +232,9 @@ jobs:
             echo "| pdf: hostile files | ${{ steps.pdf_hostile.outcome }} |"
             echo "| ui: offscreen screenshots | ${{ steps.ui_shots.outcome }} |"
             echo "| ui: start-up measurement | ${{ steps.ui_startup.outcome }} |"
+            if [ "$RUNNER_OS" = Windows ]; then
+              echo "| ui: UI Automation tree (names, focus, Invoke) | ${{ steps.ui_uia.outcome }} (detail above; a runner without a desktop is reported there as informational) |"
+            fi
             echo
             echo "First frame of the 5 runs (software renderer, from process start):"
             echo '```'
@@ -228,7 +263,7 @@ jobs:
           mkdir -p ci-out stage/ui/shots stage/db stage/pdf
           cp "$UI_BIN" rust/spike/ci/start-ui.* rust/spike/TESTING.md stage/ui/
           cp -R ci-out/shots/. stage/ui/shots/ 2>/dev/null || true
-          cp ci-out/startup-ci.log stage/ui/ 2>/dev/null || true
+          cp ci-out/startup-ci.log ci-out/uia-*.txt stage/ui/ 2>/dev/null || true
           cp "$DB_BIN" stage/db/
           cp ci-out/db-*.log stage/db/ 2>/dev/null || true
           cp "$PDF_BIN" rust/spike/ci/check-pdfs.* rust/spike/ci/PDF-README.txt stage/pdf/

@@ -1,8 +1,9 @@
 import { Theme } from "theme.slint";
+import { Startup } from "widgets.slint";
 import { Strings } from "strings.slint";
 import { LockScreen } from "lock.slint";
 import { OverviewScreen, CategoryRow, Step, MonthBar } from "overview.slint";
-export { Strings, Theme, CategoryRow, Step, MonthBar }
+export { Strings, Theme, Startup, CategoryRow, Step, MonthBar }
 
 export component App inherits Window {
     // "lock-password" | "lock-hello" | "overview"
@@ -18,6 +19,8 @@ export component App inherits Window {
     callback unlock(string);
     // Spike D: the device button (Windows Hello or Touch ID), its result text, and the typing test field.
     callback device-pressed();
+    callback forgot-pressed();
+    callback erase-pressed();
     in-out property <string> device-result;
     in-out property <bool> device-busy: false;
     in property <bool> typing: false;
@@ -38,6 +41,12 @@ export component App inherits Window {
         }
         device-pressed => {
             root.device-pressed();
+        }
+        forgot-pressed => {
+            root.forgot-pressed();
+        }
+        erase-pressed => {
+            root.erase-pressed();
         }
         device-result <=> root.device-result;
         device-busy: root.device-busy;

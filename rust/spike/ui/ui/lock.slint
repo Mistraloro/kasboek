@@ -1,15 +1,24 @@
 // Lock screen: src/renderer/src/pages/auth/Lock.tsx + AuthLayout.tsx (password mode and Windows Hello mode).
 import { Theme } from "theme.slint";
 import { Strings } from "strings.slint";
-import { Button, Field, PasswordInput, PlainInput } from "widgets.slint";
+import { Button, Field, PasswordInput, PlainInput, PressTarget } from "widgets.slint";
 
-export component Mark inherits Image {
-    // The Kasboek mark (assets/brand/mark.svg); 520x624 viewBox scaled to `size` wide.
+export component Mark inherits Rectangle {
+    // The Kasboek mark (assets/brand/mark.svg); 520x624 viewBox scaled to `size` wide. Decorative: the name next to it says
+    // it all. (A Mark that inherits Image would be exposed as an unnamed item: Slint 1.19 does not let a component hide
+    // its root Image, `accessible-role: none` on the root or on a use of it still leaves an "unknown" node.)
     in property <length> size: 20px;
-    source: @image-url("../assets/icons/mark.svg");
     width: size;
     height: size * 624 / 520;
-    colorize: Theme.accent;
+    preferred-width: self.width;
+    preferred-height: self.height;
+    Image {
+        width: parent.width;
+        height: parent.height;
+        source: @image-url("../assets/icons/mark.svg");
+        colorize: Theme.accent;
+        accessible-role: none;
+    }
 }
 
 export component LockScreen inherits Rectangle {
@@ -20,6 +29,9 @@ export component LockScreen inherits Rectangle {
     callback unlock(string);
     // Spike D: pressing the device button asks the OS (Windows Hello / Touch ID); the answer is shown as text.
     callback device-pressed();
+    // The two links under the card do nothing in the spike but say so (a screen reader user gets an answer).
+    callback forgot-pressed();
+    callback erase-pressed();
     in property <string> device-result;
     in property <bool> device-busy: false;
     in property <bool> typing: false;
@@ -137,31 +149,47 @@ export component LockScreen inherits Rectangle {
                                 }
                             }
                         }
-                        // Forgot password? / Erase data (mt-5, text-[13px]).
-                        Text {
+                        // Forgot password? / Erase data (mt-5, text-[13px]). Buttons: Tab, Space/Enter and Invoke work.
+                        PressTarget {
                             x: 25px;
                             y: form.y + form.height + 20px;
+                            width: forgot-text.preferred-width;
                             height: 19.5px;
-                            text: Strings.forgot;
-                            font-family: Theme.sans;
-                            font-weight: 500;
-                            font-size: 13px;
-                            color: Theme.accent;
-                            vertical-alignment: center;
-                            accessible-role: button;
-                            accessible-label: self.text;
+                            label: Strings.forgot;
+                            activated => {
+                                root.forgot-pressed();
+                            }
+                            forgot-text := Text {
+                                width: parent.width;
+                                height: parent.height;
+                                text: Strings.forgot;
+                                font-family: Theme.sans;
+                                font-weight: 500;
+                                font-size: 13px;
+                                color: Theme.accent;
+                                vertical-alignment: center;
+                                accessible-role: none;
+                            }
                         }
-                        Text {
+                        PressTarget {
                             x: parent.width - 25px - self.width;
                             y: form.y + form.height + 20px;
+                            width: erase-text.preferred-width;
                             height: 19.5px;
-                            text: Strings.erase-link;
-                            font-family: Theme.sans;
-                            font-size: 13px;
-                            color: Theme.muted;
-                            vertical-alignment: center;
-                            accessible-role: button;
-                            accessible-label: self.text;
+                            label: Strings.erase-link;
+                            activated => {
+                                root.erase-pressed();
+                            }
+                            erase-text := Text {
+                                width: parent.width;
+                                height: parent.height;
+                                text: Strings.erase-link;
+                                font-family: Theme.sans;
+                                font-size: 13px;
+                                color: Theme.muted;
+                                vertical-alignment: center;
+                                accessible-role: none;
+                            }
                         }
                     }
                 }
@@ -183,6 +211,7 @@ export component LockScreen inherits Rectangle {
             wrap: word-wrap;
             horizontal-alignment: center;
             accessible-role: text;
+            accessible-live-region: polite;
         }
         if root.typing: Field {
             label: root.typing-label;

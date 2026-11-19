@@ -147,6 +147,7 @@ pub fn apply(ui: &App, en: &Locale, screen: &str, dark: bool) {
     // Row heights are measured from the Electron page for this fixture (Slint layouts have no height-for-width).
     let step = |done: bool, lines: &[&str], body: String, number: &str, bh: f32| crate::Step {
         done,
+        title: lines.join(" ").into(),
         title_lines: ModelRc::new(VecModel::from(
             lines
                 .iter()
@@ -192,6 +193,16 @@ pub fn apply(ui: &App, en: &Locale, screen: &str, dark: bool) {
         })
         .collect();
     ui.set_months(ModelRc::new(VecModel::from(months)));
+
+    // Text alternative of the trend chart: "Trend: Oct: Income 3.100,00 €, Spending 2.280,00 €; Nov: ...".
+    let (income, spending) = (en.t("overview.income", &[]), en.t("overview.spending", &[]));
+    let per_month: Vec<String> = HISTORY
+        .iter()
+        .map(|(l, i, sp)| format!("{l}: {income} {}, {spending} {}", money(*i), money(*sp)))
+        .collect();
+    s.set_trend_summary(
+        format!("{}: {}", en.t("overview.trend", &[]), per_month.join("; ")).into(),
+    );
 }
 
 /// Names the device in the two Lock texts: Windows Hello (the default of `apply`) or Touch ID on a Mac.

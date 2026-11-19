@@ -55,12 +55,32 @@ On the lock screen the field **Type here to test accents and dead keys** is show
 ## 5. Screen reader quick check
 
 Start `start-ui` (lock-hello screen), then switch the reader on: **Narrator** Win+Ctrl+Enter (off again: same keys); **VoiceOver** Cmd+F5.
-Press Tab (VoiceOver: Ctrl+Option+Right arrow) to move and listen. Expected to hear:
-- Title "Unlock Kasboek"; the hint text; button "Unlock with Windows Hello" (Mac: "Touch ID"); "Forgot password?" and "Erase data" (as buttons).
-- Run `start-ui --screen lock-password`: edit field "Password", button "Unlock", button for show/hide password.
-- Run `start-ui --screen overview`: each sidebar item (Overview, Transactions, Budgets, ...) read by name and as a button; the main amounts read as text.
-Known weak spots we want to see: icons read as "image" with no name, the Hello button skipped by Tab, a missing name on an item.
-Note for each of the 3 screens: what was read, what was missing or wrong.
+How Narrator moves (the Narrator key is Caps Lock or Insert):
+- **Tab** / **Shift+Tab**: next / previous control you can press or type in. Narrator says the name, the kind ("button", "edit") and the state. Enter or Space presses.
+- **Caps Lock + Right arrow** / **Left arrow**: next / previous item of any kind, also plain text (scan mode). **Caps Lock + Space** switches scan mode on and off.
+  **Caps Lock + Enter** presses the item Narrator is on.
+- Mac VoiceOver: Ctrl+Option+Right arrow to move, Ctrl+Option+Space to press.
+Each screen should have a clear **focus ring** (green, 2 px) on the control Tab is on.
+
+What to expect to hear:
+- **Lock screen** (`start-ui`): "Kasboek" (window); in scan mode "Kasboek", "Unlock Kasboek", the hint text "Confirm it's you with Windows Hello.".
+  Tab goes: "Unlock with Windows Hello, button", "Forgot password?, button", "Erase data, button", then "Type here to test accents and dead keys, edit".
+  Press Forgot or Erase: a line under the card says it is not part of the spike, and Narrator reads it aloud.
+- **Lock screen with password** (`start-ui --screen lock-password`): the cursor starts in "Password, edit, protected"; Tab goes: "Hold to show the password, button",
+  "Forgot password?", "Erase data". "Unlock" is dimmed until you type a password, then it comes between the eye button and Forgot.
+- **Overview** (`start-ui --screen overview`): "Navigation" with a list of 8 items (Overview is "selected"), then "Settings" and "Lock" in a second list. Tab goes through
+  the 10 items, then "Show or hide the assistant", "Previous month", "March 2026", "Next month", the red alert (button), the "3 transactions ... Review" row (button),
+  "Open" (step 3), "Set up an assistant". Scan mode also reads the cards as one item each ("Income: 3.250,00 €", "Spending: ...", "Left to spend: ..."),
+  each category as "Groceries: 482,50 €", each step with its title and text, and the trend chart as one picture whose name lists every month with both amounts.
+  Icons must not be read at all.
+
+What to report (per screen; a short note is enough):
+1. Does Narrator read anything at all when you press Tab? Which controls are read, with which words?
+2. Which control does Tab skip, or what is read twice, or read without a name ("button" only, "image", "unknown")?
+3. Does Enter / Space on the focused button do something visible (Forgot, Erase and the Hello button show a line of text)?
+4. Does the focus ring follow Tab, and is it visible in both light and dark (`--theme dark`)?
+5. Scan mode (Caps Lock + arrows): does it reach the headings, the card texts and the chart? Is the order top to bottom?
+6. Anything that sounds wrong (name too long, wrong language, a number read digit by digit).
 
 ## 6. Look: compare with the real Kasboek
 

@@ -1,6 +1,69 @@
 // Primitives ported from src/renderer/src/components/ui.tsx (Button, Card, CardHeader, Field/Input, PasswordInput).
 import { Theme } from "theme.slint";
 
+// styles.css `:focus-visible`: 2px outline in --focus (the accent), offset 2px, radius 6px. Put it as the last child of
+// the focused element (it draws outside the element's box).
+export component FocusRing inherits Rectangle {
+    Rectangle {
+        x: -4px;
+        y: -4px;
+        width: parent.width + 8px;
+        height: parent.height + 8px;
+        border-radius: 10px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
+// The real window switches the autofocus of the password field on; offscreen renders (`shot`) do not, because a focused
+// field draws its caret, which the reference screenshots do not have.
+export global Startup {
+    in property <bool> autofocus: false;
+}
+
+export global Keys {
+    // Space and Enter activate a focused button, as in a browser.
+    pure public function activates(e: KeyEvent) -> bool {
+        return e.text == " " || e.text == Key.Return;
+    }
+}
+
+// A button for the keyboard and for screen readers: it takes Tab focus, shows the focus ring, Space or Enter (or the
+// screen reader's Invoke) emits `activated`, and a click does the same. The accessible node is this element itself, so
+// that "set focus" from a screen reader lands on the focusable element. Put it over the whole visual button and give
+// the texts and icons inside the button `accessible-role: none`, so the name is read once.
+export component PressTarget inherits FocusScope {
+    in property <string> label;
+    out property <bool> has-hover: ta.has-hover;
+    callback activated();
+
+    focus-on-click: false;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.activated();
+        }
+    }
+    key-pressed(e) => {
+        if (Keys.activates(e)) {
+            root.activated();
+            return accept;
+        }
+        return reject;
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            root.activated();
+        }
+    }
+    if root.has-focus: FocusRing { }
+}
+
 export component Button inherits Rectangle {
     in property <string> text;
     in property <image> icon;
@@ -26,19 +89,10 @@ export component Button inherits Rectangle {
     border-width: bordered ? 1px : 0px;
     border-color: enabled ? Theme.border : Theme.border.mix(dim-bg, 0.5);
 
-    accessible-role: button;
-    accessible-label: root.text;
-    accessible-enabled: root.enabled;
-    accessible-action-default => {
-        if (root.enabled) {
-            root.clicked();
-        }
-    }
-
-    ta := TouchArea {
+    ta := PressTarget {
+        label: root.text;
         enabled: root.enabled;
-        mouse-cursor: root.enabled ? pointer : default;
-        clicked => {
+        activated => {
             root.clicked();
         }
     }
@@ -55,6 +109,7 @@ export component Button inherits Rectangle {
                 width: 14px;
                 height: 14px;
                 colorize: root.enabled ? root.face-fg : root.face-fg.mix(root.dim-bg, 0.5);
+                accessible-role: none;
             }
         }
         Text {
@@ -66,6 +121,7 @@ export component Button inherits Rectangle {
             vertical-alignment: center;
             horizontal-alignment: center;
             overflow: clip;
+            accessible-role: none;
         }
     }
 }
@@ -150,6 +206,19 @@ export component PasswordInput inherits Rectangle {
     background: Theme.surface;
     border-color: (input.has-focus || root.force-focus-look) ? Theme.accent : Theme.border;
 
+    // The reference page has autoFocus on this field: the first Tab then goes on to the eye button.
+    property <bool> autofocus: Startup.autofocus;
+    init => {
+        if (root.autofocus) {
+            input.focus();
+        }
+    }
+    changed autofocus => {
+        if (root.autofocus) {
+            input.focus();
+        }
+    }
+
     // Chromium's focus-visible outline (2px, accent) around the focused field.
     if input.has-focus || root.force-focus-look: Rectangle {
         x: -3px;
@@ -174,17 +243,19 @@ export component PasswordInput inherits Rectangle {
         accessible-role: text-input;
         accessible-label: root.label;
     }
-    // Hold to show: the real behaviour (reveal while pressed, hide on blur/Escape) is not ported in the spike.
-    Rectangle {
+    // Hold to show: the real behaviour (reveal while pressed, hide on blur/Escape) is not ported in the spike; the button
+    // is focusable and can be invoked, and does nothing.
+    eye := PressTarget {
         x: parent.width - 2px - 32px - 1px;
         y: (parent.height - 32px) / 2 - 1px;
         width: 32px;
         height: 32px;
-        border-radius: 6px;
-        background: eye.has-hover ? Theme.surface-2 : transparent;
-        accessible-role: button;
-        accessible-label: root.eye-label;
-        eye := TouchArea { }
+        label: root.eye-label;
+        activated => { }
+        Rectangle {
+            border-radius: 6px;
+            background: eye.has-hover ? Theme.surface-2 : transparent;
+        }
         Image {
             source: @image-url("../assets/icons/eye.svg");
             x: (parent.width - self.width) / 2;
@@ -192,6 +263,7 @@ export component PasswordInput inherits Rectangle {
             width: 16px;
             height: 16px;
             colorize: eye.has-hover ? Theme.text : Theme.muted;
+            accessible-role: none;
         }
     }
 }
@@ -206,6 +278,15 @@ export component PlainInput inherits Rectangle {
     background: Theme.surface;
     border-color: input.has-focus ? Theme.accent : Theme.border;
 
+    if input.has-focus: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 11px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
     input := TextInput {
         x: 12px;
         width: parent.width - 24px;
