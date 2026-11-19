@@ -27,7 +27,7 @@ import { broadcast } from '../session'
 const INSTRUCTIONS = `You check a bank CSV export before it is imported into a personal budget app. It can come from any bank or payment app in any country, with headers in any language; the account's currency and the person's language are given. Read dates and amounts as the file writes them (day or month first, decimal comma or point, a separate debit/credit or direction column).
 
 You get the raw cells, the column mapping the app detected, the rows it couldn't read or flagged, groups of similar transactions and the categories. Rows that are exactly the same as transactions already in Kasboek are left out (the stats say how many). Return a plan:
-- mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines. Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
+- mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines of the file (given as headerRow; the lines above it are not shown to you). Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
 - fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: at most 6 words.
 - groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group where you set a categoryId, a name or a description, and leave out the groups where all three would be null; the app applies an entry to every row in the group. Banks write these texts differently, so read them carefully:
   - categoryId: for groups marked "uncategorised", a category id from the list. Most have an obvious category (supermarkets, bakeries, energy, telecom, rent, salary, restaurants, fuel, insurance, …): categorise every group where one fits; null only if you really can't tell. Transfers between the person's own accounts (savings, own accounts) go in a transfer category, not spending. Use only the category ids given. null for groups that already have a category.
@@ -147,7 +147,8 @@ export function checkPayload(db: Db, preview: ImportPreview, batch: Batch, langu
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,
       stats: preview.stats,
-      linesAboveHeader: raw.preamble.map((r) => r.map(mask)),
+      // Only the number of the header line: the free text above it (a holder's name and address) is never sent.
+      headerRow: raw.headerRow,
       header: raw.header.map((h, i) => `${i}: ${mask(h)}`),
       firstRows: (batch.first ? raw.rows : raw.rows.slice(0, 5)).map((r) => ({ index: r.index, cells: r.cells.map(mask) })),
       flaggedRows: flagged,
@@ -389,7 +390,7 @@ const MIN_UNITS = 5
  * Raise this whenever the list of what a check sends changes (see checkPayload): everyone is asked
  * again before the next request.
  */
-export const CHECK_CONSENT_VERSION = 1
+export const CHECK_CONSENT_VERSION = 2
 
 /** The model that reads the file: Claude's own setting, else the provider's model for reading files. */
 const checkModel = (db: Db, p: ActiveProvider): string => (p.preset.id === 'anthropic' ? getSettings(db).csvModel : p.csvModel)
