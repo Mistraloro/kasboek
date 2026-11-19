@@ -1,0 +1,16 @@
+[package]
+name = "kb-cli"
+version = "0.0.0"
+description = "Dev-only command line for the differential checks (never shipped)"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+hex.workspace = true
+kb-crypto.workspace = true
+kb-db.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+zeroize.workspace = true

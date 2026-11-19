@@ -1,0 +1,6 @@
+# Checkouts on Windows must not change line endings: the migration SQL text is stored in the database and compared with
+# the TypeScript core's, and the parity fixtures are compared byte for byte.
+* text=auto eol=lf
+parity/fixtures/*.db binary
+parity/fixtures/*.kasboek binary
+parity/fixtures/*.kbsync binary

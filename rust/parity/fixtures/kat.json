@@ -1,0 +1,246 @@
+{
+  "note": "Invented known-answer fixtures made by the TypeScript core. The keys and passwords protect nothing real. Regenerate with gen-fixtures.spec.ts.",
+  "dbKeyHex": "5a5a5a5a5a5a5a5a00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff",
+  "masterHex": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+  "password": "invented fixture password ✓",
+  "recoveryKey": "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-6723",
+  "kdfVectors": {
+    "argon2id": {
+      "default": {
+        "m": 131072,
+        "t": 3,
+        "p": 4,
+        "keyHex": "0f35638d6e96fc6739434a4e984aa659eaf7288dbc965e985b99a6cf8aee93c8"
+      },
+      "cheap": {
+        "m": 64,
+        "t": 1,
+        "p": 1,
+        "keyHex": "f6e531895292ae770c1bfa178be458b63ab1a831a2e623960e743456be758a03"
+      }
+    },
+    "scrypt": {
+      "N": 16384,
+      "r": 8,
+      "p": 1,
+      "keyHex": "51aa8134521b366d53a8ab2195383e6d23a296891f3d32f7a857a87a559a35a6"
+    },
+    "hkdf": {
+      "info": "kasboek:slot",
+      "keyHex": "78f3f8b8a91ea7345cf5c4b3379d24e9011efe788e1f293935981b84bca07877"
+    },
+    "saltHex": "000102030405060708090a0b0c0d0e0f",
+    "password": "invented fixture password ✓"
+  },
+  "slots": {
+    "passwordDefault": {
+      "kdf": {
+        "name": "argon2id",
+        "m": 131072,
+        "t": 3,
+        "p": 4,
+        "salt": "whdzF6sU6pnGuWYBQb6q9w=="
+      },
+      "sealed": {
+        "iv": "Om1vyVVw/t4ZDaO7",
+        "ct": "tIM+6bDO6J71g7x/5l7M+6O0ZcX9NPQ4FwQ7vnr2GkUL9J530/qytMZC9BHdjKaw"
+      }
+    },
+    "passwordCheap": {
+      "kdf": {
+        "name": "argon2id",
+        "m": 64,
+        "t": 1,
+        "p": 1,
+        "salt": "NwQKauTBWCmMQp95bO0gwA=="
+      },
+      "sealed": {
+        "iv": "BQkYF2aD/9NUUzGT",
+        "ct": "NXFnelfhEu3J203Bn6Bw/epjIFRfb7CKd8JlxEDyhzHzMYJnGSniW1X0A4dW6D3N"
+      }
+    },
+    "recovery": {
+      "kdf": {
+        "name": "hkdf",
+        "salt": "oCqBiOwHbOLZdQw+5SgkEw=="
+      },
+      "sealed": {
+        "iv": "kMCmAy/K9VOcZprc",
+        "ct": "WaC9ZpwLgMtXIgCbDnmTlM5iv9BEvwM65Gr2XGpAX9txeiaIJsAO6qw2l3CiLh83"
+      }
+    },
+    "scrypt": {
+      "kdf": {
+        "name": "scrypt",
+        "N": 16384,
+        "r": 8,
+        "p": 1,
+        "salt": "oKGio6SlpqeoqaqrrK2urw=="
+      },
+      "sealed": {
+        "iv": "FplOxpyrJtmpwxMw",
+        "ct": "eOPf4z4ZXORUNazco+CCZRM4nqimP8ApsXbNh54gWPvZBSUc3jsc8ArVww0fjF08"
+      }
+    }
+  },
+  "vault": {
+    "plain": {
+      "dbKey": "5a5a5a5a5a5a5a5a00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff",
+      "totp": {
+        "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+        "lastStep": -1
+      }
+    },
+    "sealed": {
+      "iv": "SkzipOejvE26znU6",
+      "ct": "s2mZWfgL6fewoSKPJni6KeN2KZPK8sv7mz0iUXY3gNMXX4dHjcUtgNsXFMbOnGbyigtq0yXsKW93G7RSfenTGZ7eO/gtgQB6RDRb8wtDtFb8PIibTquFKabThqmo1Kl6gtyZoiS4IxRmQ8SrBlrObogqmieWlo4vqpDgoNJEqtYvouykYfQj2WnIUqmHvQ6WR2F4+6mGAiFUhfTeqWB4"
+    }
+  },
+  "totp": {
+    "secret": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+    "rfc6238Sha1Digits8": [
+      [
+        59,
+        "94287082"
+      ],
+      [
+        1111111109,
+        "07081804"
+      ],
+      [
+        1111111111,
+        "14050471"
+      ],
+      [
+        1234567890,
+        "89005924"
+      ],
+      [
+        2000000000,
+        "69279037"
+      ],
+      [
+        20000000000,
+        "65353130"
+      ]
+    ]
+  },
+  "transfer": {
+    "file": "export.kasboek",
+    "file2fa": "export-2fa.kasboek",
+    "dbSha256": "1318c8d6eaff3bca27a4a123330186191f1e023e32786965069e112857499e5a",
+    "appVersion": "0.0.0-fixture",
+    "schemaVersion": 1,
+    "totpNow": 1234567890,
+    "totpCode": "005924"
+  },
+  "sync": {
+    "file": "changes.kbsync",
+    "keyHex": "3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+    "header": {
+      "v": 1,
+      "account": "fixture-account",
+      "device": "fixture-device",
+      "seq": 3
+    },
+    "payload": {
+      "changes": [
+        {
+          "tbl": "accounts",
+          "uid": "fixture-uid-1",
+          "data": {
+            "name": "Invented current account ✓",
+            "currency": "EUR",
+            "opening_balance_cents": 120000
+          }
+        },
+        {
+          "tbl": "transactions",
+          "uid": "fixture-uid-2",
+          "data": {
+            "description": "Zażółć gęślą jaźń",
+            "amount_cents": -1250,
+            "ratio": 0.125,
+            "note": null
+          }
+        }
+      ]
+    }
+  },
+  "db": {
+    "schema1": {
+      "file": "schema1.db",
+      "userVersion": 1,
+      "tables": {
+        "accounts": 4,
+        "audit_log": 1,
+        "budgets": 12,
+        "categories": 18,
+        "csv_profiles": 1,
+        "import_batches": 1,
+        "settings": 2,
+        "transactions": 48
+      }
+    },
+    "schema15": {
+      "file": "schema15.db",
+      "userVersion": 15,
+      "tables": {
+        "accounts": 4,
+        "audit_log": 1,
+        "budgets": 12,
+        "categories": 18,
+        "csv_profiles": 1,
+        "fx_rates": 4,
+        "goals": 0,
+        "import_batches": 1,
+        "insight_feedback": 0,
+        "insights": 0,
+        "memories": 0,
+        "recurring_marks": 0,
+        "rules": 4,
+        "secrets": 1,
+        "settings": 2,
+        "sync_conflicts": 0,
+        "sync_flags": 1,
+        "sync_meta": 0,
+        "sync_outbox": 0,
+        "sync_pending": 0,
+        "sync_rows": 0,
+        "transaction_splits": 0,
+        "transactions": 48,
+        "valuations": 1
+      }
+    },
+    "schema1MigratedByTs": {
+      "file": "schema1-migrated-by-ts.db",
+      "userVersion": 15,
+      "tables": {
+        "accounts": 4,
+        "audit_log": 1,
+        "budgets": 12,
+        "categories": 18,
+        "csv_profiles": 1,
+        "fx_rates": 0,
+        "goals": 0,
+        "import_batches": 1,
+        "insight_feedback": 0,
+        "insights": 0,
+        "memories": 0,
+        "recurring_marks": 0,
+        "rules": 0,
+        "secrets": 0,
+        "settings": 2,
+        "sync_conflicts": 0,
+        "sync_flags": 1,
+        "sync_meta": 0,
+        "sync_outbox": 0,
+        "sync_pending": 0,
+        "sync_rows": 0,
+        "transaction_splits": 0,
+        "transactions": 48,
+        "valuations": 0
+      }
+    }
+  }
+}

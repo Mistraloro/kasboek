@@ -1,0 +1,98 @@
+name: Rust CI
+
+# Builds and tests the Rust workspace of the native port (rust/Cargo.toml, docs/rust-port-plan.md) on the six targets:
+#   Windows x64 + ARM64, macOS Apple Silicon + Intel, Linux x64 + ARM64.
+# Per machine: release build, cargo test, clippy with warnings as errors, rustfmt check, and the parity suite
+# (rust/parity: the app's own TypeScript core against the Rust binary kb-cli, both ways).
+# The spikes (rust/spike) have their own workflow, rust-spike.yml.
+on:
+  push:
+    branches: [rust-native]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned to exact commits (the comment shows the version), as in rust-spike.yml and build.yml.
+env:
+  # The version the workspace is built and tested with (rust-version in rust/Cargo.toml is 1.97).
+  RUST_VERSION: 1.97.0
+  CARGO_TERM_COLOR: never
+
+jobs:
+  rust:
+    name: ${{ matrix.os_name }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-latest, os_name: windows, arch: x64 }
+          # Free for public repositories only.
+          - { runner: windows-11-arm, os_name: windows, arch: arm64 }
+          - { runner: macos-latest, os_name: macos, arch: arm64 }
+          # macos-13 was retired in December 2025; macos-15-intel is the Intel image now (offered until August 2027).
+          - { runner: macos-15-intel, os_name: macos, arch: x64 }
+          - { runner: ubuntu-latest, os_name: linux, arch: x64 }
+          - { runner: ubuntu-24.04-arm, os_name: linux, arch: arm64 }
+    env:
+      TAG: ${{ matrix.os_name }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            # Some images (Windows ARM64) may come without rustup.
+            curl --proto '=https' --tlsv1.2 -sSf -o rustup-init.exe https://win.rustup.rs/aarch64
+            ./rustup-init.exe -y --default-toolchain none --profile minimal
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$USERPROFILE/.cargo/bin:$PATH"
+          fi
+          rustup toolchain install "$RUST_VERSION" --profile minimal --component clippy --component rustfmt --no-self-update
+          rustup default "$RUST_VERSION"
+          rustc -Vv
+          cargo -V
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: rust-ci-${{ env.TAG }}-${{ env.RUST_VERSION }}-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: rust-ci-${{ env.TAG }}-${{ env.RUST_VERSION }}-
+
+      # Node: the parity suite runs the app's own core (better-sqlite3-multiple-ciphers, hash-wasm). Scripts are skipped
+      # (no Electron download); the package ships prebuilt binaries for all six targets, so nothing is compiled.
+      # The Rust build itself needs no Node: the sqlite3mc source is vendored in rust/crates/kb-sqlite3mc-sys.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      - name: Build (release)
+        run: cargo build --workspace --release --locked --manifest-path rust/Cargo.toml
+      - name: Test
+        run: cargo test --workspace --locked --manifest-path rust/Cargo.toml
+      - name: Clippy (warnings are errors)
+        run: cargo clippy --workspace --locked --manifest-path rust/Cargo.toml -- -D warnings
+      - name: Format check
+        run: cargo fmt --all --check --manifest-path rust/Cargo.toml
+      - name: Parity suite (TypeScript core against kb-cli)
+        shell: bash
+        env:
+          KB_PARITY_TMP: ${{ runner.temp }}
+        run: npx vitest run --config rust/parity/vitest.config.ts

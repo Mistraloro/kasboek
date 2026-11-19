@@ -1,0 +1,1 @@
+UPDATE rules SET match = 'word' WHERE match = 'contains' AND length(trim(pattern)) < 4

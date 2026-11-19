@@ -1,0 +1,28 @@
+[package]
+# Named libsqlite3-sys on purpose: the workspace [patch.crates-io] swaps it in, so rusqlite links sqlite3mc.
+# Only the Rust side (bindings, error codes) is taken from libsqlite3-sys 0.40.0 (MIT, see LICENSE-libsqlite3-sys);
+# the C side is the vendored sqlite3mc amalgamation in vendor/, built by build.rs. See VENDOR.md.
+name = "libsqlite3-sys"
+version = "0.40.0"
+description = "sqlite3mc 2.4.0 (SQLite 3.53.4) as libsqlite3-sys, for rusqlite"
+edition.workspace = true
+license = "MIT"
+rust-version.workspace = true
+publish = false
+build = "build.rs"
+links = "sqlite3"
+
+[lib]
+doctest = false
+
+# Accepted so rusqlite's feature forwarding resolves; all are on or irrelevant in this build.
+[features]
+default = []
+bundled = []
+bundled_bindings = []
+column_metadata = []
+loadable_extension = []
+min_sqlite_version_3_45_3 = []
+
+[build-dependencies]
+cc.workspace = true

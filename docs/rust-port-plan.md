@@ -1,6 +1,6 @@
 # Kasboek: port to a fully native Rust app (plan)
 
-Branch: `rust-native`. The Electron app keeps shipping from `main` until cut-over. Status: plan. The M0 spike ran on Linux x64 (results in section 10); no product code is built.
+Branch: `rust-native`. The Electron app keeps shipping from `main` until cut-over. Status: plan. The M0 spike ran on Linux x64 (results in section 10). M1 has started: the workspace, `kb-sqlite3mc-sys`, `kb-crypto`, `kb-db` and `kb-cli` exist in `rust/` (progress in section 10).
 Goal: the same app, behaving the same (with exceptions listed in section 5), looking like a copy of the current UI
 (fonts swappable), starting fast and installing small, on Windows x64/ARM64, macOS arm64/x64, Linux x64/arm64.
 Non-goals: new features, a mobile app, changing any file format, changing the MCP helper's protocol.
@@ -612,6 +612,38 @@ invented. Rerun steps are in `rust/spike/db/README.md`, `rust/spike/ui/README.md
 3. German and one long-string locale on the two UI screens (G1).
 4. Cold-start and Defender first-run measurements (G5, section 5).
 5. Go/no-go meeting for M1, using the gate table above.
+
+**M1 progress (Foundations; Linux x64 only so far, CI for the other five targets is in `.github/workflows/rust-ci.yml`)**
+
+Done:
+- Workspace `rust/Cargo.toml` (resolver 2, shared versions, release profile with LTO, strip and abort on panic) and
+  `rust/README.md` (layout, how to run, rules).
+- `kb-sqlite3mc-sys`: sqlite3mc 2.4.0 / SQLite 3.53.4 vendored (no `node_modules` at build time), the 37 defines read
+  from the vendored `defines.gypi`, licence files, `VENDOR.md` with versions, hashes and update steps. Patched in as
+  `libsqlite3-sys` for rusqlite 0.43.
+- `kb-crypto`: password slot (Argon2id, NFKC), recovery slot (HKDF `kasboek:slot`), legacy scrypt slots with the same
+  caps, vault seal, TOTP (RFC 6238 vectors), recovery key format, base32/base64/hex, and the `.kasboek` (KASBOEK2) and
+  `.kbsync` (KBSYNC1) codecs. Typed errors with the TypeScript codes; keys in `Zeroizing`.
+- `kb-db`: `Store` trait and `SqliteStore` (open/unlock as in `database.ts`, transactions with savepoints, migrations
+  1 to 15 with the same SQL, `fx()`, integrity check, `VACUUM INTO`, canonical dump). A test fails if the linked engine
+  is not sqlite3mc 2.4.0.
+- `kb-cli` and `rust/parity`: differential suite in both directions (databases at schema 1 to 15 including the
+  migration paths, all slot kinds, vault, TOTP, `.kasboek`, `.kbsync`, `fx()`, wrong keys and refusals) and committed
+  known-answer fixtures, read by both sides.
+- CI workflow `rust-ci.yml`: release build, `cargo test`, clippy `-D warnings`, rustfmt check and the parity suite on
+  the six runners.
+
+Not done yet (still M1 or later):
+- The six-target CI has not run: cross-open on Windows, macOS and ARM is unconfirmed (gate G4 stays partial).
+- No change hooks or typed query helpers in `Store` (they come with `kb-core`); no `store-conformance` suite for a
+  second engine; no `kb-bench`; WAL is not used (the app uses `journal_mode = DELETE`).
+- Account logic (`account.ts`: throttling, remember-2FA MAC, unlock flows), `account.json` and the OS seal belong to
+  `kb-core` and `kb-platform`. Time formatting (`toISOString`) is left to the caller of the codecs.
+- Mixed-fleet sync, kb-core, kb-import, kb-pdf, kb-assistant, kb-sync, kb-i18n, kb-platform, kb-ui, the app binary.
+
+Known differences from Node, none reachable with files the app writes: AES-GCM IVs other than 12 bytes are refused
+(Node accepts them); invalid base64 characters are refused (Node skips them); the `fx()` function takes the text
+arguments of non-text values as JavaScript would only for integers, reals, NULL and blobs.
 
 ## Appendix: not verified offline (each is a spike or M1 task)
 

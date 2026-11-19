@@ -1,0 +1,19 @@
+[package]
+name = "kb-db"
+version = "0.0.0"
+description = "Kasboek storage boundary: the Store trait and its sqlite3mc implementation"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+hex.workspace = true
+rusqlite.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true

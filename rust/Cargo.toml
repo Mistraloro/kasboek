@@ -1,0 +1,53 @@
+# Cargo workspace of the native Rust port (docs/rust-port-plan.md). The spikes under spike/ keep their own workspaces.
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-only"
+rust-version = "1.97"
+publish = false
+
+# Shared dependency versions. The ones used by the spikes carry the same requirement strings as there.
+[workspace.dependencies]
+rusqlite = { version = "0.43", default-features = false, features = ["functions"] }
+argon2 = "0.5"
+aes-gcm = "0.10"
+unicode-normalization = "0.1"
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+hex = "0.4"
+cc = "1"
+hkdf = "0.12"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+scrypt = { version = "0.11", default-features = false }
+flate2 = "1"
+tempfile = "3"
+zeroize = { version = "1", features = ["serde"] }
+subtle = "2"
+thiserror = "2"
+kb-crypto = { path = "crates/kb-crypto" }
+kb-db = { path = "crates/kb-db" }
+
+# rusqlite links sqlite3mc instead of plain SQLite: the vendored engine sits in a package that is named like the crate
+# it replaces (see crates/kb-sqlite3mc-sys/VENDOR.md).
+[patch.crates-io]
+libsqlite3-sys = { path = "crates/kb-sqlite3mc-sys" }
+
+# Nothing catches panics, so aborting is safe and makes the binaries smaller.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+# Argon2id with the real cost (128 MiB, 3 passes) is far too slow unoptimised; tests run it.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3

@@ -1,0 +1,26 @@
+[package]
+name = "kb-crypto"
+version = "0.0.0"
+description = "Kasboek crypto: key slots, vault seal, TOTP, recovery key, .kasboek and .kbsync file codecs"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+aes-gcm.workspace = true
+argon2.workspace = true
+base64.workspace = true
+flate2.workspace = true
+hex.workspace = true
+hkdf.workspace = true
+scrypt.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true
+unicode-normalization.workspace = true
+zeroize.workspace = true
