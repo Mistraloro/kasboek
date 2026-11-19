@@ -3,6 +3,14 @@
 A simple, local-first budget app for Windows, macOS and Linux, with an AI assistant built in
 (Claude, or any OpenAI-compatible provider, including local models). Your data stays on your computer, encrypted, and is locked to your computer and login.
 
+> **Privacy first, also in the AI assistant**
+>
+> - Account and card numbers (IBANs, long digit strings) are hidden before a CSV, PDF statement or tip text goes to an AI provider.
+> - Nothing is sent until you ask. You choose the provider, and PDF reading, "Check with …" and Overview tips each ask first and show exactly what is sent.
+> - The PDF file itself is never sent, only its text, and the preview shows you exactly what that is. Your name and address above the table are normally left out. Overview tips send only a short rounded summary, never account or card numbers, balances or income.
+> - Use a local model (Ollama, LM Studio, or any OpenAI-compatible server on your own computer) and nothing leaves your computer.
+> - The assistant can't write amounts into your data: Kasboek checks every amount against your data or the PDF's own text. You decide what it may change by itself or only after your OK, and it can never change its own permissions, settings, keys or addresses.
+
 See [PLAN.md](PLAN.md) for the design, the security model and what still needs testing.
 
 ## What it does
