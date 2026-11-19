@@ -4,7 +4,8 @@ import type { Db } from '@core/database'
 import { coreOps } from '@core/ops'
 import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
-import { previewRule } from '@core/finance'
+import { maskContacts, maskIban, maskNumbers } from '@shared/iban'
+import { previewRule, rulePattern } from '@core/finance'
 import { findRecurring } from '@core/recurring'
 import { commitSummary, latestSession, preview, sessionKind } from '@core/import'
 import type { RuleField, RuleMatch } from '@shared/types'
@@ -59,7 +60,50 @@ export function mcpTools(): ToolDef[] {
 
 /** Keeps tool results small enough for the model: import previews are summarised. */
 export function compactResult(op: OpName, data: unknown, input?: unknown): string {
-  if (op.startsWith('import.') && data && typeof data === 'object' && 'rows' in data) {
+  return compact(op, maskResult(op === 'settings.get' ? assistantSettings(data) : data), input)
+}
+
+const HIDDEN_SETTINGS = new Set(['autoBackupFolder', 'lastBackupFile', 'aiBaseUrl', 'baseUrl'])
+
+/** What the assistant may know of the settings: not where the person keeps backups, nor which servers are used. */
+function assistantSettings(data: unknown): unknown {
+  if (!data || typeof data !== 'object') return data
+  if (Array.isArray(data)) return data.map(assistantSettings)
+  return Object.fromEntries(Object.entries(data).filter(([k]) => !HIDDEN_SETTINGS.has(k)).map(([k, v]) => [k, assistantSettings(v)]))
+}
+
+const KEEP_KEYS = new Set(['uid', 'sessionId', 'fingerprint'])
+const IBAN_KEYS = new Set(['iban', 'counterpartyIban'])
+
+/** An account number as a whole value: CC…1234, also when it is not a valid one. */
+function maskAccount(text: string): string {
+  const masked = maskIban(text.trim())
+  return masked !== text.trim() || text.trim().length < 9 ? masked : `${text.trim().slice(0, 2)}…${text.trim().slice(-4)}`
+}
+
+/**
+ * Everything the assistant gets goes through here: every text in the result (also deep inside) has
+ * account and card numbers, e-mail addresses and phone numbers hidden. Numbers, dates, ids and the
+ * like are not texts and stay as they are.
+ */
+export function maskResult(data: unknown, key?: string, depth = 0): unknown {
+  if (typeof data === 'string') {
+    if (key && KEEP_KEYS.has(key)) return data
+    return key && IBAN_KEYS.has(key) ? maskAccount(data) : maskNumbers(maskContacts(data))
+  }
+  if (!data || typeof data !== 'object' || depth > 30) return data
+  if (Array.isArray(data)) return data.map((v) => maskResult(v, key, depth + 1))
+  const o = data as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(o)) {
+    // A rule on an account number: its pattern is one.
+    out[k] = k === 'pattern' && o['field'] === 'iban' && typeof v === 'string' ? maskAccount(v) : maskResult(v, k, depth + 1)
+  }
+  return out
+}
+
+function compact(op: OpName, data: unknown, input?: unknown): string {
+  if (op.startsWith('import.') && op !== 'import.raw' && data && typeof data === 'object' && 'rows' in data) {
     const p = data as ImportPreview
     const flagged = p.rows.filter((r) => r.status !== 'ready')
     const ready = p.rows.filter((r) => r.status === 'ready')
@@ -115,7 +159,7 @@ function slimItem(item: unknown): unknown {
  * to continue, instead of cutting the text in the middle of a value.
  */
 export function fitJson(data: unknown, max: number): string {
-  const text = JSON.stringify(data)
+  const text = JSON.stringify(data) ?? 'null'
   if (text.length <= max) return text
   const listKey = Array.isArray(data) ? null : data && typeof data === 'object' ? Object.keys(data).find((k) => Array.isArray((data as Record<string, unknown>)[k])) : undefined
   if (listKey === undefined) return JSON.stringify({ truncated: true, note: 'The result was too large. Ask for less (a narrower filter or a smaller limit).' })
@@ -164,6 +208,15 @@ const money = (db: Db, c: number, currency = getSettings(db).currency): string =
 
 /** One readable sentence for the confirmation card. */
 export function describeChange(db: Db, op: OpName, input: Record<string, unknown>): string {
+  // A rule taken from a transaction shows the person the account number it will look for.
+  if ((op === 'rules.create' || op === 'rules.update') && typeof input['fromTransactionId'] === 'number') {
+    try {
+      const field = (input['field'] as RuleField | undefined) ?? (db.prepare('SELECT field FROM rules WHERE id = ?').get(input['id']) as { field: RuleField } | undefined)?.field
+      input = { ...input, pattern: rulePattern(db, { field, pattern: undefined, fromTransactionId: input['fromTransactionId'] }, false) }
+    } catch {
+      // The change itself reports the problem to the model.
+    }
+  }
   const cat = (id: unknown): string => (id == null ? 'Uncategorised' : ((db.prepare('SELECT name FROM categories WHERE id = ?').get(id) as { name: string } | undefined)?.name ?? `category ${String(id)}`))
   switch (op) {
     case 'budgets.set':

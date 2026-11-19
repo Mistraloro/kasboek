@@ -579,7 +579,7 @@ function checkSummary(c: CheckState): CheckSummary {
 }
 
 /** Raw rows for the assistant: header plus a window of data rows. */
-export function rawWindow(id: string, from = 0, count = 40): { headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preamble: string[][] } {
+export function rawWindow(id: string, from = 0, count = 40): { headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preambleLines: number } {
   const s = session(id)
   const hr = s.mapping?.headerRow ?? 0
   const data = s.rows.slice(hr + 1)
@@ -588,7 +588,7 @@ export function rawWindow(id: string, from = 0, count = 40): { headerRow: number
     header: s.rows[hr] ?? [],
     rows: data.slice(from, from + count).map((cells, i) => ({ index: from + i, cells })),
     totalRows: data.length,
-    preamble: s.rows.slice(0, hr)
+    preambleLines: hr
   }
 }
 

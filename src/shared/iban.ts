@@ -87,3 +87,8 @@ const DATES_ONLY = new RegExp(`^${DATE}(?:[ -]${DATE})*$`)
 /** IBANs as maskIban shows them, and runs of 13 or more digits (card or account numbers) by their last four. Dates side by side stay. */
 export const maskNumbers = (text: string): string =>
   maskIban(text).replace(/\d(?:[ -]?\d){12,}/g, (m) => (DATES_ONLY.test(m) ? m : `…${m.replace(/\D/g, '').slice(-4)}`))
+
+/** An e-mail address, or a phone number written with a + or 00 prefix. Cheap and not exhaustive. */
+const EMAIL = /[^\s@<>()|]+@[^\s@<>()|]+\.[^\s@<>()|]+/g
+const PHONE = /(?:\+|\b00)\d[\d ./()-]{6,}\d/g
+export const maskContacts = (text: string): string => text.replace(EMAIL, '…@…').replace(PHONE, '…phone…')

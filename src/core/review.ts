@@ -2,6 +2,7 @@
  * The facts for a monthly review: each spending category against the three months before,
  * budgets that went over, and payments that stand out. The assistant writes the review from these.
  */
+import { maskNumbers } from '@shared/iban'
 import { addMonths, monthRange } from '@shared/month'
 import type { MonthReview } from '@shared/types'
 import { groupKey } from './assist-plan'
@@ -71,7 +72,7 @@ export function monthReview(db: Db, month: string): MonthReview {
       const usual = past.length ? [...past].sort((a, b) => a - b)[past.length >> 1]! : null
       const cents = -t.main
       const reason: 'higher' | 'new' | null = usual !== null && past.length >= 2 && cents > usual * 2.5 && cents - usual >= 2000 ? 'higher' : usual === null && cents >= Math.max(large, 5000) ? 'new' : null
-      return reason ? [{ id: t.id, date: t.booking_date, name: (t.counterparty_name || t.description).slice(0, 60), cents, usualCents: usual, category: t.category_name, reason }] : []
+      return reason ? [{ id: t.id, date: t.booking_date, name: maskNumbers(t.counterparty_name || t.description).slice(0, 60), cents, usualCents: usual, category: t.category_name, reason }] : []
     })
     .sort((a, b) => b.cents - a.cents)
     .slice(0, 8)

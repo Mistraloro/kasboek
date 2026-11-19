@@ -7,7 +7,7 @@
  */
 import { z } from 'zod'
 import { parseAmount } from '@shared/amount'
-import { findIbans, maskIban, maskNumbers } from '@shared/iban'
+import { findIbans, maskContacts, maskIban, maskNumbers } from '@shared/iban'
 import type { ImportMapping } from '@shared/types'
 import { parseJsonAnswer } from './assist-plan'
 import { detectDateOrder, detectDecimal } from './csv/mapping'
@@ -102,11 +102,6 @@ function looksLikeTransaction(line: PdfLine): boolean {
 export function firstLineSent(lines: PdfLine[]): number | null {
   return tableStart(lines) ?? lines.find(looksLikeTransaction)?.id ?? null
 }
-
-/** An e-mail address, or a phone number written with a + or 00 prefix. Cheap and not exhaustive. */
-const EMAIL = /[^\s@<>()|]+@[^\s@<>()|]+\.[^\s@<>()|]+/g
-const PHONE = /(?:\+|\b00)\d[\d ./()-]{6,}\d/g
-const maskContacts = (text: string): string => text.replace(EMAIL, '…@…').replace(PHONE, '…phone…')
 
 /**
  * The lines as they are sent: IBANs, runs of 13 or more digits, e-mail addresses and phone numbers

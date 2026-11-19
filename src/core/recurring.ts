@@ -3,6 +3,7 @@
  * (salary), found from the transactions themselves: the same payee at a steady rhythm with a
  * steady amount. Gives what is still due this month, price changes, and late payments.
  */
+import { maskNumbers } from '@shared/iban'
 import { addMonths, localToday, monthOf } from '@shared/month'
 import type { RecurringItem, RecurringSummary } from '@shared/types'
 import { groupKey } from './assist-plan'
@@ -113,7 +114,7 @@ function scanRecurring(db: Db, today: string): RecurringSummary {
     const change = last.amount_cents !== previous.amount_cents && Math.abs(last.amount_cents - previous.amount_cents) >= Math.max(100, Math.abs(previous.amount_cents) * 0.02) ? last.amount_cents - previous.amount_cents : null
     items.push({
       key,
-      name: (last.counterparty_name || last.bank_counterparty || last.description).slice(0, 60),
+      name: maskNumbers(last.counterparty_name || last.bank_counterparty || last.description).slice(0, 60),
       direction: typical < 0 ? 'out' : 'in',
       frequency: rhythm.frequency,
       typicalCents: typical,

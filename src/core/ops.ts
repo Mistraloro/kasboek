@@ -284,9 +284,24 @@ export const coreOps: OpTable = {
     }
   },
   'rules.list': { mutates: false, assistant: true, handler: ({ db }) => fin.listRules(db) },
-  'rules.create': { mutates: true, assistant: true, handler: ({ db }, i) => fin.createRule(db, i) },
+  'rules.create': {
+    mutates: true,
+    assistant: true,
+    handler: ({ db, actor }, { fromTransactionId, pattern, ...i }) => {
+      const p = fin.rulePattern(db, { field: i.field, pattern, fromTransactionId }, actor === 'assistant')
+      if (p === undefined) throw new AppError('rules.pattern', 'Give the text the rule looks for (pattern).')
+      return fin.createRule(db, { ...i, pattern: p })
+    }
+  },
   'rules.preview': { mutates: false, assistant: true, handler: ({ db }, i) => fin.previewRule(db, i) },
-  'rules.update': { mutates: true, assistant: true, handler: ({ db }, i) => fin.updateRule(db, i) },
+  'rules.update': {
+    mutates: true,
+    assistant: true,
+    handler: ({ db, actor }, { fromTransactionId, pattern, ...i }) => {
+      const field = i.field ?? fin.listRules(db).find((r) => r.id === i.id)?.field
+      return fin.updateRule(db, { ...i, pattern: fin.rulePattern(db, { field, pattern, fromTransactionId }, actor === 'assistant') })
+    }
+  },
   'rules.reorder': { mutates: true, assistant: false, handler: ({ db }, { ids }) => fin.reorderRules(db, ids) },
   'rules.delete': {
     mutates: true,

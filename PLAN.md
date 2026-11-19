@@ -121,6 +121,15 @@ names and amounts; the column layout is what matters.
   client. It holds no keys and opens no database: it forwards calls over a named pipe / Unix socket
   (per-start token) to the running app, which must be unlocked with MCP switched on. Changes wait
   for approval in the app.
+* **Privacy audit of tool results**: results left through `compactResult` (chat and MCP) with no
+  masking, so IBANs, card numbers, e-mail, phone numbers and the holder's lines above a CSV table
+  could reach the AI provider. Fixed in one deep pass (`maskResult` in `assistant/tools.ts`): every
+  text is run through `maskContacts` + `maskNumbers`, `iban` / `counterpartyIban` / the pattern of an
+  iban rule show as `CC…1234`; `import.raw` returns `preambleLines` (a count) instead of the text;
+  `settings.get` drops backup folder/file and base URLs; the 60-character shortenings of rule
+  examples, recurring names and review names mask before cutting. Rules on an account number are made
+  with `fromTransactionId` (filled locally); the assistant cannot pass a masked or invalid number.
+  Test: `tests/assistant-masking.test.ts`.
 * **Other LLMs later**: everything goes through the operation contract, whose input schemas are
   plain JSON Schema for tools. MCP already works with any MCP-capable client; an in-app adapter
   for another provider would replace `src/main/assistant/claude.ts`.
