@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 import type { ImportColumns, ImportMapping, ImportPreview } from '@shared/types'
 import { Button, Field, Modal, Select, Switch } from '../../components/ui'
 import { useToast } from '../../components/Toast'
+import { shownText } from '@shared/hide-numbers'
 import { call } from '../../lib/api'
+import { useHideNumbers } from '../../lib/hide-numbers'
 import { errText } from '../auth/parts'
 
 const FIELDS: (keyof Omit<ImportColumns, 'description'>)[] = ['bookingDate', 'amount', 'debit', 'credit', 'direction', 'counterpartyName', 'counterpartyIban', 'communication', 'valueDate', 'currency', 'bankReference', 'status', 'balance']
@@ -12,6 +14,7 @@ const FIELDS: (keyof Omit<ImportColumns, 'description'>)[] = ['bookingDate', 'am
 export function MappingModal({ open, preview, onClose, onApplied }: { open: boolean; preview: ImportPreview; onClose: () => void; onApplied: (p: ImportPreview) => void }) {
   const { t } = useTranslation()
   const toast = useToast()
+  const hideNumbers = useHideNumbers()
   const [m, setM] = useState<ImportMapping>(
     preview.mapping ?? { delimiter: ';', headerRow: 0, dateOrder: 'DMY', decimal: ',', invertSign: false, columns: { bookingDate: 0, amount: 1, description: [] } }
   )
@@ -23,7 +26,7 @@ export function MappingModal({ open, preview, onClose, onApplied }: { open: bool
     else (columns as unknown as Record<string, number>)[f] = Number(v)
     setM({ ...m, columns })
   }
-  const label = (i: number): string => `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i / 26) : ''} · ${header[i] || t('import.column', { n: i + 1 })}${preview.sample[0]?.[i] ? `  (${preview.sample[0][i]!.slice(0, 24)})` : ''}`
+  const label = (i: number): string => `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i / 26) : ''} · ${header[i] || t('import.column', { n: i + 1 })}${preview.sample[0]?.[i] ? `  (${shownText(preview.sample[0][i]!.slice(0, 24), hideNumbers)})` : ''}`
   return (
     <Modal open={open} title={t('import.columns')} onClose={onClose}>
       <div className="flex max-h-[65vh] flex-col gap-3 overflow-y-auto pr-1">

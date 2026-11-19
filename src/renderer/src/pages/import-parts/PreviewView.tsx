@@ -5,10 +5,12 @@ import type { ImportCommitResult, ImportPreview, ImportRow } from '@shared/types
 import { Badge, Button, Card, PageHeader, Switch, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { parseAmount } from '@shared/amount'
+import { shownText } from '@shared/hide-numbers'
 import { reconciliationBanner } from '@shared/pdf-import'
 import { dateExample, datePlaceholder, parseTypedDate } from '@shared/format'
 import { call, useOp } from '../../lib/api'
 import { formatDate } from '../../lib/format'
+import { Masked, useHideNumbers } from '../../lib/hide-numbers'
 import { useSettings } from '../../lib/settings'
 import { errText } from '../auth/parts'
 import { CategorySelect } from '../Transactions'
@@ -50,6 +52,7 @@ export function PreviewView({
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
+  const hideNumbers = useHideNumbers()
   const assistant = useAssistant()
   const categories = useOp('categories.list')
   // Seconds since the check started, so a slow answer visibly isn't stuck.
@@ -297,10 +300,10 @@ export function PreviewView({
                       )}
                     </td>
                     <td className="max-w-0 px-2 py-2">
-                      <p className="truncate"><span className="font-medium text-text">{r.counterpartyName || r.description}</span>{r.counterpartyName && <span className="ml-2 text-[13px] text-muted">{r.description}</span>}</p>
-                      {(r.note || r.communication) && <p className="truncate text-xs text-muted">{r.note ? `✦ ${r.note}` : r.communication}</p>}
+                      <p className="truncate"><span className="font-medium text-text"><Masked text={r.counterpartyName || r.description} /></span>{r.counterpartyName && <span className="ml-2 text-[13px] text-muted"><Masked text={r.description} /></span>}</p>
+                      {(r.note || r.communication) && <p className="truncate text-xs text-muted"><Masked text={r.note ? `✦ ${r.note}` : (r.communication ?? '')} /></p>}
                       {r.match && r.status === 'possible_duplicate' && (
-                        <p className="truncate text-xs text-muted">{t('import.matches', { date: formatDate(r.match.bookingDate, fmt), text: r.match.counterpartyName || r.match.description })}</p>
+                        <p className="truncate text-xs text-muted">{t('import.matches', { date: formatDate(r.match.bookingDate, fmt), text: shownText(r.match.counterpartyName || r.match.description || '', hideNumbers) })}</p>
                       )}
                     </td>
                     <td className="px-2 py-1.5">

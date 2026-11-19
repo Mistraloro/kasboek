@@ -74,6 +74,13 @@ export function maskIban(text: string): string {
   return out + text.slice(at)
 }
 
+/** An account number as a whole value: CC…1234, also when it is not a valid one. */
+export function maskAccount(text: string): string {
+  const v = text.trim()
+  const masked = maskIban(v)
+  return masked !== v || v.length < 9 ? masked : `${v.slice(0, 2)}…${v.slice(-4)}`
+}
+
 /** The valid IBANs in a text, without spaces and in order of appearance, each once. */
 export const findIbans = (text: string): string[] => [...new Set(scan(text).map((h) => h.iban))]
 

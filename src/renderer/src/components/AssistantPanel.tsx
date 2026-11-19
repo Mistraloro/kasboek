@@ -6,7 +6,9 @@ import { REASONING_LEVELS, claudeEfforts, type ReasoningLevel } from '@shared/re
 import { ASSISTANT_MODELS, type AssistantModel, type AssistantStatus, type ChatMessage, type Effort, type Settings } from '@shared/types'
 import { presetFor, type ProviderId } from '@shared/ai-providers'
 import type { Page } from '../App'
+import { shownText } from '@shared/hide-numbers'
 import { call } from '../lib/api'
+import { useHideNumbers } from '../lib/hide-numbers'
 import { usePageContext } from '../lib/page-context'
 import { openSettingsTab } from '../lib/settings-tab'
 import { setAiName } from '../i18n'
@@ -175,14 +177,17 @@ function Thinking({ text, live }: { text: string; live: boolean }) {
 function Bubble({ m }: { m: ChatMessage }) {
   const { t } = useTranslation()
   const toast = useToast()
-  if (m.role === 'user') return <div className="selectable ml-8 self-end rounded-2xl rounded-br-md bg-surface-2 px-3.5 py-2 text-[13px] whitespace-pre-wrap">{m.text}</div>
+  // The messages on screen hide account numbers like the pages do; the assistant's own text is already masked on its way here.
+  const hidden = useHideNumbers()
+  const masked = (text: string): string => shownText(text, hidden)
+  if (m.role === 'user') return <div className="selectable ml-8 self-end rounded-2xl rounded-br-md bg-surface-2 px-3.5 py-2 text-[13px] whitespace-pre-wrap">{masked(m.text)}</div>
   // Made without asking, as the person's permissions allow.
   if (m.role === 'confirm' && m.state === 'auto')
     return (
       <p className="flex items-start gap-1.5 rounded-lg bg-surface-2/60 px-2.5 py-1.5 text-xs text-muted">
         {m.failed ? <X size={13} className="mt-0.5 shrink-0 text-negative" /> : <Check size={13} className="mt-0.5 shrink-0 text-accent" />}
         <span>
-          <span className="font-medium text-text">{m.failed ? t('assistant.autoFailed') : t('assistant.autoDone')}</span> {m.summary}
+          <span className="font-medium text-text">{m.failed ? t('assistant.autoFailed') : t('assistant.autoDone')}</span> {masked(m.summary)}
         </span>
       </p>
     )
@@ -190,7 +195,7 @@ function Bubble({ m }: { m: ChatMessage }) {
     return (
       <div className="rounded-xl border border-border bg-surface p-3 text-[13px]">
         <p className="mb-1 text-xs font-medium text-muted">{t('assistant.wantsTo')}</p>
-        <p className="font-medium">{m.summary}</p>
+        <p className="font-medium">{masked(m.summary)}</p>
         {m.state === 'pending' ? (
           <div className="mt-3 flex gap-2">
             <Button size="sm" variant="primary" icon={<Check size={14} />} onClick={() => void call('assistant.confirm', { id: m.id, approve: true }).catch((e) => toast(errText(e), 'error'))}>{t('assistant.approve')}</Button>
@@ -222,8 +227,8 @@ function Bubble({ m }: { m: ChatMessage }) {
           {[...new Set(m.tools.map((x) => t(`assistant.tool.${x.name}`, { defaultValue: x.name.replace(/_/g, ' ') })))].join(' · ')}
         </p>
       )}
-      {m.text && <Rich text={m.text} />}
-      {m.error && <p className="mt-1 text-negative">{m.error}</p>}
+      {m.text && <Rich text={masked(m.text)} />}
+      {m.error && <p className="mt-1 text-negative">{masked(m.error)}</p>}
     </div>
   )
 }

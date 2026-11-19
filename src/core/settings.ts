@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   permissions: DEFAULT_PERMISSIONS,
   memoryEnabled: true,
   pageContextEnabled: true,
+  hideAccountNumbers: true,
   aiInsightsConsent: null,
   aiCheckConsent: null
 }
@@ -73,8 +74,8 @@ export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
   return getSettings(db)
 }
 
-/** Settings that decide where data is sent, what Claude may do and where files are written, plus the agreements to send tips data and CSV rows to a provider. */
-const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled', 'aiInsightsConsent', 'aiCheckConsent'] as const
+/** Settings that decide where data is sent, what Claude may do and where files are written, plus the choice to hide account numbers on screen (a file must not switch it off), and the agreements to send tips data and CSV rows to a provider. */
+const UNTRUSTED_AFTER_IMPORT = ['aiBaseUrl', 'aiProvider', 'aiProviders', 'permissions', 'mcpEnabled', 'autoBackupFolder', 'autoBackupEnabled', 'memoryEnabled', 'hideAccountNumbers', 'aiInsightsConsent', 'aiCheckConsent'] as const
 
 /**
  * After an import or a sync join: a file from elsewhere must not bring its own AI address, permissions,

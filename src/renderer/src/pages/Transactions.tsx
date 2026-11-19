@@ -13,6 +13,7 @@ import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { exportTransactions } from '../lib/export'
 import { formatDate, monthLabel } from '../lib/format'
+import { Iban, Masked } from '../lib/hide-numbers'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { localToday } from '@shared/month'
@@ -307,8 +308,8 @@ export function Transactions({ go, initial }: { go: (p: Page) => void; initial?:
                     <button type="button" className="block w-full truncate text-left" onClick={() => setEditing(tx)}>
                       {tx.transferAccount && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted" title={t('transfers.pairedHint')}>⇄ {tx.transferAccount}</span>}
                       {tx.splitCount > 0 && <span className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{t('splits.badge', { count: tx.splitCount })}</span>}
-                      <span className="font-medium">{tx.counterpartyName || tx.description}</span>
-                      {tx.counterpartyName && <span className="ml-2 text-[13px] text-muted">{tx.description}</span>}
+                      <span className="font-medium"><Masked text={tx.counterpartyName || tx.description} /></span>
+                      {tx.counterpartyName && <span className="ml-2 text-[13px] text-muted"><Masked text={tx.description} /></span>}
                     </button>
                   </td>
                   <td className="px-3 py-1.5">
@@ -434,8 +435,8 @@ function TxModal({ tx, categories, accounts, onClose, onSaved }: { tx: Transacti
           </Field>
         </div>
         <div className="col-span-2"><Field label={t('transactions.notes')}>{(id) => <Input id={id} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />}</Field></div>
-        {base?.communication && <p className="selectable col-span-2 text-xs text-muted">{t('transactions.communication')}: {base.communication}</p>}
-        {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: {base.counterpartyIban}</p>}
+        {base?.communication && <p className="selectable col-span-2 text-xs text-muted">{t('transactions.communication')}: <Masked text={base.communication} /></p>}
+        {base?.counterpartyIban && <p className="selectable num col-span-2 -mt-3 text-xs text-muted">IBAN: <Iban value={base.counterpartyIban} /></p>}
         {base && <div className="col-span-2"><SplitEditor tx={base} categories={categories} onSaved={onSaved} /></div>}
         {base?.transferAccount && (
           <div className="col-span-2 flex flex-col gap-1.5">

@@ -4,7 +4,7 @@ import type { Db } from '@core/database'
 import { coreOps } from '@core/ops'
 import { getSettings } from '@core/settings'
 import { formatDate, formatMoney } from '@shared/format'
-import { maskContacts, maskIban, maskNumbers } from '@shared/iban'
+import { maskAccount, maskContacts, maskNumbers } from '@shared/iban'
 import { previewRule, rulePattern } from '@core/finance'
 import { findRecurring } from '@core/recurring'
 import { commitSummary, latestSession, preview, sessionKind } from '@core/import'
@@ -74,12 +74,6 @@ function assistantSettings(data: unknown): unknown {
 
 const KEEP_KEYS = new Set(['uid', 'sessionId', 'fingerprint'])
 const IBAN_KEYS = new Set(['iban', 'counterpartyIban'])
-
-/** An account number as a whole value: CC…1234, also when it is not a valid one. */
-function maskAccount(text: string): string {
-  const masked = maskIban(text.trim())
-  return masked !== text.trim() || text.trim().length < 9 ? masked : `${text.trim().slice(0, 2)}…${text.trim().slice(-4)}`
-}
 
 /**
  * Everything the assistant gets goes through here: every text in the result (also deep inside) has

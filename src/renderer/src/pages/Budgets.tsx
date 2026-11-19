@@ -11,6 +11,7 @@ import { PromptModal } from '../components/PromptModal'
 import { Badge, Button, Card, Field, Input, Modal, MonthNav, PageHeader, Select, cx } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
+import { Iban, Masked } from '../lib/hide-numbers'
 import { usePublishPageContext } from '../lib/page-context'
 import { monthLabel } from '../lib/format'
 import { useSettings } from '../lib/settings'
@@ -227,7 +228,7 @@ function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
         {list.map((r, i) => (
           <div key={r.id} className="flex items-center gap-1 border-b border-border py-1.5 text-[13px] last:border-b-0">
             <span className="min-w-0 flex-1 truncate">
-              <span className="text-muted">{t(`budgets.field.${r.field}`)} {r.field === 'iban' ? t('budgets.match.is') : t(`budgets.match.${r.match}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
+              <span className="text-muted">{t(`budgets.field.${r.field}`)} {r.field === 'iban' ? t('budgets.match.is') : t(`budgets.match.${r.match}`)}</span> “{r.field === 'iban' ? <Iban value={r.pattern} /> : <Masked text={r.pattern} />}” → <span className="font-medium">{r.categoryName}</span>
             </span>
             <button type="button" aria-label={t('budgets.moveUp')} disabled={i === 0} className="rounded p-1 text-muted hover:text-text disabled:opacity-30" onClick={() => move(i, -1)}>
               <ArrowUp size={14} />

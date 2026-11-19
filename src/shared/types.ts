@@ -175,6 +175,8 @@ export interface Settings {
   memoryEnabled: boolean
   /** The chat tells the assistant which page is open (see shared/page-context.ts). */
   pageContextEnabled: boolean
+  /** Account numbers show as BE…1234 on screen until the person reveals one (this computer only; an import cannot switch it off). */
+  hideAccountNumbers: boolean
   /**
    * The person agreed to send the tips summary to this AI provider at this address with this model (see
    * core/insight-plan.ts for what is sent); null = not asked yet. `baseUrl` (normalised) and `model` are
