@@ -1,0 +1,9 @@
+{
+  "name": "categories create and list",
+  "steps": [
+    {"op": "categories.list"},
+    {"op": "categories.create", "input": {"name": "Pets", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "  Side income ", "kind": "income"}},
+    {"op": "categories.create", "input": {"name": "Holiday", "kind": "transfer"}}
+  ]
+}

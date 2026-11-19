@@ -1,0 +1,20 @@
+{
+  "name": "transactions update: every field, nulls and keeping what is not given",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -8000, "description": "first", "counterpartyName": "Shop", "categoryId": 3, "notes": "n"}},
+    {"op": "transactions.update", "input": {"id": 1, "description": "  second  "}},
+    {"op": "transactions.update", "input": {"id": 1, "categoryId": null}},
+    {"op": "transactions.update", "input": {"id": 1, "categoryId": 4, "notes": null, "counterpartyName": null}},
+    {"op": "transactions.update", "input": {"id": 1, "bookingDate": "2026-09-01", "amountCents": 0}},
+    {"op": "transactions.update", "input": {"id": 1, "amountCents": -1.0}},
+    {"op": "transactions.update", "input": {"id": 1}},
+    {"op": "transactions.update", "input": {"id": 1, "counterpartyName": ""}},
+    {"op": "transactions.update", "input": {"id": 2, "notes": "x"}},
+    {"op": "transactions.update", "input": {"id": 1, "categoryId": 99}},
+    {"op": "transactions.update", "input": {"id": 1, "description": ""}},
+    {"op": "transactions.update", "input": {"id": 1, "bookingDate": "09/01/2026"}},
+    {"op": "transactions.update", "input": {"id": 1, "accountId": 1}},
+    {"op": "transactions.list", "input": {}}
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "app.info": { "name": "Kasboek", "version": "0.21.1", "commit": "", "platform": "linux", "dataDir": "/invented/data", "graphics": { "hardware": true, "reason": null }, "mcpCommand": { "command": "", "args": [] } },
+  "prefs.get": { "theme": "light", "language": "en", "formats": { "decimal": ",", "group": ".", "grouping": "thousands", "currencyPosition": "after-space", "currencyStyle": "symbol", "negative": "minus", "date": "DD/MM/YYYY", "time": "24h" }, "autoLockMinutes": 10, "updateCheck": false, "welcomeDone": true, "graphics": "auto", "graphicsFailed": false, "keepInTray": false, "insights": false },
+  "auth.status": { "state": "locked", "mode": "password", "twoFactor": false, "rememberedUntil": null, "device": null, "deviceChecking": false, "throttleSeconds": 0, "recovered": false, "weakPassword": false, "legacyData": false, "erased": [], "keyProtection": "os", "error": null },
+  "settings.get": { "currency": "EUR", "fxAutoUpdate": false, "fxLastEcbUpdateAt": null, "autoBackupEnabled": false, "autoBackupFolder": null, "autoBackupKeep": 7, "lastBackupAt": null, "lastBackupFile": null, "chatModel": "sonnet", "chatEffort": "medium", "csvModel": "haiku", "csvEffort": "low", "mcpEnabled": false, "aiProvider": "claude", "aiBaseUrl": null, "aiChatModel": "", "aiCsvModel": "", "aiPdfModel": "", "pageContextEnabled": true },
+  "backup.status": { "autoEnabled": false, "folder": null, "keep": 7, "lastBackupAt": null, "lastBackupFile": null },
+  "accounts.list": [
+    { "id": 1, "name": "Everyday account", "kind": "checking", "bank": "Example Bank", "iban": null, "currency": "EUR", "openingBalanceCents": 0, "archived": false, "createdAt": "2025-01-01", "fxCostPct": null, "lastBankBalance": null, "balanceCents": 184250, "balanceMainCents": 184250, "transactionCount": 120 },
+    { "id": 2, "name": "Savings", "kind": "savings", "bank": "Example Bank", "iban": null, "currency": "EUR", "openingBalanceCents": 0, "archived": false, "createdAt": "2025-01-01", "fxCostPct": null, "lastBankBalance": null, "balanceCents": 920000, "balanceMainCents": 920000, "transactionCount": 8 }
+  ],
+  "alerts.list": [
+    { "kind": "budget", "key": "budget-3", "categoryId": 3, "name": "Groceries", "budgetCents": 45000, "spentCents": 48250, "level": "over" }
+  ],
+  "assistant.status": { "configured": false, "keyHint": null, "provider": "claude", "providerName": "Claude", "company": "Anthropic", "busy": false, "activity": null, "messages": [] },
+  "update.status": { "state": "idle", "current": "0.21.1", "latest": null, "notes": null, "pageUrl": null, "kind": null, "sizeBytes": null, "progress": 0, "error": null, "lastCheckedAt": null, "supported": false },
+  "summary.month": {
+    "month": "2026-03",
+    "incomeCents": 325000,
+    "spendingCents": 214380,
+    "budgetedCents": 250000,
+    "leftCents": 35620,
+    "byCategory": [
+      { "categoryId": 3, "name": "Groceries", "cents": 48250 },
+      { "categoryId": 4, "name": "Rent", "cents": 95000 },
+      { "categoryId": 5, "name": "Transport", "cents": 21400 },
+      { "categoryId": 6, "name": "Eating out", "cents": 18730 },
+      { "categoryId": 7, "name": "Utilities", "cents": 15600 },
+      { "categoryId": null, "name": "", "cents": 15400 }
+    ],
+    "uncategorized": 3,
+    "unconverted": 0,
+    "history": [
+      { "month": "2025-10", "incomeCents": 310000, "spendingCents": 228000 },
+      { "month": "2025-11", "incomeCents": 310000, "spendingCents": 241500 },
+      { "month": "2025-12", "incomeCents": 342000, "spendingCents": 297800 },
+      { "month": "2026-01", "incomeCents": 310000, "spendingCents": 205300 },
+      { "month": "2026-02", "incomeCents": 315000, "spendingCents": 198900 },
+      { "month": "2026-03", "incomeCents": 325000, "spendingCents": 214380 }
+    ]
+  }
+}

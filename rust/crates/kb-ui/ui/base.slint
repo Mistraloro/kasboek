@@ -1,0 +1,225 @@
+// Building blocks every component uses: focus ring, keyboard helpers, the pressable (focus + hover + press + keys +
+// screen reader action) in its accessible flavours, and the Icon.
+//
+// Lessons of the UI spike (docs/rust-port-plan.md section 10), kept as rules:
+//  * a TouchArea is not focusable and invisible to screen readers: every control is a FocusScope with a role, a label
+//    and `accessible-action-default`; the TouchArea inside only does the mouse;
+//  * texts and icons inside a control get `accessible-role: none`, so the control's name is read once;
+//  * `accessible-role: none` works on a plain Image or Text, not on a component whose root is one (Icon therefore has a
+//    Rectangle root);
+//  * Windows only reaches a control by Tab if it is a FocusScope, and the window must be active.
+import { Theme } from "theme.slint";
+
+// styles.css `:focus-visible`: 2px outline in --focus, offset 2px. Put it as the last child of the focused element
+// (it draws outside the element's box). `radius` is the outline's own radius: element radius 6px + 2px offset + 2px.
+export component FocusRing inherits Rectangle {
+    in property <length> radius: 10px;
+    in property <length> gap: 2px;
+    Rectangle {
+        x: -(root.gap + 2px);
+        y: -(root.gap + 2px);
+        width: parent.width + 2 * (root.gap + 2px);
+        height: parent.height + 2 * (root.gap + 2px);
+        border-radius: root.radius;
+        border-width: 2px;
+        border-color: Theme.focus;
+    }
+}
+
+// Set by the app on the events that must hide revealed secrets (window loses focus, tab hidden, app locks): every
+// PasswordInput hides its text when `hide-secrets` changes. Slint has no window-blur hook, so Rust bumps this.
+export global Session {
+    in-out property <int> hide-secrets: 0;
+}
+
+export global Keys {
+    // Space and Enter activate a focused button, as in a browser.
+    pure public function activates(e: KeyEvent) -> bool {
+        return e.text == " " || e.text == Key.Return;
+    }
+}
+
+// The behaviour of a clickable control, without a role. A mouse click never focuses it (like a button in Chromium: no
+// focus ring from the mouse); Tab does, and then Space/Enter activate it: Enter on key down, Space on key up, as in a
+// browser. `simulate` forces a state for the gallery and the parity shots: "hover", "pressed" or "focus".
+export component Pressable inherits FocusScope {
+    in property <string> label;
+    in property <string> description;
+    in property <string> simulate;
+    in property <bool> ring: true;
+    in property <length> ring-radius: 10px;
+    in property <length> ring-gap: 2px;
+    in property <MouseCursor> cursor: pointer;
+    out property <bool> hovered: ta.has-hover || root.simulate == "hover";
+    out property <bool> down: ta.pressed || root.space-down || root.simulate == "pressed";
+    out property <bool> focused: root.has-focus || root.simulate == "focus";
+    // True while the pointer button is held on the control (not for keys).
+    out property <bool> pointer-down: ta.pressed;
+    callback activated();
+    // A press or release of the pointer button or of Space/Enter: used by hold-to-show.
+    callback down-changed(bool);
+    // First look at a key: return true to take it (arrow keys of a group). Space and Enter come after.
+    callback key(KeyEvent) -> bool;
+    property <bool> space-down;
+
+    focus-on-click: false;
+    key-pressed(e) => {
+        if (!root.enabled) {
+            return reject;
+        }
+        if (root.key(e)) {
+            return accept;
+        }
+        if (e.text == Key.Return) {
+            root.down-changed(true);
+            root.activated();
+            return accept;
+        }
+        if (e.text == " ") {
+            root.space-down = true;
+            root.down-changed(true);
+            return accept;
+        }
+        return reject;
+    }
+    key-released(e) => {
+        if (e.text == " " && root.space-down) {
+            root.space-down = false;
+            root.down-changed(false);
+            root.activated();
+            return accept;
+        }
+        if (e.text == Key.Return) {
+            root.down-changed(false);
+            return accept;
+        }
+        return reject;
+    }
+    changed has-focus => {
+        if (!root.has-focus && root.space-down) {
+            root.space-down = false;
+            root.down-changed(false);
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? root.cursor : MouseCursor.default;
+        clicked => {
+            root.activated();
+        }
+        changed pressed => {
+            root.down-changed(self.pressed);
+        }
+    }
+    if root.ring && root.focused && root.enabled: FocusRing {
+        radius: root.ring-radius;
+        gap: root.ring-gap;
+    }
+}
+
+// A button for the keyboard and for screen readers: Tab focus, focus ring, Space/Enter or the screen reader's Invoke
+// emit `activated`. Put it over the whole visual button.
+export component PressTarget inherits Pressable {
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-description: root.description;
+    accessible-enabled: root.enabled;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.activated();
+        }
+    }
+}
+
+// Same for a two-state control (Switch, Checkbox): role is set by the component that uses it.
+export component SwitchTarget inherits Pressable {
+    in property <bool> checked;
+    accessible-role: switch;
+    accessible-label: root.label;
+    accessible-description: root.description;
+    accessible-enabled: root.enabled;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.activated();
+        }
+    }
+}
+
+export component CheckboxTarget inherits Pressable {
+    in property <bool> checked;
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-description: root.description;
+    accessible-enabled: root.enabled;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.activated();
+        }
+    }
+}
+
+export component RadioTarget inherits Pressable {
+    in property <bool> checked;
+    accessible-role: radio-button;
+    accessible-label: root.label;
+    accessible-description: root.description;
+    accessible-enabled: root.enabled;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.activated();
+        }
+    }
+}
+
+export component TabTarget inherits Pressable {
+    in property <bool> selected;
+    accessible-role: tab;
+    accessible-label: root.label;
+    accessible-description: root.description;
+    accessible-enabled: root.enabled;
+    accessible-item-selectable: true;
+    accessible-item-selected: root.selected;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.activated();
+        }
+    }
+}
+
+// A decorative or meaningful-by-context icon, coloured by theme (lucide SVGs are black strokes; `colorize` recolours
+// them). Not exposed to screen readers: the control around it carries the name. Use `Icons.<name>` from icons.slint.
+export component Icon inherits Rectangle {
+    in property <image> source;
+    in property <length> size: 16px;
+    in property <brush> tint: Theme.text;
+    width: root.size;
+    height: root.size;
+    Image {
+        source: root.source;
+        width: 100%;
+        height: 100%;
+        colorize: root.tint;
+        accessible-role: none;
+    }
+}
+
+// Text with the renderer's metrics: a CSS line box height `lh` around the text, centred, like a browser's half-leading.
+export component Label inherits Text {
+    in property <length> lh: Theme.lh-body;
+    in property <bool> numeric: false;
+    // Not in the accessibility tree by default (the control around a text names itself); set `accessible-role: text` on
+    // an instance for text a screen reader should read (titles, hints, errors, toast messages).
+    accessible-role: none;
+    font-family: root.numeric ? Theme.num : Theme.sans;
+    font-size: Theme.fs-body;
+    color: Theme.text;
+    vertical-alignment: center;
+    line-height-factor: Theme.lhf(self.font-size, root.lh);
+}

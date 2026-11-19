@@ -1,0 +1,13 @@
+{
+  "name": "strict objects: odd keys",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "x", "__proto__": 1}},
+    {"op": "accounts.create", "input": {"name": "x", "constructor": 1}},
+    {"op": "accounts.create", "input": {"name": "x", "Name": "y"}},
+    {"op": "accounts.create", "input": {"NAME": "x"}},
+    {"op": "accounts.create", "input": {"name": "x", "opening_balance_cents": 5}},
+    {"op": "accounts.update", "input": {"id": 1, "bank": "x", "id2": 2}},
+    {"op": "transactions.categorize", "input": {"ids": [1], "categoryId": 1, "ids ": [2]}},
+    {"op": "settings.update", "input": {"currency": "EUR", "": 1}}
+  ]
+}

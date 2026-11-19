@@ -1,0 +1,19 @@
+[package]
+name = "kb-core"
+version = "0.0.0"
+description = "Kasboek core: the operation registry, dispatch, validation and the business logic of the operations"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+hex.workspace = true
+kb-db.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

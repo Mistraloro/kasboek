@@ -1,0 +1,12 @@
+{
+  "name": "audit log: actor, redaction and read-only calls",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "A"}, "actor": "assistant"},
+    {"op": "accounts.list", "actor": "user"},
+    {"op": "categories.create", "input": {"name": "C", "kind": "expense"}, "actor": "system"},
+    {"op": "prefs.update", "input": {"theme": "dark"}, "actor": "user"},
+    {"op": "settings.update", "input": {"currency": "usd"}, "actor": "user"},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-01-01", "amountCents": -5, "description": "x"}, "actor": "assistant"},
+    {"op": "accounts.create", "input": {"name": ""}, "actor": "user"}
+  ]
+}

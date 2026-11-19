@@ -1,0 +1,9 @@
+{
+  "name": "accounts create: a refused bank balance leaves no account behind",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Never", "bankBalance": {"date": "2026-11-15", "cents": 5}}},
+    {"op": "accounts.list"},
+    {"op": "accounts.create", "input": {"name": "Today", "bankBalance": {"date": "2026-11-14", "cents": 5}}},
+    {"op": "accounts.list"}
+  ]
+}

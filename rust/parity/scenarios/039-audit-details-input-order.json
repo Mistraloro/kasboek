@@ -1,0 +1,10 @@
+{
+  "name": "audit log: details are the parsed input in schema order with defaults",
+  "steps": [
+    {"op": "accounts.create", "input": {"openingBalanceCents": 5, "name": "  Ordered  ", "fxCostPct": 1.0, "currency": "usd", "iban": null}},
+    {"op": "transactions.create", "input": {"description": " d ", "amountCents": -5.0, "bookingDate": "2026-01-01", "accountId": 1.0, "notes": null, "counterpartyName": "  Me ", "categoryId": null}},
+    {"op": "transactions.split", "input": {"parts": [], "id": 1}},
+    {"op": "transactions.categorize", "input": {"categoryId": null, "ids": [1, 1]}},
+    {"op": "searches.save", "input": {"filter": {"direction": "in", "accountId": 1}, "name": "n"}}
+  ]
+}

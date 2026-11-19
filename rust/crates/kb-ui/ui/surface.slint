@@ -1,0 +1,167 @@
+// Card, CardHeader, PageHeader, Badge, EmptyState: the static building blocks of ui.tsx.
+import { Theme } from "theme.slint";
+import { Icon, Label } from "base.slint";
+
+// `rounded-xl border border-border bg-surface`.
+export component Card inherits Rectangle {
+    background: Theme.surface;
+    border-radius: Theme.r-xl;
+    border-width: 1px;
+    border-color: Theme.border;
+}
+
+// `flex items-start justify-between gap-4 border-b border-border px-5 py-4`: title 15px semibold, description 13px
+// muted 2px below it, an optional action (children) on the right.
+export component CardHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    height: row.preferred-height + 1px;
+
+    row := HorizontalLayout {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        spacing: 16px;
+        VerticalLayout {
+            spacing: 2px;
+            Label {
+                text: root.title;
+                font-size: Theme.fs-card-title;
+                font-weight: 600;
+                lh: Theme.lh-card-title;
+                accessible-role: text;
+            }
+            if root.description != "": Label {
+                text: root.description;
+                font-size: Theme.fs-ui;
+                color: Theme.muted;
+                lh: Theme.lh-ui;
+                wrap: word-wrap;
+            }
+        }
+        @children
+    }
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+}
+
+// `mb-8 flex items-end justify-between gap-4`: serif 30px title (leading-tight, tracking -0.01em), muted subtitle 4px
+// below, an optional action (children) bottom-right. The 32px gap under the header is the caller's.
+export component PageHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> subtitle;
+    height: row.preferred-height;
+
+    row := HorizontalLayout {
+        spacing: 16px;
+        VerticalLayout {
+            spacing: 4px;
+            Text {
+                text: root.title;
+                font-family: Theme.serif;
+                font-size: Theme.fs-title;
+                font-weight: 500;
+                letter-spacing: -0.3px;
+                color: Theme.text;
+                vertical-alignment: center;
+                line-height-factor: Theme.lhf(self.font-size, Theme.lh-title);
+                accessible-role: text;
+            }
+            if root.subtitle != "": Label {
+                text: root.subtitle;
+                color: Theme.muted;
+                wrap: word-wrap;
+            }
+        }
+        VerticalLayout {
+            alignment: end;
+            @children
+        }
+    }
+}
+
+// `inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium`. tone: "neutral" | "accent" | "warning"
+// | "negative". The text is the node a screen reader reads.
+export component Badge inherits Rectangle {
+    in property <string> text;
+    in property <string> tone: "neutral";
+    height: Theme.lh-xs + 4px;
+    width: label.preferred-width + 16px;
+    border-radius: Theme.r-full;
+    background: root.tone == "accent" ? Theme.accent-soft : root.tone == "warning" ? Theme.warning-soft : root.tone == "negative" ? Theme.negative-soft : Theme.surface-2;
+
+    label := Label {
+        x: 8px;
+        width: parent.width - 16px;
+        text: root.text;
+        font-size: Theme.fs-xs;
+        font-weight: 500;
+        lh: Theme.lh-xs;
+        color: root.tone == "accent" ? Theme.accent : root.tone == "warning" ? Theme.warning : root.tone == "negative" ? Theme.negative : Theme.muted;
+        horizontal-alignment: center;
+    }
+}
+
+// `flex flex-col items-center px-6 py-14 text-center`: an 11-unit icon tile, a semibold title, an optional body (max
+// 384px) and an action (children) 20px below.
+export component EmptyState inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> body;
+    // Set when children (the action) are given: only then the 20px gap above them exists.
+    in property <bool> has-action: false;
+    height: col.preferred-height;
+
+    col := VerticalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        padding-top: 56px;
+        padding-bottom: 56px;
+        alignment: start;
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 44px;
+                height: 44px;
+                border-radius: Theme.r-xl;
+                background: Theme.accent-soft;
+                Icon {
+                    source: root.icon;
+                    size: 20px;
+                    tint: Theme.accent;
+                }
+            }
+        }
+        Rectangle {
+            height: 16px;
+        }
+        Label {
+            text: root.title;
+            font-weight: 600;
+            horizontal-alignment: center;
+            accessible-role: text;
+        }
+        if root.body != "": HorizontalLayout {
+            alignment: center;
+            padding-top: 4px;
+            Label {
+                max-width: 384px;
+                text: root.body;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.muted;
+                wrap: word-wrap;
+                horizontal-alignment: center;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            padding-top: root.has-action ? 20px : 0px;
+            @children
+        }
+    }
+}

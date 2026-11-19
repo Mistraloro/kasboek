@@ -1,0 +1,7 @@
+{
+  "name": "prefs: stored formats are normalised",
+  "prefs": "{\"language\":\"es\",\"formats\":{\"decimal\":\"x\",\"group\":\",\",\"date\":\"nope\",\"time\":\"12h\"}}",
+  "steps": [
+    {"op": "prefs.get"}
+  ]
+}

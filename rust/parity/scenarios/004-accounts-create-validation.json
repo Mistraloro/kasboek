@@ -1,0 +1,32 @@
+{
+  "name": "accounts create: input validation",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": ""}},
+    {"op": "accounts.create", "input": {"name": "   "}},
+    {"op": "accounts.create", "input": {"name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}},
+    {"op": "accounts.create", "input": {"name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}},
+    {"op": "accounts.create", "input": {"name": "ok", "bank": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"}},
+    {"op": "accounts.create", "input": {"name": "ok", "currency": "ZZZ"}},
+    {"op": "accounts.create", "input": {"name": "ok", "currency": "EURO"}},
+    {"op": "accounts.create", "input": {"name": "ok", "kind": "bogus"}},
+    {"op": "accounts.create", "input": {"name": "ok", "extra": 1}},
+    {"op": "accounts.create", "input": {"name": "ok", "fxCostPct": 21}},
+    {"op": "accounts.create", "input": {"name": "ok", "fxCostPct": -0.1}},
+    {"op": "accounts.create", "input": {"name": "ok", "fxCostPct": 20}},
+    {"op": "accounts.create", "input": {"name": "ok", "openingBalanceCents": 1.5}},
+    {"op": "accounts.create", "input": {"name": "ok", "openingBalanceCents": "5"}},
+    {"op": "accounts.create", "input": {"name": "ok", "openingBalanceCents": 9007199254740993}},
+    {"op": "accounts.create", "input": {"name": "ok", "iban": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"}},
+    {"op": "accounts.create", "input": {"name": "ok", "bankBalance": {"date": "2026-1-1", "cents": 1}}},
+    {"op": "accounts.create", "input": {"name": "ok", "bankBalance": {"date": "2026-11-01", "cents": 1, "x": 1}}},
+    {"op": "accounts.create", "input": {"name": "ok", "bankBalance": {"date": "2026-11-01"}}},
+    {"op": "accounts.create", "input": {"name": "ok", "bank": null}},
+    {"op": "accounts.create", "input": {"name": "ok", "currency": null}},
+    {"op": "accounts.create", "input": {"name": "ok", "openingBalanceCents": 100.0}},
+    {"op": "accounts.create"},
+    {"op": "accounts.create", "input": [1]},
+    {"op": "accounts.create", "input": "x"},
+    {"op": "accounts.create", "input": 5},
+    {"op": "accounts.list"}
+  ]
+}

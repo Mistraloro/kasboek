@@ -1,0 +1,6 @@
+{
+  "name": "settings get: the defaults",
+  "steps": [
+    {"op": "settings.get"}
+  ]
+}

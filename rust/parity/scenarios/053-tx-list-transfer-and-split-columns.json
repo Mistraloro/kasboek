@@ -1,0 +1,14 @@
+{
+  "name": "transactions list: transferAccount and splitCount",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "accounts.create", "input": {"name": "Savings"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -5000, "description": "to savings"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-10-01", "amountCents": 5000, "description": "from main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -300, "description": "split me"}},
+    {"op": "@sql", "input": {"sql": "UPDATE transactions SET transfer_pair = 'pair-1' WHERE id IN (1, 2)"}},
+    {"op": "transactions.split", "input": {"id": 3, "parts": [{"categoryId": 3, "amountCents": -100}, {"categoryId": 4, "amountCents": -200}]}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "transactions.edit", "input": {"id": 1, "notes": "x"}}
+  ]
+}

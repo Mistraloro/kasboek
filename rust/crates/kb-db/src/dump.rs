@@ -1,7 +1,7 @@
 //! A stable text dump of a database for the conformance tests: schema, `user_version` and every row.
 //! Random ids are masked, so two databases migrated by different engines compare equal when they hold the same data.
 use crate::error::DbResult;
-use crate::store::Cell;
+use crate::store::{Cell, TableDump};
 use rusqlite::types::ValueRef;
 use rusqlite::Connection;
 use std::fmt::Write;
@@ -71,6 +71,26 @@ pub(crate) fn canonical_dump(conn: &Connection) -> DbResult<String> {
         }
     }
     Ok(out)
+}
+
+/// All user tables, by name, with their rows in rowid order.
+pub(crate) fn tables(conn: &Connection) -> DbResult<Vec<TableDump>> {
+    let names: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")?
+        .query_map([], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    let mut dumps = Vec::with_capacity(names.len());
+    for name in names {
+        let mut stmt = conn.prepare(&format!("SELECT * FROM \"{name}\" ORDER BY rowid"))?;
+        let columns: Vec<String> = stmt.column_names().map(str::to_owned).collect();
+        let mut rows = Vec::new();
+        let mut cursor = stmt.query([])?;
+        while let Some(row) = cursor.next()? {
+            rows.push((0..columns.len()).map(|i| Ok(cell(row.get_ref(i)?))).collect::<rusqlite::Result<Vec<_>>>()?);
+        }
+        dumps.push(TableDump { name, columns, rows });
+    }
+    Ok(dumps)
 }
 
 #[cfg(test)]

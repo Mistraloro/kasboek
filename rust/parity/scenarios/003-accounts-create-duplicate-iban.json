@@ -1,0 +1,11 @@
+{
+  "name": "accounts create: duplicate IBAN refused, empty IBANs allowed",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Checking", "bank": "Invented Bank", "iban": "BE68 5390 0754 7034", "openingBalanceCents": 120000}},
+    {"op": "accounts.create", "input": {"name": "Again", "iban": "BE68539007547034"}},
+    {"op": "accounts.create", "input": {"name": "No iban 1"}},
+    {"op": "accounts.create", "input": {"name": "No iban 2"}},
+    {"op": "accounts.create", "input": {"name": "Blank", "iban": ""}},
+    {"op": "accounts.list"}
+  ]
+}

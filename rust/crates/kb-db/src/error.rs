@@ -11,6 +11,9 @@ pub enum DbError {
     Locked,
     #[error("This database was made by a newer version of Kasboek (schema {found}). Update the app to open it.")]
     NewerSchema { found: u32 },
+    /// A UNIQUE or PRIMARY KEY constraint failed (the engine's message text holds `UNIQUE`, as TypeScript tests for).
+    #[error("{0}")]
+    Unique(String),
     /// Any other engine failure. The message is the engine's own.
     #[error("database error: {0}")]
     Engine(String),
@@ -22,6 +25,7 @@ impl DbError {
             Self::BadKey => "db.bad_key",
             Self::Locked => "db.locked",
             Self::NewerSchema { .. } => "db.newer_schema",
+            Self::Unique(_) => "db.unique",
             Self::Engine(_) => "db.engine",
         }
     }
@@ -29,7 +33,18 @@ impl DbError {
 
 impl From<rusqlite::Error> for DbError {
     fn from(e: rusqlite::Error) -> Self {
-        Self::Engine(e.to_string())
+        match &e {
+            rusqlite::Error::SqliteFailure(failure, _)
+                if failure.code == rusqlite::ErrorCode::ConstraintViolation
+                    && matches!(
+                        failure.extended_code,
+                        rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE | rusqlite::ffi::SQLITE_CONSTRAINT_PRIMARYKEY
+                    ) =>
+            {
+                Self::Unique(e.to_string())
+            }
+            _ => Self::Engine(e.to_string()),
+        }
     }
 }
 

@@ -1,0 +1,11 @@
+{
+  "name": "unknown operation names",
+  "steps": [
+    {"op": "no.such.op"},
+    {"op": "accounts"},
+    {"op": "Accounts.List"},
+    {"op": "constructor"},
+    {"op": "__proto__"},
+    {"op": "toString"}
+  ]
+}

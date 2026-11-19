@@ -1,0 +1,19 @@
+// The words the design system itself speaks (names of its own buttons, the discard question). English defaults; the
+// app sets them from the active locale file (`modal.*`, `monthNav.*`, `auth.holdToShowPassword`, `dateInput.*`).
+// Placeholders `{format}`, `{example}`, `{date}` are filled by the component with `replace-all`.
+export global UiText {
+    in-out property <string> modal-close: "Close";
+    in-out property <string> modal-discard-ask: "Discard what you typed?";
+    in-out property <string> modal-keep-editing: "Keep editing";
+    in-out property <string> modal-discard: "Discard";
+    in-out property <string> month-previous: "Previous month";
+    in-out property <string> month-next: "Next month";
+    in-out property <string> month-pick: "Choose a month";
+    in-out property <string> month-previous-year: "Previous year";
+    in-out property <string> month-next-year: "Next year";
+    in-out property <string> month-this: "This month";
+    in-out property <string> hold-to-show-password: "Hold to show the password";
+    in-out property <string> date-invalid: "Enter a date as {format}, for example {example}.";
+    in-out property <string> date-too-late: "The date can't be after {date}.";
+    in-out property <string> select-placeholder: "Select";
+}

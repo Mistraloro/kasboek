@@ -1,0 +1,9 @@
+{
+  "name": "prefs: a byte order mark makes the file unreadable, so the defaults apply",
+  "prefs": "\ufeff{\"language\":\"fr\",\"theme\":\"dark\"}",
+  "languages": ["nl"],
+  "steps": [
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"insights": false}}
+  ]
+}

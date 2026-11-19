@@ -1,0 +1,7 @@
+{
+  "name": "prefs: formats that is an array, and a file that starts with a byte order mark",
+  "prefs": "{\"formats\":[1,2],\"language\":\"fr\"}",
+  "steps": [
+    {"op": "prefs.get"}
+  ]
+}

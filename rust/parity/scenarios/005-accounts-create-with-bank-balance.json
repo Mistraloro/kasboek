@@ -1,0 +1,10 @@
+{
+  "name": "accounts create with a bank balance, current and investment",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main", "openingBalanceCents": 1000, "bankBalance": {"date": "2026-10-31", "cents": 50000}}},
+    {"op": "accounts.create", "input": {"name": "Broker", "kind": "investment", "bankBalance": {"date": "2026-10-31", "cents": 900000}}},
+    {"op": "accounts.list"},
+    {"op": "balances.list", "input": {"accountId": 1}},
+    {"op": "valuations.list", "input": {"accountId": 2}}
+  ]
+}

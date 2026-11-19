@@ -1,0 +1,8 @@
+{
+  "name": "reset after a sync join keeps the sync key",
+  "steps": [
+    {"op": "@sql", "input": {"sql": "INSERT INTO settings (key, value) VALUES ('aiProvider','\"mistral\"');INSERT INTO secrets (key, value) VALUES ('syncKey','invented'),('webdavPassword','invented'),('aiKey.x','invented');UPDATE sync_flags SET enabled = 1;INSERT INTO sync_meta (key, value) VALUES ('a','b')"}},
+    {"op": "@resetImportedSettings", "input": {"keepSyncKey": true}},
+    {"op": "settings.get"}
+  ]
+}

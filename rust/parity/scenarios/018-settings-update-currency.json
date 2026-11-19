@@ -1,0 +1,15 @@
+{
+  "name": "settings update: currency and auto update",
+  "steps": [
+    {"op": "settings.update", "input": {"currency": "usd"}},
+    {"op": "settings.update", "input": {"fxAutoUpdate": true}},
+    {"op": "settings.update", "input": {}},
+    {"op": "settings.update", "input": {"currency": "XXXX"}},
+    {"op": "settings.update", "input": {"currency": "ZZZ"}},
+    {"op": "settings.update", "input": {"currency": "EUR", "evil": 1}},
+    {"op": "settings.update", "input": {"fxAutoUpdate": "yes"}},
+    {"op": "settings.update", "input": {"currency": null}},
+    {"op": "settings.update", "input": {"currency": " gbp ", "fxAutoUpdate": false}},
+    {"op": "settings.get"}
+  ]
+}

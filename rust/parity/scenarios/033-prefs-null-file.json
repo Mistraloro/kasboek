@@ -1,0 +1,8 @@
+{
+  "name": "prefs: a file holding null fails like the TypeScript core",
+  "prefs": "null",
+  "steps": [
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"theme": "dark"}}
+  ]
+}

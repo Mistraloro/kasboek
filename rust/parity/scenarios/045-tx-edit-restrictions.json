@@ -1,0 +1,14 @@
+{
+  "name": "transactions edit: only text fields, for the assistant",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -8000, "description": "first"}},
+    {"op": "transactions.edit", "input": {"id": 1, "notes": "fixed", "description": "Better", "counterpartyName": "Shop", "categoryId": 5}, "actor": "assistant"},
+    {"op": "transactions.edit", "input": {"id": 1, "bookingDate": "2026-01-01"}, "actor": "assistant"},
+    {"op": "transactions.edit", "input": {"id": 1, "amountCents": 5}, "actor": "assistant"},
+    {"op": "transactions.edit", "input": {"id": 7, "notes": "x"}, "actor": "assistant"},
+    {"op": "transactions.edit", "input": {"id": 1, "categoryId": 99}, "actor": "assistant"},
+    {"op": "transactions.edit", "input": {"id": 1, "categoryId": null}, "actor": "assistant"},
+    {"op": "transactions.list", "input": {}}
+  ]
+}

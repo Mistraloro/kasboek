@@ -1,0 +1,15 @@
+{
+  "name": "categories update: rename, archive, duplicate, not found",
+  "steps": [
+    {"op": "categories.update", "input": {"id": 3, "name": "Food"}},
+    {"op": "categories.update", "input": {"id": 3, "archived": true}},
+    {"op": "categories.update", "input": {"id": 3, "name": "Housing"}},
+    {"op": "categories.update", "input": {"id": 99, "name": "Nope"}},
+    {"op": "categories.update", "input": {"id": 4, "name": "  Home  ", "archived": false}},
+    {"op": "categories.update", "input": {"id": 4}},
+    {"op": "categories.update", "input": {"id": 0}},
+    {"op": "categories.update", "input": {"id": 4, "name": ""}},
+    {"op": "categories.update", "input": {"id": 4, "kind": "income"}},
+    {"op": "categories.list"}
+  ]
+}

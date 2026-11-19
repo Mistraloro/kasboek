@@ -1,0 +1,9 @@
+{
+  "name": "reset after import: untrusted settings, keys, memory and sync state go back to defaults",
+  "steps": [
+    {"op": "@sql", "input": {"sql": "INSERT INTO settings (key, value) VALUES ('currency','\"USD\"'),('aiProvider','\"mistral\"'),('aiBaseUrl','\"http://x\"'),('permissions','{}'),('mcpEnabled','true'),('autoBackupFolder','\"/b\"'),('autoBackupEnabled','true'),('memoryEnabled','false'),('aiInsightsConsent','{}'),('aiCheckConsent','{}'),('chatEffort','\"high\"');INSERT INTO secrets (key, value) VALUES ('anthropicApiKey','invented'),('aiKey.mistral','invented'),('syncKey','invented'),('webdavPassword','invented'),('other','keep');INSERT INTO memories (text, source) VALUES ('likes tea','person');UPDATE sync_flags SET enabled = 1;INSERT INTO sync_outbox (tbl, uid) VALUES ('accounts','x');INSERT INTO sync_meta (key, value) VALUES ('a','b');INSERT INTO insights (month, created_at, provider, model, language, facts_hash, facts_json, suggestions_json) VALUES ('2026-10','2026-11-01','p','m','en','h','{}','[]')"}},
+    {"op": "@resetImportedSettings", "input": {}},
+    {"op": "settings.get"},
+    {"op": "@resetImportedSettings", "input": {}}
+  ]
+}

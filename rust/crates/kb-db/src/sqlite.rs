@@ -5,7 +5,7 @@ use crate::error::{DbError, DbResult};
 use crate::fx::{self, FxRates};
 use crate::key::DbKey;
 use crate::migrations::{MIGRATIONS, SCHEMA_VERSION};
-use crate::store::{Cell, OpenOptions, Store};
+use crate::store::{Cell, OpenOptions, Store, TableDump};
 use rusqlite::types::Value;
 use rusqlite::{Connection, OpenFlags};
 use std::cell::Cell as Counter;
@@ -13,7 +13,7 @@ use std::path::Path;
 use zeroize::Zeroizing;
 
 pub struct SqliteStore {
-    conn: Connection,
+    pub(crate) conn: Connection,
     rates: FxRates,
     depth: Counter<u32>,
 }
@@ -68,7 +68,7 @@ impl Store for SqliteStore {
             return Err(DbError::NewerSchema { found: current });
         }
         for (index, migration) in MIGRATIONS.iter().enumerate().take(target.min(SCHEMA_VERSION) as usize).skip(current as usize) {
-            self.transaction(|store| {
+            self.transaction::<_, DbError, _>(|store| {
                 migration(&store.conn)?;
                 store.conn.execute_batch(&format!("PRAGMA user_version = {}", index + 1))?;
                 Ok(())
@@ -77,20 +77,20 @@ impl Store for SqliteStore {
         Ok(())
     }
 
-    fn transaction<T, F: FnOnce(&Self) -> DbResult<T>>(&self, work: F) -> DbResult<T> {
+    fn transaction<T, E: From<DbError>, F: FnOnce(&Self) -> Result<T, E>>(&self, work: F) -> Result<T, E> {
         let depth = self.depth.get();
         let (begin, commit, rollback) = if depth == 0 {
             ("BEGIN".to_string(), "COMMIT".to_string(), "ROLLBACK".to_string())
         } else {
             (format!("SAVEPOINT sp{depth}"), format!("RELEASE sp{depth}"), format!("ROLLBACK TO sp{depth}; RELEASE sp{depth}"))
         };
-        self.conn.execute_batch(&begin)?;
+        self.conn.execute_batch(&begin).map_err(|e| E::from(e.into()))?;
         self.depth.set(depth + 1);
         let result = work(self);
         self.depth.set(depth);
         match result {
             Ok(value) => {
-                self.conn.execute_batch(&commit)?;
+                self.conn.execute_batch(&commit).map_err(|e| E::from(e.into()))?;
                 Ok(value)
             }
             Err(error) => {
@@ -136,5 +136,13 @@ impl Store for SqliteStore {
 
     fn canonical_dump(&self) -> DbResult<String> {
         dump::canonical_dump(&self.conn)
+    }
+
+    fn dump_tables(&self) -> DbResult<Vec<TableDump>> {
+        dump::tables(&self.conn)
+    }
+
+    fn execute_script(&self, sql: &str) -> DbResult<()> {
+        Ok(self.conn.execute_batch(sql)?)
     }
 }

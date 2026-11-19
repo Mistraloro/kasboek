@@ -1,0 +1,371 @@
+// MonthNav and DateInput.
+import { Theme } from "theme.slint";
+import { Icon, Label, PressTarget, Pressable } from "base.slint";
+import { Icons } from "icons.slint";
+import { Input } from "form.slint";
+import { PanelFrame } from "overlay.slint";
+import { Rules, DateCheck } from "rules.slint";
+import { UiText } from "texts.slint";
+
+// A 32px square text button with a glyph (`‹` `›`): `rounded-md text-muted hover:bg-surface-2 hover:text-text`.
+component GlyphButton inherits Rectangle {
+    in property <string> glyph;
+    in property <string> label;
+    in property <string> simulate;
+    callback clicked();
+    width: 32px;
+    height: 32px;
+    border-radius: Theme.r-md;
+    background: tgt.hovered ? Theme.surface-2 : transparent;
+    Label {
+        text: root.glyph;
+        color: tgt.hovered ? Theme.text : Theme.muted;
+        horizontal-alignment: center;
+        accessible-role: none;
+    }
+    tgt := PressTarget {
+        label: root.label;
+        simulate: root.simulate;
+        ring-radius: 8px;
+        activated => {
+            root.clicked();
+        }
+    }
+}
+
+component MonthCell inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    in property <bool> current;
+    in property <int> index;
+    in property <int> want-focus: -1;
+    callback chosen();
+    callback arrow(int);
+    changed want-focus => {
+        if (root.want-focus == root.index) {
+            tgt.focus();
+        }
+    }
+    height: 36px;
+    border-radius: tgt.focused ? Theme.r-md : Theme.r-md;
+    background: root.selected ? Theme.accent : tgt.hovered ? Theme.surface-2 : transparent;
+    Label {
+        text: root.text;
+        font-size: Theme.fs-ui;
+        font-weight: root.selected ? 500 : root.current ? 600 : 400;
+        color: root.selected ? Theme.accent-fg : root.current ? Theme.accent : Theme.text;
+        horizontal-alignment: center;
+        accessible-role: none;
+    }
+    tgt := PressTarget {
+        label: root.text;
+        description: root.selected ? "selected" : "";
+        accessible-checkable: true;
+        accessible-checked: root.selected;
+        ring-radius: 8px;
+        activated => {
+            root.chosen();
+        }
+        key(e) => {
+            if (e.text == Key.RightArrow) {
+                root.arrow(1);
+                return true;
+            }
+            if (e.text == Key.LeftArrow) {
+                root.arrow(-1);
+                return true;
+            }
+            if (e.text == Key.DownArrow) {
+                root.arrow(3);
+                return true;
+            }
+            if (e.text == Key.UpArrow) {
+                root.arrow(-3);
+                return true;
+            }
+            return false;
+        }
+    }
+}
+
+// The month picker panel: year arrows, a 3x4 grid of months (arrow keys move), "This month". 256px wide (`w-64`).
+component MonthPicker inherits PanelFrame {
+    in-out property <int> picker-year;
+    in property <int> year;
+    in property <int> month;
+    in property <[string]> month-names;
+    in property <int> today-year;
+    in property <int> today-month;
+    callback picked(int, int);
+    property <int> want-focus: -1;
+    width: 256px;
+    height: 258px;
+
+    VerticalLayout {
+        padding: 13px;
+        spacing: 8px;
+        HorizontalLayout {
+            height: 32px;
+            GlyphButton {
+                glyph: "‹";
+                label: UiText.month-previous-year;
+                clicked => {
+                    root.picker-year -= 1;
+                }
+            }
+            Label {
+                text: root.picker-year;
+                numeric: true;
+                font-size: Theme.fs-ui;
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
+            GlyphButton {
+                glyph: "›";
+                label: UiText.month-next-year;
+                clicked => {
+                    root.picker-year += 1;
+                }
+            }
+        }
+        Rectangle {
+            height: 156px;
+            for name[i] in root.month-names: MonthCell {
+                x: mod(i, 3) * (parent.width + 4px) / 3;
+                y: floor(i / 3) * 40px;
+                width: (parent.width - 8px) / 3;
+                index: i;
+                text: name;
+                selected: root.picker-year == root.year && i + 1 == root.month;
+                current: root.picker-year == root.today-year && i + 1 == root.today-month;
+                want-focus: root.want-focus;
+                chosen => {
+                    root.picked(root.picker-year, i + 1);
+                }
+                arrow(d) => {
+                    if (i + d >= 0 && i + d < 12) {
+                        root.want-focus = -1;
+                        root.want-focus = i + d;
+                    }
+                }
+            }
+        }
+        Rectangle {
+            height: 28px;
+            border-radius: Theme.r-md;
+            background: tm.hovered ? Theme.surface-2 : transparent;
+            Label {
+                text: UiText.month-this;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                font-weight: 500;
+                color: Theme.accent;
+                horizontal-alignment: center;
+                accessible-role: none;
+            }
+            tm := PressTarget {
+                label: UiText.month-this;
+                ring-radius: 8px;
+                activated => {
+                    root.picked(root.today-year, root.today-month);
+                }
+            }
+        }
+    }
+}
+
+// `MonthNav` of ui.tsx: `inline-flex gap-1 rounded-lg border bg-surface p-0.5` with previous, a label button that opens
+// the month picker (year arrows, 3x4 months, "This month"), and next. `year`/`month` (1-12) are the selection;
+// `changed(year, month)` reports every change. `month-names` are the 12 short names (capitalised, no dot) and `label`
+// the text of the middle button ("March 2026"), both from the active language.
+export component MonthNav inherits Rectangle {
+    in-out property <int> year;
+    in-out property <int> month;
+    in property <string> label;
+    in property <[string]> month-names;
+    in property <int> today-year;
+    in property <int> today-month;
+    // Shots: draw the picker in place.
+    in property <bool> force-open: false;
+    callback changed(int, int);
+
+    property <int> picker-year: root.year;
+    property <int> want-focus: -1;
+    function shift(n: int) {
+        let total = root.year * 12 + (root.month - 1) + n;
+        root.year = floor(total / 12);
+        root.month = total - floor(total / 12) * 12 + 1;
+        root.changed(root.year, root.month);
+    }
+    function pick(y: int, m: int) {
+        root.year = y;
+        root.month = m;
+        root.changed(y, m);
+    }
+
+    height: 38px;
+    width: row.preferred-width + 6px;
+    border-radius: Theme.r-lg;
+    border-width: 1px;
+    border-color: Theme.border;
+    background: Theme.surface;
+
+    row := HorizontalLayout {
+        padding: 2px;
+        spacing: 4px;
+        GlyphButton {
+            glyph: "‹";
+            label: UiText.month-previous;
+            clicked => {
+                root.shift(-1);
+            }
+        }
+        mid := Rectangle {
+            min-width: 144px;
+            preferred-width: max(144px, lbl.preferred-width + 16px);
+            height: 32px;
+            border-radius: Theme.r-md;
+            background: mt.hovered ? Theme.surface-2 : transparent;
+            lbl := Label {
+                text: root.label;
+                font-size: Theme.fs-ui;
+                font-weight: 500;
+                horizontal-alignment: center;
+                accessible-role: none;
+            }
+            mt := PressTarget {
+                label: root.label;
+                description: UiText.month-pick;
+                accessible-expanded: picker.is-open;
+                ring-radius: 8px;
+                activated => {
+                    root.picker-year = root.year;
+                    picker.show();
+                }
+            }
+        }
+        GlyphButton {
+            glyph: "›";
+            label: UiText.month-next;
+            clicked => {
+                root.shift(1);
+            }
+        }
+    }
+    picker := PopupWindow {
+        x: root.width - 256px;
+        y: root.height + 4px;
+        width: 256px;
+        height: 258px;
+        close-policy: close-on-click-outside;
+        FocusScope {
+            accessible-role: groupbox;
+            accessible-label: UiText.month-pick;
+            init => {
+                self.focus();
+            }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    picker.close();
+                    return accept;
+                }
+                return reject;
+            }
+            MonthPicker {
+                picker-year <=> root.picker-year;
+                year: root.year;
+                month: root.month;
+                month-names: root.month-names;
+                today-year: root.today-year;
+                today-month: root.today-month;
+                picked(y, m) => {
+                    root.pick(y, m);
+                    picker.close();
+                }
+            }
+        }
+    }
+    if root.force-open: MonthPicker {
+        x: root.width - 256px;
+        y: root.height + 4px;
+        picker-year <=> root.picker-year;
+        year: root.year;
+        month: root.month;
+        month-names: root.month-names;
+        today-year: root.today-year;
+        today-month: root.today-month;
+    }
+}
+
+// `DateInput` of DateInput.tsx: a text field that shows and reads dates in the Formats setting (`Rules.date-pattern`).
+// `value` is ISO "YYYY-MM-DD" ('' for none or unusable); `changed(iso, usable)` follows every edit. Outside changes of
+// `value` (a reset after saving) and of the pattern re-write the text, own typing does not. After leaving the field
+// with unusable text the error shows below, in the negative colour.
+export component DateInput inherits Rectangle {
+    in-out property <string> value;
+    in property <string> max;
+    in property <string> label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <string> simulate;
+    callback changed-date(string, bool);
+    forward-focus: field;
+
+    property <string> text;
+    property <bool> left: false;
+    property <DateCheck> check: Rules.check-date(root.text, root.max, root.pattern);
+    property <string> pattern: Rules.date-pattern;
+    property <bool> shown: root.left && root.check.problem != "";
+    property <string> error-text: root.check.problem == "too-late" ? UiText.date-too-late.replace-all("{date}", Rules.format-date(root.max, root.pattern)) : UiText.date-invalid.replace-all("{format}", root.pattern).replace-all("{example}", Rules.format-date(root.example, root.pattern));
+    // An example date in the pattern (today's date from the owner).
+    in property <string> example;
+
+    function sync() {
+        if (root.value != root.check.iso) {
+            root.text = root.value == "" ? "" : Rules.format-date(root.value, root.pattern);
+        }
+    }
+    init => {
+        root.sync();
+    }
+    changed value => {
+        root.sync();
+    }
+    changed pattern => {
+        root.text = root.value == "" ? "" : Rules.format-date(root.value, root.pattern);
+    }
+
+    height: col.preferred-height;
+    col := VerticalLayout {
+        spacing: 6px;
+        field := Input {
+            text <=> root.text;
+            placeholder: root.pattern;
+            label: root.label;
+            description: root.shown ? root.error-text : root.description;
+            enabled: root.enabled;
+            invalid: root.shown;
+            numeric: true;
+            simulate: root.simulate;
+            edited(t) => {
+                root.left = false;
+                let c = Rules.check-date(t, root.max, root.pattern);
+                root.value = c.iso;
+                root.changed-date(c.iso, c.problem == "");
+            }
+            changed has-focus => {
+                if (!self.has-focus) {
+                    root.left = true;
+                }
+            }
+        }
+        if root.shown: Label {
+            text: root.error-text;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.negative;
+            wrap: word-wrap;
+            accessible-live-region: polite;
+        }
+    }
+}

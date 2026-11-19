@@ -1,0 +1,7 @@
+{
+  "name": "accounts create and list",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Checking", "bank": "Invented Bank", "iban": "BE68 5390 0754 7034", "openingBalanceCents": 120000}},
+    {"op": "accounts.list"}
+  ]
+}

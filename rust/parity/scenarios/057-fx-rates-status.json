@@ -1,0 +1,30 @@
+{
+  "name": "fx: manual rates, status, euro refused, validation",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Dollar", "currency": "USD"}},
+    {"op": "accounts.create", "input": {"name": "Pound", "currency": "GBP"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-01-10", "amountCents": -100, "description": "usd"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-05-10", "amountCents": -100, "description": "gbp"}},
+    {"op": "fx.status"},
+    {"op": "fx.rates"},
+    {"op": "fx.setRate", "input": {"currency": "usd", "date": "2026-01-01", "perEur": 1.1}},
+    {"op": "fx.setRate", "input": {"currency": "USD", "date": "2026-01-01", "perEur": 1.2}},
+    {"op": "fx.setRate", "input": {"currency": "GBP", "date": "2026-06-01", "perEur": 0.8}, "actor": "assistant"},
+    {"op": "fx.status"},
+    {"op": "fx.rates", "input": {}},
+    {"op": "fx.rates", "input": {"currency": "USD"}},
+    {"op": "fx.setRate", "input": {"currency": "EUR", "date": "2026-01-01", "perEur": 1}},
+    {"op": "fx.setRate", "input": {"currency": "USD", "date": "2026-01-01", "perEur": 0}},
+    {"op": "fx.setRate", "input": {"currency": "USD", "date": "2026-01-01", "perEur": 10000000000.0}},
+    {"op": "fx.setRate", "input": {"currency": "USD", "date": "2026-01-01", "perEur": 1000000000.0}},
+    {"op": "fx.setRate", "input": {"currency": "QQQ", "date": "2026-01-01", "perEur": 1}},
+    {"op": "fx.deleteRate", "input": {"currency": "USD", "date": "2026-01-01"}},
+    {"op": "fx.deleteRate", "input": {"currency": "USD", "date": "1999-01-01"}},
+    {"op": "fx.deleteRate", "input": {"currency": "USD"}},
+    {"op": "accounts.list"},
+    {"op": "settings.update", "input": {"fxAutoUpdate": true}},
+    {"op": "fx.status"},
+    {"op": "settings.update", "input": {"currency": "CHF"}},
+    {"op": "fx.status"}
+  ]
+}

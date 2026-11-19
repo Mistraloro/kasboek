@@ -1,0 +1,10 @@
+{
+  "name": "prefs update: values, formats and the written file",
+  "steps": [
+    {"op": "prefs.update", "input": {"theme": "dark", "autoLockMinutes": 0}},
+    {"op": "prefs.update", "input": {"formats": {"date": "YYYY-MM-DD", "time": "12h"}}},
+    {"op": "prefs.update", "input": {"language": "pt-BR", "welcomeDone": true, "keepInTray": true, "insights": false, "updateCheck": false}},
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {}}
+  ]
+}

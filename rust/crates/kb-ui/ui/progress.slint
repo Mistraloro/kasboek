@@ -1,0 +1,89 @@
+// Meter (charts.tsx `Meter`), ProgressBar and Spinner.
+import { Theme } from "theme.slint";
+
+// A turning arc for "busy". It stops with prefers-reduced-motion (Theme.reduced-motion). It has no accessible node: the
+// control that is busy (Button) says so in its description.
+export component Spinner inherits Rectangle {
+    in property <length> size: 16px;
+    in property <brush> tint: Theme.accent;
+    width: root.size;
+    height: root.size;
+    accessible-role: none;
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: self.width / 2;
+        border-width: max(2px, root.size / 8);
+        border-color: root.tint.with-alpha(0.25);
+    }
+    Path {
+        // A quarter circle that walks round once every 0.8 s (a Rectangle cannot rotate in Slint, so the arc's end
+        // points move instead).
+        property <angle> start: Theme.reduced-motion ? 0deg : mod(animation-tick() / 1s, 0.8) / 0.8 * 360deg;
+        width: 100%;
+        height: 100%;
+        viewbox-width: 16;
+        viewbox-height: 16;
+        commands: "M \{8 + 7 * cos(self.start)} \{8 + 7 * sin(self.start)} A 7 7 0 0 1 \{8 + 7 * cos(self.start + 90deg)} \{8 + 7 * sin(self.start + 90deg)}";
+        stroke: root.tint;
+        stroke-width: max(2px, root.size / 8);
+        stroke-line-cap: round;
+    }
+}
+
+// Budget meter: spent against budget. Over budget switches to the negative colour, above 85 % to warning. `max` of 0
+// (no budget) draws the empty track only. A screen reader reads value and maximum; the caller's row carries the words.
+export component Meter inherits Rectangle {
+    in property <float> value;
+    in property <float> limit;
+    in property <string> label;
+
+    property <float> pct: root.limit > 0 ? min(100, root.value / root.limit * 100) : 0;
+    property <bool> over: root.limit > 0 && root.value > root.limit;
+
+    height: 6px;
+    border-radius: 3px;
+    background: Theme.surface-2;
+    clip: true;
+    // Without a budget only the empty track is drawn, and nothing is announced.
+    if root.limit > 0: Rectangle {
+        accessible-role: progress-indicator;
+        accessible-label: root.label;
+        accessible-value: root.value;
+        accessible-value-minimum: 0;
+        accessible-value-maximum: root.limit;
+    }
+    Rectangle {
+        x: 0;
+        width: root.width * max(root.pct, (root.limit > 0 && root.value > 0) ? 2 : 0) / 100;
+        height: parent.height;
+        border-radius: 3px;
+        background: root.over ? Theme.negative : root.pct > 85 ? Theme.warning : Theme.accent;
+    }
+}
+
+// A determinate (value 0..1) or indeterminate bar for the loading view. Same track as Meter, accent fill.
+export component ProgressBar inherits Rectangle {
+    in property <float> value;
+    in property <bool> indeterminate: false;
+    in property <string> label;
+
+    height: 6px;
+    border-radius: 3px;
+    background: Theme.surface-2;
+    clip: true;
+    accessible-role: progress-indicator;
+    accessible-label: root.label;
+    accessible-value: root.indeterminate ? "" : "\{round(root.value * 100)}%";
+    accessible-value-minimum: 0;
+    accessible-value-maximum: 1;
+
+    Rectangle {
+        property <float> phase: Theme.reduced-motion ? 0.3 : mod(animation-tick() / 1s, 1.4) / 1.4;
+        x: root.indeterminate ? root.width * (phase * 1.4 - 0.4) : 0;
+        width: root.indeterminate ? root.width * 0.4 : root.width * clamp(root.value, 0, 1);
+        height: parent.height;
+        border-radius: 3px;
+        background: Theme.accent;
+    }
+}

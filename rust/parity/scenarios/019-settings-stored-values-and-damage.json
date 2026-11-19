@@ -1,0 +1,9 @@
+{
+  "name": "settings get: stored values, damaged values and unknown keys",
+  "steps": [
+    {"op": "@sql", "input": {"sql": "INSERT INTO settings (key, value) VALUES ('memoryEnabled','false'),('pageContextEnabled','false'),('autoBackupKeep','25'),('chatEffort','\"high\"'),('lastBackupAt','\"2026-11-01T00:00:00.000Z\"'),('aiReasoning','not json'),('fxLastEcbUpdateAt','null'),('permissions','{\"mode\":\"smart\",\"rules\":{\"categorise\":\"allow\"},\"mcpAlwaysAsk\":false}'),('notASetting','1'),('savedSearches','[{\"name\":\"a\",\"filter\":{}}]'),('aiProviders','{\"x\":{\"baseUrl\":\"http://localhost\"}}'),('autoBackupFolder','\"/tmp/x\"'),('aiBaseUrl','1.0')"}},
+    {"op": "settings.get"},
+    {"op": "settings.update", "input": {"currency": "GBP"}},
+    {"op": "settings.get"}
+  ]
+}

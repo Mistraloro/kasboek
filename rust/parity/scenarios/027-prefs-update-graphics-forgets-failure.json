@@ -1,0 +1,10 @@
+{
+  "name": "prefs update: choosing graphics forgets an earlier failure",
+  "prefs": "{\"graphicsFailed\":true,\"graphics\":\"on\",\"language\":\"fr\"}",
+  "steps": [
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"graphics": "off"}},
+    {"op": "prefs.update", "input": {"theme": "light"}},
+    {"op": "prefs.update", "input": {"graphics": "auto"}}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "accounts list: balances in own and main currency, recorded balances, archived last",
+  "steps": [
+    {"op": "@sql", "input": {"sql": "INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-01-01',1.10,'ecb'),('USD','2026-06-01',1.20,'ecb'),('USD','2026-06-01',1.25,'manual'),('GBP','2026-01-01',0.85,'ecb')"}},
+    {"op": "@fxReload"},
+    {"op": "accounts.create", "input": {"name": "Zed", "currency": "EUR", "openingBalanceCents": 10000}},
+    {"op": "accounts.create", "input": {"name": "Dollar", "currency": "USD", "openingBalanceCents": 5000}},
+    {"op": "accounts.create", "input": {"name": "Pound", "currency": "GBP"}},
+    {"op": "accounts.create", "input": {"name": "Old"}},
+    {"op": "accounts.update", "input": {"id": 4, "archived": true}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-03-01", "amountCents": -2500, "description": "eur spend"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-03-01", "amountCents": -1000, "description": "usd spend"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-07-01", "amountCents": 3333, "description": "usd income"}},
+    {"op": "transactions.create", "input": {"accountId": 3, "bookingDate": "2026-02-01", "amountCents": -777, "description": "gbp"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO transactions (account_id, booking_date, amount_cents, currency, description, fingerprint) VALUES (1,'2026-04-01',2000,'USD','usd in eur account','fp-x')"}},
+    {"op": "accounts.list"},
+    {"op": "balances.set", "input": {"accountId": 2, "date": "2026-05-01", "balanceCents": 4000}},
+    {"op": "accounts.list"}
+  ]
+}

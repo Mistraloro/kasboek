@@ -1,0 +1,13 @@
+{
+  "name": "transactions rename: trimmed names, missing ids",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "a", "counterpartyName": "CRF MKT"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -2, "description": "b"}},
+    {"op": "transactions.rename", "input": {"ids": [1, 2, 3], "counterpartyName": "  Carrefour  "}, "actor": "assistant"},
+    {"op": "transactions.rename", "input": {"ids": [1], "counterpartyName": ""}},
+    {"op": "transactions.rename", "input": {"ids": [], "counterpartyName": "x"}},
+    {"op": "transactions.rename", "input": {"ids": [1], "counterpartyName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}},
+    {"op": "transactions.list", "input": {"search": "carre"}}
+  ]
+}

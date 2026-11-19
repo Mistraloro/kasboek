@@ -1,0 +1,581 @@
+// Form controls of ui.tsx: Field, Input, PasswordInput, CodeInput, Switch, Checkbox, Radio(Group), Segmented.
+// A control that has a visible label elsewhere (Field) still gets the same text in `label`: Slint cannot link them.
+import { Theme } from "theme.slint";
+import { FocusRing, Icon, Label, PressTarget, Pressable, SwitchTarget, CheckboxTarget, RadioTarget, Session } from "base.slint";
+import { Icons } from "icons.slint";
+import { Elevated } from "theme.slint";
+
+// `flex flex-col gap-1.5`: label 13px medium, the control (children), an optional error and the hint (text-xs muted).
+export component Field inherits Rectangle {
+    in property <string> label;
+    in property <string> hint;
+    in property <string> error;
+    height: col.preferred-height;
+
+    col := VerticalLayout {
+        spacing: 6px;
+        Label {
+            text: root.label;
+            font-size: Theme.fs-ui;
+            font-weight: 500;
+            lh: Theme.lh-ui;
+        }
+        @children
+        if root.error != "": Label {
+            text: root.error;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.negative;
+            wrap: word-wrap;
+            accessible-live-region: polite;
+        }
+        if root.hint != "": Label {
+            text: root.hint;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.muted;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// `control` class of ui.tsx: h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm, border accent while
+// focused, disabled:opacity-60. Chromium also draws the 2px focus ring around a focused text field (the app's
+// `:focus-visible` rule beats `focus:outline-none`), and styles.css makes it radius 6px.
+export component Input inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <string> label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <bool> invalid: false;
+    in property <bool> read-only: false;
+    // `.num` class: tabular figures.
+    in property <bool> numeric: false;
+    in property <InputType> input-type: InputType.text;
+    in property <TextHorizontalAlignment> text-align: TextHorizontalAlignment.left;
+    in property <length> text-size: Theme.fs-body;
+    in property <length> letter-spacing: 0px;
+    // Room kept free on the right (PasswordInput's eye button: pr-10).
+    in property <length> right-inset: 0px;
+    // Gallery and parity shots: "focus" draws the focused look.
+    in property <string> simulate;
+    out property <bool> has-focus: ti.has-focus;
+    out property <bool> focused: ti.has-focus || root.simulate == "focus";
+    callback edited(string);
+    callback accepted(string);
+    forward-focus: ti;
+
+    height: Theme.h-control;
+    border-radius: root.focused ? Theme.r-md : Theme.r-lg;
+    border-width: 1px;
+    border-color: root.focused ? Theme.accent : root.invalid ? Theme.negative : Theme.border;
+    background: Theme.surface;
+    opacity: root.enabled ? 1 : 0.6;
+    clip: false;
+
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.text;
+        clicked => {
+            ti.focus();
+        }
+    }
+    if root.text == "" && root.placeholder != "": Text {
+        x: 13px;
+        y: 1px;
+        width: parent.width - 26px - root.right-inset;
+        height: parent.height - 1px;
+        text: root.placeholder;
+        font-family: root.numeric ? Theme.num : Theme.sans;
+        font-size: root.text-size;
+        letter-spacing: root.letter-spacing;
+        color: Theme.muted.with-alpha(0.7);
+        horizontal-alignment: root.text-align;
+        vertical-alignment: center;
+        overflow: clip;
+        accessible-role: none;
+    }
+    // The text starts 13px in (1px border + px-3) and sits one pixel lower than the box centre, as in Chromium.
+    ti := TextInput {
+        x: 13px;
+        y: 1px;
+        width: parent.width - 26px - root.right-inset;
+        height: parent.height - 1px;
+        text <=> root.text;
+        enabled: root.enabled;
+        read-only: root.read-only;
+        input-type: root.input-type;
+        single-line: true;
+        font-family: root.numeric ? Theme.num : Theme.sans;
+        font-size: root.text-size;
+        letter-spacing: root.letter-spacing;
+        color: Theme.text;
+        horizontal-alignment: root.text-align;
+        vertical-alignment: center;
+        selection-background-color: Theme.accent.with-alpha(0.3);
+        selection-foreground-color: Theme.text;
+        accessible-role: text-input;
+        accessible-label: root.label;
+        accessible-description: root.description;
+        accessible-placeholder-text: root.placeholder;
+        accessible-enabled: root.enabled;
+        edited => {
+            root.edited(self.text);
+        }
+        accepted => {
+            root.accepted(self.text);
+        }
+    }
+    if root.focused && root.enabled: FocusRing {
+        radius: 8px;
+        gap: 1px;
+    }
+}
+
+// `PasswordInput` of ui.tsx: the text is visible only while the eye button is held (pointer, or Space/Enter on the
+// focused button). Same release rules as src/shared/password-reveal.ts: pointer up or cancel, key up, Escape in the
+// field, focus leaving the field or the button, the window losing focus (Session.hide-secrets), or the app locking.
+export component PasswordInput inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    // Names of the field and of the eye button ("Hold to show the password").
+    in property <string> label;
+    in property <string> eye-label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <bool> invalid: false;
+    in property <string> simulate;
+    // Gallery: shows the revealed state without a button being held.
+    in property <bool> force-shown: false;
+    out property <bool> shown: root.revealed || root.force-shown;
+    callback edited(string);
+    callback accepted(string);
+    forward-focus: field;
+
+    property <bool> revealed: false;
+    property <int> hide-tick: Session.hide-secrets;
+    changed hide-tick => {
+        root.revealed = false;
+    }
+
+    height: Theme.h-control;
+
+    scope := FocusScope {
+        // Only here to see Escape bubble up from the text field; never takes focus itself.
+        focus-on-click: false;
+        focus-on-tab-navigation: false;
+        key-pressed(e) => {
+            if (e.text == Key.Escape && root.revealed) {
+                root.revealed = false;
+                return accept;
+            }
+            return reject;
+        }
+        field := Input {
+            text <=> root.text;
+            placeholder: root.placeholder;
+            label: root.label;
+            description: root.description;
+            enabled: root.enabled;
+            invalid: root.invalid;
+            simulate: root.simulate;
+            input-type: root.shown ? InputType.text : InputType.password;
+            right-inset: 28px;
+            edited(t) => {
+                root.edited(t);
+            }
+            accepted(t) => {
+                root.accepted(t);
+            }
+            changed has-focus => {
+                if (!self.has-focus && !eye.has-focus) {
+                    root.revealed = false;
+                }
+            }
+        }
+        // top-1/2 right-0.5 h-8 w-8 rounded-md text-muted hover:bg-surface-2 hover:text-text
+        eye := PressTarget {
+            x: parent.width - 2px - 32px;
+            y: (parent.height - 32px) / 2;
+            width: 32px;
+            height: 32px;
+            label: root.eye-label;
+            enabled: root.enabled;
+            simulate: root.simulate == "eye-focus" ? "focus" : "";
+            ring-radius: 8px;
+            accessible-checkable: true;
+            accessible-checked: root.shown;
+            accessible-action-default => {
+                // A screen reader's click has no "hold": the button does nothing, as in the renderer.
+            }
+            down-changed(d) => {
+                root.revealed = d && root.enabled;
+            }
+            changed has-focus => {
+                if (!self.has-focus && !field.has-focus) {
+                    root.revealed = false;
+                }
+            }
+            Rectangle {
+                border-radius: Theme.r-md;
+                background: (eye.hovered && root.enabled) ? Theme.surface-2 : transparent;
+            }
+            Icon {
+                source: root.shown ? Icons.eye-off : Icons.eye;
+                size: 16px;
+                tint: (eye.hovered && root.enabled) ? Theme.text : Theme.muted;
+            }
+        }
+    }
+}
+
+// Authenticator code field of pages/auth/parts.tsx: digits only, at most 6, `num text-center text-lg tracking-[0.4em]`.
+// A paste longer than 6 digits is refused as a whole (the renderer would cut it).
+export component CodeInput inherits Input {
+    in property <int> max-length: 6;
+    property <string> last;
+    placeholder: "123456";
+    numeric: true;
+    input-type: InputType.number;
+    text-align: TextHorizontalAlignment.center;
+    text-size: 18px;
+    letter-spacing: 7.2px;
+    edited(t) => {
+        if (t.character-count > root.max-length) {
+            root.text = root.last;
+        } else {
+            root.last = t;
+        }
+    }
+}
+
+// `Switch` of ui.tsx: h-5 w-9 pill, accent when on, border-strong when off, a 16px white thumb with a small shadow.
+export component Switch inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <string> simulate;
+    callback toggled(bool);
+    forward-focus: tgt;
+
+    width: 36px;
+    height: 20px;
+    border-radius: Theme.r-full;
+    background: root.checked ? Theme.accent : Theme.border-strong;
+    opacity: root.enabled ? 1 : 0.5;
+
+    Elevated {
+        level: 2;
+        x: root.checked ? 18px : 2px;
+        y: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: Theme.r-full;
+        background: Theme.white;
+    }
+    tgt := SwitchTarget {
+        label: root.label;
+        description: root.description;
+        checked: root.checked;
+        enabled: root.enabled;
+        simulate: root.simulate;
+        ring-radius: 12px;
+        activated => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+// A checkbox with its text (`flex items-start gap-2 text-[13px]`), drawn at 16px in the accent colour (the renderer
+// uses the native one with `accent-color`). `indeterminate` is the "some rows selected" state of a select-all box.
+export component Checkbox inherits Rectangle {
+    in-out property <bool> checked;
+    in property <bool> indeterminate: false;
+    // The visible text; empty for a bare box in a table (then `label` names it).
+    in property <string> text;
+    in property <string> label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <string> simulate;
+    callback toggled(bool);
+    forward-focus: tgt;
+
+    property <bool> on: root.checked || root.indeterminate;
+    height: max(16px, row.preferred-height);
+    width: row.preferred-width;
+    opacity: root.enabled ? 1 : 0.5;
+
+    row := HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+        VerticalLayout {
+            alignment: start;
+            padding-top: 2px;
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                border-radius: Theme.r-sm;
+                border-width: 1px;
+                border-color: root.on ? Theme.accent : Theme.border-strong;
+                background: root.on ? Theme.accent : Theme.surface;
+                if root.checked && !root.indeterminate: Icon {
+                    source: Icons.check-3;
+                    size: 12px;
+                    tint: Theme.accent-fg;
+                }
+                if root.indeterminate: Rectangle {
+                    width: 8px;
+                    height: 2px;
+                    background: Theme.accent-fg;
+                }
+            }
+        }
+        if root.text != "": Label {
+            text: root.text;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            accessible-role: none;
+        }
+    }
+    tgt := CheckboxTarget {
+        label: root.label != "" ? root.label : root.text;
+        description: root.description;
+        checked: root.checked;
+        enabled: root.enabled;
+        simulate: root.simulate;
+        ring-radius: 8px;
+        activated => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+// One radio button with its text.
+component RadioItem inherits Rectangle {
+    in property <string> text;
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    in property <string> simulate;
+    in property <int> index;
+    in property <int> want-focus: -1;
+    callback chosen();
+    callback arrow(int);
+    changed want-focus => {
+        if (root.want-focus == root.index) {
+            tgt.focus();
+        }
+    }
+
+    height: 20px;
+    width: row.preferred-width;
+    opacity: root.enabled ? 1 : 0.5;
+
+    row := HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                border-radius: Theme.r-full;
+                border-width: root.checked ? 5px : 1px;
+                border-color: root.checked ? Theme.accent : Theme.border-strong;
+                background: root.checked ? Theme.accent-fg : Theme.surface;
+            }
+        }
+        Label {
+            text: root.text;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            accessible-role: none;
+        }
+    }
+    tgt := RadioTarget {
+        label: root.text;
+        checked: root.checked;
+        enabled: root.enabled;
+        simulate: root.simulate;
+        ring-radius: 8px;
+        activated => {
+            root.chosen();
+        }
+        key(e) => {
+            if (e.text == Key.DownArrow || e.text == Key.RightArrow) {
+                root.arrow(1);
+                return true;
+            }
+            if (e.text == Key.UpArrow || e.text == Key.LeftArrow) {
+                root.arrow(-1);
+                return true;
+            }
+            return false;
+        }
+    }
+}
+
+// A group of radio buttons from a model; arrow keys move the choice, like native radios.
+export component RadioGroup inherits Rectangle {
+    in property <[string]> model;
+    in-out property <int> current-index: -1;
+    in property <string> label;
+    in property <bool> enabled: true;
+    callback selected(int);
+
+    property <int> want-focus: -1;
+    height: col.preferred-height;
+    width: col.preferred-width;
+    accessible-role: radio-group;
+    accessible-label: root.label;
+
+    col := VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+        for item[i] in root.model: RadioItem {
+            text: item;
+            index: i;
+            checked: root.current-index == i;
+            enabled: root.enabled;
+            want-focus: root.want-focus;
+            chosen => {
+                root.current-index = i;
+                root.selected(i);
+            }
+            arrow(d) => {
+                if (i + d >= 0 && i + d < root.model.length) {
+                    root.current-index = i + d;
+                    root.selected(i + d);
+                    root.want-focus = -1;
+                    root.want-focus = i + d;
+                }
+            }
+        }
+    }
+}
+
+export struct SegmentOption {
+    label: string,
+    icon: image,
+    has-icon: bool,
+    disabled: bool,
+    // `title` of the renderer; read as the description.
+    tip: string,
+}
+
+component SegmentItem inherits Rectangle {
+    in property <SegmentOption> option;
+    in property <bool> selected;
+    in property <int> index;
+    in property <int> want-focus: -1;
+    in property <string> simulate;
+    callback chosen();
+    callback arrow(int);
+    changed want-focus => {
+        if (root.want-focus == root.index) {
+            tgt.focus();
+        }
+    }
+
+    property <bool> hover: tgt.hovered && !root.option.disabled && !root.selected;
+    width: row.preferred-width;
+    height: 32px;
+    border-radius: tgt.focused ? Theme.r-md : Theme.r-md;
+    opacity: root.option.disabled ? 0.4 : 1;
+
+    if root.selected: Elevated {
+        level: 1;
+        border-radius: Theme.r-md;
+        background: Theme.surface;
+    }
+    row := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 6px;
+        alignment: center;
+        if root.option.has-icon: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.option.icon;
+                size: 14px;
+                tint: root.selected || root.hover ? Theme.text : Theme.muted;
+            }
+        }
+        Label {
+            text: root.option.label;
+            font-size: Theme.fs-ui;
+            font-weight: 500;
+            lh: Theme.lh-ui;
+            color: root.selected || root.hover ? Theme.text : Theme.muted;
+            accessible-role: none;
+        }
+    }
+    tgt := RadioTarget {
+        label: root.option.label;
+        description: root.option.tip;
+        checked: root.selected;
+        enabled: !root.option.disabled;
+        simulate: root.simulate;
+        ring-radius: 8px;
+        activated => {
+            root.chosen();
+        }
+        key(e) => {
+            if (e.text == Key.RightArrow || e.text == Key.DownArrow) {
+                root.arrow(1);
+                return true;
+            }
+            if (e.text == Key.LeftArrow || e.text == Key.UpArrow) {
+                root.arrow(-1);
+                return true;
+            }
+            return false;
+        }
+    }
+}
+
+// `Segmented` of ui.tsx: `inline-flex rounded-lg border border-border bg-surface-2 p-0.5` with 32px options. Tab
+// reaches every enabled option like in the renderer; the arrow keys also move the choice.
+export component Segmented inherits Rectangle {
+    in property <[SegmentOption]> options;
+    in-out property <int> current-index: 0;
+    in property <string> label;
+    in property <string> simulate;
+    callback selected(int);
+
+    property <int> want-focus: -1;
+    width: row.preferred-width + 6px;
+    height: 38px;
+    border-radius: Theme.r-lg;
+    border-width: 1px;
+    border-color: Theme.border;
+    background: Theme.surface-2;
+    accessible-role: radio-group;
+    accessible-label: root.label;
+
+    row := HorizontalLayout {
+        padding: 2px;
+        for option[i] in root.options: SegmentItem {
+            option: option;
+            index: i;
+            selected: root.current-index == i;
+            want-focus: root.want-focus;
+            simulate: (root.simulate == "focus" && root.current-index == i) ? "focus" : "";
+            chosen => {
+                root.current-index = i;
+                root.selected(i);
+            }
+            arrow(d) => {
+                if (i + d >= 0 && i + d < root.options.length && !root.options[i + d].disabled) {
+                    root.current-index = i + d;
+                    root.selected(i + d);
+                    root.want-focus = -1;
+                    root.want-focus = i + d;
+                }
+            }
+        }
+    }
+}

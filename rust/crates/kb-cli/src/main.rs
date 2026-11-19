@@ -4,6 +4,7 @@
 //! `{"error":{"code","message"}}` and exits with 1. Secrets are arguments or stdin: use invented ones only.
 //! `kb-cli help` lists the commands.
 mod commands;
+mod scenario;
 
 use serde_json::json;
 use std::process::ExitCode;

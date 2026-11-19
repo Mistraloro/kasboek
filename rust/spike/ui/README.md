@@ -14,7 +14,7 @@ software renderer by default. Goal: gates G1 (geometry +-2 px, pixel diff <= 3%)
 | `src/startup.rs` | real window, startup.log-style milestones, `--renderer software|femtovg|skia` |
 | `assets/fonts` | static Inter 400/500/600, "Inter Num" (tnum frozen) 400/500/600, Source Serif 4 500/600: 8 TTF, 474 KB, OFL-1.1 (from `@fontsource-variable`; licence texts next to them) |
 | `assets/icons` | 17 lucide SVGs (ISC) and the Kasboek mark |
-| `tools/` | `make-fonts.py`, `make-icons.mjs`, `reference.mjs`, `shots.sh`, `compare.py`, `startup-bench.sh`, `a11y-dump.sh` |
+| `tools/` | `make-icons.mjs`, `reference.mjs`, `shots.sh`, `compare.py`, `startup-bench.sh`, `a11y-dump.sh` |
 
 ## Rerun
 
@@ -23,7 +23,7 @@ All outputs go to a scratch directory, e.g. `OUT=/tmp/kb-shots`. Run from `rust/
 ```sh
 # 0. one-time: fonts and icons (the generated files are committed, this is only needed to change them)
 python3 -m venv /tmp/kb-venv && /tmp/kb-venv/bin/pip install fonttools brotli opentype-feature-freezer pillow numpy scipy
-PATH=/tmp/kb-venv/bin:$PATH python tools/make-fonts.py
+PATH=/tmp/kb-venv/bin:$PATH python ../../crates/kb-ui/tools/make-fonts.py   # moved to kb-ui (it now also writes kb-ui's own assets; the spike's fonts stay as committed)
 node tools/make-icons.mjs
 
 # 1. Electron reference (needs `npm run build` at the repo root first, and `playwright` resolvable by node)
@@ -66,7 +66,7 @@ Window: `target/release/kasboek-ui-spike --screen lock-password|lock-hello|overv
 ## Fonts
 
 `@fontsource-variable` ships woff2 variable fonts (latin and latin-ext subsets, wght axis only, no opsz). Slint cannot use
-variable fonts, so `tools/make-fonts.py` converts the latin subset to TTF, makes static instances with fonttools `instancer`
+variable fonts, so `crates/kb-ui/tools/make-fonts.py` (moved there from this spike) converts the latin subset to TTF, makes static instances with fonttools `instancer`
 (wght 400/500/600 for Inter, 500/600 for Source Serif 4), renames the families and freezes `tnum` into a second family
 ("Inter Num") for the renderer's `.num` class. `font-feature-settings: 'cv11','ss01'` in `styles.css` is a no-op today: the
 shipped latin subset has no `cv11` or `ss01` (its GSUB has only calt, ccmp, dnom, frac, locl, numr, pnum, tnum), so nothing needs

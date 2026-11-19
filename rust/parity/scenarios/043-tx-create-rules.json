@@ -1,0 +1,28 @@
+{
+  "name": "transactions create: the first matching rule gives the category (contains, word, starts, iban, priority, accents)",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO rules (field, pattern, category_id, match, priority) VALUES ('counterparty','delhaize',3,'contains',0),('any','cafe',7,'contains',0),('description','tv',11,'word',0),('counterparty','albert',8,'starts',2),('any','ref',9,'contains',-1),('iban','BE62510007547061',15,'contains',0),('any','ß',12,'contains',0),('description','İstanbul',13,'contains',0),('any','x',14,'word',0)"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "DELHAIZE gent"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "x", "counterpartyName": "Delhaize"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -1, "description": "Café Crème"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -1, "description": "CAFÉ"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -1, "description": "my tv set"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -1, "description": "tvs and more"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -1, "description": "(tv)"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-04", "amountCents": -1, "description": "shop", "counterpartyName": "Albert Heijn"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-04", "amountCents": -1, "description": "the albert", "counterpartyName": "Not Albert"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-05", "amountCents": -1, "description": "REF 12"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-05", "amountCents": -1, "description": "Straße"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-05", "amountCents": -1, "description": "STRASSE"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-06", "amountCents": -1, "description": "x"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-06", "amountCents": -1, "description": "ax"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-06", "amountCents": -1, "description": "a x b"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-07", "amountCents": -1, "description": "ISTANBUL"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-07", "amountCents": -1, "description": "İstanbul trip"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-08", "amountCents": -1, "description": "both delhaize and café"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-08", "amountCents": -1, "description": "plain", "categoryId": 1}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-08", "amountCents": -1, "description": "cafe explicit null", "categoryId": null}},
+    {"op": "transactions.list", "input": {"limit": 100}}
+  ]
+}

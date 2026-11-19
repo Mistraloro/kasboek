@@ -1,0 +1,9 @@
+{
+  "name": "prefs: a file that is not JSON gives the defaults",
+  "prefs": "{not json",
+  "languages": ["de"],
+  "steps": [
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"theme": "dark"}}
+  ]
+}

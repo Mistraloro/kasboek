@@ -1,0 +1,8 @@
+{
+  "name": "prefs: a missing language follows the system",
+  "prefs": "{\"language\":\"\"}",
+  "languages": ["pt-PT"],
+  "steps": [
+    {"op": "prefs.get"}
+  ]
+}

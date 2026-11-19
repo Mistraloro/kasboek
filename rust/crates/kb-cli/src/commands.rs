@@ -33,6 +33,12 @@ macro_rules! lib_error {
 }
 lib_error!(kb_crypto::CryptoError, kb_crypto::transfer::TransferError, kb_db::DbError);
 
+impl From<kb_core::AppError> for CliError {
+    fn from(e: kb_core::AppError) -> Self {
+        CliError { code: e.code, message: e.message }
+    }
+}
+
 impl From<kb_crypto::syncfile::SyncFileError> for CliError {
     fn from(e: kb_crypto::syncfile::SyncFileError) -> Self {
         CliError { code: "sync.file".into(), message: e.to_string() }
@@ -52,6 +58,7 @@ impl From<serde_json::Error> for CliError {
 }
 
 const HELP: &str = "commands:
+  scenario <file.json>                      run a scenario of ops through kb-core on a fresh database; prints results and a dump
   db-create <file> <keyhex> <schema>        create a database migrated to schema 1..15
   db-open <file> <keyhex> [--no-migrate]    open; print schema version, row counts, integrity
   db-migrate <file> <keyhex>                migrate to the current schema
@@ -77,6 +84,7 @@ pub fn run(args: &[String]) -> Result<String, CliError> {
     };
     match arg(0)? {
         "help" => Ok(HELP.into()),
+        "scenario" => crate::scenario::run(arg(1)?),
         "db-create" => {
             let schema: u32 = arg(3)?.parse().map_err(|_| CliError { code: "usage".into(), message: "schema must be a number".into() })?;
             let store = open(arg(1)?, arg(2)?, false)?;

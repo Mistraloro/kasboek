@@ -1,0 +1,18 @@
+{
+  "name": "transactions list: amounts in a currency without a rate are left out of the totals",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "accounts.create", "input": {"name": "Yen", "currency": "JPY"}},
+    {"op": "accounts.create", "input": {"name": "Dollar", "currency": "USD"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-05',1.2,'ecb')"}},
+    {"op": "@fxReload"},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -500, "description": "eur"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-10-01", "amountCents": -50000, "description": "yen"}},
+    {"op": "transactions.create", "input": {"accountId": 3, "bookingDate": "2026-10-01", "amountCents": 1200, "description": "usd before the first rate"}},
+    {"op": "transactions.create", "input": {"accountId": 3, "bookingDate": "2026-10-20", "amountCents": -2400, "description": "usd later"}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "transactions.list", "input": {"accountId": 2}},
+    {"op": "settings.update", "input": {"currency": "JPY"}},
+    {"op": "transactions.list", "input": {}}
+  ]
+}

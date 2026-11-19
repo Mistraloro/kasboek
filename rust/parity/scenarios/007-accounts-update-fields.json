@@ -1,0 +1,15 @@
+{
+  "name": "accounts update: every field, and nulls",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Checking", "bank": "Invented Bank", "iban": "BE68 5390 0754 7034", "openingBalanceCents": 120000}},
+    {"op": "accounts.update", "input": {"id": 1, "name": " Renamed "}},
+    {"op": "accounts.update", "input": {"id": 1, "bank": ""}},
+    {"op": "accounts.update", "input": {"id": 1, "iban": " be71 0961 2345 6769 "}},
+    {"op": "accounts.update", "input": {"id": 1, "iban": null}},
+    {"op": "accounts.update", "input": {"id": 1, "kind": "savings", "archived": true, "fxCostPct": 3}},
+    {"op": "accounts.update", "input": {"id": 1, "fxCostPct": null}},
+    {"op": "accounts.update", "input": {"id": 1}},
+    {"op": "accounts.update", "input": {"id": 1, "archived": false}},
+    {"op": "accounts.list"}
+  ]
+}

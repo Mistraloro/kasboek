@@ -1,0 +1,19 @@
+{
+  "name": "valuations: investment values, bank accounts refused, delete",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Broker", "kind": "investment"}},
+    {"op": "accounts.create", "input": {"name": "Bank"}},
+    {"op": "valuations.set", "input": {"accountId": 1, "date": "2026-01-31", "valueCents": 100000, "note": "jan"}},
+    {"op": "valuations.set", "input": {"accountId": 1, "date": "2026-03-31", "valueCents": 120000}},
+    {"op": "valuations.set", "input": {"accountId": 1, "date": "2026-01-31", "valueCents": 101000, "note": null}},
+    {"op": "valuations.set", "input": {"accountId": 2, "date": "2026-01-31", "valueCents": 5}},
+    {"op": "valuations.set", "input": {"accountId": 9, "date": "2026-01-31", "valueCents": 5}},
+    {"op": "valuations.list", "input": {"accountId": 1}},
+    {"op": "valuations.delete", "input": {"accountId": 1, "date": "2026-03-31"}},
+    {"op": "valuations.delete", "input": {"accountId": 1, "date": "2030-01-01"}},
+    {"op": "valuations.list", "input": {"accountId": 9}},
+    {"op": "valuations.set", "input": {"accountId": 1, "date": "2026-01-31", "valueCents": 1.5}},
+    {"op": "valuations.set", "input": {"accountId": 1, "date": "2026-01-31", "valueCents": 1, "note": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"}},
+    {"op": "valuations.list", "input": {"accountId": 1}}
+  ]
+}

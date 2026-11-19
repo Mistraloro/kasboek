@@ -12,11 +12,12 @@ Rust 1.97 (`rust-version` in `Cargo.toml`; CI pins 1.97.0). Licence of the works
 | `Cargo.toml` | Workspace: shared package fields and dependency versions, the `[patch.crates-io]` that makes rusqlite link sqlite3mc, the release profile (LTO, strip, one codegen unit, abort on panic). |
 | `crates/kb-sqlite3mc-sys` | The database engine: sqlite3mc 2.4.0 / SQLite 3.53.4, vendored, built with `cc`. See its `VENDOR.md`. Named `libsqlite3-sys` so the patch applies. |
 | `crates/kb-crypto` | Key slots (Argon2id, legacy scrypt, HKDF recovery), vault seal, TOTP, recovery key, base32/base64/hex, and the `.kasboek` (KASBOEK2) and `.kbsync` (KBSYNC1) codecs. Port of `src/core/{crypto,totp,account,transfer-format,sync-file}.ts`. Keys are `Zeroizing`; errors are typed and carry the TypeScript error codes. |
-| `crates/kb-db` | The storage boundary. `Store` trait, `SqliteStore` on sqlite3mc, open/unlock sequence of `src/core/database.ts`, the 15 migrations (same SQL), sync tables and triggers, the `fx()` SQL function, integrity check, `VACUUM INTO`, canonical dump for the conformance tests. All SQL lives here. No business logic. |
-| `crates/kb-cli` | Dev-only binary `kb-cli` for the parity suite (never shipped). `kb-cli help` lists the commands. |
+| `crates/kb-db` | The storage boundary. `Store` trait, `SqliteStore` on sqlite3mc, open/unlock sequence of `src/core/database.ts`, the 15 migrations (same SQL), sync tables and triggers, the `fx()` SQL function, integrity check, `VACUUM INTO`, canonical dump for the conformance tests, and `Queries`: the typed reads and writes behind the business operations. All SQL lives here. No business logic. |
+| `crates/kb-core` | M2, first slice. The op table of all 154 operations with their flags, `dispatch(core, op, input, actor)` (locked refusal, zod-like input validation, audit log), `AppError`, `Actor`, injected `Clock` and `Rng`, and the ported operations: accounts, categories, settings, prefs, saved searches, transactions (list, create, edit, splits, bulk), balances, valuations, exchange rates. The other operations answer `op.not_ported`. No SQL: it depends on `kb-db`'s traits. `contract.json` is generated from the TypeScript sources. |
+| `crates/kb-cli` | Dev-only binary `kb-cli` for the parity suite (never shipped). `kb-cli help` lists the commands; `kb-cli scenario file.json` runs a scenario of ops through kb-core. |
 | `parity/` | Node side of the differential tests (vitest) and the known-answer fixtures. |
 
-Not here yet (later milestones of the plan): kb-core, kb-import, kb-pdf, kb-assistant, kb-sync, kb-i18n, kb-platform,
+Not here yet (later milestones of the plan): the rest of kb-core (see `docs/rust-port-plan.md`, section 10, M2 progress), kb-import, kb-pdf, kb-assistant, kb-sync, kb-i18n, kb-platform,
 kb-ui, the app binary.
 
 ## Run the tests (from the repository root)
@@ -35,6 +36,16 @@ npx vitest run --config rust/parity/vitest.config.ts                  # needs th
   against `kb-cli`, in both directions: databases at schema 1 to 15 (Rust migrates a TS-made file and the canonical dump
   equals TS's migration of the same file, and the reverse), password, recovery and scrypt slots, the vault seal, TOTP
   (RFC 6238 vectors), `.kasboek` and `.kbsync` files, `fx()` results, wrong keys and refusals.
+- The scenario suite (`parity/scenarios.spec.ts`) runs every file of `parity/scenarios/*.json` and a seeded household of about
+  2,000 transactions through the app's own `dispatch` (`src/main/ipc.ts`, with Electron and the session mocked) and through
+  `kb-cli scenario`, on a fresh invented encrypted database with a fixed clock (UTC), and diffs every op result and a dump of
+  all tables (random ids and `*_at` times masked). A scenario is `{name, clock?, languages?, prefs?, steps: [{op, input, actor?}]}`;
+  steps starting with `@` are harness steps (`@lock`, `@unlock`, `@sql` for seeding invented rows, `@fxReload`,
+  `@resetImportedSettings`). The text of `op.invalid_input` / `op.failed` errors is not compared, only their code.
+- `parity/contract.spec.ts` regenerates `crates/kb-core/contract.json` (op names and flags, input JSON Schemas, enums, defaults,
+  currency list) from the TypeScript sources and fails when the committed file is stale:
+  `KB_WRITE_CONTRACT=1 npx vitest run --config rust/parity/vitest.config.ts contract` rewrites it. The kb-core tests compare the
+  Rust op table with it.
 - `KB_CLI_BIN` selects another `kb-cli` binary (default: `rust/target/release/kb-cli`, then `debug`).
   `KB_PARITY_TMP` selects where the temporary files go. They are removed afterwards.
 - `rust/parity/vitest.config.ts` is separate from the repository's `vitest.config.ts`, which only includes `tests/**`, so

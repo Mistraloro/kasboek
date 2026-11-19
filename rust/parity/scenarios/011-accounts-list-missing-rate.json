@@ -1,0 +1,10 @@
+{
+  "name": "accounts list: a currency without any rate has no main-currency balance",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Yen", "currency": "JPY", "openingBalanceCents": 100000}},
+    {"op": "accounts.create", "input": {"name": "Eur"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-01-01", "amountCents": -100, "description": "yen shop"}},
+    {"op": "accounts.list"},
+    {"op": "settings.get"}
+  ]
+}

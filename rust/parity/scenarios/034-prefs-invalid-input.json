@@ -1,0 +1,18 @@
+{
+  "name": "prefs update: input validation",
+  "steps": [
+    {"op": "prefs.update", "input": {"theme": "blue"}},
+    {"op": "prefs.update", "input": {"language": "xx"}},
+    {"op": "prefs.update", "input": {"autoLockMinutes": 241}},
+    {"op": "prefs.update", "input": {"autoLockMinutes": -1}},
+    {"op": "prefs.update", "input": {"autoLockMinutes": 1.5}},
+    {"op": "prefs.update", "input": {"formats": {"decimal": ";"}}},
+    {"op": "prefs.update", "input": {"formats": {"extra": "x"}}},
+    {"op": "prefs.update", "input": {"formats": null}},
+    {"op": "prefs.update", "input": {"graphicsFailed": true}},
+    {"op": "prefs.update", "input": {"theme": null}},
+    {"op": "prefs.update", "input": {"updateCheck": "no"}},
+    {"op": "prefs.update", "input": {"autoLockMinutes": 240}},
+    {"op": "prefs.get", "input": {"x": 1}}
+  ]
+}

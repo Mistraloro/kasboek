@@ -101,7 +101,7 @@ fn transactions_commit_roll_back_and_nest() {
         |k: &str| store.connection().execute("INSERT INTO settings (key, value) VALUES (?1, 'v')", [k]).map(drop).map_err(DbError::from);
 
     store
-        .transaction(|s| {
+        .transaction::<_, DbError, _>(|s| {
             put("a")?;
             let inner: Result<(), DbError> = s.transaction(|_| {
                 put("b")?;

@@ -1,0 +1,7 @@
+{
+  "name": "prefs get: defaults and the system language",
+  "languages": ["nl-BE", "en-US"],
+  "steps": [
+    {"op": "prefs.get"}
+  ]
+}

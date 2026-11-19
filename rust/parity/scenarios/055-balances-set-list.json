@@ -1,0 +1,27 @@
+{
+  "name": "balances: expected and difference, future days, investments, missing accounts",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "accounts.create", "input": {"name": "Broker", "kind": "investment"}},
+    {"op": "accounts.create", "input": {"name": "Opening", "openingBalanceCents": 5000}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1000, "description": "a"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-05", "amountCents": 50000, "description": "b"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-10", "amountCents": -2000, "description": "c"}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "2026-10-05", "balanceCents": 100000}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "2026-10-31", "balanceCents": 90000, "note": "  statement  "}, "actor": "assistant"},
+    {"op": "balances.list", "input": {"accountId": 1}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "2026-11-14", "balanceCents": 1}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "2026-11-15", "balanceCents": 1}},
+    {"op": "balances.set", "input": {"accountId": 2, "date": "2026-10-01", "balanceCents": 1}},
+    {"op": "balances.set", "input": {"accountId": 9, "date": "2026-10-01", "balanceCents": 1}},
+    {"op": "balances.set", "input": {"accountId": 3, "date": "2026-10-01", "balanceCents": 4000}},
+    {"op": "balances.list", "input": {"accountId": 3}},
+    {"op": "balances.list", "input": {"accountId": 2}},
+    {"op": "balances.list", "input": {"accountId": 9}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "bad", "balanceCents": 1}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "2026-10-01", "balanceCents": 1.5}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-25", "amountCents": -4000, "description": "later"}},
+    {"op": "balances.list", "input": {"accountId": 1}},
+    {"op": "accounts.list"}
+  ]
+}

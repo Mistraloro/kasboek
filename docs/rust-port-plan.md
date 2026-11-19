@@ -645,6 +645,71 @@ Known differences from Node, none reachable with files the app writes: AES-GCM I
 (Node accepts them); invalid base64 characters are refused (Node skips them); the `fx()` function takes the text
 arguments of non-text values as JavaScript would only for integers, reals, NULL and blobs.
 
+**M2 progress (core parity, first slice; Linux x64 only, the six-target CI has not run it)**
+
+Done (`rust/crates/kb-core`, plus typed queries in `kb-db`, `kb-cli scenario` and the scenario harness in `rust/parity`):
+- Registry and `dispatch(core, op, input_json, actor)` as `ipc.ts` / `ops.ts` do it: the locked refusal with `PUBLIC_OPS`, `op.unknown`,
+  input validation like zod (strict objects, safe integers, trim before length, code-point lengths, defaults, `null` only
+  where the schema says so, all `op.invalid_input`), the audit log for `mutates` ops (the parsed input in schema order, redacted
+  for `auth|transfer|backup|prefs|insights`), `AppError {code, message, details}`, `Actor`, injected `Clock` and `Rng`. Results are
+  JSON with the TypeScript field names; whole floats print as integers (`100`, not `100.0`), like JavaScript numbers.
+- All 154 ops are in the table with their flags. `rust/parity/dump-contract.ts` writes `crates/kb-core/contract.json` (names, mutates /
+  assistant / public, descriptions, input JSON Schemas as `assistantTools()` makes them, the names of the output types, the
+  enums, defaults and the currency list of Node's ICU). A Rust test fails when the table differs from it, and when an operation
+  is neither ported nor answering `op.not_ported`.
+- Ported (30): `accounts.list/create/update`, `categories.list/create/update`, `settings.get/update`, `prefs.get/update`,
+  `searches.save/delete`, `transactions.list/create/update/edit/splits/split/rename/categorize/delete`,
+  `balances.list/set`, `valuations.list/set/delete`, `fx.status/rates/setRate/deleteRate`. Also `reset_imported_settings`
+  (the `UNTRUSTED_AFTER_IMPORT` reset) as a function; it has no op of its own.
+- Not ported (124, `op.not_ported`): everything else, among them the transfers pairing (`transfers.*`), rules, budgets, summaries,
+  goals, memory, insights, recurring, alerts, import, sync, auth, backup, assistant, mcp, update and export ops, and
+  `fx.updateEcb`. `transactions.create` already applies the rules (the first matching rule in rule order, accents and case
+  folded), because the TypeScript one does; rules can only be inserted as rows until the rules ops are ported.
+- `kb-db` gained `Queries` (typed reads and writes, all SQL of these ops, no logic), `Store::transaction` with the caller's
+  error type, `DbError::Unique`, `dump_tables` and `execute_script` (harness seeding). `kb-core` contains no SQL.
+- Scenario harness: a scenario is `{name, clock, languages, prefs, steps: [{op, input, actor}]}` with harness steps `@lock`,
+  `@unlock`, `@sql`, `@fxReload`, `@resetImportedSettings`. `rust/parity/scenario-runner.ts` runs it through the app's own
+  `dispatch` from `src/main/ipc.ts` (Electron, tray, splash and session mocked) on a fresh encrypted database with the clock
+  fixed (`TZ=UTC`); `kb-cli scenario file.json` runs it in Rust. Every result and a dump of all tables (uids and `*_at`
+  columns masked) are compared; the message text of `op.invalid_input` and `op.failed` is not. 67 scenarios (every ported op,
+  validation, locked, not found, Unicode, number and date edge cases) and a seeded household of 2,000 transactions with splits,
+  three currencies, rules and edits, followed by about 200 list calls (filters, search, paging, totals) compared page by page.
+- Differences found and fixed while building it: serde reads a struct from a JSON array (now refused, as zod does); zod 4 counts
+  string lengths in code points, not UTF-16 units; a harness-only trap (the exchange-rate cache of `src/core/fx.ts` is module
+  state, so the harness loads the whole app module graph again per scenario).
+
+Deviations and what is not faithful:
+- The message of `op.invalid_input` is serde's, not zod's `prettifyError` text (the code is equal). The message of `op.failed` is
+  the same fixed text, the engine's own error stays out of it.
+- `\p{L}\p{N}` in the whole-word rule match is Rust's alphabetic and numeric properties; the Unicode version of the NFKD and
+  mark tables is that of the `unicode-normalization` crate, not Node's ICU. Both are the same for all text of the scenarios.
+- `prefs.json` with a top level that is not an object counts as empty (TypeScript would spread a string or array into index
+  keys); `null` fails with `op.failed` as in TypeScript. `prefs.update` does not apply the theme or tray (platform glue).
+- Time is UTC in the scenarios; `Clock::utc_offset_minutes` carries the person's offset in the app (`localToday`).
+- The currency list is the committed table from Node's ICU (`contract.json`); it follows the Node that regenerates it.
+- Output types have no runtime schema in TypeScript (`out<T>()`), so `contract.json` holds only their names; outputs are checked
+  by the scenarios.
+- `hideAccountNumbers` (named in the task) is not a setting of this code base.
+
+Not confirmed (needs the CI on Windows and macOS): the parity suite and `cargo test` on the other five targets, line endings of
+the scenario files under Windows checkouts, `TZ=UTC` taking effect in the Node of those runners, and the file replace of
+`prefs.json` (`rename` over an existing file) on Windows.
+
+**M3 progress (design system `rust/crates/kb-ui`; Linux x64 only, `.github/workflows/rust-ui.yml` has not run)**
+
+Done:
+- Tokens (light/dark, runtime switch), fonts from one config (`tools/fonts.json` -> `make-fonts.py`, Inter, Inter Num, Source Serif 4, OFL texts), 74 lucide icons from the renderer's imports (`make-icons.mjs`), `Icon`.
+- Components: Button, IconButton, Card, CardHeader, PageHeader, Field, Input, PasswordInput (hold to show), CodeInput, Select (popup, keyboard, type-ahead),
+  Segmented, Switch, Checkbox, RadioGroup, Badge, EmptyState, Modal and ConfirmDialog (focus trap, Escape asks, backdrop does not close), Popover, Tip/HoverTip,
+  ToastHost, MonthNav (+ picker), DateInput, Tabs, virtualised ListView, Scrollbar, Table rows, Meter, ProgressBar, Spinner; charts CategoryBars, MonthBars,
+  TrendLine with hover tips and text alternatives.
+- Gallery (`kb-ui-gallery`, `--shot` offscreen, `--tab N`, `--keys`), `tools/parity.sh` against the real React components, AT-SPI dump, UIA script, behaviour tests.
+- Parity (21 cases with a React twin, light and dark): differing pixels 0.0 to 4.2 % (16 of 21 under the 3 % gate); landmark offsets
+  0 to 2 px for 12 cases. Over a gate: pixels in password (Slint's fixed `●` mask), select (native arrow vs our chevron), date, badge (3.07 %), pageheader;
+  landmarks in date (6 px), pageheader (5 px), monthnav (8 px), toast (6 px), and landmark count in input/password/select/segmented
+  (the pixel analysis merges or splits faint disabled controls differently).
+- Gaps: see `rust/crates/kb-ui/README.md` (Slint limits). Windows and macOS were not run: UIA/Narrator/VoiceOver, real focus ring and IME in the fields, popup placement at window edges, fonts under DirectWrite/CoreText.
+
 ## Appendix: not verified offline (each is a spike or M1 task)
 
 - Slint: Skia prebuilt binaries for aarch64-pc-windows-msvc (Skia did not run in the spike), tooltip and popover

@@ -1,0 +1,9 @@
+{
+  "name": "prefs: unknown keys survive, a legacy format locale is upgraded",
+  "prefs": "{\"language\":\"de\",\"formatLocale\":\"en-US\",\"extra\":{\"a\":[1,2,{\"b\":null}]},\"theme\":\"dark\",\"note\":\"h\u00e9llo\",\"n\":1.5}",
+  "steps": [
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"autoLockMinutes": 30}},
+    {"op": "prefs.get"}
+  ]
+}

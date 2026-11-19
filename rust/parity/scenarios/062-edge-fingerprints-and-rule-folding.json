@@ -1,0 +1,24 @@
+{
+  "name": "fingerprints and rule folding for unusual text",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO rules (field, pattern, category_id, match, priority) VALUES ('any','σας',3,'contains',0),('any','ǆ',4,'contains',0),('any','i̇stanbul',5,'contains',0),('any','fi',6,'word',0),('any','ﬁsh',7,'contains',0),('any','ａｂｃ',8,'contains',0),('any','½',9,'contains',0),('any','ａ',10,'starts',0),('any','٣',11,'word',0)"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "ΣΑΣ"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "ΟΔΟΣ ΑΣ"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "Ǆ"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "İSTANBUL"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "a fi b"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "fish"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "FISH"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "abc"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "1/2"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "ab"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "room ٣ x"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "room٣x"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -1, "description": "  Tab\tand nbsp　spaces  ", "counterpartyName": "\tTAB\t"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -1, "description": "tab and nbsp spaces", "counterpartyName": "tab"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -1, "description": "﻿tab﻿"}},
+    {"op": "transactions.list", "input": {"limit": 100}},
+    {"op": "@sql", "input": {"sql": "SELECT 1"}}
+  ]
+}

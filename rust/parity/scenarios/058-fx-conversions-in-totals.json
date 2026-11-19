@@ -1,0 +1,22 @@
+{
+  "name": "fx: conversions at the rate of the day (before the first rate, between, after, manual over bank)",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Dollar", "currency": "USD"}},
+    {"op": "accounts.create", "input": {"name": "Eur"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-03-01',1.10,'ecb'),('USD','2026-06-01',1.20,'ecb'),('USD','2026-06-01',1.30,'manual'),('USD','2026-09-01',1.07,'ecb')"}},
+    {"op": "@fxReload"},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-01-01", "amountCents": -12345, "description": "before"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-03-01", "amountCents": -10000, "description": "on the first"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-05-31", "amountCents": -9999, "description": "between"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-06-01", "amountCents": -10001, "description": "manual day"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-12-31", "amountCents": 5, "description": "after"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-12-31", "amountCents": -5, "description": "tiny"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-07-01", "amountCents": -1, "description": "one cent"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-07-01", "amountCents": -1, "description": "eur"}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "transactions.list", "input": {"direction": "out"}},
+    {"op": "settings.update", "input": {"currency": "USD"}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "accounts.list"}
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "prefs get: es outside Spain is Latin American Spanish",
+  "languages": ["es_MX"],
+  "steps": [
+    {"op": "prefs.get"}
+  ]
+}

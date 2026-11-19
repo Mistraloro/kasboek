@@ -1,0 +1,9 @@
+{
+  "name": "prefs update: a decimal and group mark that clash are corrected",
+  "steps": [
+    {"op": "prefs.update", "input": {"formats": {"decimal": ".", "group": "."}}},
+    {"op": "prefs.update", "input": {"formats": {"decimal": ",", "group": ","}}},
+    {"op": "prefs.update", "input": {"formats": {"group": "'", "grouping": "indian", "currencyPosition": "before", "currencyStyle": "code", "negative": "parentheses"}}},
+    {"op": "prefs.update", "input": {"formats": {}}}
+  ]
+}

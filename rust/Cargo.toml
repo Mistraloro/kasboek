@@ -32,6 +32,7 @@ subtle = "2"
 thiserror = "2"
 kb-crypto = { path = "crates/kb-crypto" }
 kb-db = { path = "crates/kb-db" }
+kb-core = { path = "crates/kb-core" }
 
 # rusqlite links sqlite3mc instead of plain SQLite: the vendored engine sits in a package that is named like the crate
 # it replaces (see crates/kb-sqlite3mc-sys/VENDOR.md).

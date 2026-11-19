@@ -1,0 +1,218 @@
+// ListView + Scrollbar (the renderer's 10px styled scrollbar), Tabs, and table row primitives.
+import { Theme } from "theme.slint";
+import { Label, TabTarget } from "base.slint";
+
+// A vertical list that only builds the rows in view: `for row in model: ...` directly inside it is virtualised by the
+// compiler because this component is named `ListView` and has Flickable's content-* and visible-* properties. Rows
+// must have one fixed height. Mouse wheel and keys scroll; dragging does not (text selection and clicks stay normal).
+// Put a Scrollbar next to it (see Scrollbar).
+export component ListView inherits Flickable {
+    out property <length> visible-width: self.width;
+    out property <length> visible-height: self.height;
+    interactive: false;
+    accessible-role: list;
+}
+
+// ::-webkit-scrollbar { width: 10px } with a thumb of --border-strong, radius 10px and a 3px border in --bg: a 4px
+// wide pill with 3px around it, on a transparent track. Shown only when the content is taller than the view.
+//   Rectangle { lv := ListView { ... } Scrollbar { x: parent.width - self.width; height: parent.height;
+//       content-height: lv.content-height; visible-height: lv.visible-height; content-y <=> lv.content-y; } }
+export component Scrollbar inherits Rectangle {
+    in property <length> content-height;
+    in property <length> visible-height;
+    in-out property <length> content-y;
+
+    property <length> track: root.height;
+    property <length> thumb-h: clamp(root.track * root.visible-height / max(root.content-height, 1px), 24px, root.track);
+    property <length> travel: root.track - root.thumb-h;
+    property <length> max-scroll: max(root.content-height - root.visible-height, 0px);
+    property <bool> needed: root.content-height > root.visible-height + 0.5px;
+
+    width: 10px;
+    visible: root.needed;
+    accessible-role: none;
+
+    // Page up/down by clicking the track.
+    TouchArea {
+        clicked => {
+            if (self.mouse-y < thumb.y) {
+                root.content-y = min(0px, root.content-y + root.visible-height);
+            } else {
+                root.content-y = max(-root.max-scroll, root.content-y - root.visible-height);
+            }
+        }
+    }
+    thumb := Rectangle {
+        x: 3px;
+        width: 4px;
+        height: root.thumb-h;
+        y: root.max-scroll > 0px ? root.travel * (-root.content-y / root.max-scroll) : 0px;
+        border-radius: 2px;
+        background: Theme.border-strong;
+        drag := TouchArea {
+            property <length> grab-y;
+            width: 10px;
+            x: -3px;
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down) {
+                    self.grab-y = self.mouse-y;
+                }
+            }
+            moved => {
+                if (self.pressed && root.travel > 0px) {
+                    root.content-y = clamp(-(thumb.y + self.mouse-y - self.grab-y) / root.travel * root.max-scroll, -root.max-scroll, 0px);
+                }
+            }
+        }
+    }
+}
+
+component TabItem inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    in property <int> index;
+    in property <int> want-focus: -1;
+    callback chosen();
+    callback arrow(int);
+    changed want-focus => {
+        if (root.want-focus == root.index) {
+            tgt.focus();
+        }
+    }
+
+    // `-mb-px border-b-2 px-3 py-2 text-sm font-medium`: 20px line, 8px above and below, 2px bottom border.
+    height: 38px;
+    width: lbl.preferred-width + 24px;
+
+    lbl := Label {
+        x: 12px;
+        y: 8px;
+        width: parent.width - 24px;
+        height: 20px;
+        text: root.text;
+        font-weight: 500;
+        lh: 20px;
+        color: root.selected ? Theme.accent : tgt.hovered ? Theme.text : Theme.muted;
+        horizontal-alignment: center;
+        accessible-role: none;
+    }
+    Rectangle {
+        y: parent.height - 2px;
+        height: 2px;
+        background: root.selected ? Theme.accent : transparent;
+    }
+    tgt := TabTarget {
+        label: root.text;
+        selected: root.selected;
+        ring-radius: 8px;
+        activated => {
+            root.chosen();
+        }
+        key(e) => {
+            if (e.text == Key.RightArrow) {
+                root.arrow(1);
+                return true;
+            }
+            if (e.text == Key.LeftArrow) {
+                root.arrow(-1);
+                return true;
+            }
+            return false;
+        }
+    }
+}
+
+// The tab bar of pages/Settings.tsx: `flex gap-1 border-b border-border`. The panel below is the caller's: give it
+// `accessible-role: tab-panel` and the tab's name as label.
+export component Tabs inherits Rectangle {
+    in property <[string]> model;
+    in-out property <int> current-index: 0;
+    in property <string> label;
+    callback selected(int);
+
+    property <int> want-focus: -1;
+    height: 38px;
+    accessible-role: tab-list;
+    accessible-label: root.label;
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+    HorizontalLayout {
+        spacing: 4px;
+        alignment: start;
+        for t[i] in root.model: TabItem {
+            text: t;
+            index: i;
+            selected: root.current-index == i;
+            want-focus: root.want-focus;
+            chosen => {
+                root.current-index = i;
+                root.selected(i);
+            }
+            arrow(d) => {
+                if (i + d >= 0 && i + d < root.model.length) {
+                    root.current-index = i + d;
+                    root.selected(i + d);
+                    root.want-focus = -1;
+                    root.want-focus = i + d;
+                }
+            }
+        }
+    }
+}
+
+// One row of a table (`border-b border-border hover:bg-surface-2/60`, selected `bg-accent-soft/50`): children are the
+// cells, usually TableCell with the same widths as the header. `last` drops the bottom border.
+export component TableRow inherits Rectangle {
+    in property <bool> selected: false;
+    in property <bool> last: false;
+    in property <length> row-height: 41px;
+    out property <bool> hovered: ta.has-hover;
+    height: root.row-height;
+    background: root.selected ? Theme.row-selected : ta.has-hover ? Theme.row-hover : transparent;
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.default;
+    }
+    HorizontalLayout {
+        padding-bottom: root.last ? 0px : 1px;
+        @children
+    }
+    if !root.last: Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+}
+
+// A table cell: `px-3 py-2.5` text-sm; `header` makes it 12px muted medium (th). `align` is the text alignment.
+export component TableCell inherits Rectangle {
+    in property <string> text;
+    in property <length> cell-width: 0px;
+    in property <bool> header: false;
+    in property <bool> numeric: false;
+    in property <bool> muted: false;
+    in property <TextHorizontalAlignment> align: TextHorizontalAlignment.left;
+    in property <length> pad-left: 12px;
+    in property <length> pad-right: 12px;
+    preferred-width: root.cell-width;
+    min-width: root.cell-width;
+    max-width: root.cell-width > 0px ? root.cell-width : 100000px;
+    horizontal-stretch: root.cell-width > 0px ? 0 : 1;
+
+    Label {
+        x: root.pad-left;
+        width: parent.width - root.pad-left - root.pad-right;
+        height: parent.height;
+        text: root.text;
+        numeric: root.numeric;
+        font-size: root.header ? 12px : Theme.fs-body;
+        font-weight: root.header ? 500 : 400;
+        color: (root.header || root.muted) ? Theme.muted : Theme.text;
+        horizontal-alignment: root.align;
+        overflow: clip;
+    }
+}

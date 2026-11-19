@@ -1,0 +1,23 @@
+{
+  "name": "strings: JavaScript whitespace, UTF-16 length, emoji",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "﻿ BOM and NBSP 　"}},
+    {"op": "accounts.create", "input": {"name": "NEL stays"}},
+    {"op": "accounts.create", "input": {"name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"}},
+    {"op": "accounts.create", "input": {"name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"}},
+    {"op": "accounts.create", "input": {"name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"}},
+    {"op": "accounts.create", "input": {"name": "a b c\u000bd\fe"}},
+    {"op": "accounts.create", "input": {"name": "​zero width is not space​"}},
+    {"op": "accounts.create", "input": {"name": "x", "iban": "﻿ nl91 abna  0417 1643 00 "}},
+    {"op": "accounts.create", "input": {"name": "x", "iban": "ß straße"}},
+    {"op": "categories.create", "input": {"name": " Nbsp ", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "ÉCOLE", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "école", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "İ", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "i", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "ǅ", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "ǆ", "kind": "expense"}},
+    {"op": "accounts.list"},
+    {"op": "categories.list"}
+  ]
+}

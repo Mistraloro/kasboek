@@ -1,0 +1,15 @@
+{
+  "name": "locked: only the login operations run; everything else is refused, also unknown names",
+  "steps": [
+    {"op": "@lock"},
+    {"op": "accounts.list"},
+    {"op": "accounts.create", "input": {"name": "x"}},
+    {"op": "categories.list"},
+    {"op": "transactions.create", "input": {"bad": 1}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "no.such.op"},
+    {"op": "prefs.get"},
+    {"op": "@unlock"},
+    {"op": "accounts.list"}
+  ]
+}

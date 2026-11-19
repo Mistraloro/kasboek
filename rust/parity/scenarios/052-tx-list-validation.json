@@ -1,0 +1,26 @@
+{
+  "name": "transactions list: input validation",
+  "steps": [
+    {"op": "transactions.list", "input": {"limit": 0}},
+    {"op": "transactions.list", "input": {"limit": 501}},
+    {"op": "transactions.list", "input": {"limit": 500}},
+    {"op": "transactions.list", "input": {"limit": 1.5}},
+    {"op": "transactions.list", "input": {"offset": -1}},
+    {"op": "transactions.list", "input": {"offset": 0}},
+    {"op": "transactions.list", "input": {"categoryId": 0}},
+    {"op": "transactions.list", "input": {"categoryId": "all"}},
+    {"op": "transactions.list", "input": {"categoryId": null}},
+    {"op": "transactions.list", "input": {"month": "2026-13"}},
+    {"op": "transactions.list", "input": {"month": "2026-00"}},
+    {"op": "transactions.list", "input": {"month": "2026-1"}},
+    {"op": "transactions.list", "input": {"from": "2026-1-1"}},
+    {"op": "transactions.list", "input": {"to": 20260101}},
+    {"op": "transactions.list", "input": {"search": "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"}},
+    {"op": "transactions.list", "input": {"search": "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"}},
+    {"op": "transactions.list", "input": {"direction": "both"}},
+    {"op": "transactions.list", "input": {"accountId": "1"}},
+    {"op": "transactions.list", "input": {"extra": 1}},
+    {"op": "transactions.list", "input": {"search": null}},
+    {"op": "transactions.list", "input": {"limit": 100.0, "offset": 2.0}}
+  ]
+}

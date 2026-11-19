@@ -1,0 +1,16 @@
+{
+  "name": "transactions delete: counts, missing ids, splits go with the transaction",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -100, "description": "a"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": -200, "description": "b"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -300, "description": "c"}},
+    {"op": "transactions.split", "input": {"id": 3, "parts": [{"categoryId": 3, "amountCents": -100}, {"categoryId": 4, "amountCents": -200}]}},
+    {"op": "transactions.delete", "input": {"ids": [1, 1, 9]}},
+    {"op": "transactions.delete", "input": {"ids": [3]}},
+    {"op": "transactions.delete", "input": {"ids": []}},
+    {"op": "transactions.delete", "input": {"ids": [2], "extra": 1}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "transactions.splits", "input": {"id": 3}}
+  ]
+}

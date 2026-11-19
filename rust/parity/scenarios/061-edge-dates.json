@@ -1,0 +1,20 @@
+{
+  "name": "dates: only digits and dashes, no calendar check",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-02-30", "amountCents": -1, "description": "feb 30"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "0000-00-00", "amountCents": -1, "description": "zeros"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "9999-99-99", "amountCents": -1, "description": "nines"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "٢٠٢٦-١١-١٤", "amountCents": -1, "description": "arabic digits"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-11-14 ", "amountCents": -1, "description": "trailing space"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-11-14\n", "amountCents": -1, "description": "trailing newline"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "+2026-11-14", "amountCents": -1, "description": "plus"}},
+    {"op": "transactions.list", "input": {"month": "0000-01"}},
+    {"op": "transactions.list", "input": {"month": "9999-12"}},
+    {"op": "transactions.list", "input": {"from": "0000-00-00", "to": "9999-99-99"}},
+    {"op": "transactions.list", "input": {"month": "2026-12"}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "0000-00-00", "balanceCents": 1}},
+    {"op": "balances.set", "input": {"accountId": 1, "date": "2026-11-14\n", "balanceCents": 1}},
+    {"op": "transactions.list", "input": {}}
+  ]
+}

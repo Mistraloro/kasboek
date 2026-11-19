@@ -1,0 +1,764 @@
+// The gallery's cases: one component per design-system component (or small family), each with a fixed size and
+// absolute positions, laid out exactly like its twin in tools/reference/harness.tsx so that the parity script can
+// compare them. Sizes live in tools/cases.json. States are forced with `simulate`.
+import { Theme } from "theme.slint";
+import { Icons } from "icons.slint";
+import { Icon, Label } from "base.slint";
+import { Button, IconButton } from "button.slint";
+import { Card, CardHeader, PageHeader, Badge, EmptyState } from "surface.slint";
+import { Field, Input, PasswordInput, CodeInput, Switch, Checkbox, RadioGroup, Segmented, SegmentOption } from "form.slint";
+import { Select, Tip, HoverTip, Popover } from "overlay.slint";
+import { Modal, ConfirmDialog, ToastHost, ToastItem } from "dialog.slint";
+import { MonthNav, DateInput } from "month.slint";
+import { ListView, Scrollbar, Tabs, TableRow, TableCell } from "data.slint";
+import { Meter, ProgressBar, Spinner } from "progress.slint";
+import { CategoryBars, MonthBars, TrendLine, CategoryBar, MonthDatum, TrendPoint } from "charts.slint";
+
+component CaseFrame inherits Rectangle {
+    background: Theme.bg;
+}
+
+export component CaseButton inherits CaseFrame {
+    width: 640px;
+    height: 272px;
+    for variant[r] in ["primary", "secondary", "ghost", "danger"]: Rectangle {
+        y: 24px + r * 48px;
+        height: 36px;
+        Button {
+            x: 24px;
+            y: 0px;
+            text: "Save";
+            variant: variant;
+        }
+        Button {
+            x: 184px;
+            y: 0px;
+            text: "Save";
+            variant: variant;
+            simulate: "hover";
+        }
+        Button {
+            x: 344px;
+            y: 0px;
+            text: "Save";
+            variant: variant;
+            simulate: "focus";
+        }
+        Button {
+            x: 504px;
+            y: 0px;
+            text: "Save";
+            variant: variant;
+            enabled: false;
+        }
+    }
+    Button {
+        x: 24px;
+        y: 216px;
+        text: "Edit";
+        small: true;
+    }
+    Button {
+        x: 184px;
+        y: 216px;
+        text: "Copy";
+        icon: Icons.copy;
+        has-icon: true;
+    }
+    Button {
+        x: 344px;
+        y: 216px;
+        text: "Add account";
+        variant: "primary";
+        icon: Icons.plus;
+        has-icon: true;
+    }
+}
+
+export component CaseInput inherits CaseFrame {
+    width: 480px;
+    height: 264px;
+    Input {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        text: "Groceries";
+        label: "Description";
+    }
+    Input {
+        x: 24px;
+        y: 72px;
+        width: 432px;
+        placeholder: "Search transactions";
+        label: "Search";
+    }
+    Input {
+        x: 24px;
+        y: 120px;
+        width: 432px;
+        text: "Groceries";
+        label: "Description";
+        simulate: "focus";
+    }
+    Input {
+        x: 24px;
+        y: 168px;
+        width: 432px;
+        text: "Groceries";
+        label: "Description";
+        enabled: false;
+    }
+    Input {
+        x: 24px;
+        y: 216px;
+        width: 432px;
+        text: "-1234,50";
+        label: "Amount";
+        numeric: true;
+        invalid: true;
+    }
+}
+
+export component CasePassword inherits CaseFrame {
+    width: 480px;
+    height: 216px;
+    PasswordInput {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        label: "Password";
+        eye-label: "Hold to show the password";
+        placeholder: "Password";
+    }
+    PasswordInput {
+        x: 24px;
+        y: 72px;
+        width: 432px;
+        label: "Password";
+        eye-label: "Hold to show the password";
+        text: "correct horse";
+    }
+    PasswordInput {
+        x: 24px;
+        y: 120px;
+        width: 432px;
+        label: "Password";
+        eye-label: "Hold to show the password";
+        text: "correct horse";
+        force-shown: true;
+    }
+    PasswordInput {
+        x: 24px;
+        y: 168px;
+        width: 432px;
+        label: "Password";
+        eye-label: "Hold to show the password";
+        text: "correct horse";
+        simulate: "focus";
+    }
+}
+
+export component CaseSelect inherits CaseFrame {
+    width: 480px;
+    height: 168px;
+    Select {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        model: ["Euro", "US dollar", "Pound sterling"];
+        current-index: 0;
+        label: "Currency";
+    }
+    Select {
+        x: 24px;
+        y: 72px;
+        width: 432px;
+        model: ["Euro", "US dollar", "Pound sterling"];
+        current-index: 1;
+        label: "Currency";
+        simulate: "focus";
+    }
+    Select {
+        x: 24px;
+        y: 120px;
+        width: 432px;
+        model: ["Euro", "US dollar", "Pound sterling"];
+        current-index: 0;
+        label: "Currency";
+        enabled: false;
+    }
+}
+
+export component CaseSelectOpen inherits CaseFrame {
+    width: 480px;
+    height: 220px;
+    Select {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        model: ["Euro", "US dollar", "Pound sterling", "Swiss franc"];
+        current-index: 1;
+        label: "Currency";
+        simulate: "open";
+    }
+}
+
+export component CaseSegmented inherits CaseFrame {
+    width: 480px;
+    height: 216px;
+    Segmented {
+        x: 24px;
+        y: 24px;
+        label: "Period";
+        options: [{ label: "Month" }, { label: "Year" }];
+        current-index: 0;
+    }
+    Segmented {
+        x: 24px;
+        y: 72px;
+        label: "Theme";
+        options: [{ label: "System", icon: Icons.monitor, has-icon: true }, { label: "Light", icon: Icons.sun, has-icon: true }, { label: "Dark", icon: Icons.moon, has-icon: true }];
+        current-index: 1;
+    }
+    Segmented {
+        x: 24px;
+        y: 120px;
+        label: "Mode";
+        options: [{ label: "Income" }, { label: "Spending" }, { label: "Both", disabled: true }];
+        current-index: 1;
+        simulate: "focus";
+    }
+}
+
+export component CaseSwitch inherits CaseFrame {
+    width: 320px;
+    height: 80px;
+    Switch {
+        x: 24px;
+        y: 24px;
+        label: "Insights";
+    }
+    Switch {
+        x: 84px;
+        y: 24px;
+        label: "Insights";
+        checked: true;
+    }
+    Switch {
+        x: 144px;
+        y: 24px;
+        label: "Insights";
+        checked: true;
+        simulate: "focus";
+    }
+    Switch {
+        x: 204px;
+        y: 24px;
+        label: "Insights";
+        enabled: false;
+    }
+    Switch {
+        x: 264px;
+        y: 24px;
+        label: "Insights";
+        checked: true;
+        enabled: false;
+    }
+}
+
+export component CaseChoice inherits CaseFrame {
+    width: 480px;
+    height: 232px;
+    Checkbox {
+        x: 24px;
+        y: 24px;
+        text: "Remember this computer";
+    }
+    Checkbox {
+        x: 24px;
+        y: 56px;
+        text: "Remember this computer";
+        checked: true;
+    }
+    Checkbox {
+        x: 24px;
+        y: 88px;
+        text: "Select all";
+        indeterminate: true;
+    }
+    Checkbox {
+        x: 24px;
+        y: 120px;
+        text: "Focused";
+        checked: true;
+        simulate: "focus";
+    }
+    Checkbox {
+        x: 24px;
+        y: 152px;
+        text: "Disabled";
+        enabled: false;
+    }
+    RadioGroup {
+        x: 264px;
+        y: 24px;
+        label: "Language";
+        model: ["English", "Nederlands", "Deutsch"];
+        current-index: 1;
+    }
+}
+
+export component CaseBadge inherits CaseFrame {
+    width: 480px;
+    height: 72px;
+    Badge {
+        x: 24px;
+        y: 24px;
+        text: "Neutral";
+    }
+    Badge {
+        x: 120px;
+        y: 24px;
+        text: "Accent";
+        tone: "accent";
+    }
+    Badge {
+        x: 208px;
+        y: 24px;
+        text: "Warning";
+        tone: "warning";
+    }
+    Badge {
+        x: 304px;
+        y: 24px;
+        text: "Negative";
+        tone: "negative";
+    }
+}
+
+export component CaseCard inherits CaseFrame {
+    width: 640px;
+    height: 224px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        height: col.preferred-height + 2px;
+        col := VerticalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            CardHeader {
+                title: "Budget progress";
+                description: "Spent this month against your limits";
+                Button {
+                    text: "Edit";
+                    small: true;
+                }
+            }
+            Rectangle {
+                height: 20px + 19.5px + 20px;
+                Label {
+                    x: 20px;
+                    y: 20px;
+                    width: parent.width - 40px;
+                    height: 19.5px;
+                    text: "Groceries are at 84% of the budget.";
+                    font-size: Theme.fs-ui;
+                    lh: 19.5px;
+                }
+            }
+        }
+    }
+}
+
+export component CasePageHeader inherits CaseFrame {
+    width: 800px;
+    height: 120px;
+    PageHeader {
+        x: 24px;
+        y: 24px;
+        width: 752px;
+        title: "Overview";
+        subtitle: "March 2026";
+        Button {
+            text: "Import";
+            variant: "primary";
+        }
+    }
+}
+
+export component CaseEmptyState inherits CaseFrame {
+    width: 640px;
+    height: 296px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        height: 248px;
+        EmptyState {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            icon: Icons.arrow-left-right;
+            title: "No transactions yet";
+            body: "Import a bank file or add a transaction by hand to see it here.";
+            has-action: true;
+            Button {
+                text: "Go to import";
+                variant: "primary";
+            }
+        }
+    }
+}
+
+export component CaseModal inherits CaseFrame {
+    width: 640px;
+    height: 420px;
+    Label {
+        x: 40px;
+        y: 40px;
+        text: "Page behind the dialog";
+        color: Theme.muted;
+    }
+    Modal {
+        open: true;
+        demo: true;
+        title: "Add a note";
+        Field {
+            label: "Note";
+            hint: "Only you can see it.";
+            Input {
+                label: "Note";
+                text: "Rent for March";
+            }
+        }
+        Rectangle {
+            height: 16px;
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            Button {
+                text: "Cancel";
+            }
+            Button {
+                text: "Save";
+                variant: "primary";
+            }
+        }
+    }
+}
+
+export component CaseModalAsk inherits CaseFrame {
+    width: 640px;
+    height: 420px;
+    Modal {
+        open: true;
+        demo: true;
+        title: "Add a note";
+        force-asking: true;
+        dirty: true;
+        Rectangle {
+            height: 40px;
+        }
+    }
+}
+
+export component CaseMonthNav inherits CaseFrame {
+    width: 640px;
+    height: 360px;
+    MonthNav {
+        x: 24px;
+        y: 24px;
+        year: 2026;
+        month: 3;
+        label: "March 2026";
+        month-names: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        today-year: 2026;
+        today-month: 3;
+        force-open: true;
+    }
+}
+
+export component CaseToast inherits CaseFrame {
+    width: 640px;
+    height: 200px;
+    ToastHost {
+        width: parent.width;
+        height: parent.height;
+        toasts: [{ id: 1, tone: "success", message: "Copied to the clipboard." }, { id: 2, tone: "error", message: "The backup could not be written: the folder is read-only." }];
+    }
+}
+
+export component CaseTabs inherits CaseFrame {
+    width: 640px;
+    height: 112px;
+    Tabs {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        label: "Settings";
+        model: ["General", "Accounts", "Security", "Data", "About"];
+        current-index: 1;
+    }
+}
+
+export component CaseTable inherits CaseFrame {
+    width: 640px;
+    height: 232px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        height: 166px;
+        VerticalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            TableRow {
+                row-height: 41px;
+                TableCell {
+                    header: true;
+                    text: "Date";
+                    cell-width: 116px;
+                    pad-left: 20px;
+                }
+                TableCell {
+                    header: true;
+                    text: "Description";
+                }
+                TableCell {
+                    header: true;
+                    text: "Amount";
+                    cell-width: 128px;
+                    align: right;
+                    pad-right: 20px;
+                }
+            }
+            TableRow {
+                TableCell {
+                    text: "05/03/2026";
+                    cell-width: 116px;
+                    numeric: true;
+                    pad-left: 20px;
+                }
+                TableCell {
+                    text: "Supermarket";
+                }
+                TableCell {
+                    text: "-42.10";
+                    cell-width: 128px;
+                    align: right;
+                    numeric: true;
+                    pad-right: 20px;
+                }
+            }
+            TableRow {
+                selected: true;
+                TableCell {
+                    text: "04/03/2026";
+                    cell-width: 116px;
+                    numeric: true;
+                    pad-left: 20px;
+                }
+                TableCell {
+                    text: "Salary";
+                }
+                TableCell {
+                    text: "2,450.00";
+                    cell-width: 128px;
+                    align: right;
+                    numeric: true;
+                    pad-right: 20px;
+                }
+            }
+            TableRow {
+                last: true;
+                TableCell {
+                    text: "02/03/2026";
+                    cell-width: 116px;
+                    numeric: true;
+                    pad-left: 20px;
+                }
+                TableCell {
+                    text: "Water bill";
+                }
+                TableCell {
+                    text: "-18.40";
+                    cell-width: 128px;
+                    align: right;
+                    numeric: true;
+                    pad-right: 20px;
+                }
+            }
+        }
+    }
+}
+
+export component CaseMeter inherits CaseFrame {
+    width: 480px;
+    height: 168px;
+    Meter {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        value: 30;
+        limit: 100;
+        label: "Groceries";
+    }
+    Meter {
+        x: 24px;
+        y: 48px;
+        width: 432px;
+        value: 90;
+        limit: 100;
+        label: "Dining";
+    }
+    Meter {
+        x: 24px;
+        y: 72px;
+        width: 432px;
+        value: 120;
+        limit: 100;
+        label: "Travel";
+    }
+    Meter {
+        x: 24px;
+        y: 96px;
+        width: 432px;
+        value: 0;
+        limit: 0;
+    }
+    Meter {
+        x: 24px;
+        y: 120px;
+        width: 432px;
+        value: 1;
+        limit: 1000;
+        label: "Gifts";
+    }
+}
+
+export component CaseProgress inherits CaseFrame {
+    width: 480px;
+    height: 120px;
+    ProgressBar {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        value: 0.6;
+        label: "Loading transactions";
+    }
+    ProgressBar {
+        x: 24px;
+        y: 48px;
+        width: 432px;
+        indeterminate: true;
+        label: "Opening your data";
+    }
+    Spinner {
+        x: 24px;
+        y: 72px;
+        size: 16px;
+    }
+    Spinner {
+        x: 56px;
+        y: 72px;
+        size: 24px;
+    }
+}
+
+export component CaseCategoryBars inherits CaseFrame {
+    width: 640px;
+    height: 300px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        height: col.preferred-height + 2px;
+        col := VerticalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            padding: 20px;
+            CategoryBars {
+                top: 54200;
+                rows: [{ name: "Groceries", cents: 54200, value: "€542.00" }, { name: "Rent", cents: 50000, value: "€500.00" }, { name: "Dining out", cents: 18950, value: "€189.50" }, { name: "Transport", cents: 9400, value: "€94.00" }, { name: "Subscriptions", cents: 4599, value: "€45.99" }, { name: "Other", cents: 300, value: "€3.00" }];
+            }
+        }
+    }
+}
+
+export component CaseMonthBars inherits CaseFrame {
+    width: 640px;
+    height: 320px;
+    in property <int> hover: -1;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        height: col.preferred-height + 2px;
+        col := VerticalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            padding: 20px;
+            MonthBars {
+                top: 310000;
+                hover: root.hover;
+                label: "Income and spending per month";
+                summary: "Jan: income 2,450.00, spending 1,890.00";
+                income-legend: "Income";
+                spending-legend: "Spending";
+                data: [{ label: "Oct", income: 245000, spending: 189000, income-text: "€2,450.00", spending-text: "€1,890.00" }, { label: "Nov", income: 245000, spending: 210500, income-text: "€2,450.00", spending-text: "€2,105.00" }, { label: "Dec", income: 310000, spending: 267300, income-text: "€3,100.00", spending-text: "€2,673.00" }, { label: "Jan", income: 245000, spending: 176000, income-text: "€2,450.00", spending-text: "€1,760.00" }, { label: "Feb", income: 245000, spending: 0, income-text: "€2,450.00", spending-text: "€0.00" }, { label: "Mar", income: 0, spending: 54200, income-text: "€0.00", spending-text: "€542.00" }];
+            }
+        }
+    }
+}
+
+export component CaseTrendLine inherits CaseFrame {
+    width: 640px;
+    height: 320px;
+    in property <int> hover: -1;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 592px;
+        height: col.preferred-height + 2px;
+        col := VerticalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            padding: 20px;
+            TrendLine {
+                hover: root.hover;
+                lo: -48000;
+                hi: 1272000;
+                ticks: [0, 500000, 1000000];
+                tick-texts: ["0", "5k", "10k"];
+                label: "Net worth over time";
+                summary: "Jan: 2,500.00";
+                data: [{ label: "Jan", cents: 0, value: "€0.00", note: "" }, { label: "Feb", cents: 250000, value: "€2,500.00", note: "" }, { label: "Mar", cents: 410000, value: "€4,100.00", note: "Bonus" }, { label: "Apr", cents: 380000, value: "€3,800.00", note: "" }, { label: "May", cents: 720000, value: "€7,200.00", note: "" }, { label: "Jun", cents: 900000, value: "€9,000.00", note: "" }, { label: "Jul", cents: 1200000, value: "€12,000.00", note: "" }];
+            }
+        }
+    }
+}
+
+export component CaseDate inherits CaseFrame {
+    width: 480px;
+    height: 120px;
+    DateInput {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        label: "Date";
+        example: "2026-03-15";
+    }
+    // Somewhere for Tab to go, so that the field can lose focus in a still (out of view, like the page behind it).
+    Button {
+        x: 24px;
+        y: 200px;
+        text: "Next";
+    }
+}

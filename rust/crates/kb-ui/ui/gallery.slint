@@ -1,0 +1,282 @@
+// The component gallery: every case of cases.slint in one scrolling window (light or dark), or a single case at its
+// own size for the parity shots. Interactive parts at the top (theme, toast, modal) exercise the live behaviour.
+import { Theme } from "theme.slint";
+import { Icons } from "icons.slint";
+import { Label } from "base.slint";
+import { Button } from "button.slint";
+import { Switch, Segmented, Input } from "form.slint";
+import { ToastHost, ToastItem, Modal } from "dialog.slint";
+import { MonthNav } from "month.slint";
+import { Select } from "overlay.slint";
+import { Rules, DateCheck } from "rules.slint";
+import { UiText } from "texts.slint";
+import { Session } from "base.slint";
+import { CaseButton, CaseInput, CasePassword, CaseSelect, CaseSelectOpen, CaseSegmented, CaseSwitch, CaseChoice, CaseBadge, CaseCard, CasePageHeader, CaseEmptyState, CaseModal, CaseModalAsk, CaseMonthNav, CaseToast, CaseTabs, CaseTable, CaseMeter, CaseProgress, CaseCategoryBars, CaseMonthBars, CaseTrendLine, CaseDate } from "cases.slint";
+export { Theme, Rules, DateCheck, UiText, Session, ToastItem }
+
+component Section inherits Rectangle {
+    in property <string> title;
+    in property <length> content-width: 640px;
+    in property <length> content-height: 100px;
+    height: 28px + root.content-height + 12px;
+    width: root.content-width;
+    Label {
+        y: 0px;
+        height: 24px;
+        text: root.title;
+        font-weight: 600;
+        color: Theme.text;
+    }
+    Rectangle {
+        y: 28px;
+        height: root.content-height;
+        border-width: 1px;
+        border-color: Theme.border;
+        clip: true;
+        @children
+    }
+}
+
+export component Gallery inherits Window {
+    // "all" or one case name (the names of tools/cases.json).
+    in property <string> case: "all";
+    in-out property <bool> dark <=> Theme.dark;
+    // What the live parts did last (tests and the curious read it).
+    in-out property <string> last-event;
+    in property <[ToastItem]> toasts;
+    in-out property <bool> modal-open: false;
+    in-out property <bool> modal-dirty: false;
+    in-out property <string> field-text;
+    in-out property <int> select-index: 0;
+    in-out property <int> segment-index: 0;
+    in-out property <string> year-month: "2026-03";
+    // The model is owned by Rust (a VecModel): pushing and removing toasts is the app's job, as in Toast.tsx.
+    callback push-toast();
+    callback dismiss-toast(int);
+
+    title: "Kasboek design system";
+    preferred-width: 760px;
+    preferred-height: 820px;
+    background: Theme.bg;
+    default-font-family: Theme.sans;
+    default-font-size: Theme.fs-body;
+
+    if root.case == "all": Flickable {
+        content-height: all.preferred-height + 48px;
+        all := VerticalLayout {
+            x: 24px;
+            y: 24px;
+            width: parent.width - 48px;
+            spacing: 16px;
+            HorizontalLayout {
+                spacing: 16px;
+                height: 36px;
+                Label {
+                    text: "Kasboek design system";
+                    font-size: 20px;
+                    font-weight: 600;
+                }
+                Switch {
+                    label: "Dark theme";
+                    checked <=> root.dark;
+                    toggled(c) => {
+                        root.last-event = c ? "dark:on" : "dark:off";
+                    }
+                }
+                Button {
+                    text: "Push toast";
+                    clicked => {
+                        root.push-toast();
+                        root.last-event = "toast";
+                    }
+                }
+                Button {
+                    text: "Open modal";
+                    clicked => {
+                        root.modal-open = true;
+                        root.last-event = "modal-open";
+                    }
+                }
+            }
+            Section {
+                title: "Button";
+                content-height: 272px;
+                CaseButton { }
+            }
+            Section {
+                title: "Input";
+                content-height: 264px;
+                CaseInput { }
+            }
+            Section {
+                title: "PasswordInput";
+                content-height: 216px;
+                CasePassword { }
+            }
+            Section {
+                title: "Select";
+                content-height: 168px;
+                CaseSelect { }
+            }
+            Section {
+                title: "DateInput (type 99/99/2026, then Tab)";
+                content-height: 120px;
+                CaseDate { }
+            }
+            Section {
+                title: "Select (open)";
+                content-height: 220px;
+                CaseSelectOpen { }
+            }
+            Section {
+                title: "Segmented";
+                content-height: 216px;
+                CaseSegmented { }
+            }
+            Section {
+                title: "Switch";
+                content-height: 80px;
+                CaseSwitch { }
+            }
+            Section {
+                title: "Checkbox, Radio";
+                content-height: 232px;
+                CaseChoice { }
+            }
+            Section {
+                title: "Badge";
+                content-height: 72px;
+                CaseBadge { }
+            }
+            Section {
+                title: "Card, CardHeader";
+                content-height: 224px;
+                CaseCard { }
+            }
+            Section {
+                title: "PageHeader";
+                content-height: 120px;
+                CasePageHeader { }
+            }
+            Section {
+                title: "EmptyState";
+                content-height: 296px;
+                CaseEmptyState { }
+            }
+            Section {
+                title: "Modal";
+                content-height: 420px;
+                CaseModal { }
+            }
+            Section {
+                title: "Modal (discard question)";
+                content-height: 420px;
+                CaseModalAsk { }
+            }
+            Section {
+                title: "MonthNav";
+                content-height: 360px;
+                CaseMonthNav { }
+            }
+            Section {
+                title: "Toast";
+                content-height: 200px;
+                CaseToast { }
+            }
+            Section {
+                title: "Tabs";
+                content-height: 112px;
+                CaseTabs { }
+            }
+            Section {
+                title: "Table";
+                content-height: 232px;
+                CaseTable { }
+            }
+            Section {
+                title: "Meter, ProgressBar, Spinner";
+                content-height: 168px;
+                CaseMeter { }
+            }
+            Section {
+                title: "ProgressBar, Spinner";
+                content-height: 120px;
+                CaseProgress { }
+            }
+            Section {
+                title: "CategoryBars";
+                content-height: 300px;
+                CaseCategoryBars { }
+            }
+            Section {
+                title: "MonthBars (hover on the third month)";
+                content-height: 320px;
+                CaseMonthBars {
+                    hover: 2;
+                }
+            }
+            Section {
+                title: "TrendLine (hover on the third point)";
+                content-height: 320px;
+                CaseTrendLine {
+                    hover: 2;
+                }
+            }
+        }
+    }
+    if root.case == "button": CaseButton { }
+    if root.case == "input": CaseInput { }
+    if root.case == "password": CasePassword { }
+    if root.case == "select": CaseSelect { }
+    if root.case == "date": CaseDate { }
+    if root.case == "select-open": CaseSelectOpen { }
+    if root.case == "segmented": CaseSegmented { }
+    if root.case == "switch": CaseSwitch { }
+    if root.case == "choice": CaseChoice { }
+    if root.case == "badge": CaseBadge { }
+    if root.case == "card": CaseCard { }
+    if root.case == "pageheader": CasePageHeader { }
+    if root.case == "emptystate": CaseEmptyState { }
+    if root.case == "modal": CaseModal { }
+    if root.case == "modal-ask": CaseModalAsk { }
+    if root.case == "monthnav": CaseMonthNav { }
+    if root.case == "toast": CaseToast { }
+    if root.case == "tabs": CaseTabs { }
+    if root.case == "table": CaseTable { }
+    if root.case == "meter": CaseMeter { }
+    if root.case == "progress": CaseProgress { }
+    if root.case == "categorybars": CaseCategoryBars { }
+    if root.case == "monthbars": CaseMonthBars {
+        hover: 2;
+    }
+    if root.case == "trendline": CaseTrendLine {
+        hover: 2;
+    }
+
+    // Live parts (all view): toasts and a modal that behave as in the app.
+    ToastHost {
+        width: root.width;
+        height: root.height;
+        toasts: root.toasts;
+        dismissed(id) => {
+            root.dismiss-toast(id);
+            root.last-event = "toast-dismissed";
+        }
+    }
+    if root.modal-open: Modal {
+        open: true;
+        title: "Add a note";
+        dirty: root.modal-dirty;
+        close-requested => {
+            root.modal-open = false;
+            root.last-event = "modal-closed";
+        }
+        Input {
+            label: "Note";
+            text <=> root.field-text;
+            edited(t) => {
+                root.modal-dirty = t != "";
+            }
+        }
+    }
+}

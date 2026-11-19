@@ -1,0 +1,23 @@
+[package]
+name = "kb-ui"
+version = "0.0.0"
+description = "Kasboek design system in Slint (tokens, fonts, icons, components, charts) and its component gallery"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+# Only so that build.rs can hand the folder of the .slint files to the crates that depend on this one (DEP_KB_UI_DIR).
+links = "kb_ui"
+
+[dependencies]
+# Same feature set as the UI spike: software renderer first, accessibility on, winit for the real window.
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06"] }
+png = "0.17"
+serde_json.workspace = true
+
+[build-dependencies]
+slint-build = "1.19"
+
+[[bin]]
+name = "kb-ui-gallery"
+path = "src/bin/gallery.rs"

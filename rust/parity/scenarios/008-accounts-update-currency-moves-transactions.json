@@ -1,0 +1,15 @@
+{
+  "name": "accounts update: a corrected currency moves the account\u2019s transactions",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Foreign", "currency": "EUR"}},
+    {"op": "accounts.create", "input": {"name": "Other"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -500, "description": "one"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": 700, "description": "two"}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-10-02", "amountCents": 900, "description": "other account"}},
+    {"op": "@sql", "input": {"sql": "UPDATE transactions SET currency = 'GBP' WHERE id = 2"}},
+    {"op": "accounts.update", "input": {"id": 1, "currency": "usd"}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "accounts.update", "input": {"id": 1, "currency": "USD"}},
+    {"op": "accounts.list"}
+  ]
+}

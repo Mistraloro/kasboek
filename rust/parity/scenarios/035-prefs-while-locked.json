@@ -1,0 +1,12 @@
+{
+  "name": "prefs works while locked, data operations do not",
+  "steps": [
+    {"op": "@lock"},
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"theme": "dark"}},
+    {"op": "settings.get"},
+    {"op": "accounts.list"},
+    {"op": "@unlock"},
+    {"op": "settings.get"}
+  ]
+}

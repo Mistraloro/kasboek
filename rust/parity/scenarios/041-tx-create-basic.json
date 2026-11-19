@@ -1,0 +1,12 @@
+{
+  "name": "transactions create: defaults, the account currency, a bank text that stays the original",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "accounts.create", "input": {"name": "Dollar", "currency": "USD"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-03", "amountCents": -8000, "description": "  Delhaize  Gent  ", "counterpartyName": "  Delhaize  ", "notes": "  keep spaces  "}},
+    {"op": "transactions.create", "input": {"accountId": 2, "bookingDate": "2026-10-04", "amountCents": 2500, "description": "usd in"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-05", "amountCents": -100, "description": "no name", "counterpartyName": null, "categoryId": 3, "notes": null}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "transactions.splits", "input": {"id": 1}}
+  ]
+}

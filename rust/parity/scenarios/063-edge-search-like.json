@@ -1,0 +1,31 @@
+{
+  "name": "search: LIKE wildcards, escapes, case, non-ASCII",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "100% pure"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "under_score"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "back\\slash"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "Éclair"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "éclair lower"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "[bracket]"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "caret^"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "it's"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "ABC", "counterpartyName": "abc"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1, "description": "x", "notes": "note only"}},
+    {"op": "transactions.list", "input": {"search": "%"}},
+    {"op": "transactions.list", "input": {"search": "_"}},
+    {"op": "transactions.list", "input": {"search": "\\"}},
+    {"op": "transactions.list", "input": {"search": "é"}},
+    {"op": "transactions.list", "input": {"search": "É"}},
+    {"op": "transactions.list", "input": {"search": "["}},
+    {"op": "transactions.list", "input": {"search": "^"}},
+    {"op": "transactions.list", "input": {"search": "'"}},
+    {"op": "transactions.list", "input": {"search": "abc"}},
+    {"op": "transactions.list", "input": {"search": "NOTE"}},
+    {"op": "transactions.list", "input": {"search": " "}},
+    {"op": "transactions.list", "input": {"search": " ﻿100%  "}},
+    {"op": "transactions.list", "input": {"search": "%%"}},
+    {"op": "transactions.list", "input": {"search": "e_clair"}},
+    {"op": "transactions.list", "input": {"search": "100%25"}}
+  ]
+}

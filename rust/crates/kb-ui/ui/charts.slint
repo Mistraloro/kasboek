@@ -1,0 +1,502 @@
+// Charts of src/renderer/src/components/charts.tsx with the same geometry: the SVG's 560-unit-wide viewBox is scaled
+// to the element's width (`k` below), so a unit written here is a unit of the SVG. Slint cannot loop over a model to
+// take a maximum or to write one path string, so the scale numbers (`top`, `lo`, `hi`, `ticks`) come from
+// src/charts.rs (`month_top`, `TrendAxis`), which is the TypeScript `Math.max`/`niceTicks` ported; lines are drawn
+// segment by segment, and the dashed gridlines (`stroke-dasharray="2 4"`) as 2-unit segments every 6 units.
+//
+// Every chart is a screen reader "image": `label` names it and `summary` carries the numbers as text.
+import { Theme } from "theme.slint";
+import { Label } from "base.slint";
+import { Tip } from "overlay.slint";
+
+export struct CategoryBar {
+    name: string,
+    cents: int,
+    // format(cents), done by the owner.
+    value: string,
+}
+
+export struct MonthDatum {
+    label: string,
+    income: int,
+    spending: int,
+    income-text: string,
+    spending-text: string,
+}
+
+export struct TrendPoint {
+    label: string,
+    cents: int,
+    value: string,
+    note: string,
+}
+
+component Swatch inherits Rectangle {
+    in property <color> tint;
+    width: 10px;
+    height: 10px;
+    border-radius: Theme.r-sm;
+    background: root.tint;
+    accessible-role: none;
+}
+
+// `stroke-dasharray="2 4"` from x1 to x2 at height y (user units), `thickness` 1 unit: segments of 2 every 6.
+component DashedLine inherits Rectangle {
+    in property <length> k;
+    in property <float> x1;
+    in property <float> x2;
+    in property <float> ly;
+    in property <color> tint: Theme.border;
+    accessible-role: none;
+    for i in 94: Rectangle {
+        property <float> ux: root.x1 + i * 6;
+        visible: self.ux < root.x2;
+        x: self.ux * root.k;
+        y: (root.ly - 0.5) * root.k;
+        width: min(2, root.x2 - self.ux) * root.k;
+        height: max(1px, root.k);
+        background: root.tint;
+    }
+}
+
+// `CategoryBars`: one hue, no legend, the value at the end of each row. `top` is the largest `cents` (at least 1).
+export component CategoryBars inherits Rectangle {
+    in property <[CategoryBar]> rows;
+    in property <float> top: 1;
+    in property <string> label: "Spending by category";
+    height: col.preferred-height;
+    accessible-role: list;
+    accessible-label: root.label;
+
+    col := VerticalLayout {
+        spacing: 10px;
+        for r in root.rows: Rectangle {
+            height: Theme.lh-ui;
+            accessible-role: list-item;
+            accessible-label: r.name + ": " + r.value;
+            HorizontalLayout {
+                spacing: 12px;
+                Label {
+                    width: 120px;
+                    text: r.name;
+                    font-size: Theme.fs-ui;
+                    lh: Theme.lh-ui;
+                    color: Theme.muted;
+                    overflow: elide;
+                    accessible-role: none;
+                }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    Rectangle {
+                        width: parent.width * max(1.5, r.cents / root.top * 100) / 100;
+                        height: 12px;
+                        y: (parent.height - 12px) / 2;
+                        border-top-right-radius: 4px;
+                        border-bottom-right-radius: 4px;
+                        background: Theme.chart-spending;
+                    }
+                }
+                Label {
+                    text: r.value;
+                    numeric: true;
+                    font-size: Theme.fs-ui;
+                    font-weight: 500;
+                    lh: Theme.lh-ui;
+                    horizontal-alignment: right;
+                    accessible-role: none;
+                }
+            }
+        }
+    }
+}
+
+// A bar with a rounded top and a square base on the baseline: `M x,y0 V y0-h+r Q x,y0-h x+r,y0-h H x+w-r Q x+w,y0-h
+// x+w,y0-h+r V y0 Z` (user units). `top` is the value that fills the plot.
+component Bar inherits Path {
+    in property <float> value;
+    in property <float> top;
+    in property <float> bx;
+    in property <float> bw;
+    in property <float> base: 156;
+    in property <float> plot-h: 146;
+    in property <color> tint;
+    property <float> h: max(root.value > 0 ? 2 : 0, root.value / root.top * root.plot-h);
+    property <float> r: min(4, min(root.h / 2, root.bw / 2));
+    property <float> y0: root.base;
+    viewbox-width: 560;
+    viewbox-height: 180;
+    width: 100%;
+    height: 100%;
+    fill: root.tint;
+    accessible-role: none;
+    commands: "M\{root.bx} \{root.y0} V\{root.y0 - root.h + root.r} Q\{root.bx} \{root.y0 - root.h} \{root.bx + root.r} \{root.y0 - root.h} H\{root.bx + root.bw - root.r} Q\{root.bx + root.bw} \{root.y0 - root.h} \{root.bx + root.bw} \{root.y0 - root.h + root.r} V\{root.y0} Z";
+}
+
+// `MonthBars`: income and spending per month side by side on one axis, a legend above and a hover card.
+export component MonthBars inherits Rectangle {
+    in property <[MonthDatum]> data;
+    // max(income, spending) over all months, at least 1 (`month_top` in src/charts.rs).
+    in property <float> top: 1;
+    in property <string> label;
+    in property <string> summary;
+    in property <string> income-legend;
+    in property <string> spending-legend;
+    // Hover state, settable for shots.
+    in-out property <int> hover: -1;
+
+    property <length> k: root.width / 560;
+    property <float> slot: 560 / max(root.data.length, 1);
+    property <float> bar-w: min(22, root.slot / 3.2);
+    property <length> legend-h: 16px + 12px;
+    height: root.legend-h + root.width * 180 / 560;
+
+    HorizontalLayout {
+        y: 0px;
+        height: 16px;
+        spacing: 16px;
+        alignment: start;
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                Swatch {
+                    tint: Theme.chart-income;
+                }
+            }
+            Label {
+                text: root.income-legend;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                color: Theme.muted;
+            }
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                Swatch {
+                    tint: Theme.chart-spending;
+                }
+            }
+            Label {
+                text: root.spending-legend;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                color: Theme.muted;
+            }
+        }
+    }
+    plot := Rectangle {
+        y: root.legend-h;
+        height: root.width * 180 / 560;
+        accessible-role: image;
+        accessible-label: root.label;
+        accessible-description: root.summary;
+
+        DashedLine {
+            k: root.k;
+            x1: 0;
+            x2: 560;
+            ly: 156 - 146 * 0.5;
+        }
+        DashedLine {
+            k: root.k;
+            x1: 0;
+            x2: 560;
+            ly: 156 - 146;
+        }
+        Rectangle {
+            y: 156 * root.k - 0.5px;
+            height: max(1px, root.k);
+            background: Theme.border-strong;
+        }
+        for d[i] in root.data: Rectangle {
+            property <float> cx: root.slot * i + root.slot / 2;
+            x: root.slot * i * root.k;
+            width: root.slot * root.k;
+            height: parent.height;
+            border-radius: 6 * root.k;
+            background: root.hover == i ? Theme.surface-2 : transparent;
+            TouchArea {
+                changed has-hover => {
+                    if (self.has-hover) {
+                        root.hover = i;
+                    } else if (root.hover == i) {
+                        root.hover = -1;
+                    }
+                }
+            }
+        }
+        for d[i] in root.data: Rectangle {
+            property <float> cx: root.slot * i + root.slot / 2;
+            Bar {
+                value: d.income;
+                top: root.top;
+                bx: parent.cx - root.bar-w - 1;
+                bw: root.bar-w;
+                tint: Theme.chart-income;
+            }
+            Bar {
+                value: d.spending;
+                top: root.top;
+                bx: parent.cx + 1;
+                bw: root.bar-w;
+                tint: Theme.chart-spending;
+            }
+            Text {
+                // SVG puts the text baseline at y = H - 6 = 174; Inter's ascent is 0.969 em.
+                x: (parent.cx - 40) * root.k;
+                y: (174 - 0.969 * 11) * root.k;
+                width: 80 * root.k;
+                text: d.label;
+                font-family: Theme.sans;
+                font-size: 11 * root.k;
+                color: Theme.muted;
+                horizontal-alignment: center;
+                accessible-role: none;
+            }
+        }
+    }
+    if root.hover >= 0 && root.hover < root.data.length: Tip {
+        x: clamp((root.hover + 0.5) / root.data.length * root.width - self.width / 2, -1000px, 1000px);
+        y: root.legend-h - 8px - self.height;
+        Label {
+            text: root.data[root.hover].label;
+            font-size: Theme.fs-xs;
+            font-weight: 500;
+            lh: Theme.lh-xs;
+            accessible-role: none;
+        }
+        Rectangle {
+            height: 4px;
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                Swatch {
+                    tint: Theme.chart-income;
+                }
+            }
+            Label {
+                text: root.income-legend + ":";
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                accessible-role: none;
+            }
+            Label {
+                text: root.data[root.hover].income-text;
+                numeric: true;
+                font-size: Theme.fs-xs;
+                font-weight: 500;
+                lh: Theme.lh-xs;
+                accessible-role: none;
+            }
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                Swatch {
+                    tint: Theme.chart-spending;
+                }
+            }
+            Label {
+                text: root.spending-legend + ":";
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                accessible-role: none;
+            }
+            Label {
+                text: root.data[root.hover].spending-text;
+                numeric: true;
+                font-size: Theme.fs-xs;
+                font-weight: 500;
+                lh: Theme.lh-xs;
+                accessible-role: none;
+            }
+        }
+    }
+}
+
+// One piece of the trend line: a 2-unit round-capped segment, and the faint column under it down to the zero line.
+component Segment inherits Path {
+    in property <float> x1;
+    in property <float> y1;
+    in property <float> x2;
+    in property <float> y2;
+    in property <color> tint;
+    viewbox-width: 560;
+    viewbox-height: 200;
+    width: 100%;
+    height: 100%;
+    stroke: root.tint;
+    stroke-width: 2px * (self.width / 560px);
+    stroke-line-cap: round;
+    accessible-role: none;
+    commands: "M\{root.x1} \{root.y1} L\{root.x2} \{root.y2}";
+}
+
+component Area inherits Path {
+    in property <float> x1;
+    in property <float> y1;
+    in property <float> x2;
+    in property <float> y2;
+    in property <float> zero;
+    in property <color> tint;
+    viewbox-width: 560;
+    viewbox-height: 200;
+    width: 100%;
+    height: 100%;
+    fill: root.tint.with-alpha(0.1);
+    accessible-role: none;
+    commands: "M\{root.x1} \{root.y1} L\{root.x2} \{root.y2} L\{root.x2} \{root.zero} L\{root.x1} \{root.zero} Z";
+}
+
+// `TrendLine`: one value over time. `lo`/`hi` are the padded value range and `ticks` the round gridline values (`TrendAxis`
+// in src/charts.rs); `tick-texts` are `compact(v)` for each tick. Labels are thinned to about eight, always keeping the
+// last. Hovering the plot shows a crosshair, a dot and a card; the dot follows the pointer's nearest point.
+export component TrendLine inherits Rectangle {
+    in property <[TrendPoint]> data;
+    in property <float> lo: 0;
+    in property <float> hi: 100;
+    in property <[float]> ticks;
+    in property <[string]> tick-texts;
+    in property <string> label;
+    in property <string> summary;
+    in-out property <int> hover: -1;
+
+    property <length> k: root.width / 560;
+    property <int> n: root.data.length;
+    // pad = { top: 12, bottom: 24, left: 56, right: 8 } in an W 560 x H 200 viewBox.
+    property <float> plot-w: 560 - 56 - 8;
+    property <float> plot-h: 200 - 12 - 24;
+    property <int> every: max(1, ceil(root.n / 8));
+    height: root.width * 200 / 560;
+
+    pure function px(i: int) -> float {
+        return 56 + (root.n == 1 ? root.plot-w / 2 : i / (root.n - 1) * root.plot-w);
+    }
+    pure function py(v: float) -> float {
+        return 12 + root.plot-h - (v - root.lo) / (root.hi - root.lo) * root.plot-h;
+    }
+
+    accessible-role: image;
+    accessible-label: root.label;
+    accessible-description: root.summary;
+
+    for t[i] in root.ticks: Rectangle {
+        DashedLine {
+            k: root.k;
+            x1: 56;
+            x2: 552;
+            ly: root.py(t);
+        }
+        Text {
+            x: (56 - 8 - 56) * root.k;
+            y: (root.py(t) + 4 - 0.969 * 11) * root.k;
+            width: 56 * root.k;
+            text: root.tick-texts[i];
+            font-family: Theme.num;
+            font-size: 11 * root.k;
+            color: Theme.muted;
+            horizontal-alignment: right;
+            accessible-role: none;
+        }
+    }
+    if root.lo < 0: Rectangle {
+        x: 56 * root.k;
+        y: root.py(0) * root.k - 0.5px;
+        width: (552 - 56) * root.k;
+        height: max(1px, root.k);
+        background: Theme.border-strong;
+    }
+    for d[i] in root.data: Rectangle {
+        if i < root.n - 1: Area {
+            x1: root.px(i);
+            y1: root.py(d.cents);
+            x2: root.px(i + 1);
+            y2: root.py(root.data[i + 1].cents);
+            zero: root.py(0);
+            tint: Theme.chart-spending;
+        }
+        if i < root.n - 1: Segment {
+            x1: root.px(i);
+            y1: root.py(d.cents);
+            x2: root.px(i + 1);
+            y2: root.py(root.data[i + 1].cents);
+            tint: Theme.chart-spending;
+        }
+        if mod(i, root.every) == 0 || i == root.n - 1: Text {
+            x: (root.px(i) - 40) * root.k;
+            y: (194 - 0.969 * 11) * root.k;
+            width: 80 * root.k;
+            text: d.label;
+            font-family: Theme.sans;
+            font-size: 11 * root.k;
+            color: Theme.muted;
+            horizontal-alignment: center;
+            accessible-role: none;
+        }
+    }
+    if root.hover >= 0 && root.hover < root.n: Rectangle {
+        x: root.px(root.hover) * root.k;
+        y: 12 * root.k;
+        width: max(1px, root.k);
+        height: root.plot-h * root.k;
+        background: Theme.border-strong;
+    }
+    if root.hover >= 0 && root.hover < root.n: Rectangle {
+        property <length> d: 9 * root.k;
+        x: root.px(root.hover) * root.k - self.d / 2;
+        y: root.py(root.data[root.hover].cents) * root.k - self.d / 2;
+        width: self.d;
+        height: self.d;
+        border-radius: self.d / 2;
+        background: Theme.chart-spending;
+        border-width: 2 * root.k;
+        border-color: Theme.surface;
+    }
+    TouchArea {
+        x: 56 * root.k;
+        width: root.plot-w * root.k;
+        height: root.height;
+        mouse-cursor: MouseCursor.default;
+        moved => {
+            if (root.n > 0) {
+                root.hover = max(0, min(root.n - 1, round(self.mouse-x / self.width * (root.n - 1))));
+            }
+        }
+        changed has-hover => {
+            if (!self.has-hover) {
+                root.hover = -1;
+            }
+        }
+    }
+    if root.hover >= 0 && root.hover < root.n: Tip {
+        x: root.px(root.hover) * root.k - self.width / 2;
+        y: 56px - self.height;
+        Label {
+            text: root.data[root.hover].label;
+            font-size: Theme.fs-xs;
+            font-weight: 500;
+            lh: Theme.lh-xs;
+            accessible-role: none;
+        }
+        Label {
+            text: root.data[root.hover].value;
+            numeric: true;
+            font-size: Theme.fs-xs;
+            font-weight: 500;
+            lh: Theme.lh-xs;
+            accessible-role: none;
+        }
+        if root.data[root.hover].note != "": Label {
+            text: root.data[root.hover].note;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.muted;
+            accessible-role: none;
+        }
+    }
+}

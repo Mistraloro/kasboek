@@ -1,0 +1,101 @@
+// Design tokens of the Electron renderer: src/renderer/src/styles.css (:root and :root[data-theme='dark']) plus the
+// Tailwind scales its components use (radius, shadow, type sizes). Components read only from here: no hex colours,
+// no font names and no magic radii outside this file.
+import { Fonts } from "fonts.slint";
+
+export global Theme {
+    // The theme switch. The app binds it to the `theme` preference (system resolved to light or dark first);
+    // changing it re-colours everything at once, no component keeps its own copy.
+    in-out property <bool> dark: false;
+
+    // ---- colours (styles.css) ----
+    out property <color> bg: dark ? #0e110f : #fafaf8;
+    out property <color> surface: dark ? #161a17 : #ffffff;
+    out property <color> surface-2: dark ? #1d221f : #f3f4f1;
+    out property <color> border: dark ? #262c28 : #e6e8e4;
+    out property <color> border-strong: dark ? #343c37 : #d4d8d2;
+    out property <color> text: dark ? #e7ece8 : #18201b;
+    out property <color> muted: dark ? #8e9a92 : #5f6b63;
+    out property <color> accent: dark ? #3fcf8e : #15803d;
+    out property <color> accent-hover: dark ? #5bd9a0 : #116a33;
+    out property <color> accent-soft: dark ? #3fcf8e.with-alpha(0.12) : #e7f5ec;
+    out property <color> accent-fg: dark ? #062014 : #ffffff;
+    out property <color> negative: dark ? #f2867a : #b42318;
+    out property <color> negative-soft: dark ? #f2867a.with-alpha(0.12) : #fdecea;
+    out property <color> warning: dark ? #e9b949 : #9a6700;
+    out property <color> warning-soft: dark ? #e9b949.with-alpha(0.12) : #fff6dd;
+    // `bg-accent-soft/50` and `bg-surface-2/60` of table rows (alpha multiplied, not replaced).
+    out property <color> row-selected: dark ? #3fcf8e.with-alpha(0.06) : #e7f5ec.with-alpha(0.5);
+    out property <color> row-hover: dark ? #1d221f.with-alpha(0.6) : #f3f4f1.with-alpha(0.6);
+    // `--focus`: the colour of the 2px focus ring.
+    out property <color> focus: accent;
+    // Chart series (validated for colour-vision deficiency).
+    out property <color> chart-income: dark ? #2dae74 : #15803d;
+    out property <color> chart-spending: dark ? #6b83e8 : #4f6bd8;
+    // Tailwind `bg-black/40` behind modals, `bg-white` of the switch thumb.
+    out property <color> scrim: #00000066;
+    out property <color> white: #ffffff;
+
+    // ---- radii (Tailwind: rounded-sm/md/lg/xl/full) ----
+    out property <length> r-sm: 4px;
+    out property <length> r-md: 6px;
+    out property <length> r-lg: 8px;
+    out property <length> r-xl: 12px;
+    out property <length> r-full: 9999px;
+
+    // ---- spacing (Tailwind 4 px unit: p-1 = 4px, p-3 = 12px ...) ----
+    out property <length> unit: 4px;
+    // Control heights: Button md / Input / Select 36px, Button sm / Segmented option / IconButton 32px.
+    out property <length> h-control: 36px;
+    out property <length> h-control-sm: 32px;
+
+    // ---- typography ----
+    // Font family names live in tools/fonts.json (generated into fonts.slint). Change them there, not here.
+    out property <string> sans: Fonts.sans;
+    out property <string> num: Fonts.num;
+    out property <string> serif: Fonts.serif;
+    // Sizes the renderer uses (text-xs, text-[13px], text-sm = body, text-[15px], text-base, text-[30px]) and the
+    // line box each one gets in the browser (body line-height 1.5; Tailwind's own pairs for text-xs and text-sm).
+    out property <length> fs-xs: 12px;
+    out property <length> lh-xs: 16px;
+    out property <length> fs-ui: 13px;
+    out property <length> lh-ui: 19.5px;
+    out property <length> fs-body: 14px;
+    out property <length> lh-body: 21px;
+    out property <length> fs-card-title: 15px;
+    out property <length> lh-card-title: 22.5px;
+    out property <length> fs-chart: 11px;
+    out property <length> fs-title: 30px;
+    out property <length> lh-title: 37.5px;
+    out property <length> fs-tip: 12px;
+
+    // Slint's `line-height-factor` multiplies the font's natural line box (1.21 em for Inter); this turns a CSS line
+    // height (`lh`, for font size `fs`) into that factor.
+    pure public function lhf(fs: length, lh: length) -> float {
+        return (lh / fs) / 1.21;
+    }
+
+    // ---- elevation: the Tailwind shadows as one blur, one offset and one colour (Slint has no spread) ----
+    // 1 = shadow-sm, 2 = shadow, 3 = shadow-lg, 4 = shadow-xl.
+    pure public function shadow-blur(level: int) -> length {
+        return level == 1 ? 2px : level == 2 ? 3px : level == 3 ? 13px : 22px;
+    }
+    pure public function shadow-dy(level: int) -> length {
+        return level == 1 ? 1px : level == 2 ? 1px : level == 3 ? 8px : 16px;
+    }
+    pure public function shadow-color(level: int) -> color {
+        return #000000.with-alpha(level == 1 ? 0.05 : level == 2 ? 0.1 : 0.11);
+    }
+
+    // ---- motion ----
+    // prefers-reduced-motion: the app sets this from the OS; the spinner stops and nothing animates.
+    in-out property <bool> reduced-motion: false;
+}
+
+// A rectangle with one of the Tailwind shadows (0 = none).
+export component Elevated inherits Rectangle {
+    in property <int> level: 1;
+    drop-shadow-blur: root.level == 0 ? 0px : Theme.shadow-blur(root.level);
+    drop-shadow-offset-y: root.level == 0 ? 0px : Theme.shadow-dy(root.level);
+    drop-shadow-color: root.level == 0 ? transparent : Theme.shadow-color(root.level);
+}

@@ -1,0 +1,20 @@
+// Text rules that Slint cannot express (it has no substring or search). They are pure callbacks implemented in Rust
+// (src/rules.rs); the host wires them once with `kb_ui::wire_rules!(&window)`. Unwired, they return empty values and
+// the components degrade (type-ahead finds nothing, DateInput accepts any text as "no date").
+export struct DateCheck {
+    // "YYYY-MM-DD", or "" when the text is empty or unusable.
+    iso: string,
+    // "" | "invalid" | "too-late"
+    problem: string,
+}
+
+export global Rules {
+    // The date pattern of the Formats setting (`fmt.formats.date` of the renderer), e.g. "DD/MM/YYYY".
+    in-out property <string> date-pattern: "DD/MM/YYYY";
+    // checkDateText of src/shared/format.ts.
+    pure callback check-date(text: string, max: string, pattern: string) -> DateCheck;
+    // formatDate of src/shared/format.ts for an ISO date.
+    pure callback format-date(iso: string, pattern: string) -> string;
+    // Index of the first item at or after `from` (wrapping) that starts with `prefix`, case-insensitive; -1 if none.
+    pure callback find-prefix(items: [string], prefix: string, from: int) -> int;
+}

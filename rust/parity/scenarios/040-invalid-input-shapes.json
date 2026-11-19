@@ -1,0 +1,16 @@
+{
+  "name": "input that is not an object, or has the wrong shape",
+  "steps": [
+    {"op": "accounts.list", "input": []},
+    {"op": "accounts.list", "input": "x"},
+    {"op": "accounts.list", "input": 5},
+    {"op": "accounts.list", "input": {"x": 1}},
+    {"op": "accounts.list"},
+    {"op": "categories.list", "input": true},
+    {"op": "settings.get", "input": [1]},
+    {"op": "transactions.list", "input": []},
+    {"op": "transactions.list"},
+    {"op": "transactions.list", "input": {"limit": "5"}},
+    {"op": "transactions.create"}
+  ]
+}

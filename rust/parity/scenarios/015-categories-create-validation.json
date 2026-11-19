@@ -1,0 +1,12 @@
+{
+  "name": "categories create: input validation",
+  "steps": [
+    {"op": "categories.create", "input": {"name": "", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "ok", "kind": "other"}},
+    {"op": "categories.create", "input": {"name": "ok"}},
+    {"op": "categories.create", "input": {"kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "ok", "kind": "expense", "color": "red"}},
+    {"op": "categories.create", "input": {"name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "kind": "income"}}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "prefs: an unknown stored language is English, an empty one the system language",
+  "prefs": "{\"language\":\"xx\"}",
+  "languages": ["fr"],
+  "steps": [
+    {"op": "prefs.get"}
+  ]
+}

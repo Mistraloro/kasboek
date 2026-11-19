@@ -1,0 +1,121 @@
+// Button and IconButton: ui.tsx `Button` and the ghost icon buttons used around the renderer (modal close, eye).
+import { Theme } from "theme.slint";
+import { Icon, Label, PressTarget } from "base.slint";
+import { Spinner } from "progress.slint";
+
+// variant: "primary" | "secondary" (alias "default") | "ghost" | "danger". Sizes: md 36px / 14px text / px-4,
+// small 32px / 13px / px-3. Hover colours as in ui.tsx. `busy` shows a spinner instead of the icon and ignores presses
+// (the screen reader hears "busy" in the description). Disabled is opacity 50%, as `disabled:opacity-50`.
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> has-icon: false;
+    in property <string> variant: "secondary";
+    in property <bool> enabled: true;
+    in property <bool> small: false;
+    in property <bool> busy: false;
+    in property <string> busy-label;
+    in property <string> description;
+    in property <string> simulate;
+    out property <bool> has-focus: tgt.has-focus;
+    callback clicked();
+    forward-focus: tgt;
+
+    property <bool> hover: tgt.hovered && root.enabled;
+    property <bool> primary: root.variant == "primary";
+    property <bool> ghost: root.variant == "ghost";
+    property <bool> danger: root.variant == "danger";
+    property <color> face-bg: root.primary ? (root.hover ? Theme.accent-hover : Theme.accent) : root.ghost ? (root.hover ? Theme.surface-2 : transparent) : root.danger ? (root.hover ? Theme.negative-soft : Theme.surface) : (root.hover ? Theme.surface-2 : Theme.surface);
+    property <color> face-fg: root.primary ? Theme.accent-fg : root.ghost ? (root.hover ? Theme.text : Theme.muted) : root.danger ? Theme.negative : Theme.text;
+
+    width: face.preferred-width;
+    height: root.small ? Theme.h-control-sm : Theme.h-control;
+    // styles.css gives every :focus-visible element a 6px radius, which beats rounded-lg.
+    border-radius: tgt.focused ? Theme.r-md : Theme.r-lg;
+    background: root.face-bg;
+    border-width: (root.primary || root.ghost) ? 0px : 1px;
+    border-color: Theme.border;
+    opacity: root.enabled ? 1 : 0.5;
+
+    face := HorizontalLayout {
+        alignment: center;
+        padding-left: root.small ? 12px : 16px;
+        padding-right: root.small ? 12px : 16px;
+        spacing: 8px;
+        if root.busy: VerticalLayout {
+            alignment: center;
+            Spinner {
+                size: 14px;
+                tint: root.face-fg;
+            }
+        }
+        if !root.busy && root.has-icon: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                size: 14px;
+                tint: root.face-fg;
+            }
+        }
+        Label {
+            text: root.text;
+            font-weight: 500;
+            font-size: root.small ? Theme.fs-ui : Theme.fs-body;
+            color: root.face-fg;
+            horizontal-alignment: center;
+            overflow: clip;
+            accessible-role: none;
+        }
+    }
+
+    tgt := PressTarget {
+        label: root.text;
+        description: root.busy ? (root.busy-label != "" ? root.busy-label : "Busy") : root.description;
+        enabled: root.enabled;
+        simulate: root.simulate;
+        ring-radius: 10px;
+        activated => {
+            if (!root.busy) {
+                root.clicked();
+            }
+        }
+    }
+}
+
+// A square ghost button with one icon (`text-muted hover:bg-surface-2 hover:text-text`, rounded-md). `label` is
+// required: the icon alone has no name. 32px like the eye button of PasswordInput; `size: 24px` is the modal close.
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <length> size: 32px;
+    in property <length> icon-size: 16px;
+    in property <string> simulate;
+    // Tone of the icon at rest: muted by default, `danger` shows it in the negative colour.
+    in property <bool> danger: false;
+    out property <bool> has-focus: tgt.has-focus;
+    callback clicked();
+    forward-focus: tgt;
+
+    width: root.size;
+    height: root.size;
+    border-radius: tgt.focused ? Theme.r-md : Theme.r-md;
+    background: (tgt.hovered && root.enabled) ? Theme.surface-2 : transparent;
+    opacity: root.enabled ? 1 : 0.5;
+
+    Icon {
+        source: root.icon;
+        size: root.icon-size;
+        tint: root.danger ? Theme.negative : (tgt.hovered && root.enabled) ? Theme.text : Theme.muted;
+    }
+    tgt := PressTarget {
+        label: root.label;
+        description: root.description;
+        enabled: root.enabled;
+        simulate: root.simulate;
+        activated => {
+            root.clicked();
+        }
+    }
+}

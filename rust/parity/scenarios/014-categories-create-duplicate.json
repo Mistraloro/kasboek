@@ -1,0 +1,10 @@
+{
+  "name": "categories create: duplicate names refused regardless of case",
+  "steps": [
+    {"op": "categories.create", "input": {"name": "Groceries", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "GROCERIES", "kind": "income"}},
+    {"op": "categories.create", "input": {"name": "Pets", "kind": "expense"}},
+    {"op": "categories.create", "input": {"name": "pets", "kind": "expense"}},
+    {"op": "categories.list"}
+  ]
+}

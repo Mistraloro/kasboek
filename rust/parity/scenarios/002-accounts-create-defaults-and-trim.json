@@ -1,0 +1,11 @@
+{
+  "name": "accounts create: defaults, trimming, upper-casing",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "  Wallet  "}},
+    {"op": "accounts.create", "input": {"name": "Dollar", "bank": "  Dollar Bank ", "currency": " usd ", "kind": "credit_card", "openingBalanceCents": -5000, "fxCostPct": 2.5}},
+    {"op": "accounts.create", "input": {"name": "Zero cost", "fxCostPct": 0, "iban": null}},
+    {"op": "accounts.create", "input": {"name": "Blank iban", "iban": "   "}},
+    {"op": "accounts.create", "input": {"name": "Spaces", "iban": " nl91 abna 0417 1643 00 "}},
+    {"op": "accounts.list"}
+  ]
+}

@@ -1,0 +1,327 @@
+// Modal, ConfirmDialog and the toast host. Put them last in the window's root so they draw over everything.
+import { Theme, Elevated } from "theme.slint";
+import { Icon, Label, FocusRing } from "base.slint";
+import { Icons } from "icons.slint";
+import { Button, IconButton } from "button.slint";
+import { UiText } from "texts.slint";
+
+// `Modal` of ui.tsx. The dimmed background swallows clicks and does NOT close the dialog unless `close-on-backdrop`.
+// Escape and the close button close it, or ask first when `dirty` ("Discard what you typed?": Keep editing / Discard;
+// Escape on the question goes back to editing). `dismissible: false` ignores all three. `close-requested` is the only
+// way out: the owner sets `open: false` in it. Content goes in as children.
+//
+// Instantiate it only while it is wanted (`if root.show-modal: Modal { open: true; ... }`): a hidden Modal would keep its
+// controls in the screen reader's tree. A closing owner sets the condition to false in `close-requested`.
+//
+// Focus: opening puts it on the close button (or on the dialog when not dismissible); Tab and Shift+Tab stay inside
+// (two invisible stops at the ends send the focus round). Slint has no dialog role: the dialog is a labelled group.
+export component Modal inherits Rectangle {
+    in property <bool> open;
+    in property <string> title;
+    in property <bool> dismissible: true;
+    in property <bool> close-on-backdrop: false;
+    in property <bool> dirty: false;
+    // Gallery cases: a dialog drawn as a picture, which must not take the keyboard focus or trap Tab.
+    in property <bool> demo: false;
+    // Shots: draw the "Discard what you typed?" question.
+    in property <bool> force-asking: false;
+    // `w-full max-w-md`: 448px, less on a narrow window (p-6 on each side).
+    in property <length> dialog-width: min(448px, root.width - 48px);
+    callback close-requested();
+
+    property <bool> asking: false;
+    property <bool> wrapped-from-start: false;
+    out property <bool> showing-question: root.asking || root.force-asking;
+
+    function request(source: string) {
+        if (!root.dismissible) {
+            return;
+        }
+        if (source == "backdrop" && !root.close-on-backdrop) {
+            return;
+        }
+        if (root.dirty) {
+            root.asking = true;
+        } else {
+            root.close-requested();
+        }
+    }
+    function focus-in() {
+        if (root.open && !root.demo) {
+            if (root.dismissible) {
+                close-btn.focus();
+            } else {
+                first.focus();
+            }
+        }
+    }
+    init => {
+        root.focus-in();
+    }
+    changed open => {
+        if (root.open) {
+            root.focus-in();
+        } else {
+            root.asking = false;
+        }
+    }
+
+    // Everything is built once and shown or hidden: the children (the form) cannot sit in a conditional element, so a
+    // hidden modal keeps its content alive, which also keeps what was typed.
+    Rectangle {
+        visible: root.open;
+        width: root.width;
+        height: root.height;
+        background: Theme.scrim;
+        TouchArea {
+            clicked => {
+                root.request("backdrop");
+            }
+        }
+        scope := FocusScope {
+            enabled: root.open;
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    if (root.asking) {
+                        root.asking = false;
+                        close-btn.focus();
+                    } else {
+                        root.request("escape");
+                    }
+                    return accept;
+                }
+                return reject;
+            }
+            dialog := Elevated {
+                level: 4;
+                width: root.dialog-width;
+                x: (parent.width - self.width) / 2;
+                y: max(24px, (parent.height - self.height) / 2);
+                height: col.preferred-height + 2px;
+                border-radius: Theme.r-xl;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+                accessible-role: groupbox;
+                accessible-label: root.title;
+
+                TouchArea { }
+                col := VerticalLayout {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    // header: `flex items-center justify-between border-b px-5 py-3.5`
+                    Rectangle {
+                        height: 21px + 28px + 1px;
+                        first := FocusScope {
+                            width: 0px;
+                            height: 0px;
+                            accessible-role: none;
+                            changed has-focus => {
+                                if (self.has-focus && !root.dismissible && root.wrapped-from-start) {
+                                    root.wrapped-from-start = false;
+                                }
+                            }
+                        }
+                        Label {
+                            x: 20px;
+                            y: 14px;
+                            width: parent.width - 40px - 32px;
+                            height: 21px;
+                            text: root.title;
+                            font-weight: 600;
+                            overflow: elide;
+                            accessible-role: none;
+                        }
+                        close-btn := IconButton {
+                            visible: root.dismissible;
+                            enabled: root.dismissible && root.open;
+                            x: parent.width - 20px - self.width;
+                            y: (parent.height - 1px - self.height) / 2;
+                            size: 24px;
+                            icon: Icons.x;
+                            label: UiText.modal-close;
+                            clicked => {
+                                root.request("button");
+                            }
+                        }
+                        Rectangle {
+                            y: parent.height - 1px;
+                            height: 1px;
+                            background: Theme.border;
+                        }
+                    }
+                    // body: `px-5 py-4`
+                    VerticalLayout {
+                        padding: 20px;
+                        padding-top: 16px;
+                        padding-bottom: 16px;
+                        // Kept in place while asking, so "Keep editing" returns to exactly what was typed.
+                        Rectangle {
+                            visible: !root.showing-question;
+                            height: root.showing-question ? 0px : content.preferred-height;
+                            content := VerticalLayout {
+                                @children
+                            }
+                        }
+                        if root.showing-question: VerticalLayout {
+                            spacing: 16px;
+                            accessible-role: groupbox;
+                            accessible-label: UiText.modal-discard-ask;
+                            Label {
+                                text: UiText.modal-discard-ask;
+                                font-size: Theme.fs-ui;
+                                lh: Theme.lh-ui;
+                                wrap: word-wrap;
+                            }
+                            HorizontalLayout {
+                                alignment: end;
+                                spacing: 8px;
+                                keep := Button {
+                                    text: UiText.modal-keep-editing;
+                                    clicked => {
+                                        root.asking = false;
+                                        close-btn.focus();
+                                    }
+                                    init => {
+                                        self.focus();
+                                    }
+                                }
+                                Button {
+                                    text: UiText.modal-discard;
+                                    variant: "danger";
+                                    clicked => {
+                                        root.close-requested();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                // Tab trap: the stop after the last control sends the focus back to the first one.
+                end-stop := FocusScope {
+                    width: 0px;
+                    height: 0px;
+                    changed has-focus => {
+                        if (self.has-focus) {
+                            if (root.demo) {
+                                return;
+                            }
+                            if (root.wrapped-from-start) {
+                                root.wrapped-from-start = false;
+                            } else if (root.dismissible) {
+                                close-btn.focus();
+                            } else {
+                                first.focus();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// A question with two answers: `Modal` with a message and Cancel / confirm buttons (the confirm one is `danger` for
+// destructive actions). The owner supplies every text.
+export component ConfirmDialog inherits Modal {
+    in property <string> message;
+    in property <string> confirm-text;
+    in property <string> cancel-text;
+    in property <bool> destructive: false;
+    callback confirmed();
+
+    VerticalLayout {
+        spacing: 16px;
+        Label {
+            text: root.message;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            Button {
+                text: root.cancel-text;
+                clicked => {
+                    root.close-requested();
+                }
+            }
+            Button {
+                text: root.confirm-text;
+                variant: root.destructive ? "danger" : "primary";
+                clicked => {
+                    root.confirmed();
+                }
+            }
+        }
+    }
+}
+
+export struct ToastItem {
+    id: int,
+    // "success" | "error"
+    tone: string,
+    message: string,
+}
+
+// Toast of Toast.tsx: `fixed right-5 bottom-5 flex flex-col gap-2`, each `max-w-sm rounded-lg border bg-surface px-4
+// py-3 text-[13px] shadow-lg` with a 16px status icon. The owner keeps the model; a toast calls `dismissed(id)` after
+// 3.5 s (7 s for errors) and the owner removes it. The host does not take clicks away from the page behind.
+// The messages are a polite live region, so a screen reader announces a new toast without moving focus.
+export component ToastHost inherits Rectangle {
+    in property <[ToastItem]> toasts;
+    callback dismissed(int);
+
+    VerticalLayout {
+        alignment: end;
+        padding: 20px;
+        spacing: 8px;
+        for toast in root.toasts: HorizontalLayout {
+            alignment: end;
+            Elevated {
+                level: 3;
+                height: row.preferred-height + 2px;
+                width: min(384px, row.preferred-width + 2px);
+                border-radius: Theme.r-lg;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                Timer {
+                    interval: toast.tone == "error" ? 7s : 3.5s;
+                    running: true;
+                    triggered => {
+                        self.running = false;
+                        root.dismissed(toast.id);
+                    }
+                }
+                row := HorizontalLayout {
+                    padding-left: 17px;
+                    padding-right: 17px;
+                    padding-top: 13px;
+                    padding-bottom: 13px;
+                    spacing: 10px;
+                    VerticalLayout {
+                        alignment: start;
+                        padding-top: 2px;
+                        Icon {
+                            source: toast.tone == "error" ? Icons.alert-circle : Icons.check-circle-2;
+                            size: 16px;
+                            tint: toast.tone == "error" ? Theme.negative : Theme.accent;
+                        }
+                    }
+                    Label {
+                        text: toast.message;
+                        font-size: Theme.fs-ui;
+                        lh: Theme.lh-ui;
+                        wrap: word-wrap;
+                        accessible-role: text;
+                        accessible-live-region: polite;
+                    }
+                }
+            }
+        }
+    }
+}

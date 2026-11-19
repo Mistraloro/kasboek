@@ -1,0 +1,10 @@
+{
+  "name": "prefs: values of the wrong type in the file are kept or replaced like the TypeScript core does",
+  "prefs": "{\"zeta\":1,\"theme\":5,\"formats\":\"x\",\"language\":5,\"autoLockMinutes\":\"soon\",\"insights\":null,\"alpha\":[]}",
+  "languages": ["de"],
+  "steps": [
+    {"op": "prefs.get"},
+    {"op": "prefs.update", "input": {"theme": "light", "formats": {"date": "YYYY-MM-DD"}}},
+    {"op": "prefs.get"}
+  ]
+}

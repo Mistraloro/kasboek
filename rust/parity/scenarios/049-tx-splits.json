@@ -1,0 +1,26 @@
+{
+  "name": "transactions split: sums, one part, zero part, categories, removal, notes",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-01", "amountCents": -1000, "description": "receipt"}},
+    {"op": "transactions.create", "input": {"accountId": 1, "bookingDate": "2026-10-02", "amountCents": 500, "description": "refund"}},
+    {"op": "transactions.splits", "input": {"id": 1}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": -600, "note": "  food "}, {"categoryId": null, "amountCents": -400, "note": "   "}]}, "actor": "assistant"},
+    {"op": "transactions.splits", "input": {"id": 1}},
+    {"op": "transactions.list", "input": {}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": -1000}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": 0}, {"categoryId": 4, "amountCents": -1000}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": -500}, {"categoryId": 4, "amountCents": -400}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 99, "amountCents": -500}, {"categoryId": 4, "amountCents": -500}]}},
+    {"op": "transactions.split", "input": {"id": 9, "parts": []}},
+    {"op": "transactions.split", "input": {"id": 2, "parts": [{"categoryId": 3, "amountCents": 200}, {"categoryId": 4, "amountCents": 300}, {"categoryId": null, "amountCents": 0}]}},
+    {"op": "transactions.split", "input": {"id": 2, "parts": [{"categoryId": 3, "amountCents": 900}, {"categoryId": 4, "amountCents": -400}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"amountCents": -500}, {"categoryId": 4, "amountCents": -500}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": -500, "note": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"}, {"categoryId": 4, "amountCents": -500}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": -250}, {"categoryId": 3, "amountCents": -250}, {"categoryId": 3, "amountCents": -250}, {"categoryId": 3, "amountCents": -250}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": [{"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}, {"categoryId": 3, "amountCents": -100}]}},
+    {"op": "transactions.split", "input": {"id": 1, "parts": []}},
+    {"op": "transactions.splits", "input": {"id": 1}},
+    {"op": "transactions.list", "input": {}}
+  ]
+}
