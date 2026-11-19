@@ -19,6 +19,7 @@ Non-goals: new features, a mobile app, changing any file format, changing the MC
 | Start-up | No splash window. The first frame is the real Setup/Lock screen. The Hello/Touch ID button is part of the first frame; the OS prompt opens only when the person presses it (section 5). |
 | Parity | Differential TS-vs-Rust runs on invented data, cross-opened files, and fixture-driven screenshot and geometry diffs. |
 | First step | A 2–3 week spike with go/no-go gates (section 7, M0). |
+| Exact-copy scope (owner decision) | The "exact copy" requirement is relaxed for small native details: password mask glyph, native dropdown arrow or chevron, anti-aliasing, and 1–3 px spacing differences are acceptable and can be adjusted later, as long as the result fits the design. The pixel gate (3%) and landmark gate (2 px) become guidelines for layout, colours, typography and component proportions, not blockers for these details. See section 10 (polish list). |
 
 ## 1. Inventory of the current app
 
@@ -394,6 +395,7 @@ locally; results and files are never committed.
      its testing API, within ±1 px for containers and ±2 px for text baselines; (b) **pixels**: pixelmatch/SSIM with
      anti-aliasing tolerance, under 2% changed pixels per page; (c) owner side-by-side review per screen.
    - Glyphs will never be bit-identical across rasterisers. Exactness is defined by (a) and (b).
+   - Owner decision: for small native details (see section 0), the (a) and (b) thresholds are guidelines, not blockers.
 5. **Porting the 863 vitest tests**: about 520 core/shared tests become Rust unit tests module by module (same
    names, so coverage can be tracked in a table). Tests of Electron glue (`ipc-wiring`, `splash-page`,
    `window-policy`, `device-auth`, `startup-*`) are rewritten against kb-platform, or dropped with a written
@@ -440,7 +442,7 @@ depends mostly on owner review.
 | **M0 Spike** (time-boxed) | Slint shell + Lock screen + Overview on fake data; open an Electron-written encrypted DB and show real totals; Hello/Touch ID button in the first frame (prompt on press); renderer comparison (Skia vs FemtoVG vs software); CI builds for 6 targets | **G1** Overview geometry ±2 px and pixel diff ≤ 3% vs Playwright, light and dark, en and de. **G2** Inter with tnum and accents, Serif title; Narrator and VoiceOver read nav and buttons; Tab order matches. **G3** dead-key IME works. **G4** Rust opens a TS-written DB and TS re-opens a Rust-written one, on Win, mac and Linux. **G5** first frame ≤ 0.5 s and Hello prompt ≤ 0.7 s from button press on Win x64, Win ARM64 and mac arm64, logged in startup.log; installer ≤ 25 MB. **G6** decode an Electron-sealed account.json on Windows, with a written plan for mac and Linux | 2–3 ew |
 | **M1 Foundations** | Workspace, kb-sqlite3mc-sys, kb-crypto, kb-db (15 migrations, `fx`), account and file codecs, kb-cli, TS runner, tools.json dump, CI matrix | All cross-open tests green on 6 targets; crypto/format unit tests ported | 4–6 ew |
 | **M2 Core parity** | All 154 ops in kb-core/kb-import/kb-assistant (logic only)/kb-sync engine | Differential suites green; ~520 ported tests green; schema-dump equal | 10–16 ew |
-| **M3 Design system** (parallel with M2) | Tokens, frozen fonts, 74 icons, primitives from `ui.tsx`, 4 charts with hover tips, Modal/Popover/Tooltip/Toast, title bar per OS, shell + nav, assistant panel frame | Component gallery passes geometry and pixel diffs; components have accessibility labels | 4–6 ew |
+| **M3 Design system** (parallel with M2) | Tokens, frozen fonts, 74 icons, primitives from `ui.tsx`, 4 charts with hover tips, Modal/Popover/Tooltip/Toast, title bar per OS, shell + nav, assistant panel frame | Component gallery passes geometry and pixel diffs (owner decision: the 3% and 2 px gates are guidelines for layout, colours, typography and component proportions; small native details are accepted and tracked in section 10, polish list); components have accessibility labels | 4–6 ew |
 | **M4 Screens** | In order: Setup/Lock/ImportFlow/Recovered, Overview (+tips, bank balance), Transactions (+splits, rename, searches, CSV export), Import (CSV, mapping, preview, consent, PDF, XML, AI check), Budgets, Recurring, Goals, Year (+PDF report), Net worth, Settings (all sections, Claude, Memory, MCP, WebDAV), Welcome + Tour, Assistant panel (streaming, confirmations, suggestions, model picker) + MCP requests | Each screen: fixture matrix passes; manual checklist done; owner sign-off | 12–18 ew |
 | **M5 Platform** (partly parallel with M4) | OS seal + legacy migration, Hello/Touch ID, idle/lock/suspend auto-lock, single instance + `--background`, tray, notifications, dialogs, theme following, startup.log, quarantine, backup scheduler, sync service + WebDAV, ECB fetch, MCP bridge (Go helper unchanged), updater (GitHub + SHA256SUMS, MSI via Go helper, AppImage replace) | Real-hardware checklist on 6 targets; security review closed; mixed-fleet sync with the Electron app | 6–9 ew |
 | **M6 Installers** | MSI (WiX, same UpgradeCode, per-user, same path and exe, shortcuts, art), dmg (`app.kasboek`, ad-hoc or Developer ID), AppImage + deb (same name), `kasboek-mcp` in the same place, assets named for `pickAsset` | Electron → Rust upgrade by the in-app updater on all 6; downgrade to Electron keeps data (`account.electron.json`); installers ≤ 25 MB | 3–5 ew |
@@ -708,6 +710,16 @@ Done:
   0 to 2 px for 12 cases. Over a gate: pixels in password (Slint's fixed `●` mask), select (native arrow vs our chevron), date, badge (3.07 %), pageheader;
   landmarks in date (6 px), pageheader (5 px), monthnav (8 px), toast (6 px), and landmark count in input/password/select/segmented
   (the pixel analysis merges or splits faint disabled controls differently).
+- Owner decision on the over-gate items: the 5 components over the 3% pixel gate (password, select, date, badge, pageheader) are **accepted, polish later**. Their remaining differences are the small native details listed in the polish list below.
+
+**Polish list (accepted, adjust later; owner decision, see section 0)**
+
+- Password: Slint's fixed `●` mask glyph instead of the React mask (pixels).
+- Select: native dropdown arrow vs our chevron (pixels).
+- Date field: landmark offsets of 6 px (landmarks).
+- Page header: landmark offset of 5 px as measured in the spike (landmarks), plus pixel diff over 3% (pixels). The owner's note said 2–4 px; re-measure to confirm.
+- MonthNav and Toast: landmark offsets of 8 px and 6 px; cause not yet explained (landmarks).
+- Badge: 3.07% pixel diff (pixels).
 - Gaps: see `rust/crates/kb-ui/README.md` (Slint limits). Windows and macOS were not run: UIA/Narrator/VoiceOver, real focus ring and IME in the fields, popup placement at window edges, fonts under DirectWrite/CoreText.
 
 ## Appendix: not verified offline (each is a spike or M1 task)
