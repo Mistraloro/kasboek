@@ -1,14 +1,19 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.21.1
+## What’s new in 0.22
 
-**Changes**
-- **Kasboek is now open source under the GPL-3.0 licence.** The licence is in the repository, in the app (Settings → About, and a copy in the installed files) and in the README. The copyright holder is divemost.
-- **The project has moved to a new GitHub address: `github.com/divemost/kasboek`.** The old address redirects for now.
+**Privacy**
+- **Account numbers are hidden on screen by default.** An IBAN shows as `BE…1234` (country and last four characters) everywhere: accounts, transactions, import preview, rules and the assistant panel. Hold the small eye next to it to show the full number for a moment. You can switch this off in Settings → Appearance. Importing a file never switches it off.
+- **The assistant and connected apps (MCP) no longer see account or card numbers.** Everything they look up is cleaned first: IBANs, card-like numbers, e-mail addresses and phone numbers are hidden. Your own account number shows as `BE…1234`. Amounts, dates and category names stay readable so the assistant can still answer questions. Rules for an account number are made by pointing at a transaction.
+- **Statement headers are never sent.** “Check with your assistant” on a CSV no longer sends the lines above the header row (they can hold your name and address), so you are asked for your agreement again once. For a PDF, only the text from the first transaction row on is sent, and nothing is sent when there is no such row.
+- The privacy rules are summarised at the top of the README.
 
-**Important if you installed 0.20.0 or 0.21.0:** because of the new address, the “Update” button in those two versions may not be able to download this update. If that happens, download the installer once from this page (below) and run it; your data is kept. From this version on, updating works normally again.
+**Fixes**
+- Reading a PDF that has no table header no longer sends the first-page header to the assistant.
 
-Everything that came in 0.21 (XML statement import, a minimum password length of 12) is listed on the 0.21.0 release, and 0.20 on the 0.20.0 release. Note: for XML files, “Flip signs” is not offered, because the signs come from the file itself.
+If you installed 0.20.0 or 0.21.0 and the “Update” button doesn’t find this version, download the installer once from this page. From 0.21.1 on, updating works normally.
+
+Everything that came before is listed on the 0.21.1, 0.21.0 and 0.20.0 releases.
 
 ## Download
 
