@@ -5,11 +5,12 @@ A simple, local-first budget app for Windows, macOS and Linux, with an AI assist
 
 > **Privacy first, also in the AI assistant**
 >
-> - Account and card numbers (IBANs, long digit strings), e-mail addresses and phone numbers are hidden before anything goes to an AI provider or to a connected app such as Claude Desktop: in chat, in CSV checks, in PDF reading and in tips.
-> - Nothing is sent until you ask. You choose the provider, and PDF reading, "Check with …" and Overview tips each ask first and show exactly what is sent.
-> - The PDF file itself is never sent, only its text, and the preview shows you exactly what that is. For a CSV, nothing above the header row is sent; for a PDF, only the text from the first transaction row on. Overview tips send only a short rounded summary, never account or card numbers, balances or income.
-> - Use a local model (Ollama, LM Studio, or any OpenAI-compatible server on your own computer) and nothing leaves your computer.
-> - The assistant can't write amounts into your data: Kasboek checks every amount against your data or the PDF's own text. You decide what it may change by itself or only after your OK, and it can never change its own permissions, settings, keys or addresses.
+> - Account and card numbers, e-mail addresses and international phone numbers (starting with + or 00) are hidden before text goes to an AI provider or to a connected app such as Claude Desktop: in chat, CSV checks, PDF reading, tips, memory notes and what you type yourself.
+> - Nothing is sent without your agreement. You choose the provider, and PDF reading, "Check with …" and Overview tips each ask first and show exactly what is sent.
+> - For a CSV, nothing above the header row is sent, and the assistant can't move the header up past the one Kasboek found. For a PDF, only the rows of the transaction table are sent: everything above the table and the top of every later page is left out. Overview tips send only a short rounded summary.
+> - Use a local model (Ollama, LM Studio, or any OpenAI-compatible server on your own computer) and everything stays on your computer.
+> - Account numbers are also hidden on screen by default (`BE…1234`); hold the eye next to one to see it. The setting is switched back on after restoring a backup or export, or joining sync.
+> - The assistant never types amounts into your data: Kasboek checks every amount against your data or the PDF's own text. It can never change its own permissions, settings, keys or addresses.
 
 See [PLAN.md](PLAN.md) for the design, the security model and what still needs testing.
 

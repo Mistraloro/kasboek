@@ -3,13 +3,14 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 ## What’s new in 0.22
 
 **Privacy**
-- **Account numbers are hidden on screen by default.** An IBAN shows as `BE…1234` (country and last four characters) everywhere: accounts, transactions, import preview, rules and the assistant panel. Hold the small eye next to it to show the full number for a moment. You can switch this off in Settings → Appearance. Importing a file never switches it off.
-- **The assistant and connected apps (MCP) no longer see account or card numbers.** Everything they look up is cleaned first: IBANs, card-like numbers, e-mail addresses and phone numbers are hidden. Your own account number shows as `BE…1234`. Amounts, dates and category names stay readable so the assistant can still answer questions. Rules for an account number are made by pointing at a transaction.
-- **Statement headers are never sent.** “Check with your assistant” on a CSV no longer sends the lines above the header row (they can hold your name and address), so you are asked for your agreement again once. For a PDF, only the text from the first transaction row on is sent, and nothing is sent when there is no such row.
+- **Account numbers are hidden on screen by default.** An IBAN shows as `BE…1234` (country and last four characters) everywhere: accounts, transactions, import preview, rules and the assistant panel. Hold the small eye next to it to show the full number for a moment; the eye no longer opens the edit window. You can switch this off in Settings → Appearance. Importing a file never switches it off, and it is switched back on after restoring a backup or export or joining sync.
+- **The assistant and connected apps (MCP) no longer see account or card numbers, e-mail addresses or international phone numbers (starting with + or 00).** This holds for chat, CSV checks, PDF reading, tips, memory notes and what you type. Your own account number shows as `BE…1234`. Amounts, dates and category names stay readable so the assistant can still answer questions. Hiding also holds for numbers written with dots, slashes or line breaks.
+- **Statement headers are never sent.** “Check with your assistant” on a CSV no longer sends the lines above the header row (they can hold your name and address), and the assistant can't move the header up past the one Kasboek found, so you are asked for your agreement again once. For a PDF, only the rows of the transaction table are sent: everything above the table and the top of every later page is left out.
 - The privacy rules are summarised at the top of the README.
 
 **Fixes**
-- Reading a PDF that has no table header no longer sends the first-page header to the assistant.
+- The assistant can preview a rule for an account number (IBAN) from a transaction.
+- Fixed costs, and rules created from them, work with account numbers in their names.
 
 If you installed 0.20.0 or 0.21.0 and the “Update” button doesn’t find this version, download the installer once from this page. From 0.21.1 on, updating works normally.
 

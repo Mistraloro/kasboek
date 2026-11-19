@@ -307,7 +307,7 @@ export function PreviewView({
                       )}
                     </td>
                     <td className="px-2 py-1.5">
-                      <CategorySelect label={t('transactions.category')} className="h-8 text-[13px]" disabled={locked} value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
+                      <CategorySelect label={t('transactions.category')} className="h-8 min-w-48 text-[13px]" disabled={locked} value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
                     </td>
                     <td className={cx('num px-2 py-2 text-right font-medium whitespace-nowrap', r.status === 'ready' && (r.amountCents ?? 0) > 0 && 'text-accent', r.status === 'ready' && (r.amountCents ?? 0) <= 0 && 'text-text')}>
                       {r.amountCents === null ? (
