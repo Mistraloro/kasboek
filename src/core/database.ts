@@ -33,8 +33,14 @@ export function openDatabase(file: string, keyHex: string, opts: { migrate?: boo
   db.pragma('foreign_keys = ON')
   db.pragma('secure_delete = ON')
   db.pragma('journal_mode = DELETE')
-  if (opts.migrate !== false) migrate(db)
-  installFx(db)
+  try {
+    if (opts.migrate !== false) migrate(db)
+    installFx(db)
+  } catch (err) {
+    // A handle left open would keep the file locked (on Windows it cannot even be deleted).
+    db.close()
+    throw err
+  }
   return db
 }
 

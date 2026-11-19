@@ -1,6 +1,8 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.22
+## What’s new in 0.22.1
+
+(0.22.1 includes everything of 0.22; the 0.22.0 build was never published.)
 
 **Privacy**
 - **Account numbers are hidden on screen by default.** An IBAN shows as `BE…1234` (country and last four characters) everywhere: accounts, transactions, import preview, rules and the assistant panel. Hold the small eye next to it to show the full number for a moment; the eye no longer opens the edit window. You can switch this off in Settings → Appearance. Importing a file never switches it off, and it is switched back on after restoring a backup or export or joining sync.
@@ -9,6 +11,7 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 - The privacy rules are summarised at the top of the README.
 
 **Fixes**
+- If upgrading the database fails (for example a database from a newer Kasboek), Kasboek now closes the file properly instead of leaving it open.
 - The assistant can preview a rule for an account number (IBAN) from a transaction.
 - Fixed costs, and rules created from them, work with account numbers in their names.
 
