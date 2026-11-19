@@ -1,6 +1,6 @@
 # Kasboek: port to a fully native Rust app (plan)
 
-Branch: `rust-native`. The Electron app keeps shipping from `main` until cut-over. Status: plan, nothing built.
+Branch: `rust-native`. The Electron app keeps shipping from `main` until cut-over. Status: plan. The M0 spike ran on Linux x64 (results in section 10); no product code is built.
 Goal: the same app, behaving the same (with exceptions listed in section 5), looking like a copy of the current UI
 (fonts swappable), starting fast and installing small, on Windows x64/ARM64, macOS arm64/x64, Linux x64/arm64.
 Non-goals: new features, a mobile app, changing any file format, changing the MCP helper's protocol.
@@ -9,12 +9,12 @@ Non-goals: new features, a mobile app, changing any file format, changing the MC
 
 | Topic | Decision |
 |---|---|
-| UI toolkit | **Slint 1.x**. Renderer chosen in the spike: Skia (closest to Chromium) or FemtoVG. The software renderer is the fallback and the test renderer. |
+| UI toolkit | **Slint 1.x** (the spike used 1.19.0). The software renderer is the test renderer and the fallback; it matched the Electron reference within 2.0% of pixels in the spike. FemtoVG builds and renders. Skia did not run in the spike container (unverified). |
 | Layout | A Rust workspace in `rust/` next to the TS sources. TS stays runnable as the reference for differential tests until cut-over. |
 | Operation list | `kb-core::dispatch(op, json)` over the same 154 op names, inputs, outputs and error codes as `src/shared/contract.ts`. |
-| Database | sqlite3mc **2.4.0** (SQLite 3.53.4), built from the amalgamation with the same defines, `cipher='chacha20'` + `hexkey`. |
+| Database | sqlite3mc **2.4.0** (SQLite 3.53.4), built from the amalgamation with the same defines, `cipher='chacha20'` + `hexkey`. Spike A: Rust and Electron read each other's files on Linux x64. Other targets not yet built. |
 | Storage engine | sqlite3mc now, kept for compatibility with existing encrypted databases, backups, exports and sync files. Behind a swappable `Store` trait in `kb-db` (section 3). |
-| PDF | **Pure-Rust PDF text reader under evaluation (spike C); its result decides.** pdfium (via `pdfium-render`) in a child process mode of the same binary stays the fallback until the pure-Rust reader passes the parity suite (section 6, item 3). Line and statement logic ported 1:1. |
+| PDF | **Pure-Rust reader: `hayro-interpret` / `hayro-syntax` 0.9 plus our own glyph-merging layer (spike C). pdfium is dropped.** Runs in a child process with a 60 s kill and a 1 GiB memory cap. Open: fonts without ToUnicode give no text. pdf.js (JavaScript) would need a helper to serve as fallback, so that choice is pending (section 10). Line and statement logic ported 1:1. |
 | MCP helper | `tools/kasboek-mcp` (Go) unchanged. The Rust app implements the bridge server side of the same protocol. |
 | Start-up | No splash window. The first frame is the real Setup/Lock screen. The Hello/Touch ID button is part of the first frame; the OS prompt opens only when the person presses it (section 5). |
 | Parity | Differential TS-vs-Rust runs on invented data, cross-opened files, and fixture-driven screenshot and geometry diffs. |
@@ -85,18 +85,18 @@ art from `build/msi-project.cjs`), dmg arm64+x64 (ad-hoc signed unless CSC_* set
 Scores: 3 = strong, 2 = workable with effort, 1 = weak, 0 = missing. "(u)" = could not verify offline or in the
 docs, so it is a spike task.
 
-| Criterion | Slint 1.17 | GPUI (+gpui-component) | iced 0.14 | egui | Dioxus Native (Blitz) |
+| Criterion | Slint 1.17 (spike: 1.19) | GPUI (+gpui-component) | iced 0.14 | egui | Dioxus Native (Blitz) |
 |---|---|---|---|---|---|
 | Tailwind look: radius, borders, shadows, clip, gradients | 2: all present; spread/inner shadow Skia-only; every utility hand-translated | 3: API modelled on Tailwind (`rounded_lg`, `shadow_md`) | 2 | 1 | 3 (real CSS) but buggy |
 | Layout model (flex, tables) | 2: H/V/Grid layouts, no CSS auto table widths | 3: Taffy flex/grid | 2 | 1 | 3: Taffy + block/inline |
 | Text shaping, accents, 8 languages | 3 | 3: DirectWrite/CoreText/cosmic-text | 2: cosmic-text | 1: no complex shaping | 3: Parley |
-| OpenType features (cv11, ss01, tnum), variable axes | (u) | 3 | (u) | 0 | 3 |
+| OpenType features (cv11, ss01, tnum), variable axes | Spike B: tnum via static instance; variable fonts unusable | 3 | (u) | 0 | 3 |
 | IME | 2 | 3 | 2 (new in 0.14, partial) | 2 | 1 (u) |
 | Screen readers (UIA / NSAccessibility / AT-SPI) | **2: AccessKit shipped; we must label custom components** | **0–1: not shipped (branch only)** | **0–1: fork only** | 2: AccessKit | 1: partial |
 | Dialogs, popovers, tooltips, menus | 2: PopupWindow, Dialog, ContextMenu; tooltip custom | 3 | 2: tooltip, overlay | 2 | 1: form controls incomplete |
 | CPU fallback (Windows on ARM GPU trouble, `src/shared/graphics.ts`) | **3: software renderer** | 1: needs Metal/DX11/Vulkan | 3: tiny-skia | 2 | 1 (u) |
 | 6 targets incl. aarch64-pc-windows-msvc | 3 (Skia prebuilt for win-arm64: u) | 2 (u) | 3 | 3 | 2 (u) |
-| Binary size (app, est.) | 3: 6–12 MB; +6–10 MB with Skia | 2: 15–30 MB | 2: 8–15 MB | 3: 4–8 MB | 1: 15–25 MB (Stylo) |
+| Binary size (app) | 3: 12.57 MB measured for the two spike screens with the software renderer (estimate was 6–12 MB); femtovg 13.17 MB, skia 19.56 MB | 2: 15–30 MB | 2: 8–15 MB | 3: 4–8 MB | 1: 15–25 MB (Stylo) |
 | Cold start | 3: UI compiled to Rust, no parsing | 3 | 2: wgpu init | 3 | 2 |
 | Maturity / API stability | 3: semver 1.x since 2023, company-backed | 1: no official stable crate, community repackages | 2: 0.x, breaking releases | 2 | 0–1: pre-alpha (0.3.0-alpha.4) |
 | Licence vs GPL-3.0-only | 3: GPL-3.0 option (or royalty-free) | 3: Apache-2.0 | 3: MIT | 3 | 3: MIT/Apache, Stylo MPL-2.0 |
@@ -104,17 +104,18 @@ docs, so it is a spike task.
 
 **Recommendation: Slint.** It is the only candidate that has all of the following today: shipped accessibility on
 all three desktops, IME, a CPU renderer for the Windows-on-ARM graphics history, a stable API with a funded
-maintainer, a GPL-3.0-compatible licence, and small, fast-starting binaries. With its Skia renderer it also uses
-the same rasteriser as Chromium, which matters for looking the same.
+maintainer, a GPL-3.0-compatible licence, and small, fast-starting binaries. Skia is closer to Chromium's rasteriser, but it did not run
+in the spike container, so that is unverified (section 10).
 
 Honest weaknesses of Slint:
 - Every Tailwind class becomes a hand-written property on ~20 components.
 - Tables need computed column widths.
 - Tooltips and the spotlight tour are custom code.
 - The custom title bar (Windows caption buttons with Snap Layouts, macOS traffic-light inset) needs winit-level work.
-- OpenType feature and variable-font support is unverified. Mitigation that also keeps fonts swappable: ship
-  **static instances with the features frozen in** (fonttools `instancer` + feature freezing for cv11/ss01, plus a
-  tnum variant for `.num`), produced by a script from any OFL font. Swapping fonts means re-running the script.
+- Slint cannot use variable fonts. Mitigation that keeps fonts swappable: ship **static instances** (fonttools
+  `instancer`, with `tnum` frozen into an "Inter Num" family for `.num`), produced by a script from any OFL font.
+  Swapping fonts means re-running the script. Spike B: the shipped latin subset has no `cv11` or `ss01`, so there is
+  nothing to freeze for them (the CSS line is a no-op today).
 
 **Alternatives:**
 - **GPUI** wins on styling and text, but has no screen-reader support today and no stable crate. Use it only if
@@ -142,7 +143,7 @@ crates/kb-core                  contract (typed op inputs/outputs, validation, e
                                 fx, memory, settings, sync engine (HLC merge), backup tiers, quarantine, update helpers,
                                 `dispatch()`; Clock + Rng injected
 crates/kb-import                csv (decode, mapping, normalize), camt (own XML reader), pdf lines/statement, fingerprint
-crates/kb-pdf                   PDF text reader producing the same PdfText items as src/core/pdf/extract.ts (pdfium-render fallback; pure-Rust reader under evaluation)
+crates/kb-pdf                   hayro-based PDF text reader producing the same PdfText items as src/core/pdf/extract.ts (spike C)
 crates/kb-assistant             Anthropic + OpenAI-compatible streaming clients (reqwest + SSE), tool loop, csv/pdf
                                 assist plans, insight plan, page context, permissions, masking
 crates/kb-sync                  folder + WebDAV stores, sync service orchestration
@@ -205,9 +206,9 @@ accepts and refuses the same sample inputs. This avoids re-deriving zod's JSON S
 
 | Item | Exact current behaviour (source) | Rust | Risk |
 |---|---|---|---|
-| DB | sqlite3mc 2.4.0, `PRAGMA cipher='chacha20'; PRAGMA hexkey='<64 hex>'` first, probe `SELECT count(*) FROM sqlite_master`, then `foreign_keys=ON`, `secure_delete=ON`, `journal_mode=DELETE`, migrate, `fx()` (`src/core/database.ts:11-39`). Schema version = `PRAGMA user_version` (15 migrations, `migrations.ts:12`) | Same library version and defines (kb-sqlite3mc-sys), same pragma order. The chacha20 KDF and salt are internal to sqlite3mc, so identical library defaults give identical files | **High** until cross-open passes on all 6 targets. Do not move to a newer sqlite3mc until both sides use it |
+| DB | sqlite3mc 2.4.0, `PRAGMA cipher='chacha20'; PRAGMA hexkey='<64 hex>'` first, probe `SELECT count(*) FROM sqlite_master`, then `foreign_keys=ON`, `secure_delete=ON`, `journal_mode=DELETE`, migrate, `fx()` (`src/core/database.ts:11-39`). Schema version = `PRAGMA user_version` (15 migrations, `migrations.ts:12`) | Same library version and defines (kb-sqlite3mc-sys), same pragma order. The chacha20 KDF and salt are internal to sqlite3mc, so identical library defaults give identical files | **High** until cross-open passes on all 6 targets (Linux x64 only so far, section 10). Do not move to a newer sqlite3mc until both sides use it |
 | `fx(cents, from, date, to)` | JS UDF, rates preloaded, non-deterministic flag (`src/core/fx.ts:81`) | rusqlite `create_scalar_function`, same lookup rule, same NULL semantics | Low |
-| Slots | AES-256-GCM, 12-byte IV, base64 `{iv, ct+tag}`, AAD `kasboek:slot:password` / `kasboek:slot:recovery`; Argon2id m=131072 KiB, t=3, p=4, 32-byte output, password NFKC; caps m≤1 GiB, t≤10, p≤16, m≥8p; HKDF-SHA256 info `kasboek:slot` for the recovery key (normalised `XXXX-...`); scrypt N≤2^20, r≤16, p≤4 legacy, upgraded on unlock (`src/core/crypto.ts:35-98`) | RustCrypto `aes-gcm`, `argon2` (v0x13), `hkdf`+`sha2`, `scrypt`, `unicode-normalization`. Keep the caps | Low. Verify Argon2 output against hash-wasm vectors and measure speed (p=4 lanes may run serially) |
+| Slots | AES-256-GCM, 12-byte IV, base64 `{iv, ct+tag}`, AAD `kasboek:slot:password` / `kasboek:slot:recovery`; Argon2id m=131072 KiB, t=3, p=4, 32-byte output, password NFKC; caps m≤1 GiB, t≤10, p≤16, m≥8p; HKDF-SHA256 info `kasboek:slot` for the recovery key (normalised `XXXX-...`); scrypt N≤2^20, r≤16, p≤4 legacy, upgraded on unlock (`src/core/crypto.ts:35-98`) | RustCrypto `aes-gcm`, `argon2` (v0x13), `hkdf`+`sha2`, `scrypt`, `unicode-normalization`. Keep the caps | Low. Spike A: the password slot works in all four directions; Argon2id ~300 ms in Rust (lanes run serially) vs ~490 ms with hash-wasm (section 10) |
 | Vault / account | Vault JSON `{dbKey, totp?}` sealed with label `kasboek:vault`; AccountData v2 `{mode, createdAt, twoFactor, slots{password?, recovery, device?}, vault, attempts, remember2fa?}`; remember MAC = HMAC-SHA256(master, `kasboek:remember2fa:<ISO until>`) (`src/core/account.ts`) | serde with `preserve_order`; ISO times formatted like JS `toISOString()` (ms + `Z`); throttle 5 free tries then 30·2^(n-5) s up to 15 min | Medium (time formats, JSON key order) |
 | account.json file | `{format:'kasboek-account', version:2, seal:'os'|'none', data}`; `os` = Electron `safeStorage.encryptStringAsync` (`account-store.ts:66`) | Rust cannot call safeStorage. **(a)** A read-only decoder for Chromium OSCrypt: Windows uses the `Local State` `os_crypt.encrypted_key` (DPAPI) and AES-GCM `v10`; macOS uses the Keychain "Kasboek Safe Storage" and AES-128-CBC `v10`; Linux uses libsecret/kwallet `v11` or `v10` "peanuts". Then re-seal as `seal:'os-native'` (DPAPI user scope / Keychain item holding a wrap key / Secret Service), and keep the original as `account.electron.json`. **(b)** If decoding fails: "Open with your password or recovery key" from the newest `safety-backups/*.kasboek`, which recreates the account | **Highest.** The async OSCrypt format in Electron 45 is (u) on every OS. macOS will show a Keychain prompt once (new signature). Spike task G6 |
 | Legacy keystore.json | `os:` / `plain:` prefixes (`account-store.ts:81`) | Same decoder as (a) | Low (rare) |
@@ -225,8 +226,7 @@ fancy-regex (13 lookaround/backreference uses in core), reqwest + rustls with ru
 store), tokio, interprocess (named pipe / Unix socket), windows (DPAPI, UserConsentVerifier interop with our own
 HWND, idle, session/power notifications, toasts), objc2 + objc2-local-authentication + security-framework (Touch
 ID, Keychain), zbus/oo7 (Secret Service, logind, screensaver idle), rfd (xdg-portal on Linux), tray-icon/muda,
-ksni, notify-rust, arboard, sys-locale, dark-light, qrcode, pdfium-render plus bundled pdfium binaries (fallback PDF reader; a pure-Rust reader is under evaluation)
-(bblanchon/pdfium-binaries cover all 6 targets).
+ksni, notify-rust, arboard, sys-locale, dark-light, qrcode, hayro-interpret and hayro-syntax 0.9 (pinned; pure Rust, no C) for PDF text. pdfium binaries are not bundled.
 
 **Printing the year report to PDF** (`export.pdf` uses Chromium `printToPDF`): generate the PDF directly
 (`krilla` or `printpdf` with the same embedded fonts), keeping the same content and A4 margins. This is a visible
@@ -380,14 +380,14 @@ locally; results and files are never committed.
    - Electron-seal fixtures: a tiny Electron 45 script writes account.json on each OS, and Rust decodes it.
 3. **PDF extraction parity**:
    - Synthetic PDFs (`tests/helpers/make-pdf.ts`, `statement-pdf.ts`) plus generated layouts.
-   - Compare pdf.js items with pdfium items within position tolerances.
+   - Compare pdf.js items with the hayro reader's items within position tolerances (done in spike C, section 10).
    - Then require identical `statement.ts` grids. Differences go into a normalising adapter in kb-pdf, never into
      the statement logic.
 4. **UI screenshot and geometry parity**:
    - One fixture set (`parity/ui/<scenario>/<op>.json` + events) drives both renderers.
    - Electron side: Playwright (preinstalled, 1.63) loads `out/renderer/index.html` with
      `addInitScript` installing a stub `window.kasboek` that returns the fixtures, with a frozen clock.
-   - Rust side: `kb-ui` with a FixtureService on the Slint software or Skia renderer, offscreen.
+   - Rust side: `kb-ui` with a FixtureService on the Slint software renderer, offscreen (Skia unverified).
    - Matrix: every page and modal × light/dark × en/de/fr (longest strings) × 1x/2x scale, at 1280×820.
    - Compared: (a) **geometry**: boxes of landmarks (nav items, cards, headings, buttons, table cells; existing
      `data-tour`/aria labels plus `data-testid` added on this branch only) against Slint element geometry through
@@ -447,6 +447,7 @@ depends mostly on owner review.
 | **M7 Beta + cut-over** | GitHub pre-releases (the Electron updater reads only `releases/latest`, so it never sees them); owner dogfooding ≥ 4 weeks; merge to `main`, release as the next minor or 1.0; remove Electron code one release later | No open parity bugs of severity ≥ medium; start-up targets met on real machines; owner go | 4–8 ew |
 
 - **M0 exit criteria**, add: **G7** On the 100k bench DB, the loading view appears only after 180 ms. It shows the real step names, and the bar matches the reported done/total. On the 10k DB, the Overview appears with no loading view.
+- **M0 status** (Linux only, section 10): G1 partial, G2 partial, G3 unverified, G4 partial, G5 partial, G6 and G7 not run.
 - **M2 exit criteria**, add: kb-bench runs nightly in CI on Linux x64 and macOS arm64, plus a weekly manual run on Windows x64 and ARM64. The thresholds above hold at 10k and 100k. A regression above 20% fails the run.
 - **M4 exit criteria for Transactions and Import**, add: the 500k thresholds hold, including scroll p95 ≤ 16 ms and RSS ≤ 300 MB.
 - **M7 exit criteria**, add: the full benchmark is met on all four reference machines, and the results are recorded in the release notes.
@@ -459,7 +460,7 @@ optimistic.
    pixel thresholds with the owner in M0.
 2. Decoding Electron's safeStorage format (async OSCrypt; macOS Keychain ACL prompt; Linux kwallet).
 3. sqlite3mc build or link parity on 6 targets, and later version drift.
-4. pdfium vs pdf.js text segmentation changes PDF import results.
+4. Rust PDF reader vs pdf.js text segmentation changes PDF import results. Fonts without ToUnicode give no text (spike C).
 5. Accessibility of custom components (tables, charts, tour) is weaker than Chromium's.
 6. Custom title bar: Windows Snap Layouts and caption buttons, macOS traffic lights, Linux Wayland decorations.
 7. `main` keeps shipping features: double work and schema drift. Freeze, or make each feature carry parity fixtures.
@@ -511,7 +512,7 @@ dedicated integration tasks.
 | A: core | finance+rules+budgets · recurring+alerts · insights+review · import-csv · camt · pdf lines/statement · fx+wealth+goals+balance · transfers · sync engine · memory/settings/account ops |
 | B: UI | design tokens + fonts + icons → primitives → charts → shell, then screens one per task, once lane A has that screen's ops |
 | C: platform | OS seal + legacy decoder · Hello/Touch ID + start-up pipeline · tray/notifications/idle · MCP bridge · updater · sync stores/WebDAV |
-| D: CI/packaging | 6-target build matrix · sqlite3mc/pdfium bundling · MSI/dmg/AppImage/deb · parity CI (Playwright + offscreen Slint) |
+| D: CI/packaging | 6-target build matrix · sqlite3mc bundling · MSI/dmg/AppImage/deb · parity CI (Playwright + offscreen Slint) |
 
 **Performance task (lane A):** "kb-bench generator + DB worker queue + paged model". test-writer builds the generator and thresholds; implementer builds the worker and model; code-reviewer reviews. Lane D runs the nightly benchmark.
 
@@ -521,14 +522,103 @@ dedicated integration tasks.
 - Tokens come before screens.
 - The Lock screen and start-up pipeline come first in lane B, because they are gate G5.
 
+## 10. Spike results (M0, Linux only)
+
+Run on Linux x64 (Xvfb for the UI start-up figures). Nothing was built for Windows, macOS or arm64. All data is
+invented. Rerun steps are in `rust/spike/db/README.md`, `rust/spike/ui/README.md` and `rust/spike/pdf/README.md`.
+
+**A. Database and crypto** (`rust/spike/db`)
+- sqlite3mc 2.4.0 (SQLite 3.53.4) compiled from the `node_modules` amalgamation with the same 37 defines, linked
+  into rusqlite 0.43 through a patched `libsqlite3-sys`. Open sequence as in `database.ts`: chacha20, hexkey.
+- Electron-written DB (3 accounts, 28 categories, 96 budgets, 2,000 transactions, 24 tables, `user_version` 15):
+  Rust reads the same counts and transaction sum.
+- Rust-written DB opens with the app's `openDatabase`, non-ASCII text included. Wrong keys are rejected both ways.
+- Password slot (Argon2id m=131072 KiB, t=3, p=4, NFKC, AES-256-GCM with the label as AAD) works in all four
+  directions.
+- Timing: DB open 26 ms (2,000 rows). Argon2id ~300 ms in Rust (argon2 0.5.3, lanes serial) vs ~490 ms hash-wasm.
+- Spike binary 3.17 MB, of which about 2.4 MB is the DB engine.
+- Not covered: Windows, macOS and ARM builds; scrypt, HKDF and recovery slots; the `fx()` UDF; sync triggers;
+  WAL and `VACUUM INTO`.
+
+**B. UI** (`rust/spike/ui`)
+- Slint 1.19.0 (GPL-3.0 option), software renderer. Lock screen (password and Hello-button modes) and Overview
+  (sidebar, assistant panel, charts), light and dark, English only.
+- Against the Electron reference: landmark offsets 0 px; pixel diff 0.2% (lock), 0.8% (overview), 2.0% (overview
+  scrolled, with trend chart). Threshold 3%. The rest of the diff is text anti-aliasing.
+- Slint gaps handled by hand: no height-for-width (wrapped text and step-title heights are hardcoded for the
+  fixture), no text-decoration, no dash arrays, no variable fonts (static instances needed).
+- Fonts: 8 static TTFs, 474 KB, OFL-1.1. `cv11`/`ss01` do not exist in the shipped latin subsets; `tnum` is frozen
+  into "Inter Num".
+- Accessibility: the AT-SPI tree was checked on Linux. Custom components need an explicit role and label. Gaps:
+  decorative icons show as unlabelled images, no aria-hidden equivalent, TouchArea is not focusable (needs
+  FocusScope), Tab order not verified. Narrator, VoiceOver, IME and dead keys were not tested.
+- Size: 12.57 MB release binary (software renderer) for these two screens; femtovg 13.17 MB, skia 19.56 MB. 445
+  crates; clean build 252 s.
+- Start-up: 37–43 ms to first frame under Xvfb with the software renderer. That renderer has no first-paint hook,
+  so the figure is timer-based. femtovg renders correctly but its first frame took 4.6 s under llvmpipe (an
+  environment limit). Skia (GPU and software) hung here; unverified.
+
+**C. PDF** (`rust/spike/pdf`)
+- `hayro-interpret` and `hayro-syntax` 0.9.0 (MIT OR Apache-2.0, 64 crates, no C) plus ~200 lines of our own glyph
+  merging that reproduces pdf.js item boundaries. Same limits and error codes as `extract.ts`.
+- 33 invented files, 31 read by both readers: cells 99.9% equal, lines 99.9%, whole `readStatement` result equal
+  on 31 of 31 (20 with a table; all table grids equal).
+- Weak spots: Courier 92% of cells (statement equal); non-embedded TrueType with its own `/Widths` 50% on a tiny
+  file; CID fonts without ToUnicode give no text where pdf.js reads them. That last one is the main real-world gap.
+- Speed and memory: small files 1–3 ms and 6 MB vs pdf.js 30–80 ms and 110–120 MB; 71 pages 59–98 ms and 9–10 MB
+  vs 333–416 ms and 157–166 MB. Adds about 5.4 MB to the binary (4.9 MB without the CJK CMaps).
+- Hostile input: 3,338 files (338 hand-made or mutated, 3,000 mutants), 0 crashes, aborts or hangs. Gaps closed
+  in the spike: a 2 GiB decompression bomb (1 GiB allocator cap, `import.pdf_too_large`) and the missing clock in
+  the interpreter (device checks every 256 callbacks, plus a process deadline). pdf.js on the same set: 2,000,000
+  nested `q` gave no answer in 90 s; the 2 GiB bomb used 4.3 GB.
+- Rejected: pdf_oxide (merges spans across columns, 77.3% of cells), pdf-extract (no `/Rotate`, panics),
+  pdfcraft (not on crates.io; same engine as hayro; a 150,000-line page ran over 90 s).
+- hayro's `Device` API changed between 0.7 and 0.9: pin the version.
+
+**Gate status**
+
+| Gate | Status | Evidence |
+|---|---|---|
+| G1 Overview geometry and pixels | Partial (pass for en) | landmarks 0 px; diff 0.2% / 0.8% / 2.0% vs 3%; German not run |
+| G2 Fonts and accessibility | Partial | fonts pass; AT-SPI tree on Linux; Narrator, VoiceOver and Tab order unverified |
+| G3 Dead-key IME | Unverified | not run |
+| G4 Cross-open DB | Partial | Linux x64 both directions; Windows, macOS and ARM not built |
+| G5 First frame, Hello prompt, installer size | Partial | first frame 37–43 ms (Linux, Xvfb); no Hello prompt test; UI binary 12.57 MB for two screens |
+| G6 Electron-sealed account.json | Unverified | not in the spike |
+| G7 Loading view at 100k | Unverified | not in the spike |
+
+**Changes to the plan from the spike**
+- PDF: pdfium dropped; hayro-based reader chosen (sections 0, 3, 4, 6, 7). Open: fonts without ToUnicode, and what
+  replaces pdf.js as the fallback (it is JavaScript, so it needs a helper to be used from Rust).
+- Fonts: the plan to freeze cv11/ss01 is dropped (section 2).
+- Size: the 6–12 MB estimate for the app was too low. The UI binary alone is 12.57 MB, and the DB engine (about 2.4
+  MB) and the PDF reader (about 5.4 MB) add roughly 8 MB more before the rest of the app. Simple addition of the
+  measured parts, not a measurement of the full app. The 25 MB installer target is still plausible but with less
+  margin.
+- Effort: section 7 estimates are unchanged for now. M1 gains the vendoring of the amalgamation into
+  `kb-sqlite3mc-sys` (the spike builds from `node_modules`), a pinned hayro, and a conformance suite ported from the
+  TS `extractText` tests. Re-estimate at the M0 go/no-go.
+
+**Next steps**
+1. Owner real-file PDF check: run `PDF_DIR=<folder> rust/spike/pdf/tools/run-all.sh` locally. Nothing is copied or
+   sent. Use the result to decide the ToUnicode fallback.
+2. CI matrix (GitHub Actions) builds spikes A and B for Windows x64 and ARM64, macOS arm64 and x64, and Linux arm64.
+   Download the artifacts and test first frame, Hello/Touch ID prompt on button press, IME dead keys, and
+   Narrator/VoiceOver.
+3. German and one long-string locale on the two UI screens (G1).
+4. Cold-start and Defender first-run measurements (G5, section 5).
+5. Go/no-go meeting for M1, using the gate table above.
+
 ## Appendix: not verified offline (each is a spike or M1 task)
 
-- Slint: OpenType feature toggles, variable-font axes, Skia prebuilt binaries for aarch64-pc-windows-msvc,
-  tooltip and popover behaviour at window edges, Windows 11 Snap Layouts with a custom title bar.
+- Slint: Skia prebuilt binaries for aarch64-pc-windows-msvc (Skia did not run in the spike), tooltip and popover
+  behaviour at window edges, Windows 11 Snap Layouts with a custom title bar. Variable fonts and OpenType features
+  are settled by spike B (section 10).
 - Electron 45 async safeStorage format on each OS, and the macOS Keychain item names.
-- Whether sqlite3mc's chacha20 `hexkey` path runs its PBKDF2 (affects DB open time).
-- RustCrypto argon2 speed with p=4 compared with hash-wasm, especially on ARM.
-- pdfium text item segmentation compared with pdf.js on bank-style tables.
+- Whether sqlite3mc's chacha20 `hexkey` path runs its PBKDF2 (affects DB open time). The spike's open time does not
+  settle it.
+- Argon2id speed on ARM and Windows (Linux x64 measured, section 10).
+- Text segmentation on real bank PDFs (spike C used invented files; the owner's real-file check is pending).
 - WinRT `RequestVerificationForWindowAsync` latency to a visible prompt on Windows ARM64.
 
 Sources checked (Nov 2026): slint.dev blog 1.16 and 1.17; iced 0.14 release notes and FAQ; DioxusLabs/blitz
