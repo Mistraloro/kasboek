@@ -13,6 +13,36 @@ A simple, local-first budget app for Windows, macOS and Linux, with an AI assist
 
 See [PLAN.md](PLAN.md) for the design, the security model and what still needs testing.
 
+## Screenshots
+
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png"><img src="docs/screenshots/overview-light.png" alt="Kasboek Overview with income, spending, budget left, suggestions and spending by category" width="880"></picture>
+</p>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/transactions-dark.png"><img src="docs/screenshots/transactions-light.png" alt="Kasboek Transactions page with filters for account, category and month, a saved search, totals and a list of grocery payments" width="280"></picture><br><sub>Transactions: search, filters and saved searches</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/budgets-dark.png"><img src="docs/screenshots/budgets-light.png" alt="Kasboek Budgets page with a monthly budget per category and progress bars, Dining out over its limit" width="280"></picture><br><sub>Budgets: spending against monthly limits</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/fixed-costs-dark.png"><img src="docs/screenshots/fixed-costs-light.png" alt="Kasboek Fixed costs page listing rent, energy, internet and subscriptions with paid and due status and price changes" width="280"></picture><br><sub>Fixed costs: subscriptions and bills found for you</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/goals-dark.png"><img src="docs/screenshots/goals-light.png" alt="Kasboek Savings goals page with progress bars and the amount to set aside per month" width="280"></picture><br><sub>Savings goals</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/net-worth-dark.png"><img src="docs/screenshots/net-worth-light.png" alt="Kasboek Net worth page with a chart of net worth per month and the totals owned and owed" width="280"></picture><br><sub>Net worth over time</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/year-dark.png"><img src="docs/screenshots/year-light.png" alt="Kasboek Year page with a bar chart of income and spending per month" width="280"></picture><br><sub>Year view: months side by side</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/import-csv-dark.png"><img src="docs/screenshots/import-csv-light.png" alt="Kasboek import preview of a CSV bank export showing detected columns, categories and one duplicate row" width="280"></picture><br><sub>CSV import preview with detected columns</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/import-pdf-dark.png"><img src="docs/screenshots/import-pdf-light.png" alt="Kasboek import preview of a PDF statement with the banner saying the amounts add up to the closing balance" width="280"></picture><br><sub>PDF statement read on your computer, with balance check</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-assistant-dark.png"><img src="docs/screenshots/settings-assistant-light.png" alt="Kasboek Settings page, Assistant tab, with provider, API key, chat and CSV check models" width="280"></picture><br><sub>Settings: choose your assistant</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/assistant-dark.png"><img src="docs/screenshots/assistant-light.png" alt="Kasboek Overview with the assistant panel open, answering how much was spent on groceries last month" width="280"></picture><br><sub>The assistant panel, next to your data</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/lock-dark.png"><img src="docs/screenshots/lock-light.png" alt="Kasboek lock screen asking for the password" width="280"></picture><br><sub>Locked until you unlock it</sub></td>
+  </tr>
+</table>
+
+<sub>The screenshots show invented people, payees and amounts. They follow your GitHub light or dark theme, and account numbers are hidden by default, as in the app. To remake them, see [scripts/screenshots](scripts/screenshots/README.md).</sub>
+
 ## What it does
 
 - **Budget**: accounts, transactions (search, filter, edit, bulk categorise or rename, saved
