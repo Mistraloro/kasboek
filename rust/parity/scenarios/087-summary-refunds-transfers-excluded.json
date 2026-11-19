@@ -1,0 +1,17 @@
+{
+  "name": "summary month: refunds lower spending, transfers and paired transfers do not count",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"accounts.create","input":{"name":"Savings"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-5000,"description":"Shop","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":1200,"description":"Refund","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":3000,"description":"Salary","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-04","amountCents":-500,"description":"Salary reversal","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"To savings"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-05","amountCents":10000,"description":"From main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-700,"description":"Own transfer cat","categoryId":15}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":5,"inId":6}]}},
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"summary.year","input":{"year":2026}}
+  ]
+}

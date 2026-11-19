@@ -74,4 +74,86 @@ pub trait Queries {
     /// and (unless `keep_sync_key`) switches sync off and clears its state. Tables a file from an older version lacks are
     /// skipped.
     fn import_reset_apply(&self, keys: &[&str], keep_sync_key: bool) -> DbResult<()>;
+
+    /* ----- rules ----- */
+    /// `DbError::Unique` when the same text exists for the field (case-insensitive).
+    fn rule_insert(&self, field: &str, pattern: &str, match_kind: &str, category_id: i64) -> DbResult<i64>;
+    /// `DbError::Unique` as for `rule_insert`.
+    fn rule_update(&self, id: i64, field: &str, pattern: &str, match_kind: &str, category_id: i64) -> DbResult<()>;
+    fn rule_set_priority(&self, id: i64, priority: i64) -> DbResult<()>;
+    fn rule_delete(&self, id: i64) -> DbResult<()>;
+    /// The text columns of all transactions, or only the uncategorised ones, in id order.
+    fn rule_texts(&self, only_uncategorised: bool) -> DbResult<Vec<RuleTextRow>>;
+
+    /* ----- budgets and summaries ----- */
+    fn category_kind(&self, id: i64) -> DbResult<Option<String>>;
+    /// Spending per category in `[from, to)`: money out minus refunds, transfers excluded; split lines count by part.
+    fn spent_by_category(&self, main: &str, from: &str, to: &str) -> DbResult<Vec<(Option<i64>, f64)>>;
+    /// Expense categories (not archived, or with a budget) with their budget of `month`.
+    fn budget_categories(&self, month: &str) -> DbResult<Vec<BudgetCategoryRow>>;
+    fn budget_delete(&self, category_id: i64, month: &str) -> DbResult<()>;
+    fn budget_upsert(&self, category_id: i64, month: &str, amount_cents: i64) -> DbResult<()>;
+    /// Copies the budgets of `from_month` to `month` where none is set; returns how many rows were added.
+    fn budgets_copy(&self, month: &str, from_month: &str) -> DbResult<u64>;
+    /// Sum of the budgets of months `from` to `to` inclusive.
+    fn budgets_sum(&self, from: &str, to: &str) -> DbResult<i64>;
+    /// `(income, spending)` of `[from, to)` in the main currency, transfers left out.
+    fn income_and_spending(&self, main: &str, from: &str, to: &str) -> DbResult<(f64, f64)>;
+    /// Distinct transactions with an uncategorised line in `[from, to)`.
+    fn uncategorized_count(&self, from: &str, to: &str) -> DbResult<i64>;
+    /// Transactions in `[from, to)` whose currency has no rate to `main`.
+    fn unconverted_count(&self, main: &str, from: &str, to: &str) -> DbResult<i64>;
+    fn year_rows(&self, main: &str, from: &str, to: &str) -> DbResult<Vec<YearRow>>;
+    fn year_totals(&self, main: &str) -> DbResult<Vec<YearTotalRow>>;
+    /// Negative payments from `from` up to (excluding) `to`, transfers left out, by date.
+    fn review_rows(&self, main: &str, from: &str, to: &str) -> DbResult<Vec<ReviewRow>>;
+
+    /* ----- net worth ----- */
+    /// Per booking date the sum of the account's transactions in `currency`, by date.
+    fn tx_daily_sums(&self, account_id: i64, currency: &str) -> DbResult<Vec<(String, f64)>>;
+    /// The oldest transaction date, recorded value or account creation day.
+    fn first_data_date(&self) -> DbResult<Option<String>>;
+
+    /* ----- recurring payments, alerts ----- */
+    /// Transactions of `[since, today]` outside transfers, by date and id.
+    fn recurring_rows(&self, since: &str, today: &str) -> DbResult<Vec<RecurringRow>>;
+    fn recurring_hidden_keys(&self) -> DbResult<Vec<String>>;
+    fn recurring_mark_exists(&self, key: &str) -> DbResult<bool>;
+    fn recurring_mark_set(&self, key: &str, hidden: bool) -> DbResult<()>;
+    /// `total_changes()` of this connection.
+    fn total_changes(&self) -> DbResult<i64>;
+    /// Active current accounts with a known balance: `(id, name, currency)`.
+    fn alert_accounts(&self) -> DbResult<Vec<(i64, String, String)>>;
+
+    /* ----- goals ----- */
+    /// Not archived first, then by date (undated last), then id.
+    fn goals_all(&self) -> DbResult<Vec<GoalRow>>;
+    fn goal_get(&self, id: i64) -> DbResult<Option<GoalRow>>;
+    fn goal_insert(
+        &self,
+        name: &str,
+        target_cents: i64,
+        target_date: Option<&str>,
+        account_id: Option<i64>,
+        saved_cents: Option<i64>,
+    ) -> DbResult<()>;
+    fn goal_update(&self, id: i64, goal: &GoalWrite) -> DbResult<()>;
+    fn goal_delete(&self, id: i64) -> DbResult<()>;
+
+    /* ----- transfers ----- */
+    fn transfer_candidates(&self) -> DbResult<Vec<TransferCandidate>>;
+    fn pair_tx_get(&self, id: i64) -> DbResult<Option<PairTx>>;
+    /// Sets the pair key and, unless the transaction already has a transfer category, `category_id`.
+    fn pair_set(&self, id: i64, key: &str, category_id: Option<i64>) -> DbResult<()>;
+    /// `None`: no such transaction. `Some(None)`: not paired.
+    fn tx_transfer_pair(&self, id: i64) -> DbResult<Option<Option<String>>>;
+    fn pair_halves(&self, pair: &str) -> DbResult<Vec<PairHalf>>;
+    /// The id of the outgoing half of a pair.
+    fn pair_out_id(&self, pair: &str) -> DbResult<Option<i64>>;
+    /// A transfer category one of the transactions already has.
+    fn transfer_category_of(&self, ids: &[i64]) -> DbResult<Option<i64>>;
+    fn first_transfer_category(&self) -> DbResult<Option<i64>>;
+    /// Active expense categories by sort order and id.
+    fn expense_categories(&self) -> DbResult<Vec<(i64, String)>>;
+    fn pair_clear(&self, pair: &str) -> DbResult<()>;
 }

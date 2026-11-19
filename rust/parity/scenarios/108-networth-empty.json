@@ -1,0 +1,10 @@
+{
+  "name": "net worth: no accounts, then one without data",
+  "steps": [
+    {"op":"networth.summary"},
+    {"op":"networth.summary","input":{"months":0}},
+    {"op":"accounts.create","input":{"name":"Empty"}},
+    {"op":"networth.summary","input":{"months":0}},
+    {"op":"networth.summary","input":{"months":5}}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "summary month: first and last day, December to January, leap day",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-02-29","amountCents":-100,"description":"Leap","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-03-01","amountCents":-200,"description":"March first","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-02-01","amountCents":-300,"description":"Feb first","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2023-12-31","amountCents":-400,"description":"Dec last","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-01-01","amountCents":-500,"description":"Jan first","categoryId":3}},
+    {"op":"summary.month","input":{"month":"2024-02"}},
+    {"op":"summary.month","input":{"month":"2024-01"}},
+    {"op":"summary.month","input":{"month":"2023-12"}},
+    {"op":"summary.month","input":{"month":"2024-03"}},
+    {"op":"summary.month","input":{"month":"2023-02"}},
+    {"op":"summary.month","input":{"month":"0001-01"}},
+    {"op":"summary.month","input":{"month":"9999-12"}}
+  ]
+}

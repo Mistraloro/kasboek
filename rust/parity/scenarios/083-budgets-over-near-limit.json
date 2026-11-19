@@ -1,0 +1,20 @@
+{
+  "name": "budgets: exactly at the limit, just over, just under, with a zero budget",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-11","amountCents":10000}},
+    {"op":"budgets.set","input":{"categoryId":4,"month":"2026-11","amountCents":10000}},
+    {"op":"budgets.set","input":{"categoryId":5,"month":"2026-11","amountCents":10000}},
+    {"op":"budgets.set","input":{"categoryId":6,"month":"2026-11","amountCents":10000}},
+    {"op":"budgets.set","input":{"categoryId":7,"month":"2026-11","amountCents":10000}},
+    {"op":"budgets.set","input":{"categoryId":8,"month":"2026-11","amountCents":0}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-01","amountCents":-8000,"description":"Exactly 80","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-02","amountCents":-7999,"description":"Just under 80","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-03","amountCents":-10000,"description":"At limit","categoryId":5}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-04","amountCents":-10001,"description":"Over","categoryId":6}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-05","amountCents":-100,"description":"Zero budget","categoryId":8}},
+    {"op":"budgets.list","input":{"month":"2026-11"}},
+    {"op":"alerts.list"},
+    {"op":"summary.month","input":{"month":"2026-11"}}
+  ]
+}

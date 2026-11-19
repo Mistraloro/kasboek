@@ -1,0 +1,23 @@
+{
+  "name": "goals: update fields, switch between account and manual, archive, delete, errors",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":1000}},
+    {"op":"goals.create","input":{"name":"A","targetCents":5000,"savedCents":100}},
+    {"op":"goals.create","input":{"name":"B","targetCents":6000,"targetDate":"2027-01-01"}},
+    {"op":"goals.update","input":{"id":1,"accountId":1}},
+    {"op":"goals.update","input":{"id":1,"accountId":null}},
+    {"op":"goals.update","input":{"id":1,"accountId":null,"savedCents":4000}},
+    {"op":"goals.update","input":{"id":1,"name":"  Renamed  ","targetCents":9000,"targetDate":"2026-12-25","archived":true}},
+    {"op":"goals.update","input":{"id":1,"targetDate":null,"archived":false}},
+    {"op":"goals.update","input":{"id":2,"savedCents":null}},
+    {"op":"goals.update","input":{"id":2,"accountId":7}},
+    {"op":"goals.update","input":{"id":9,"name":"x"}},
+    {"op":"goals.update","input":{"id":2,"name":""}},
+    {"op":"goals.update","input":{"id":2,"targetCents":0}},
+    {"op":"goals.update","input":{"id":2}},
+    {"op":"goals.delete","input":{"id":1}},
+    {"op":"goals.delete","input":{"id":1}},
+    {"op":"goals.delete","input":{"id":0}},
+    {"op":"goals.list"}
+  ]
+}

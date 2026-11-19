@@ -1,0 +1,16 @@
+{
+  "name": "alerts and recurring on 2027-01-01: the end of the month and the month of \"today\"",
+  "clock": "2027-01-01T00:00:00Z",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":1000}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-12-01","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-01","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-01","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-02","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2027-01","amountCents":100}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2027-01-01","amountCents":-90,"description":"Today","categoryId":3}},
+    {"op":"recurring.list"},
+    {"op":"alerts.list"}
+  ]
+}

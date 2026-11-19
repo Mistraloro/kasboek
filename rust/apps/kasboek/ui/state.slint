@@ -1,0 +1,128 @@
+// State and actions between Rust and the screens. Elements inside `if` cannot be reached from outside, so every screen
+// binds to a global and Rust only talks to globals. Properties keep the names of the screen they belong to.
+import { CategoryBar, MonthDatum } from "@kb-ui";
+import { AlertRow, TipRow, AccountRow } from "overview.slint";
+import { RuleRow } from "parts.slint";
+export { AlertRow, TipRow, AccountRow, RuleRow }
+
+export global Lock {
+    in property <string> mode;
+    in property <string> device-kind;
+    in property <string> device-name;
+    in property <string> body;
+    in property <string> error;
+    in property <string> throttle;
+    in property <string> remembered-note;
+    in property <bool> need-code;
+    in property <string> cant-open;
+    in property <bool> busy;
+    in property <string> erase-word;
+    in-out property <string> view;
+    in-out property <string> password;
+    in-out property <string> code;
+    callback unlock(string, string, bool);
+    callback recover(string);
+    callback erase();
+    callback retry();
+}
+
+export global SetupState {
+    in-out property <string> step;
+    in property <string> body;
+    in property <string> device-kind;
+    in property <string> device-title;
+    in property <string> device-note;
+    in property <bool> device-enabled;
+    in property <bool> busy;
+    in property <string> error;
+    in property <string> recovery-key-top;
+    in property <string> recovery-key-bottom;
+    in property <int> strength;
+    in property <string> strength-text;
+    in property <[RuleRow]> rules;
+    in-out property <string> password-a;
+    in-out property <string> password-b;
+    in-out property <bool> saved;
+    callback password-edited(string);
+    callback create-password(string);
+    callback create-device();
+    callback finished();
+}
+
+export global Loading {
+    in property <string> step-text;
+    in property <float> value;
+}
+
+export global ShellState {
+    in-out property <string> page;
+    in-out property <bool> assistant-open;
+    in property <length> caption-inset;
+    in property <length> sidebar-top;
+    in property <string> version-text;
+    in property <string> placeholder-heading;
+    in property <string> placeholder-body;
+    in property <string> assistant-note;
+    callback lock();
+    callback go(string);
+    callback about();
+}
+
+export global Ov {
+    in property <string> title;
+    in property <string> month-label;
+    in-out property <int> year;
+    in-out property <int> month;
+    in property <int> today-year;
+    in property <int> today-month;
+    in property <[string]> month-names;
+    in property <bool> show-review;
+    in property <string> review-text;
+    in property <[AlertRow]> alerts;
+    in property <string> income-label;
+    in property <string> income;
+    in property <string> spending-label;
+    in property <string> spending;
+    in property <string> left-label;
+    in property <string> left;
+    in property <string> left-tone;
+    in property <string> left-hint;
+    in property <string> summary-error;
+    in property <string> accounts-error;
+    in property <bool> tips-visible;
+    in-out property <bool> tips-collapsed;
+    in property <bool> tips-show-get;
+    in property <string> tips-get-text;
+    in property <[TipRow]> tips;
+    in property <string> tips-more;
+    in property <string> tips-empty;
+    in property <string> tips-error;
+    in property <string> sent-text;
+    in property <bool> tips-has-sent;
+    in-out property <bool> sent-open;
+    in property <string> unconverted-text;
+    in property <string> unconverted-hint;
+    in property <string> uncategorized-text;
+    in property <string> uncategorized-action;
+    in property <string> category-description;
+    in property <[CategoryBar]> categories;
+    in property <float> category-top;
+    in property <string> categories-empty-title;
+    in property <string> categories-empty-body;
+    in property <string> accounts-title;
+    in property <[AccountRow]> accounts;
+    in property <string> eye-label;
+    in property <string> trend-title;
+    in property <string> trend-description;
+    in property <[MonthDatum]> months;
+    in property <float> month-top;
+    in property <string> trend-summary;
+    in property <string> income-legend;
+    in property <string> spending-legend;
+    callback month-changed(int, int);
+    callback review();
+    callback tip-feedback(string, string);
+    callback toggle-tips();
+    callback show-all();
+    callback get-tips();
+}

@@ -1,0 +1,11 @@
+[package]
+name = "kb-i18n"
+version = "0.0.0"
+description = "Minimal i18next-compatible texts for the native app: dotted keys, {{interpolation}}, plural suffixes, language fallbacks"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true

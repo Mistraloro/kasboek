@@ -1,0 +1,11 @@
+{
+  "name": "rules: audit log entries carry the actor and the parsed input with defaults",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"abc","categoryId":3},"actor":"assistant"},
+    {"op":"rules.update","input":{"id":1,"pattern":"abcd"},"actor":"assistant"},
+    {"op":"rules.preview","input":{"field":"any","pattern":"abc"},"actor":"assistant"},
+    {"op":"rules.reorder","input":{"ids":[1]},"actor":"user"},
+    {"op":"rules.delete","input":{"id":1},"actor":"assistant"}
+  ]
+}

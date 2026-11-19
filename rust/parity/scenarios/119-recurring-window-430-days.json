@@ -1,0 +1,20 @@
+{
+  "name": "recurring: only the last 430 days count",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-04-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-05-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-06-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-07-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-08-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-09-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-10-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-11-10","amountCents":-4200,"description":"Too old","counterpartyName":"Old Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-09-10","amountCents":-111,"description":"Edge day","counterpartyName":"Edge Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-09-09","amountCents":-111,"description":"Edge before","counterpartyName":"Edge Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-10-10","amountCents":-111,"description":"Edge day","counterpartyName":"Edge Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-11-10","amountCents":-111,"description":"Edge day","counterpartyName":"Edge Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-15","amountCents":-111,"description":"Future","counterpartyName":"Edge Co"}},
+    {"op":"recurring.list"}
+  ]
+}

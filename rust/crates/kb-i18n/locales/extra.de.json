@@ -1,0 +1,16 @@
+{
+  "loading": {
+    "opening": "Deine Daten werden geöffnet",
+    "migrating": "Deine Daten werden aktualisiert",
+    "transactions": "Transaktionen werden geladen",
+    "overview": "Die Übersicht wird vorbereitet",
+    "unlocking": "Wird entsperrt…"
+  },
+  "native": {
+    "notPortedTitle": "In dieser Version noch nicht verfügbar",
+    "notPortedBody": "{{page}} wird noch in die neue native App übertragen. Deine Daten bleiben unberührt: Öffne Kasboek 0.22, um diese Seite zu nutzen.",
+    "opNotPorted": "{{op}} ist in dieser Version noch nicht verfügbar.",
+    "holdToShowNumbers": "Gedrückt halten, um die Kontonummern anzuzeigen",
+    "assistantNote": "Der Assistent ist in dieser Version noch nicht verfügbar."
+  }
+}

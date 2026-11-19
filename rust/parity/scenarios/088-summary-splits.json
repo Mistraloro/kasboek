@@ -1,0 +1,13 @@
+{
+  "name": "summary: split transactions count by their parts",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-10000,"description":"Big shop","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-04","amountCents":-3000,"description":"Mixed"}},
+    {"op":"transactions.split","input":{"id":1,"parts":[{"categoryId":3,"amountCents":-7000},{"categoryId":8,"amountCents":-2500},{"categoryId":null,"amountCents":-500}]}},
+    {"op":"transactions.split","input":{"id":2,"parts":[{"categoryId":1,"amountCents":1000},{"categoryId":3,"amountCents":-4000}]}},
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"summary.year","input":{"year":2026}},
+    {"op":"budgets.list","input":{"month":"2026-10"}}
+  ]
+}

@@ -72,7 +72,20 @@ function dump(db: Db): Outcome['dump'] {
   for (const name of names) {
     const stmt = db.prepare(`SELECT * FROM "${name}" ORDER BY rowid`)
     const columns = stmt.columns().map((c) => c.name)
-    out[name] = { columns, rows: (stmt.raw().all() as unknown[][]).map((row) => row.map((v, i) => cell(v, columns[i]!))) }
+    const pairs = new Map<string, string>()
+    const pairColumn = columns.indexOf('transfer_pair')
+    out[name] = {
+      columns,
+      rows: (stmt.raw().all() as unknown[][]).map((row) =>
+        row.map((v, i) => {
+          if (name === 'transactions' && i === pairColumn && typeof v === 'string') {
+            if (!pairs.has(v)) pairs.set(v, `<pair ${pairs.size + 1}>`)
+            return pairs.get(v)
+          }
+          return cell(v, columns[i]!)
+        })
+      )
+    }
   }
   return out
 }

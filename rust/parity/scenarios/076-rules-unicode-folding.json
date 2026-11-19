@@ -1,0 +1,24 @@
+{
+  "name": "rules: accents, case, compatibility forms and unusual letters fold the same way",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1,"description":"CAFÉ DE PARIS"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-1,"description":"Cafe de Paris"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-1,"description":"Ça va ﬁsh"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-04","amountCents":-1,"description":"École du Soir"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-1,"description":"Straße 5"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-1,"description":"STRASSE"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-07","amountCents":-1,"description":"Ⅻ club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-08","amountCents":-1,"description":"x😀y 😀 z"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-09","amountCents":-1,"description":"naïve  spaces here"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"cafe","categoryId":7}},
+    {"op":"rules.create","input":{"field":"any","pattern":"fish","categoryId":8}},
+    {"op":"rules.create","input":{"field":"any","pattern":"ecole","match":"starts","categoryId":12}},
+    {"op":"rules.create","input":{"field":"any","pattern":"strasse","categoryId":13}},
+    {"op":"rules.create","input":{"field":"any","pattern":"xii","categoryId":9}},
+    {"op":"rules.create","input":{"field":"any","pattern":"😀","match":"word","categoryId":10}},
+    {"op":"rules.create","input":{"field":"any","pattern":"spaces here","categoryId":11}},
+    {"op":"transactions.list","input":{"limit":20}},
+    {"op":"rules.list"}
+  ]
+}

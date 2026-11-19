@@ -5,6 +5,7 @@ use crate::error::{AppError, AppResult};
 use crate::numbers;
 use crate::ops;
 use crate::prefs::PrefsFile;
+use crate::recurring::RecurringSummary;
 use crate::table::{OPS, PUBLIC_OPS};
 use kb_db::Store;
 use serde_json::Value;
@@ -39,10 +40,11 @@ pub struct Core<S: Store> {
     store: Option<S>,
     unlocked: bool,
     pub(crate) clock: Box<dyn Clock>,
-    // Held for the operations that need ids of their own (none of the ported ones do).
-    #[allow(dead_code)]
+    /// For the operations that need ids of their own (the key of a transfer pair).
     pub(crate) rng: Box<dyn Rng>,
     pub(crate) prefs: RefCell<PrefsFile>,
+    /// The last recurring-payments scan: `(day and change count it was made for, result)`.
+    pub(crate) recurring_cache: RefCell<Option<(String, RecurringSummary)>>,
 }
 
 pub struct CoreConfig {
@@ -61,6 +63,7 @@ impl<S: Store> Core<S> {
             clock,
             rng,
             prefs: RefCell::new(PrefsFile::new(config.prefs_file, config.system_languages)),
+            recurring_cache: RefCell::new(None),
         }
     }
 
@@ -75,6 +78,7 @@ impl<S: Store> Core<S> {
 
     pub fn set_store(&mut self, store: Option<S>) {
         self.store = store;
+        self.recurring_cache = RefCell::new(None);
     }
 
     /// The database, or `auth.locked` when there is none (`session.db()`).

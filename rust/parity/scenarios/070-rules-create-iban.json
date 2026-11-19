@@ -1,0 +1,15 @@
+{
+  "name": "rules create: an iban rule keeps only digits and letters in capitals and matches the counterparty account exactly",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-5000,"description":"To savings","counterpartyName":"Me"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-300,"description":"Other","counterpartyName":"Me"}},
+    {"op":"@sql","input":{"sql":"UPDATE transactions SET counterparty_iban = 'BE62 5100 0754 7061' WHERE id = 1; UPDATE transactions SET counterparty_iban = 'NL91ABNA0417164300' WHERE id = 2"}},
+    {"op":"rules.preview","input":{"field":"iban","pattern":"be62510007547061","categoryId":15}},
+    {"op":"rules.create","input":{"field":"iban","pattern":" be62 5100 0754 7061 ","match":"word","categoryId":15}},
+    {"op":"rules.list"},
+    {"op":"transactions.list","input":{"limit":10}},
+    {"op":"rules.create","input":{"field":"iban","pattern":"BE62510007547061","categoryId":16}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-100,"description":"Again"}}
+  ]
+}

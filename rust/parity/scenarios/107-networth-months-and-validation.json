@@ -1,0 +1,13 @@
+{
+  "name": "net worth: months range and invalid input",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":5}},
+    {"op":"networth.summary","input":{"months":600}},
+    {"op":"networth.summary","input":{"months":601}},
+    {"op":"networth.summary","input":{"months":-1}},
+    {"op":"networth.summary","input":{"months":2.5}},
+    {"op":"networth.summary","input":{"months":"3"}},
+    {"op":"networth.summary","input":{"x":1}},
+    {"op":"networth.summary","input":{}}
+  ]
+}

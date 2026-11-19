@@ -1,0 +1,18 @@
+{
+  "name": "budgets: only spending categories, invalid months and amounts",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"budgets.set","input":{"categoryId":1,"month":"2026-10","amountCents":100}},
+    {"op":"budgets.set","input":{"categoryId":15,"month":"2026-10","amountCents":100}},
+    {"op":"budgets.set","input":{"categoryId":999,"month":"2026-10","amountCents":100}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-13","amountCents":100}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":-1}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":1.5}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":10000000001}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":null}},
+    {"op":"budgets.list","input":{"month":"2026-1"}},
+    {"op":"budgets.list","input":{}},
+    {"op":"budgets.list","input":{"month":"2026-10","x":1}}
+  ]
+}

@@ -17,6 +17,7 @@ use crate::{random_bytes, recovery::normalize_recovery_key, Master};
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Nonce};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use subtle::ConstantTimeEq;
 use thiserror::Error;
 use zeroize::Zeroizing;
@@ -64,6 +65,43 @@ pub struct TransferHeader {
     pub slots: TransferSlots,
     pub salt: String,
     pub iv: String,
+}
+
+/// Debug output never shows secrets (master key, vault, database bytes).
+impl fmt::Debug for TransferInput<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TransferInput")
+            .field("kind", &self.kind)
+            .field("created_at", &self.created_at)
+            .field("mode", &self.mode)
+            .field("master", &"<redacted>")
+            .field("vault", &"<redacted>")
+            .field("db_file_len", &self.db_file.len())
+            .finish_non_exhaustive()
+    }
+}
+
+/// Debug output never shows the password, code or recovery key.
+impl fmt::Debug for Credential<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Password { .. } => f.write_str("Credential::Password { <redacted> }"),
+            Self::RecoveryKey(_) => f.write_str("Credential::RecoveryKey(<redacted>)"),
+        }
+    }
+}
+
+/// Debug output never shows the master key, vault or database bytes.
+impl fmt::Debug for TransferContents {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TransferContents")
+            .field("header", &self.header)
+            .field("master", &"<redacted>")
+            .field("vault", &"<redacted>")
+            .field("db_file_len", &self.db_file.len())
+            .field("used_recovery", &self.used_recovery)
+            .finish()
+    }
 }
 
 pub struct TransferInput<'a> {
@@ -288,6 +326,43 @@ mod tests {
         assert!(by_recovery.used_recovery);
         assert_eq!(by_recovery.vault, by_password.vault);
         assert_eq!(by_password.header.created_at, "2026-01-02T03:04:05.678Z");
+    }
+
+    #[test]
+    fn debug_and_errors_hide_secrets() {
+        let (file, recovery) = sample(false, b"database bytes");
+        let password = "invented pass";
+        let secrets = [password, recovery.as_str(), "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", "database bytes"];
+        let contents = open_transfer(&file, &Credential::Password { password, code: Some("123456") }, 0.0).unwrap();
+        let credentials = [Credential::Password { password, code: Some("123456") }, Credential::RecoveryKey(&recovery)];
+        let mut texts = vec![format!("{contents:?}"), format!("{:#?}", contents)];
+        texts.extend(credentials.iter().map(|c| format!("{c:?}")));
+        texts.push(format!(
+            "{:?}",
+            TransferInput {
+                kind: TransferKind::Export,
+                created_at: String::new(),
+                app_version: String::new(),
+                schema_version: 1,
+                mode: AuthMode::Password,
+                two_factor: false,
+                password_slot: None,
+                recovery_slot: contents.header.slots.recovery.clone(),
+                master: &MASTER,
+                vault: &contents.vault,
+                db_file: b"database bytes",
+            }
+        ));
+        let wrong = open_transfer(&file, &Credential::Password { password: "nope-secret", code: None }, 0.0).unwrap_err();
+        let bad = open_transfer(&file, &Credential::RecoveryKey("QQQQ-secret"), 0.0).unwrap_err();
+        for e in [wrong, bad] {
+            texts.push(format!("{e} {e:?}"));
+        }
+        for text in &texts {
+            for secret in secrets.iter().chain(&["nope-secret", "QQQQ-secret"]) {
+                assert!(!text.contains(secret), "{text}");
+            }
+        }
     }
 
     #[test]

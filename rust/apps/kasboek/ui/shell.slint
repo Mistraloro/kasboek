@@ -1,0 +1,344 @@
+// App.tsx `Shell`: sidebar (mark, nav items, Settings, Lock, version), top bar with the assistant toggle, the content area
+// with the pages, and the assistant panel place. Pages other than the Overview are placeholder cards.
+import { Theme, Icons, Icon, Label, PageHeader, Card, EmptyState, PressTarget, Button } from "@kb-ui";
+import { Tx } from "tx.slint";
+import { Mark } from "parts.slint";
+import { OverviewPage, AlertRow, TipRow, AccountRow } from "overview.slint";
+
+component NavItem inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> active;
+    callback clicked();
+    height: 36px;
+    border-radius: Theme.r-lg;
+    background: root.active ? Theme.accent-soft : tgt.hovered ? Theme.surface-2 : transparent;
+    property <color> tint: root.active ? Theme.accent : tgt.hovered ? Theme.text : Theme.muted;
+    HorizontalLayout {
+        padding-left: 12px;
+        spacing: 12px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                size: 17px;
+                tint: root.tint;
+            }
+        }
+        Label {
+            text: root.text;
+            font-size: Theme.fs-ui + 1px;
+            font-weight: 500;
+            color: root.tint;
+            lh: Theme.lh-ui + 1.5px;
+        }
+    }
+    tgt := PressTarget {
+        label: root.text;
+        description: root.active ? "current page" : "";
+        ring-radius: 10px;
+        activated => {
+            root.clicked();
+        }
+    }
+}
+
+export component PlaceholderPage inherits Rectangle {
+    in property <string> title;
+    in property <string> body;
+    in property <string> heading;
+    VerticalLayout {
+        x: (parent.width - self.width) / 2;
+        y: 16px;
+        width: min(944px, parent.width - 80px);
+        PageHeader {
+            title: root.title;
+        }
+        Rectangle {
+            height: 32px;
+        }
+        Card {
+            height: empty.preferred-height + 2px;
+            empty := EmptyState {
+                icon: Icons.circle-dashed;
+                title: root.heading;
+                body: root.body;
+            }
+        }
+    }
+}
+
+export component Shell inherits Rectangle {
+    // "overview" | "transactions" | "budgets" | "recurring" | "goals" | "year" | "networth" | "import" | "settings".
+    in-out property <string> page: "overview";
+    in-out property <bool> assistant-open: false;
+    // Room the window controls take at the right of the top bar when they are drawn into it (Electron: 148px).
+    in property <length> caption-inset: 12px;
+    // Room above the sidebar mark for macOS traffic lights drawn into the window (0 with a standard title bar).
+    in property <length> sidebar-top: 0px;
+    in property <string> version-text;
+    in property <string> placeholder-heading;
+    in property <string> placeholder-body;
+    in property <string> assistant-note;
+    callback lock();
+    callback go(string);
+    callback about();
+    background: Theme.bg;
+
+    // The content of the Overview is `overview`, set by the app (it is the same element for every page change).
+    pure function title-of(p: string) -> string {
+        return Tx.tr("nav." + p);
+    }
+
+    HorizontalLayout {
+        // Sidebar: `w-56 border-r border-border bg-bg`.
+        Rectangle {
+            width: 224px;
+            background: Theme.bg;
+            Rectangle {
+                x: parent.width - 1px;
+                width: 1px;
+                background: Theme.border;
+            }
+            VerticalLayout {
+                padding-right: 1px;
+                padding-top: root.sidebar-top;
+                HorizontalLayout {
+                    height: 44px;
+                    padding-left: 20px;
+                    spacing: 10px;
+                    alignment: start;
+                    VerticalLayout {
+                        alignment: center;
+                        Mark {
+                            size: 15px;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Text {
+                            text: Tx.tr("app.name");
+                            font-family: Theme.serif;
+                            font-weight: 600;
+                            font-size: 17px;
+                            letter-spacing: -0.17px;
+                            color: Theme.text;
+                            accessible-role: none;
+                        }
+                    }
+                }
+                VerticalLayout {
+                    padding-top: 16px;
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 2px;
+                    alignment: start;
+                    NavItem {
+                        text: Tx.tr("nav.overview");
+                        icon: Icons.layout-dashboard;
+                        active: root.page == "overview";
+                        clicked => {
+                            root.go("overview");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.transactions");
+                        icon: Icons.arrow-left-right;
+                        active: root.page == "transactions";
+                        clicked => {
+                            root.go("transactions");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.budgets");
+                        icon: Icons.target;
+                        active: root.page == "budgets";
+                        clicked => {
+                            root.go("budgets");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.recurring");
+                        icon: Icons.repeat;
+                        active: root.page == "recurring";
+                        clicked => {
+                            root.go("recurring");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.goals");
+                        icon: Icons.piggy-bank;
+                        active: root.page == "goals";
+                        clicked => {
+                            root.go("goals");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.year");
+                        icon: Icons.calendar-range;
+                        active: root.page == "year";
+                        clicked => {
+                            root.go("year");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.networth");
+                        icon: Icons.trending-up;
+                        active: root.page == "networth";
+                        clicked => {
+                            root.go("networth");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.import");
+                        icon: Icons.file-up;
+                        active: root.page == "import";
+                        clicked => {
+                            root.go("import");
+                        }
+                    }
+                }
+                Rectangle {
+                    vertical-stretch: 1;
+                }
+                VerticalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    padding-bottom: 16px;
+                    spacing: 2px;
+                    NavItem {
+                        text: Tx.tr("nav.settings");
+                        icon: Icons.settings;
+                        active: root.page == "settings";
+                        clicked => {
+                            root.go("settings");
+                        }
+                    }
+                    NavItem {
+                        text: Tx.tr("nav.lock");
+                        icon: Icons.lock;
+                        clicked => {
+                            root.lock();
+                        }
+                    }
+                    Rectangle {
+                        height: 8px + 16.5px;
+                        Rectangle {
+                            y: 8px;
+                            x: 0px;
+                            width: ver.preferred-width + 24px;
+                            height: 16.5px;
+                            ver := Text {
+                                x: 12px;
+                                text: root.version-text;
+                                font-family: Theme.num;
+                                font-size: 11px;
+                                color: Theme.muted.with-alpha(0.7);
+                                vertical-alignment: center;
+                                accessible-role: none;
+                            }
+                            PressTarget {
+                                label: root.version-text;
+                                ring-radius: 6px;
+                                activated => {
+                                    root.about();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            // Top bar: `h-11`, the assistant toggle at the right.
+            Rectangle {
+                height: 44px;
+            HorizontalLayout {
+                alignment: end;
+                padding-right: root.caption-inset;
+                VerticalLayout {
+                    alignment: center;
+                    tgl := Rectangle {
+                        height: 28px;
+                        width: tg.preferred-width;
+                        border-radius: Theme.r-md;
+                        property <color> tint: root.assistant-open ? Theme.accent : toggle.hovered ? Theme.text : Theme.muted;
+                        tg := HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            spacing: 6px;
+                            alignment: start;
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: Icons.panel-right;
+                                    size: 15px;
+                                    tint: tgl.tint;
+                                }
+                            }
+                            Label {
+                                text: Tx.tr("nav.assistant");
+                                font-size: Theme.fs-ui;
+                                font-weight: 500;
+                                lh: Theme.lh-ui;
+                                color: tgl.tint;
+                            }
+                        }
+                        toggle := PressTarget {
+                            label: Tx.tr("nav.assistant");
+                            description: Tx.tr("nav.toggleAssistant");
+                            accessible-checkable: true;
+                            accessible-checked: root.assistant-open;
+                            ring-radius: 8px;
+                            activated => {
+                                root.assistant-open = !root.assistant-open;
+                            }
+                        }
+                    }
+                }
+            }
+            }
+            HorizontalLayout {
+                vertical-stretch: 1;
+                Rectangle {
+                    horizontal-stretch: 1;
+                    clip: true;
+                    @children
+                    if root.page != "overview": PlaceholderPage {
+                        title: title-of(root.page);
+                        heading: root.placeholder-heading;
+                        body: root.placeholder-body.replace-all("{{page}}", title-of(root.page));
+                    }
+                }
+                if root.assistant-open: Rectangle {
+                    width: 320px;
+                    background: Theme.surface;
+                    Rectangle {
+                        width: 1px;
+                        background: Theme.border;
+                    }
+                    VerticalLayout {
+                        padding: 20px;
+                        Label {
+                            text: Tx.tr("nav.assistant");
+                            font-size: Theme.fs-card-title;
+                            font-weight: 600;
+                            lh: Theme.lh-card-title;
+                            accessible-role: AccessibleRole.text;
+                        }
+                        Label {
+                            text: root.assistant-note;
+                            font-size: Theme.fs-ui;
+                            lh: Theme.lh-ui;
+                            color: Theme.muted;
+                            wrap: word-wrap;
+                            accessible-role: AccessibleRole.text;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

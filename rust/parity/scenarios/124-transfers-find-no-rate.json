@@ -1,0 +1,12 @@
+{
+  "name": "transfers find: without any rate only an account number makes a cross-currency pair",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Krona","currency":"SEK","iban":"SE45 5000 0000 0583 9825 7466"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"Out"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-05","amountCents":110000,"description":"In"}},
+    {"op":"transfers.find"},
+    {"op":"@sql","input":{"sql":"UPDATE transactions SET counterparty_iban = 'SE4550000000058398257466' WHERE id = 1"}},
+    {"op":"transfers.find"}
+  ]
+}

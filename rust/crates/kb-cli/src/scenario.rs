@@ -8,7 +8,8 @@
 //! `@resetImportedSettings` (`{"keepSyncKey"?}`).
 //!
 //! Masked in the output, because they are random or depend on the wall clock: `uid` values (32 hex digits), every column
-//! named `at` or ending in `_at`, and the keys `createdAt` / `updatedAt` of results.
+//! named `at` or ending in `_at`, and the keys `createdAt` / `updatedAt` of results. The random `transfer_pair` keys are
+//! numbered in order of first appearance (`<pair 1>`), so which rows share a pair is still compared.
 use crate::commands::CliError;
 use kb_core::{Actor, Core, CoreConfig, FixedClock, SeededRng};
 use kb_db::{Cell, DbKey, OpenOptions, SqliteStore, Store};
@@ -113,10 +114,27 @@ fn result_json(result: Result<Value, kb_core::AppError>) -> Value {
 fn dump(store: &SqliteStore) -> Result<Value, CliError> {
     let mut tables = Map::new();
     for t in store.dump_tables()? {
+        let mut pairs: Vec<&str> = Vec::new();
         let rows: Vec<Value> = t
             .rows
             .iter()
-            .map(|row| Value::Array(row.iter().zip(&t.columns).map(|(cell, column)| cell_json(cell, column)).collect()))
+            .map(|row| {
+                Value::Array(
+                    row.iter()
+                        .zip(&t.columns)
+                        .map(|(cell, column)| match cell {
+                            Cell::Text(key) if t.name == "transactions" && column == "transfer_pair" => {
+                                let at = pairs.iter().position(|k| k == key).unwrap_or_else(|| {
+                                    pairs.push(key);
+                                    pairs.len() - 1
+                                });
+                                json!(format!("<pair {}>", at + 1))
+                            }
+                            _ => cell_json(cell, column),
+                        })
+                        .collect(),
+                )
+            })
             .collect();
         tables.insert(t.name, json!({ "columns": t.columns, "rows": rows }));
     }

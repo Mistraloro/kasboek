@@ -1,0 +1,122 @@
+name: Rust app
+
+# Builds, tests and publishes the native app (rust/apps/kasboek, docs/rust-port-plan.md section 10, M4) on the six targets:
+#   Windows x64 + ARM64, macOS Apple Silicon + Intel, Linux x64 + ARM64.
+# Per machine: release build of `kasboek`, cargo test of the app and the crates it uses, a start-up test (the window opens, the
+# milestones of startup.log are written, the process exits), and the binary as artifact `kasboek-app-<os>-<arch>` with the
+# test script. The Windows and macOS runs are the first real builds of the Windows Hello, Touch ID and title bar code.
+on:
+  push:
+    branches: [rust-native]
+    paths:
+      - 'rust/apps/**'
+      - 'rust/crates/kb-ui/**'
+      - 'rust/crates/kb-service/**'
+      - 'rust/crates/kb-i18n/**'
+      - 'rust/crates/kb-rules/**'
+      - 'rust/crates/kb-core/**'
+      - 'rust/crates/kb-db/**'
+      - 'rust/Cargo.toml'
+      - 'rust/Cargo.lock'
+      - 'src/renderer/src/i18n/locales/**'
+      - '.github/workflows/rust-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-app-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_VERSION: 1.97.0
+  CARGO_TERM_COLOR: never
+
+jobs:
+  app:
+    name: ${{ matrix.os_name }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: windows-latest, os_name: windows, arch: x64 }
+          - { runner: windows-11-arm, os_name: windows, arch: arm64 }
+          - { runner: macos-latest, os_name: macos, arch: arm64 }
+          - { runner: macos-15-intel, os_name: macos, arch: x64 }
+          - { runner: ubuntu-latest, os_name: linux, arch: x64 }
+          - { runner: ubuntu-24.04-arm, os_name: linux, arch: arm64 }
+    env:
+      TAG: ${{ matrix.os_name }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          if ! command -v rustup >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf -o rustup-init.exe https://win.rustup.rs/aarch64
+            ./rustup-init.exe -y --default-toolchain none --profile minimal
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$USERPROFILE/.cargo/bin:$PATH"
+          fi
+          rustup toolchain install "$RUST_VERSION" --profile minimal --component clippy --no-self-update
+          rustup default "$RUST_VERSION"
+          rustc -Vv
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: rust-app-${{ env.TAG }}-${{ env.RUST_VERSION }}-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: rust-app-${{ env.TAG }}-${{ env.RUST_VERSION }}-
+
+      - name: Linux packages (window, accessibility, virtual display)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb libxkbcommon-x11-0 libfontconfig1
+
+      - name: Build (release)
+        shell: bash
+        working-directory: rust
+        run: cargo build --release --locked -p kasboek
+
+      - name: Test
+        shell: bash
+        working-directory: rust
+        run: cargo test --locked -p kasboek -p kb-service -p kb-i18n -p kb-rules -p kb-ui
+
+      - name: Clippy
+        shell: bash
+        working-directory: rust
+        run: cargo clippy --locked -p kasboek -p kb-service -p kb-i18n -p kb-rules --all-targets -- -D warnings
+
+      - name: Start-up test
+        shell: bash
+        run: |
+          ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
+          rust/apps/kasboek/tools/startup-test.sh "rust/target/release/kasboek$ext"
+          rust/apps/kasboek/tools/startup-test.sh "rust/target/release/kasboek$ext" --state unlocked
+
+      - name: Stage
+        shell: bash
+        run: |
+          ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
+          mkdir -p stage
+          cp "rust/target/release/kasboek$ext" stage/
+          cp rust/apps/kasboek/tools/startup-test.sh stage/
+          ls -l stage
+
+      - name: Upload app
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kasboek-app-${{ env.TAG }}
+          path: stage
+          retention-days: 30
+          if-no-files-found: error

@@ -1,0 +1,8 @@
+{
+  "name": "alerts: nothing to warn about on a fresh database",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"alerts.list"},
+    {"op":"alerts.list","input":{"x":1}}
+  ]
+}

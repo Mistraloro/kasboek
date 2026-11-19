@@ -1,0 +1,29 @@
+{
+  "name": "transfers pair between currencies: cost worked out from the rate, or given; booked as a fee split; unpair removes it",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"To dollars"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-06","amountCents":10890,"description":"Dollars arrive"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-10","amountCents":-20000,"description":"To dollars 2"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-10","amountCents":21000,"description":"Dollars 2"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-12","amountCents":-5000,"description":"To pounds"}},
+    {"op":"transactions.create","input":{"accountId":4,"bookingDate":"2026-10-12","amountCents":4000,"description":"Pounds"}},
+    {"op":"transfers.find"},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2},{"outId":3,"inId":4,"costCents":700},{"outId":5,"inId":6,"costCents":0}]}},
+    {"op":"transfers.cost","input":{"id":1}},
+    {"op":"transfers.cost","input":{"id":4}},
+    {"op":"transfers.cost","input":{"id":5}},
+    {"op":"transfers.cost","input":{"id":99}},
+    {"op":"transactions.splits","input":{"id":1}},
+    {"op":"transactions.splits","input":{"id":3}},
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"transfers.unpair","input":{"id":4}},
+    {"op":"transactions.splits","input":{"id":3}},
+    {"op":"transfers.cost","input":{"id":3}}
+  ]
+}

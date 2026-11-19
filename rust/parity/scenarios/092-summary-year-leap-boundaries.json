@@ -1,0 +1,15 @@
+{
+  "name": "summary year: leap day, new year midnight, December",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-02-29","amountCents":-100,"description":"Leap","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-12-31","amountCents":-200,"description":"NYE","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-01-01","amountCents":-400,"description":"NY","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-01-01","amountCents":800,"description":"Start","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-06-15","amountCents":-50,"description":"Uncat"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-06-16","amountCents":70,"description":"Uncat in"}},
+    {"op":"summary.year","input":{"year":2024}},
+    {"op":"summary.year","input":{"year":2025}},
+    {"op":"summary.year","input":{"year":2023}}
+  ]
+}

@@ -1,7 +1,7 @@
 # Cargo workspace of the native Rust port (docs/rust-port-plan.md). The spikes under spike/ keep their own workspaces.
 [workspace]
 resolver = "2"
-members = ["crates/*"]
+members = ["crates/*", "apps/*"]
 
 [workspace.package]
 edition = "2021"
@@ -14,6 +14,7 @@ publish = false
 rusqlite = { version = "0.43", default-features = false, features = ["functions"] }
 argon2 = "0.5"
 aes-gcm = "0.10"
+aes = "0.8"
 unicode-normalization = "0.1"
 base64 = "0.22"
 serde = { version = "1", features = ["derive"] }
@@ -33,6 +34,8 @@ thiserror = "2"
 kb-crypto = { path = "crates/kb-crypto" }
 kb-db = { path = "crates/kb-db" }
 kb-core = { path = "crates/kb-core" }
+kb-service = { path = "crates/kb-service" }
+kb-session = { path = "crates/kb-session" }
 
 # rusqlite links sqlite3mc instead of plain SQLite: the vendored engine sits in a package that is named like the crate
 # it replaces (see crates/kb-sqlite3mc-sys/VENDOR.md).

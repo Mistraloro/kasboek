@@ -1,0 +1,18 @@
+{
+  "name": "rules create: contains rule applies to existing uncategorised transactions, list shows the order",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1200,"description":"Delhaize Gent 123"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-800,"description":"Bakery","counterpartyName":"Delhaize Leuven"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-500,"description":"Other shop"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-04","amountCents":-700,"description":"delhaize explicit","categoryId":8}},
+    {"op":"rules.list"},
+    {"op":"rules.create","input":{"field":"any","pattern":"  delhaize ","categoryId":3}},
+    {"op":"rules.list"},
+    {"op":"transactions.list","input":{"limit":10}},
+    {"op":"rules.create","input":{"field":"counterparty","pattern":"Other","categoryId":8,"applyToExisting":false}},
+    {"op":"rules.list"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-100,"description":"Other thing","counterpartyName":"Other Co"}},
+    {"op":"transactions.list","input":{"limit":10}}
+  ]
+}

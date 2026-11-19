@@ -1,0 +1,22 @@
+{
+  "name": "transfers: without a fees category no cost is booked and setCost is refused",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"categories.update","input":{"id":14,"archived":true}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"To dollars"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-05","amountCents":10890,"description":"Dollars arrive"}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2}]}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":100}},
+    {"op":"transactions.splits","input":{"id":1}},
+    {"op":"transfers.cost","input":{"id":1}},
+    {"op":"categories.create","input":{"name":"Bank costs","kind":"expense"}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":100}},
+    {"op":"transactions.splits","input":{"id":1}},
+    {"op":"transfers.cost","input":{"id":1}}
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "summary: empty months and invalid input",
+  "steps": [
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"summary.year","input":{"year":2026}},
+    {"op":"summary.review","input":{"month":"2026-10"}},
+    {"op":"summary.month","input":{"month":"2026-13"}},
+    {"op":"summary.month","input":{}},
+    {"op":"summary.month"},
+    {"op":"summary.year","input":{"year":1899}},
+    {"op":"summary.year","input":{"year":2201}},
+    {"op":"summary.year","input":{"year":2026.5}},
+    {"op":"summary.year","input":{"year":"2026"}},
+    {"op":"summary.year","input":{"year":1900}},
+    {"op":"summary.year","input":{"year":2200}},
+    {"op":"summary.review","input":{"month":"x"}},
+    {"op":"summary.month","input":{"month":"2026-10","extra":true}}
+  ]
+}

@@ -2458,6 +2458,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "kasboek"
+version = "0.22.0"
+dependencies = [
+ "block2 0.6.2",
+ "kb-i18n",
+ "kb-rules",
+ "kb-service",
+ "kb-ui",
+ "libc",
+ "objc2 0.6.5",
+ "objc2-foundation 0.3.2",
+ "objc2-local-authentication",
+ "raw-window-handle",
+ "serde_json",
+ "slint",
+ "slint-build",
+ "tempfile",
+ "windows",
+ "windows-future",
+]
+
+[[package]]
 name = "kb-cli"
 version = "0.0.0"
 dependencies = [
@@ -2513,6 +2535,52 @@ dependencies = [
  "rusqlite",
  "serde_json",
  "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "zeroize",
+]
+
+[[package]]
+name = "kb-i18n"
+version = "0.0.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "kb-rules"
+version = "0.0.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "kb-service"
+version = "0.0.0"
+dependencies = [
+ "kb-core",
+ "kb-db",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "kb-session"
+version = "0.0.0"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "base64 0.22.1",
+ "hex",
+ "hmac",
+ "kb-crypto",
+ "kb-db",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2",
+ "subtle",
  "tempfile",
  "thiserror 2.0.21",
  "zeroize",
@@ -3107,6 +3175,7 @@ checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
 dependencies = [
  "bitflags 2.13.2",
  "block2 0.6.2",
+ "libc",
  "objc2 0.6.5",
  "objc2-core-foundation",
 ]
@@ -3132,6 +3201,18 @@ dependencies = [
  "objc2 0.5.3",
  "objc2-app-kit 0.2.2",
  "objc2-foundation 0.2.2",
+]
+
+[[package]]
+name = "objc2-local-authentication"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e48e0b8b339e0d9d2ed4416b7f93f9d4daadff7d4dd797f89867cde11aeac607"
+dependencies = [
+ "block2 0.6.2",
+ "objc2 0.6.5",
+ "objc2-foundation 0.3.2",
+ "objc2-security",
 ]
 
 [[package]]
@@ -3183,6 +3264,17 @@ dependencies = [
  "objc2-core-graphics",
  "objc2-foundation 0.3.2",
  "objc2-metal 0.3.2",
+]
+
+[[package]]
+name = "objc2-security"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "709fe137109bd1e8b5a99390f77a7d8b2961dafc1a1c5db8f2e60329ad6d895a"
+dependencies = [
+ "bitflags 2.13.2",
+ "objc2 0.6.5",
+ "objc2-core-foundation",
 ]
 
 [[package]]

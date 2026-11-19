@@ -1,0 +1,20 @@
+{
+  "name": "summary month: income, spending, categories, history of six months",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":100000}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-01-01',1.1,'ecb'),('USD','2026-08-01',1.2,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":250000,"description":"Salary","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-85000,"description":"Rent","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-4500,"description":"Delhaize","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-2300,"description":"Cafe","categoryId":7}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-07","amountCents":-3000,"description":"USD shop","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-31","amountCents":-1000,"description":"Uncategorised late"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-01","amountCents":-500,"description":"Nov first"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":10000}},
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"summary.month","input":{"month":"2026-11"}},
+    {"op":"summary.month","input":{"month":"2026-09"}}
+  ]
+}

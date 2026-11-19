@@ -1,0 +1,21 @@
+{
+  "name": "rules reorder: priority follows the list, unlisted rules keep their order after it; new transactions use it",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"market","categoryId":3}},
+    {"op":"rules.create","input":{"field":"any","pattern":"super market","categoryId":8}},
+    {"op":"rules.create","input":{"field":"counterparty","pattern":"market","categoryId":12}},
+    {"op":"rules.list"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1,"description":"The super market","counterpartyName":"Plain"}},
+    {"op":"rules.reorder","input":{"ids":[1]}},
+    {"op":"rules.reorder","input":{"ids":[2,3,1]}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-1,"description":"The super market","counterpartyName":"Plain"}},
+    {"op":"rules.reorder","input":{"ids":[3,3,99,2]}},
+    {"op":"rules.reorder","input":{"ids":[3,1,2]}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-1,"description":"The super market","counterpartyName":"Plain"}},
+    {"op":"rules.reorder","input":{"ids":[]}},
+    {"op":"rules.reorder","input":{"ids":[0]}},
+    {"op":"rules.reorder","input":{}},
+    {"op":"transactions.list","input":{"limit":10}}
+  ]
+}

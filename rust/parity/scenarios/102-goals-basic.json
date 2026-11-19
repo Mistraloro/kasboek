@@ -1,0 +1,18 @@
+{
+  "name": "goals: manual and account-tracked goals, per-month amount, reached, overdue, ordering",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","openingBalanceCents":30000}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","openingBalanceCents":20000}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-01-01',1.25,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"goals.create","input":{"name":" Holiday ","targetCents":100000,"targetDate":"2027-06-30","savedCents":5000}},
+    {"op":"goals.create","input":{"name":"Car","targetCents":500000,"accountId":1,"targetDate":"2026-12-01"}},
+    {"op":"goals.create","input":{"name":"Reached","targetCents":10000,"savedCents":10000}},
+    {"op":"goals.create","input":{"name":"Overdue","targetCents":10000,"targetDate":"2026-11-13","savedCents":100}},
+    {"op":"goals.create","input":{"name":"Dollar goal","targetCents":100000,"accountId":2,"savedCents":999}},
+    {"op":"goals.create","input":{"name":"No date","targetCents":7777}},
+    {"op":"goals.create","input":{"name":"Same day","targetCents":12345,"targetDate":"2026-11-14","savedCents":1}},
+    {"op":"goals.create","input":{"name":"Next month first","targetCents":12345,"targetDate":"2026-12-01","savedCents":1}},
+    {"op":"goals.list"}
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "transfers setCost: change, remove and the errors",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"To dollars"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-05","amountCents":10890,"description":"Dollars arrive"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-300,"description":"Same"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-06","amountCents":300,"description":"Same in"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-07","amountCents":-1,"description":"Unpaired"}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2},{"outId":3,"inId":4}]}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":250}},
+    {"op":"transfers.cost","input":{"id":2}},
+    {"op":"transfers.setCost","input":{"id":2,"costCents":9999}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":10000}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":10001}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":0}},
+    {"op":"transfers.cost","input":{"id":1}},
+    {"op":"transfers.setCost","input":{"id":3,"costCents":5}},
+    {"op":"transfers.setCost","input":{"id":5,"costCents":5}},
+    {"op":"transfers.setCost","input":{"id":77,"costCents":5}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":-5}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":1.5}},
+    {"op":"transfers.setCost","input":{"id":1,"costCents":100},"actor":"assistant"},
+    {"op":"transfers.cost","input":{"id":3}},
+    {"op":"transfers.cost","input":{"id":5}},
+    {"op":"transfers.cost","input":{}}
+  ]
+}

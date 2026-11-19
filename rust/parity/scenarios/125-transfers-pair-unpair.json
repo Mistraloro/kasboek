@@ -1,0 +1,25 @@
+{
+  "name": "transfers pair and unpair: both halves get the transfer category, spending stays clean, unpair keeps categories",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"Out"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-06","amountCents":10000,"description":"In"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-07","amountCents":-500,"description":"Pre","categoryId":16}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-07","amountCents":500,"description":"Pre in"}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2},{"outId":3,"inId":4}]}},
+    {"op":"transactions.list","input":{"limit":10}},
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"transfers.find"},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2}]}},
+    {"op":"transfers.unpair","input":{"id":2}},
+    {"op":"transfers.unpair","input":{"id":2}},
+    {"op":"transfers.unpair","input":{"id":999}},
+    {"op":"transactions.list","input":{"limit":10}},
+    {"op":"transfers.find"}
+  ]
+}

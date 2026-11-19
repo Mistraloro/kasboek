@@ -1,0 +1,11 @@
+[package]
+name = "kb-rules"
+version = "0.0.0"
+description = "Shared rules of the renderer ported to Rust: password rules and strength (src/shared/password.ts), IBAN finding and masking (src/shared/iban.ts)"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

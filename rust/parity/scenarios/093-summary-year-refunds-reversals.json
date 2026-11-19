@@ -1,0 +1,19 @@
+{
+  "name": "summary year: refunds against spending categories and reversals against income categories, multi-currency",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-01-01',1.25,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-01-10","amountCents":-10000,"description":"Shop","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-01-11","amountCents":10000,"description":"Full refund","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-02-10","amountCents":2000,"description":"Only refund","categoryId":9}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-03-01","amountCents":5000,"description":"Salary","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-03-02","amountCents":-5000,"description":"Salary back","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-04-01","amountCents":-300,"description":"Income out","categoryId":2}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-05-05","amountCents":-12500,"description":"USD spend","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-05-06","amountCents":2500,"description":"USD in"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-05-07","amountCents":-900,"description":"Other","categoryId":15}},
+    {"op":"summary.year","input":{"year":2026}}
+  ]
+}

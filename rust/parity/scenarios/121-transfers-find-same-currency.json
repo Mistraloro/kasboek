@@ -1,0 +1,24 @@
+{
+  "name": "transfers find: same amount within 3 days, closest first, each transaction once",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"To savings"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-05","amountCents":10000,"description":"From main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-10","amountCents":-5000,"description":"Out"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-13","amountCents":5000,"description":"In 3 days"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-20","amountCents":-700,"description":"Out far"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-24","amountCents":700,"description":"In 4 days"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-25","amountCents":-300,"description":"Two outs"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-26","amountCents":-300,"description":"Two outs 2"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-26","amountCents":300,"description":"One in"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-30","amountCents":-42,"description":"Same account"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-30","amountCents":42,"description":"Same account in"}},
+    {"op":"transfers.find"},
+    {"op":"transfers.find","input":{"x":1}}
+  ]
+}

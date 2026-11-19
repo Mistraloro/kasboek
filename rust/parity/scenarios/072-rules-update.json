@@ -1,0 +1,24 @@
+{
+  "name": "rules update: fields, pattern, match, category, apply to existing, not found and clashes",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1,"description":"Alpha shop"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-1,"description":"Beta shop"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-1,"description":"Gamma store"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"alpha","categoryId":3,"applyToExisting":false}},
+    {"op":"rules.create","input":{"field":"any","pattern":"beta","categoryId":4,"applyToExisting":false}},
+    {"op":"rules.update","input":{"id":1,"pattern":"shop","applyToExisting":true}},
+    {"op":"transactions.list","input":{"limit":10}},
+    {"op":"rules.update","input":{"id":1,"categoryId":5}},
+    {"op":"rules.update","input":{"id":1,"field":"counterparty","match":"starts"}},
+    {"op":"rules.update","input":{"id":1,"pattern":"gam","match":"contains"}},
+    {"op":"rules.update","input":{"id":1,"pattern":"BETA"}},
+    {"op":"rules.update","input":{"id":1,"field":"description","pattern":"BETA"}},
+    {"op":"rules.update","input":{"id":2,"field":"iban","pattern":"be62 5100 0754 7061"}},
+    {"op":"rules.update","input":{"id":77,"pattern":"abc"}},
+    {"op":"rules.update","input":{"id":1,"categoryId":999}},
+    {"op":"rules.update","input":{"id":1,"pattern":"x"}},
+    {"op":"rules.update","input":{"id":1}},
+    {"op":"rules.list"}
+  ]
+}

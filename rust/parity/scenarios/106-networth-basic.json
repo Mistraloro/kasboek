@@ -1,0 +1,29 @@
+{
+  "name": "net worth: assets and liabilities, valuations, bank balances, history by month, an account without rate",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":100000}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","openingBalanceCents":500000}},
+    {"op":"accounts.create","input":{"name":"Broker","kind":"investment","openingBalanceCents":0}},
+    {"op":"accounts.create","input":{"name":"Card","kind":"credit_card","openingBalanceCents":-20000}},
+    {"op":"accounts.create","input":{"name":"Loan","kind":"loan","openingBalanceCents":-1000000}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","openingBalanceCents":10000}},
+    {"op":"accounts.create","input":{"name":"Krona","currency":"SEK","openingBalanceCents":99999}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2025-01-01',1.05,'ecb'),('USD','2026-06-01',1.2,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-03-10","amountCents":-5000,"description":"Old","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-01-31","amountCents":250000,"description":"Salary","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-02-28","amountCents":-10000,"description":"Feb end"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-03-01","amountCents":-777,"description":"Mar first"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2025-06-01","amountCents":-100000,"description":"Invest"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-05-01","amountCents":-50000,"description":"Invest more"}},
+    {"op":"transactions.create","input":{"accountId":4,"bookingDate":"2026-10-10","amountCents":-30000,"description":"Card spend"}},
+    {"op":"transactions.create","input":{"accountId":6,"bookingDate":"2026-09-09","amountCents":5000,"description":"Dollar in"}},
+    {"op":"valuations.set","input":{"accountId":3,"date":"2025-12-31","valueCents":130000}},
+    {"op":"valuations.set","input":{"accountId":3,"date":"2026-09-30","valueCents":190000}},
+    {"op":"balances.set","input":{"accountId":1,"date":"2026-02-15","balanceCents":321000}},
+    {"op":"networth.summary"},
+    {"op":"networth.summary","input":{"months":0}},
+    {"op":"networth.summary","input":{"months":3}},
+    {"op":"networth.summary","input":{"months":1}}
+  ]
+}

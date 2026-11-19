@@ -1,0 +1,18 @@
+{
+  "name": "rules create: word, starts, contains, short texts become whole-word rules",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1,"description":"Q8 Station"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1,"description":"ref Q81234"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-1,"description":"Shell Express"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-1,"description":"The Shell"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-1,"description":"tvs"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-1,"description":"a tv set"}},
+    {"op":"rules.create","input":{"field":"description","pattern":"q8","categoryId":6}},
+    {"op":"rules.create","input":{"field":"description","pattern":"shell","match":"starts","categoryId":6}},
+    {"op":"rules.create","input":{"field":"description","pattern":"tv","categoryId":11,"match":"contains"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"express","match":"word","categoryId":7}},
+    {"op":"rules.list"},
+    {"op":"transactions.list","input":{"limit":20}}
+  ]
+}

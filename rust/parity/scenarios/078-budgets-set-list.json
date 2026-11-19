@@ -1,0 +1,17 @@
+{
+  "name": "budgets: set, replace, list with spending per expense category",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"budgets.list","input":{"month":"2026-10"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":40000}},
+    {"op":"budgets.set","input":{"categoryId":7,"month":"2026-10","amountCents":0}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-12000,"description":"Shop","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-31","amountCents":-3000,"description":"Last day","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-01","amountCents":-999,"description":"Next month","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-30","amountCents":-888,"description":"Month before","categoryId":3}},
+    {"op":"budgets.list","input":{"month":"2026-10"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":25000}},
+    {"op":"budgets.list","input":{"month":"2026-10"}},
+    {"op":"budgets.list","input":{"month":"2026-11"}}
+  ]
+}

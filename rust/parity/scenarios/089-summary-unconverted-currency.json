@@ -1,0 +1,17 @@
+{
+  "name": "summary month: a currency without a rate is counted as unconverted and left out",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"accounts.create","input":{"name":"Krona","currency":"SEK"}},
+    {"op":"accounts.create","input":{"name":"Yen","currency":"JPY"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('JPY','2026-12-01',160,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1000,"description":"EUR","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-02","amountCents":-5000,"description":"SEK","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-03","amountCents":-16000,"description":"JPY (rate after)","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-04","amountCents":2000,"description":"SEK in"}},
+    {"op":"summary.month","input":{"month":"2026-10"}},
+    {"op":"summary.year","input":{"year":2026}},
+    {"op":"accounts.list"}
+  ]
+}

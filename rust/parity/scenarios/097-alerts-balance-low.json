@@ -1,0 +1,27 @@
+{
+  "name": "alerts: balance heading below zero before the next income, counting due and late fixed costs",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":-200000}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","openingBalanceCents":5}},
+    {"op":"accounts.create","input":{"name":"Old","openingBalanceCents":1000}},
+    {"op":"accounts.update","input":{"id":3,"archived":true}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-05-20","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-20","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-20","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-20","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-20","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-20","amountCents":-50000,"description":"Rent flat","counterpartyName":"Landlord","categoryId":4}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-05-25","amountCents":150000,"description":"Salary","counterpartyName":"Acme","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-25","amountCents":150000,"description":"Salary","counterpartyName":"Acme","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-25","amountCents":150000,"description":"Salary","counterpartyName":"Acme","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-25","amountCents":150000,"description":"Salary","counterpartyName":"Acme","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-25","amountCents":150000,"description":"Salary","counterpartyName":"Acme","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-25","amountCents":150000,"description":"Salary","counterpartyName":"Acme","categoryId":1}},
+    {"op":"recurring.list"},
+    {"op":"alerts.list"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-13","amountCents":400000,"description":"Windfall"}},
+    {"op":"alerts.list"},
+    {"op":"balances.set","input":{"accountId":1,"date":"2026-11-14","balanceCents":10000}},
+    {"op":"alerts.list"}
+  ]
+}

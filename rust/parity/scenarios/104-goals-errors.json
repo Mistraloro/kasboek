@@ -1,0 +1,18 @@
+{
+  "name": "goals create: validation and account errors",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"goals.create","input":{"name":"x","targetCents":100,"accountId":5}},
+    {"op":"goals.create","input":{"name":"","targetCents":100}},
+    {"op":"goals.create","input":{"name":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","targetCents":100}},
+    {"op":"goals.create","input":{"name":"x","targetCents":0}},
+    {"op":"goals.create","input":{"name":"x","targetCents":1000000000001}},
+    {"op":"goals.create","input":{"name":"x","targetCents":100,"targetDate":"2026-1-1"}},
+    {"op":"goals.create","input":{"name":"x","targetCents":100,"savedCents":-1}},
+    {"op":"goals.create","input":{"name":"x","targetCents":100,"savedCents":null,"targetDate":null,"accountId":null}},
+    {"op":"goals.create","input":{"targetCents":100}},
+    {"op":"goals.create","input":{"name":"x","targetCents":100,"other":1}},
+    {"op":"goals.list"},
+    {"op":"goals.list","input":{"a":1}}
+  ]
+}

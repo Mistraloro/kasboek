@@ -1,0 +1,763 @@
+// pages/Overview.tsx with components/Suggestions.tsx: month navigation, three stat cards, alerts, the Suggestions card, the
+// spending-by-category bars, the accounts list and the six-month bars. Everything arrives pre-formatted from Rust.
+import { Theme, Icons, Icon, Label, Button, IconButton, Card, CardHeader, PageHeader, EmptyState, MonthNav, CategoryBars, MonthBars, CategoryBar, MonthDatum, PressTarget, Scrollbar } from "@kb-ui";
+import { Tx } from "tx.slint";
+import { HoldEye } from "parts.slint";
+
+export struct AlertRow {
+    key: string,
+    text: string,
+    // The budget "almost" level is calm, everything else red.
+    near: bool,
+    page: string,
+}
+
+export struct TipRow {
+    key: string,
+    title: string,
+    body: string,
+    // "warning" | "tip" | "info"
+    severity: string,
+    severity-label: string,
+    action: string,
+    page: string,
+}
+
+export struct AccountRow {
+    name: string,
+    balance: string,
+    // "≈ €12,00" or the no-rate text for another currency; "" for the main currency.
+    other: string,
+    // The account number as it is shown while the eye is held; `masked` is what a screen reader hears at rest.
+    number: string,
+    masked: string,
+}
+
+component Stat inherits Card {
+    in property <string> label;
+    in property <string> value;
+    in property <string> tone;
+    in property <string> hint;
+    // The cards of one row are as tall as the tallest.
+    in property <length> min-h: 0px;
+    height: max(col.preferred-height + 2px, root.min-h);
+    accessible-role: AccessibleRole.text;
+    accessible-label: root.label + ": " + root.value + (root.hint != "" ? ", " + root.hint : "");
+    col := VerticalLayout {
+        padding: 21px;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        Label {
+            text: root.label;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+        }
+        Rectangle {
+            height: 4px;
+        }
+        Label {
+            text: root.value;
+            numeric: true;
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.52px;
+            lh: 39px;
+            color: root.tone == "accent" ? Theme.accent : root.tone == "negative" ? Theme.negative : Theme.text;
+        }
+        if root.hint != "": Label {
+            text: root.hint;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.muted;
+        }
+    }
+}
+
+// A full-width row that is a button: alerts, "uncategorised", "unconverted".
+component RowButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> calm: true;
+    in property <image> icon;
+    in property <color> icon-tint: Theme.accent;
+    in property <string> hint;
+    in property <string> action;
+    callback clicked();
+    height: row.preferred-height + 2px;
+    border-radius: Theme.r-xl;
+    border-width: 1px;
+    border-color: root.calm ? (tgt.hovered ? Theme.accent : Theme.border) : Theme.negative.with-alpha(0.3);
+    background: root.calm ? Theme.surface : Theme.negative.with-alpha(0.05);
+    row := HorizontalLayout {
+        padding-left: 17px;
+        padding-right: 17px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                size: 15px;
+                tint: root.icon-tint;
+            }
+        }
+        Label {
+            text: root.label;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            wrap: word-wrap;
+            horizontal-stretch: 1;
+        }
+        if root.action != "": Label {
+            text: root.action;
+            font-size: Theme.fs-ui;
+            font-weight: 500;
+            lh: Theme.lh-ui;
+            color: Theme.accent;
+        }
+    }
+    tgt := PressTarget {
+        label: root.label;
+        ring-radius: 14px;
+        activated => {
+            root.clicked();
+        }
+    }
+}
+
+component TipItem inherits Rectangle {
+    in property <TipRow> tip;
+    in property <bool> last: false;
+    callback go(string);
+    callback feedback(string, string);
+    height: row.preferred-height + (root.last ? 0px : 1px);
+    row := HorizontalLayout {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 14px;
+        padding-bottom: 14px;
+        spacing: 12px;
+        VerticalLayout {
+            padding-top: 2px;
+            alignment: start;
+            Icon {
+                source: root.tip.severity == "warning" ? Icons.triangle-exclamation-point : root.tip.severity == "tip" ? Icons.lightbulb : Icons.info;
+                size: 16px;
+                tint: root.tip.severity == "warning" ? Theme.warning : root.tip.severity == "tip" ? Theme.accent : Theme.muted;
+            }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            Label {
+                text: root.tip.title;
+                font-size: Theme.fs-ui;
+                font-weight: 500;
+                lh: Theme.lh-ui;
+                wrap: word-wrap;
+                accessible-role: AccessibleRole.text;
+                accessible-description: root.tip.severity-label;
+            }
+            Label {
+                text: root.tip.body;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                color: Theme.muted;
+                wrap: word-wrap;
+                accessible-role: AccessibleRole.text;
+            }
+            Rectangle {
+                height: 8px;
+            }
+            HorizontalLayout {
+                spacing: 4px;
+                alignment: start;
+                Button {
+                    small: true;
+                    text: root.tip.action;
+                    clicked => {
+                        root.go(root.tip.page);
+                    }
+                }
+                Button {
+                    small: true;
+                    variant: "ghost";
+                    text: Tx.tr("insights.notUseful");
+                    clicked => {
+                        root.feedback(root.tip.key, "not_useful");
+                    }
+                }
+                Button {
+                    small: true;
+                    variant: "ghost";
+                    text: Tx.tr("insights.hide");
+                    clicked => {
+                        root.feedback(root.tip.key, "dismissed");
+                    }
+                }
+            }
+        }
+    }
+    if !root.last: Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+}
+
+component Suggestions inherits Card {
+    in property <string> description;
+    in property <bool> collapsed;
+    in property <bool> show-get;
+    in property <string> get-text;
+    in property <[TipRow]> tips;
+    in property <string> more-text;
+    in property <string> empty-text;
+    in property <string> error-text;
+    in property <string> sent-text;
+    in property <bool> has-sent;
+    in-out property <bool> sent-open: false;
+    callback toggle();
+    callback get();
+    callback more();
+    callback go(string);
+    callback feedback(string, string);
+    height: col.preferred-height + 2px;
+
+    col := VerticalLayout {
+        CardHeader {
+            title: Tx.tr("insights.title");
+            if !root.collapsed && root.show-get: Button {
+                small: true;
+                has-icon: true;
+                icon: Icons.sparkles;
+                text: root.get-text;
+                clicked => {
+                    root.get();
+                }
+            }
+            IconButton {
+                icon: root.collapsed ? Icons.chevron-down : Icons.chevron-up;
+                label: Tx.tr(root.collapsed ? "insights.expand" : "insights.collapse");
+                icon-size: 15px;
+                clicked => {
+                    root.toggle();
+                }
+            }
+        }
+        if !root.collapsed && root.error-text != "": Label {
+            text: root.error-text;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+        if !root.collapsed && root.error-text == "" && root.tips.length == 0: VerticalLayout {
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 16px;
+            padding-bottom: 16px;
+            Label {
+                text: root.empty-text;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.muted;
+                wrap: word-wrap;
+                accessible-role: AccessibleRole.text;
+            }
+        }
+        if !root.collapsed && root.error-text == "": VerticalLayout {
+            for tip[i] in root.tips: TipItem {
+                tip: tip;
+                last: i == root.tips.length - 1;
+                go(p) => {
+                    root.go(p);
+                }
+                feedback(k, kind) => {
+                    root.feedback(k, kind);
+                }
+            }
+        }
+        if !root.collapsed && root.more-text != "": Rectangle {
+            height: 45px;
+            Rectangle {
+                y: 0px;
+                height: 1px;
+                background: Theme.border;
+            }
+            Button {
+                x: 20px - 0px;
+                y: 8px;
+                small: true;
+                variant: "ghost";
+                text: root.more-text;
+                clicked => {
+                    root.more();
+                }
+            }
+        }
+        if !root.collapsed && root.has-sent: Rectangle {
+            height: sent.preferred-height + 1px;
+            Rectangle {
+                y: 0px;
+                height: 1px;
+                background: Theme.border;
+            }
+            sent := VerticalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-top: 10px;
+                padding-bottom: 10px;
+                Rectangle {
+                    height: Theme.lh-xs;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: start;
+                        VerticalLayout {
+                            alignment: center;
+                            Path {
+                                width: 8px;
+                                height: 8px;
+                                viewbox-width: 8;
+                                viewbox-height: 8;
+                                fill: Theme.muted;
+                                MoveTo {
+                                    x: root.sent-open ? 0 : 1;
+                                    y: root.sent-open ? 1 : 0;
+                                }
+                                LineTo {
+                                    x: root.sent-open ? 8 : 7;
+                                    y: root.sent-open ? 1 : 4;
+                                }
+                                LineTo {
+                                    x: root.sent-open ? 4 : 1;
+                                    y: root.sent-open ? 7 : 8;
+                                }
+                                Close {}
+                            }
+                        }
+                        Label {
+                            text: Tx.tr("insights.consent.show");
+                            font-size: Theme.fs-xs;
+                            lh: Theme.lh-xs;
+                            color: Theme.muted;
+                        }
+                    }
+                    PressTarget {
+                        label: Tx.tr("insights.consent.show");
+                        accessible-checkable: true;
+                        accessible-checked: root.sent-open;
+                        ring-radius: 8px;
+                        activated => {
+                            root.sent-open = !root.sent-open;
+                        }
+                    }
+                }
+                if root.sent-open: Rectangle {
+                    height: 8px + box.preferred-height;
+                    box := Rectangle {
+                        y: 8px;
+                        height: pre.preferred-height + 26px;
+                        border-radius: Theme.r-lg;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        background: Theme.surface-2;
+                        pre := Text {
+                            x: 13px;
+                            y: 13px;
+                            width: parent.width - 26px;
+                            text: root.sent-text;
+                            font-family: "monospace";
+                            font-size: Theme.fs-chart;
+                            color: Theme.text;
+                            wrap: word-wrap;
+                            accessible-role: AccessibleRole.text;
+                        }
+                        preferred-height: pre.preferred-height + 26px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+component Placeholder inherits Card {
+    in property <string> text;
+    height: row.preferred-height + 2px;
+    row := VerticalLayout {
+        padding: 21px;
+        Label {
+            text: root.text;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+    }
+}
+
+export component OverviewPage inherits Rectangle {
+    in property <string> title;
+    in property <string> month-label;
+    in-out property <int> year: 2026;
+    in-out property <int> month: 11;
+    in property <int> today-year: 2026;
+    in property <int> today-month: 11;
+    in property <[string]> month-names;
+    in property <bool> show-review;
+    in property <string> review-text;
+    in property <[AlertRow]> alerts;
+    in property <string> income-label;
+    in property <string> income;
+    in property <string> spending-label;
+    in property <string> spending;
+    in property <string> left-label;
+    in property <string> left;
+    in property <string> left-tone;
+    in property <string> left-hint;
+    // A section that could not be loaded says why (for instance that the operation is not ported yet).
+    in property <string> summary-error;
+    in property <string> accounts-error;
+    in property <bool> tips-visible: true;
+    in property <bool> tips-collapsed;
+    in property <bool> tips-show-get;
+    in property <string> tips-get-text;
+    in property <[TipRow]> tips;
+    in property <string> tips-more;
+    in property <string> tips-empty;
+    in property <string> tips-error;
+    in property <string> sent-text;
+    in property <bool> tips-has-sent;
+    in-out property <bool> sent-open: false;
+    in property <string> unconverted-text;
+    in property <string> unconverted-hint;
+    in property <string> uncategorized-text;
+    in property <string> uncategorized-action;
+    in property <string> category-description;
+    in property <[CategoryBar]> categories;
+    in property <float> category-top: 1;
+    in property <string> categories-empty-title;
+    in property <string> categories-empty-body;
+    in property <string> accounts-title;
+    in property <[AccountRow]> accounts;
+    in property <string> eye-label;
+    in property <string> trend-title;
+    in property <string> trend-description;
+    in property <[MonthDatum]> months;
+    in property <float> month-top: 1;
+    in property <string> trend-summary;
+    in property <string> income-legend;
+    in property <string> spending-legend;
+    out property <bool> numbers-shown: eye.held;
+    callback month-changed(int, int);
+    callback go(string);
+    callback review();
+    callback tip-feedback(string, string);
+    callback toggle-tips();
+    callback show-all();
+    callback get-tips();
+
+    property <length> content-w: min(944px, root.width - 80px);
+    property <length> grid-w: root.content-w - 16px;
+    property <length> row-h: max(by-cat.preferred-height, acc.preferred-height) + 2px;
+    background: Theme.bg;
+
+    flick := Flickable {
+        width: parent.width - 10px;
+        height: parent.height;
+        content-height: page.preferred-height + 16px + 64px;
+        interactive: false;
+        page := VerticalLayout {
+            x: (parent.width - root.content-w) / 2;
+            // 14px and a 29px gap instead of 16 and 32: the page header of the design system sits 3 px (css) taller than the
+            // renderer's (polish list, plan section 10).
+            y: 14px;
+            width: root.content-w;
+            PageHeader {
+                title: root.title;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+                    if root.show-review: Button {
+                        small: true;
+                        has-icon: true;
+                        icon: Icons.sparkles;
+                        text: root.review-text;
+                        clicked => {
+                            root.review();
+                        }
+                    }
+                    MonthNav {
+                        year <=> root.year;
+                        month <=> root.month;
+                        label: root.month-label;
+                        month-names: root.month-names;
+                        today-year: root.today-year;
+                        today-month: root.today-month;
+                        changed(y, m) => {
+                            root.month-changed(y, m);
+                        }
+                    }
+                }
+            }
+            Rectangle {
+                height: 29px;
+            }
+            if root.alerts.length > 0: VerticalLayout {
+                spacing: 8px;
+                for a in root.alerts: RowButton {
+                    label: a.text;
+                    calm: a.near;
+                    icon: Icons.triangle-exclamation-point;
+                    icon-tint: a.near ? Theme.warning : Theme.negative;
+                    clicked => {
+                        root.go(a.page);
+                    }
+                }
+                Rectangle {
+                    height: 8px;
+                }
+            }
+            if root.summary-error != "": Placeholder {
+                text: root.summary-error;
+            }
+            if root.summary-error == "": HorizontalLayout {
+                spacing: 16px;
+                Stat {
+                    label: root.income-label;
+                    value: root.income;
+                    min-h: stat3.height;
+                }
+                Stat {
+                    label: root.spending-label;
+                    value: root.spending;
+                    min-h: stat3.height;
+                }
+                stat3 := Stat {
+                    label: root.left-label;
+                    value: root.left;
+                    tone: root.left-tone;
+                    hint: root.left-hint;
+                }
+            }
+            if root.tips-visible: Rectangle {
+                height: 16px;
+            }
+            if root.tips-visible: Suggestions {
+                collapsed: root.tips-collapsed;
+                show-get: root.tips-show-get;
+                get-text: root.tips-get-text;
+                tips: root.tips;
+                more-text: root.tips-more;
+                empty-text: root.tips-empty;
+                error-text: root.tips-error;
+                sent-text: root.sent-text;
+                has-sent: root.tips-has-sent;
+                sent-open <=> root.sent-open;
+                toggle => {
+                    root.toggle-tips();
+                }
+                get => {
+                    root.get-tips();
+                }
+                more => {
+                    root.show-all();
+                }
+                go(p) => {
+                    root.go(p);
+                }
+                feedback(k, kind) => {
+                    root.tip-feedback(k, kind);
+                }
+            }
+            if root.unconverted-text != "": Rectangle {
+                height: 16px;
+            }
+            if root.unconverted-text != "": RowButton {
+                label: root.unconverted-text + " " + root.unconverted-hint;
+                icon: Icons.triangle-exclamation-point;
+                icon-tint: Theme.warning;
+                clicked => {
+                    root.go("settings");
+                }
+            }
+            if root.uncategorized-text != "": Rectangle {
+                height: 16px;
+            }
+            if root.uncategorized-text != "": RowButton {
+                label: root.uncategorized-text;
+                icon: Icons.tags;
+                action: root.uncategorized-action;
+                clicked => {
+                    root.go("transactions");
+                }
+            }
+            Rectangle {
+                height: 16px;
+            }
+            Rectangle {
+                height: root.row-h;
+                by-cat := Card {
+                    x: 0px;
+                    width: root.grid-w * 3 / 5;
+                    height: parent.height;
+                    preferred-height: bc-col.preferred-height;
+                    bc-col := VerticalLayout {
+                        CardHeader {
+                            title: Tx.tr("overview.byCategory");
+                            description: root.category-description;
+                        }
+                        if root.summary-error != "": VerticalLayout {
+                            padding: 20px;
+                            Label {
+                                text: root.summary-error;
+                                font-size: Theme.fs-ui;
+                                lh: Theme.lh-ui;
+                                color: Theme.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                        if root.summary-error == "" && root.categories.length > 0: VerticalLayout {
+                            padding-left: 20px;
+                            padding-right: 20px;
+                            padding-top: 16px;
+                            padding-bottom: 16px;
+                            CategoryBars {
+                                rows: root.categories;
+                                top: root.category-top;
+                                label: Tx.tr("overview.byCategory");
+                            }
+                        }
+                        if root.summary-error == "" && root.categories.length == 0: EmptyState {
+                            icon: Icons.chart-pie;
+                            title: root.categories-empty-title;
+                            body: root.categories-empty-body;
+                        }
+                    }
+                }
+                acc := Card {
+                    x: root.grid-w * 3 / 5 + 16px;
+                    width: root.grid-w * 2 / 5;
+                    height: parent.height;
+                    preferred-height: ac-col.preferred-height;
+                    ac-col := VerticalLayout {
+                        CardHeader {
+                            title: root.accounts-title;
+                            eye := HoldEye {
+                                label: root.eye-label;
+                            }
+                        }
+                        if root.accounts-error != "": VerticalLayout {
+                            padding: 20px;
+                            Label {
+                                text: root.accounts-error;
+                                font-size: Theme.fs-ui;
+                                lh: Theme.lh-ui;
+                                color: Theme.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                        for a[i] in root.accounts: Rectangle {
+                            height: arow.preferred-height + 1px;
+                            accessible-role: AccessibleRole.list-item;
+                            accessible-label: a.name + ", " + a.balance + (a.masked != "" ? ", " + a.masked : "");
+                            arow := HorizontalLayout {
+                                padding-left: 20px;
+                                padding-right: 20px;
+                                padding-top: 12px;
+                                padding-bottom: 12px;
+                                spacing: 12px;
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    Label {
+                                        text: a.name;
+                                        font-size: Theme.fs-ui;
+                                        lh: Theme.lh-ui;
+                                        overflow: elide;
+                                    }
+                                    if eye.held && a.number != "": Label {
+                                        text: a.number;
+                                        numeric: true;
+                                        font-size: Theme.fs-xs;
+                                        lh: Theme.lh-xs;
+                                        color: Theme.muted;
+                                    }
+                                }
+                                VerticalLayout {
+                                    alignment: start;
+                                    Label {
+                                        text: a.balance;
+                                        numeric: true;
+                                        font-size: Theme.fs-ui;
+                                        font-weight: 500;
+                                        lh: Theme.lh-ui;
+                                        horizontal-alignment: right;
+                                    }
+                                    if a.other != "": Label {
+                                        text: a.other;
+                                        numeric: true;
+                                        font-size: Theme.fs-xs;
+                                        lh: Theme.lh-xs;
+                                        color: Theme.muted;
+                                        horizontal-alignment: right;
+                                    }
+                                }
+                            }
+                            if i < root.accounts.length - 1: Rectangle {
+                                y: parent.height - 1px;
+                                height: 1px;
+                                background: Theme.border;
+                            }
+                        }
+                    }
+                }
+            }
+            Rectangle {
+                height: 16px;
+            }
+            Card {
+                height: tr-col.preferred-height + 2px;
+                tr-col := VerticalLayout {
+                    CardHeader {
+                        title: root.trend-title;
+                        description: root.trend-description;
+                    }
+                    if root.summary-error != "": VerticalLayout {
+                        padding: 20px;
+                        Label {
+                            text: root.summary-error;
+                            font-size: Theme.fs-ui;
+                            lh: Theme.lh-ui;
+                            color: Theme.muted;
+                            wrap: word-wrap;
+                        }
+                    }
+                    if root.summary-error == "": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 16px;
+                        padding-bottom: 16px;
+                        MonthBars {
+                            data: root.months;
+                            top: root.month-top;
+                            label: root.trend-title;
+                            summary: root.trend-summary;
+                            income-legend: root.income-legend;
+                            spending-legend: root.spending-legend;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Scrollbar {
+        x: parent.width - self.width;
+        height: parent.height;
+        content-height: flick.content-height;
+        visible-height: flick.height;
+        content-y <=> flick.content-y;
+    }
+    // Wheel scrolling: Flickable is not interactive (no drag), the wheel works through it.
+}

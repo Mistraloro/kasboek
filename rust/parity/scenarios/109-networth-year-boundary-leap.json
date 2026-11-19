@@ -1,0 +1,13 @@
+{
+  "name": "net worth: month ends over a leap day and a year boundary",
+  "clock": "2024-03-15T12:00:00Z",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":1000}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-02-29","amountCents":500,"description":"leap"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2023-12-31","amountCents":1,"description":"nye"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-01-01","amountCents":2,"description":"ny"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2024-03-01","amountCents":4,"description":"mar"}},
+    {"op":"balances.set","input":{"accountId":1,"date":"2024-01-15","balanceCents":7000}},
+    {"op":"networth.summary","input":{"months":0}}
+  ]
+}

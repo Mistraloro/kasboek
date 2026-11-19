@@ -1,0 +1,21 @@
+{
+  "name": "transfers find: an account number on one side makes the pair sure and ahead of the others",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-100,"description":"Plain out"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-06","amountCents":100,"description":"Plain in"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-08","amountCents":-100,"description":"Named out","counterpartyName":"Me"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-08","amountCents":100,"description":"Named in"}},
+    {"op":"@sql","input":{"sql":"UPDATE transactions SET counterparty_iban = 'BE71 0961 2345 6769' WHERE id = 3; UPDATE transactions SET counterparty_iban = 'be68539007547034' WHERE id = 6"}},
+    {"op":"transfers.find"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-12","amountCents":-200,"description":"Cross sure"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-12","amountCents":999999,"description":"Cross way off in dollars"}},
+    {"op":"@sql","input":{"sql":"UPDATE transactions SET counterparty_iban = 'GB29NWBK60161331926819' WHERE id = 7"}},
+    {"op":"transfers.find"}
+  ]
+}

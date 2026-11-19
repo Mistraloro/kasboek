@@ -1,0 +1,301 @@
+// Pieces the auth screens and the shell share, built from kb-ui: AuthLayout and AuthCard (pages/auth/AuthLayout.tsx),
+// link text, the Kasboek mark, hold-to-show eye, choice cards, the strength meter.
+import { Theme, Icons, Icon, Label, PressTarget, Elevated } from "@kb-ui";
+import { Tx } from "tx.slint";
+
+export struct RuleRow {
+    ok: bool,
+    label: string,
+}
+
+// assets/brand/mark.svg: 520x624, drawn `size` wide. Decorative; the name next to it says it all.
+export component Mark inherits Rectangle {
+    in property <length> size: 20px;
+    width: root.size;
+    height: root.size * 624 / 520;
+    Image {
+        width: 100%;
+        height: 100%;
+        source: Icons.mark;
+        colorize: Theme.accent;
+        accessible-role: none;
+    }
+}
+
+// `flex h-full flex-col`: a 44px strip (the drag area in Electron), then the content centred in the rest with `pb-16`
+// and `px-6`; the column is `max-w-sm` (384px), `max-w-xl` (576px) when wide. The logo row sits above the children.
+export component AuthLayout inherits Rectangle {
+    in property <bool> wide: false;
+    background: Theme.bg;
+    accessible-role: none;
+    VerticalLayout {
+        padding-top: 44px;
+        padding-bottom: 64px;
+        padding-left: 24px;
+        padding-right: 24px;
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            VerticalLayout {
+                width: min(root.wide ? 576px : 384px, root.width - 48px);
+                HorizontalLayout {
+                    height: 36px;
+                    alignment: center;
+                    spacing: 10px;
+                    VerticalLayout {
+                        alignment: center;
+                        Mark {
+                            size: 20px;
+                        }
+                    }
+                    Text {
+                        text: Tx.tr("app.name");
+                        font-family: Theme.serif;
+                        font-weight: 600;
+                        font-size: 24px;
+                        letter-spacing: -0.24px;
+                        color: Theme.text;
+                        vertical-alignment: center;
+                    }
+                }
+                Rectangle {
+                    height: 32px;
+                }
+                @children
+            }
+        }
+    }
+}
+
+// `rounded-xl border border-border bg-surface p-6`, title serif 22px medium (leading-tight), body `mt-1.5` 13px muted,
+// content `mt-5`.
+export component AuthCard inherits Rectangle {
+    in property <string> title;
+    in property <string> body;
+    background: Theme.surface;
+    border-radius: Theme.r-xl;
+    border-width: 1px;
+    border-color: Theme.border;
+    height: col.preferred-height + 2px;
+
+    col := VerticalLayout {
+        padding: 24px;
+        Label {
+            height: 27.5px;
+            text: root.title;
+            font-family: Theme.serif;
+            font-weight: 500;
+            font-size: 22px;
+            lh: 27.5px;
+            accessible-role: AccessibleRole.text;
+        }
+        if root.body != "": Rectangle {
+            height: 6px;
+        }
+        if root.body != "": Label {
+            text: root.body;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+        Rectangle {
+            height: 20px;
+        }
+        @children
+    }
+}
+
+// A text button (`font-medium text-accent hover:underline`, or muted that turns red). Tab, Space/Enter and Invoke work.
+export component LinkText inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Theme.accent;
+    in property <color> hover-tint: Theme.accent-hover;
+    in property <int> weight: 500;
+    in property <length> size: Theme.fs-ui;
+    callback clicked();
+    width: label.preferred-width;
+    height: Theme.lh-ui;
+    label := Label {
+        width: parent.width;
+        text: root.text;
+        font-size: root.size;
+        font-weight: root.weight;
+        lh: Theme.lh-ui;
+        color: tgt.hovered ? root.hover-tint : root.tint;
+        accessible-role: none;
+    }
+    tgt := PressTarget {
+        label: root.text;
+        ring-radius: 8px;
+        activated => {
+            root.clicked();
+        }
+    }
+}
+
+// An eye that shows what it hides only while it is held (pointer, or Space/Enter): the account numbers of the Overview.
+// Same release rules as the password field: pointer up, key up, focus lost; `Session.hide-secrets` is handled by the owner.
+export component HoldEye inherits Rectangle {
+    in property <string> label;
+    out property <bool> held: tgt.down;
+    width: 32px;
+    height: 32px;
+    border-radius: Theme.r-md;
+    background: tgt.hovered ? Theme.surface-2 : transparent;
+    Icon {
+        source: root.held ? Icons.eye-off : Icons.eye;
+        size: 16px;
+        tint: tgt.hovered ? Theme.text : Theme.muted;
+    }
+    tgt := PressTarget {
+        label: root.label;
+        ring-radius: 8px;
+        accessible-checkable: true;
+        accessible-checked: root.held;
+        accessible-action-default => {
+            // A screen reader's click cannot hold: nothing happens, as with the password eye.
+        }
+    }
+}
+
+// pages/auth/Setup.tsx `Choice`: a card button with an icon tile, a title, a body and an optional warning note.
+export component Choice inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> body;
+    in property <string> note;
+    in property <bool> enabled: true;
+    callback clicked();
+    background: Theme.surface;
+    border-radius: Theme.r-xl;
+    border-width: 1px;
+    border-color: tgt.hovered && root.enabled ? Theme.accent : Theme.border;
+    opacity: root.enabled ? 1 : 0.55;
+    height: row.preferred-height + 30px;
+
+    row := HorizontalLayout {
+        padding-left: 17px;
+        padding-right: 17px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+        spacing: 12px;
+        VerticalLayout {
+            padding-top: 2px;
+            alignment: start;
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: Theme.r-lg;
+                background: Theme.accent-soft;
+                Icon {
+                    source: root.icon;
+                    size: 16px;
+                    tint: Theme.accent;
+                }
+            }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            Label {
+                text: root.title;
+                font-weight: 600;
+                lh: Theme.lh-body;
+            }
+            Label {
+                text: root.body;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.muted;
+                wrap: word-wrap;
+            }
+            if root.note != "": Label {
+                text: root.note;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                color: Theme.warning;
+                wrap: word-wrap;
+            }
+        }
+    }
+    tgt := PressTarget {
+        label: root.title;
+        description: root.body;
+        enabled: root.enabled;
+        ring-radius: 14px;
+        activated => {
+            root.clicked();
+        }
+    }
+}
+
+// The live strength meter of PasswordFields: four segments (`h-1.5 flex-1 rounded-full`) coloured by strength, the
+// strength word (or the hint) under it, and the four rules ticked off as they are met.
+export component StrengthMeter inherits Rectangle {
+    in property <int> strength;
+    in property <bool> has-text;
+    in property <string> text;
+    in property <[RuleRow]> rules;
+    height: col.preferred-height;
+    accessible-role: none;
+    property <color> tone: root.strength >= 4 ? Theme.accent : root.strength >= 2 ? Theme.warning : Theme.negative;
+
+    col := VerticalLayout {
+        Rectangle {
+            height: 6px;
+            accessible-role: none;
+            HorizontalLayout {
+                spacing: 4px;
+                for i in [1, 2, 3, 4]: Rectangle {
+                    border-radius: Theme.r-full;
+                    background: root.has-text && root.strength >= i ? root.tone : Theme.surface-2;
+                }
+            }
+        }
+        Rectangle {
+            height: 4px;
+        }
+        Label {
+            text: root.text;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+            accessible-live-region: polite;
+        }
+        Rectangle {
+            height: 8px;
+        }
+        for r in root.rules: HorizontalLayout {
+            height: 18px;
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 12px;
+                    height: 12px;
+                    if r.ok: Icon {
+                        source: Icons.check;
+                        size: 12px;
+                        tint: Theme.accent;
+                    }
+                    if !r.ok: Rectangle {
+                        border-radius: Theme.r-full;
+                        border-width: 1px;
+                        border-color: Theme.border-strong;
+                    }
+                }
+            }
+            Label {
+                text: r.label;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                color: r.ok ? Theme.accent : Theme.muted;
+                accessible-role: AccessibleRole.text;
+                accessible-description: r.ok ? "OK" : "";
+            }
+        }
+    }
+}

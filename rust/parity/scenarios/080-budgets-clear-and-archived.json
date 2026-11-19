@@ -1,0 +1,15 @@
+{
+  "name": "budgets: null clears, an archived category with a budget stays in the list",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":100}},
+    {"op":"budgets.set","input":{"categoryId":4,"month":"2026-10","amountCents":200}},
+    {"op":"categories.update","input":{"id":4,"archived":true}},
+    {"op":"categories.update","input":{"id":5,"archived":true}},
+    {"op":"budgets.list","input":{"month":"2026-10"}},
+    {"op":"budgets.list","input":{"month":"2026-11"}},
+    {"op":"budgets.set","input":{"categoryId":4,"month":"2026-10","amountCents":null}},
+    {"op":"budgets.set","input":{"categoryId":4,"month":"2026-10","amountCents":null}},
+    {"op":"budgets.list","input":{"month":"2026-10"}}
+  ]
+}

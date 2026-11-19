@@ -1,0 +1,19 @@
+{
+  "plain": "{\"version\":2,\"mode\":\"password\",\"note\":\"invented fixture, zoë ① ﬁ\"}",
+  "windows": {
+    "keyHex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dc",
+    "localState": "{\"os_crypt\":{\"encrypted_key\":\"RFBBUEnc1c7HwLmyq6Sdlo+IgXpzbGVeV1BJQjs0LSYfGBEKAw==\"}}",
+    "blobHex": "763130000102030405060708090a0bb7c304a31feade8305b998aee54a59afb3a74181ed4ee6e2d24aadd682def15b0646bf7c0777204e00896f01abe7856898bb42737ba2af88c9066e75cc2d9978bc3923f69412270740fe26230f3dd7166ca99fad095ab9"
+  },
+  "macos": {
+    "password": "invented-keychain-secret",
+    "blobHex": "763130c28661b58d15f2d403cbd9db5c6eaba70583d1360aa13b2e24b69edca627d085bc813c182c15887582dc68da37fba724e2097d9cd385c15210d56776c1b446bf13c492d65bdbc1d9a2d8d1f45ddb9d87"
+  },
+  "linuxV11": {
+    "password": "invented-keyring-secret",
+    "blobHex": "7631318608fda8aeb1206fe2a61b46bb40ed041b305fdcb542c92f2a26e180ad288f868d8498981bac083b07d47e36b909c5649d35c980d6dc9f4e2e8fd4c273745e7a1743228c07da473c05d2c9a4b017a2ed"
+  },
+  "linuxV10": {
+    "blobHex": "76313029044ac331a2ef244e9dae535ca3498970eb8e23042b4dbec0aff0640cb7c014a5dd3ced6579bc642a947b17969c596eaea39f6900ebbdce43841396b9cf499b4eac5c319b8c0ed9d5bf9e633243e866"
+  }
+}

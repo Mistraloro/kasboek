@@ -1,0 +1,556 @@
+{
+ "passwords": [
+  {
+   "input": "",
+   "ok": false,
+   "issues": [
+    "length",
+    "variety"
+   ],
+   "strength": 0,
+   "bits": 0,
+   "classes": 0
+  },
+  {
+   "input": "a",
+   "ok": false,
+   "issues": [
+    "length",
+    "variety"
+   ],
+   "strength": 0,
+   "bits": 5,
+   "classes": 1
+  },
+  {
+   "input": "password",
+   "ok": false,
+   "issues": [
+    "length",
+    "variety",
+    "common"
+   ],
+   "strength": 0,
+   "bits": 11,
+   "classes": 1
+  },
+  {
+   "input": "Password1!",
+   "ok": false,
+   "issues": [
+    "length",
+    "common"
+   ],
+   "strength": 0,
+   "bits": 20,
+   "classes": 4
+  },
+  {
+   "input": "P@ssw0rd123",
+   "ok": false,
+   "issues": [
+    "length",
+    "common"
+   ],
+   "strength": 0,
+   "bits": 22,
+   "classes": 4
+  },
+  {
+   "input": "Welkom2026!",
+   "ok": false,
+   "issues": [
+    "length",
+    "common"
+   ],
+   "strength": 0,
+   "bits": 22,
+   "classes": 4
+  },
+  {
+   "input": "summersummer",
+   "ok": false,
+   "issues": [
+    "variety",
+    "common"
+   ],
+   "strength": 0,
+   "bits": 14,
+   "classes": 1
+  },
+  {
+   "input": "correct horse battery 12",
+   "ok": true,
+   "issues": [],
+   "strength": 4,
+   "bits": 147,
+   "classes": 3
+  },
+  {
+   "input": "kraan-tulp-Ober-7-fiets-mist",
+   "ok": true,
+   "issues": [],
+   "strength": 4,
+   "bits": 184,
+   "classes": 4
+  },
+  {
+   "input": "aaaaBBBB1111!!!!",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 1,
+   "bits": 32,
+   "classes": 4
+  },
+  {
+   "input": "abcdEFGH5678$%",
+   "ok": false,
+   "issues": [
+    "common",
+    "pattern"
+   ],
+   "strength": 0,
+   "bits": 17,
+   "classes": 4
+  },
+  {
+   "input": "qwertyuiop12AB",
+   "ok": false,
+   "issues": [
+    "common",
+    "pattern"
+   ],
+   "strength": 0,
+   "bits": 15,
+   "classes": 3
+  },
+  {
+   "input": "Xk9#mP2$vL7@nQ4!",
+   "ok": true,
+   "issues": [],
+   "strength": 4,
+   "bits": 105,
+   "classes": 4
+  },
+  {
+   "input": "123123123123Ab",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 1,
+   "bits": 36,
+   "classes": 3
+  },
+  {
+   "input": "ababababab12CD",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 2,
+   "bits": 43,
+   "classes": 3
+  },
+  {
+   "input": "Kasboek-is-leuk-2026",
+   "ok": false,
+   "issues": [
+    "appName"
+   ],
+   "strength": 1,
+   "bits": 39,
+   "classes": 4
+  },
+  {
+   "input": "k@sb0ek-Zebra-77",
+   "ok": false,
+   "issues": [
+    "appName"
+   ],
+   "strength": 1,
+   "bits": 32,
+   "classes": 4
+  },
+  {
+   "input": "Zebra-Maan-Tafel-91",
+   "ok": true,
+   "issues": [],
+   "strength": 4,
+   "bits": 125,
+   "classes": 4
+  },
+  {
+   "input": "ééééé-Ünï-çödé-12",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 3,
+   "bits": 62,
+   "classes": 3
+  },
+  {
+   "input": "only lowercase words here",
+   "ok": false,
+   "issues": [
+    "variety"
+   ],
+   "strength": 4,
+   "bits": 147,
+   "classes": 2
+  },
+  {
+   "input": "ONLYUPPERCASEWORDS",
+   "ok": false,
+   "issues": [
+    "variety"
+   ],
+   "strength": 4,
+   "bits": 85,
+   "classes": 1
+  },
+  {
+   "input": "tulp\nkraan\nober 12AB",
+   "ok": true,
+   "issues": [],
+   "strength": 4,
+   "bits": 131,
+   "classes": 4
+  },
+  {
+   "input": "emoji-😀😀😀-Abc-123",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 3,
+   "bits": 67,
+   "classes": 4
+  },
+  {
+   "input": "zyxw-Vuts-Rqpo-1",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 3,
+   "bits": 63,
+   "classes": 4
+  },
+  {
+   "input": "Bank2026budget!",
+   "ok": false,
+   "issues": [
+    "common"
+   ],
+   "strength": 1,
+   "bits": 30,
+   "classes": 4
+  },
+  {
+   "input": "Leuven-Gent-1999",
+   "ok": false,
+   "issues": [
+    "common"
+   ],
+   "strength": 1,
+   "bits": 32,
+   "classes": 4
+  },
+  {
+   "input": "a1B2c3D4e5F6g7H8",
+   "ok": false,
+   "issues": [
+    "common"
+   ],
+   "strength": 0,
+   "bits": 29,
+   "classes": 3
+  },
+  {
+   "input": "lenteLENTE12!!",
+   "ok": false,
+   "issues": [
+    "common"
+   ],
+   "strength": 0,
+   "bits": 28,
+   "classes": 4
+  },
+  {
+   "input": "Mm3$Nn4%Oo5^Pp6&",
+   "ok": true,
+   "issues": [],
+   "strength": 4,
+   "bits": 105,
+   "classes": 4
+  },
+  {
+   "input": "wxcvbn-Abc-1234-zz",
+   "ok": false,
+   "issues": [
+    "pattern"
+   ],
+   "strength": 4,
+   "bits": 71,
+   "classes": 4
+  },
+  {
+   "input": "Tr0ub4dor&3",
+   "ok": false,
+   "issues": [
+    "length"
+   ],
+   "strength": 4,
+   "bits": 72,
+   "classes": 4
+  },
+  {
+   "input": "correct-horse-battery-staple",
+   "ok": false,
+   "issues": [
+    "variety"
+   ],
+   "strength": 4,
+   "bits": 153,
+   "classes": 2
+  }
+ ],
+ "iban": [
+  {
+   "input": "",
+   "mask": "",
+   "found": [],
+   "numbers": ""
+  },
+  {
+   "input": "no account here",
+   "mask": "no account here",
+   "found": [],
+   "numbers": "no account here"
+  },
+  {
+   "input": "BE68 5390 0754 7034",
+   "mask": "BE…7034",
+   "found": [
+    "BE68539007547034"
+   ],
+   "numbers": "BE…7034"
+  },
+  {
+   "input": "BE68539007547034",
+   "mask": "BE…7034",
+   "found": [
+    "BE68539007547034"
+   ],
+   "numbers": "BE…7034"
+  },
+  {
+   "input": "NL91 ABNA 0417 1643 00",
+   "mask": "NL…4300",
+   "found": [
+    "NL91ABNA0417164300"
+   ],
+   "numbers": "NL…4300"
+  },
+  {
+   "input": "NL91ABNA0417164300",
+   "mask": "NL…4300",
+   "found": [
+    "NL91ABNA0417164300"
+   ],
+   "numbers": "NL…4300"
+  },
+  {
+   "input": "REFNL91ABNA0417164300 thanks",
+   "mask": "REFNL…4300 thanks",
+   "found": [
+    "NL91ABNA0417164300"
+   ],
+   "numbers": "REFNL…4300 thanks"
+  },
+  {
+   "input": "transfer to DE89 3704 0044 0532 0130 00 and GB82 WEST 1234 5698 7654 32 today",
+   "mask": "transfer to DE…3000 and GB…5432 today",
+   "found": [
+    "DE89370400440532013000",
+    "GB82WEST12345698765432"
+   ],
+   "numbers": "transfer to DE…3000 and GB…5432 today"
+  },
+  {
+   "input": "lowercase nl91abna0417164300 too",
+   "mask": "lowercase NL…4300 too",
+   "found": [
+    "NL91ABNA0417164300"
+   ],
+   "numbers": "lowercase NL…4300 too"
+  },
+  {
+   "input": "FR14 2004 1010 0505 0001 3M02 606 end",
+   "mask": "FR…2606 end",
+   "found": [
+    "FR1420041010050500013M02606"
+   ],
+   "numbers": "FR…2606 end"
+  },
+  {
+   "input": "XX00 1234 5678 9012 3456",
+   "mask": "XX00 1234 5678 9012 3456",
+   "found": [],
+   "numbers": "XX…3456"
+  },
+  {
+   "input": "ES9121000418450200051332 ES9121000418450200051332",
+   "mask": "ES…1332 ES…1332",
+   "found": [
+    "ES9121000418450200051332"
+   ],
+   "numbers": "ES…1332 ES…1332"
+  },
+  {
+   "input": "AAAA1234567890123456",
+   "mask": "AAAA1234567890123456",
+   "found": [],
+   "numbers": "AAAA…3456"
+  },
+  {
+   "input": "ref 2026-11-15 2026-11-16 2026-11-17 2026-11-18",
+   "mask": "ref 2026-11-15 2026-11-16 2026-11-17 2026-11-18",
+   "found": [],
+   "numbers": "ref 2026-11-15 2026-11-16 2026-11-17 2026-11-18"
+  },
+  {
+   "input": "card 4111 1111 1111 1111 paid",
+   "mask": "card 4111 1111 1111 1111 paid",
+   "found": [],
+   "numbers": "card …1111 paid"
+  },
+  {
+   "input": "long 1234567890123 number",
+   "mask": "long 1234567890123 number",
+   "found": [],
+   "numbers": "long …0123 number"
+  },
+  {
+   "input": "15-11-2026 16-11-2026 17-11-2026 18-11-2026",
+   "mask": "15-11-2026 16-11-2026 17-11-2026 18-11-2026",
+   "found": [],
+   "numbers": "15-11-2026 16-11-2026 17-11-2026 18-11-2026"
+  },
+  {
+   "input": "2026-11-15 15-11-2026 2026-11-16 15-11-2026",
+   "mask": "2026-11-15 15-11-2026 2026-11-16 15-11-2026",
+   "found": [],
+   "numbers": "2026-11-15 15-11-2026 2026-11-16 15-11-2026"
+  },
+  {
+   "input": "BE71 0961 2345 6769 en BE68 5390 0754 7034",
+   "mask": "BE…6769 en BE…7034",
+   "found": [
+    "BE71096123456769",
+    "BE68539007547034"
+   ],
+   "numbers": "BE…6769 en BE…7034"
+  },
+  {
+   "input": "prefixBE68539007547034suffix",
+   "mask": "prefixBE…7034suffix",
+   "found": [
+    "BE68539007547034"
+   ],
+   "numbers": "prefixBE…7034suffix"
+  },
+  {
+   "input": "tab\tBE68 5390 0754 7034",
+   "mask": "tab\tBE…7034",
+   "found": [
+    "BE68539007547034"
+   ],
+   "numbers": "tab\tBE…7034"
+  },
+  {
+   "input": "BE68 5390 0754 7034BE68 5390 0754 7034",
+   "mask": "BE…7034BE…7034",
+   "found": [
+    "BE68539007547034"
+   ],
+   "numbers": "BE…7034BE…7034"
+  },
+  {
+   "input": "NO93 8601 1117 947",
+   "mask": "NO…7947",
+   "found": [
+    "NO9386011117947"
+   ],
+   "numbers": "NO…7947"
+  },
+  {
+   "input": "IT60 X054 2811 1010 0000 0123 456",
+   "mask": "IT…3456",
+   "found": [
+    "IT60X0542811101000000123456"
+   ],
+   "numbers": "IT…3456"
+  },
+  {
+   "input": "12 digits 123456789012 only",
+   "mask": "12 digits 123456789012 only",
+   "found": [],
+   "numbers": "12 digits 123456789012 only"
+  },
+  {
+   "input": "13 digits 1234567890123",
+   "mask": "13 digits 1234567890123",
+   "found": [],
+   "numbers": "13 digits …0123"
+  },
+  {
+   "input": "1234-5678-9012-3456 and 1234 5678 9012 3",
+   "mask": "1234-5678-9012-3456 and 1234 5678 9012 3",
+   "found": [],
+   "numbers": "…3456 and …0123"
+  },
+  {
+   "input": "café €12,50 BE68 5390 0754 7034 ünï",
+   "mask": "café €12,50 BE…7034 ünï",
+   "found": [
+    "BE68539007547034"
+   ],
+   "numbers": "café €12,50 BE…7034 ünï"
+  }
+ ],
+ "valid": [
+  {
+   "input": "BE68539007547034",
+   "valid": true
+  },
+  {
+   "input": "NL91ABNA0417164300",
+   "valid": true
+  },
+  {
+   "input": "DE89370400440532013000",
+   "valid": true
+  },
+  {
+   "input": "BE68539007547035",
+   "valid": false
+  },
+  {
+   "input": "GB82WEST12345698765432",
+   "valid": true
+  },
+  {
+   "input": "XX",
+   "valid": false
+  },
+  {
+   "input": "",
+   "valid": false
+  }
+ ]
+}

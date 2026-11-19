@@ -1,7 +1,7 @@
 //! Transactions, categories and the rule matching a new transaction goes through: the parts of src/core/finance.ts
 //! the ported operations use. All SQL is behind [`kb_db::Queries`].
 use crate::error::{AppError, AppResult};
-use crate::jsstr::{collapse_spaces, is_js_space, js_trim};
+use crate::jsstr::{collapse_spaces, is_js_space, is_letter, js_trim};
 use kb_db::rows::{CategoryFilter, Direction, NewSplit, NewTxRow, RuleRow, TxEdit, TxFilterRow, TxRow};
 use kb_db::{DbError, Store};
 use serde::Serialize;
@@ -102,13 +102,9 @@ pub struct ListFilter {
     pub offset: i64,
 }
 
-/// `addMonths(month, 1)` for a valid `YYYY-MM`.
+/// `monthRange(month)` of src/shared/month.ts for a valid `YYYY-MM`: the month as `[from, to)`.
 pub fn month_range(month: &str) -> (String, String) {
-    let year: i64 = month[..4].parse().unwrap_or(0);
-    let m: i64 = month[5..].parse().unwrap_or(1);
-    // `new Date(y, m, 1)` rolls December over into January of the next year.
-    let (ny, nm) = if m == 12 { (year + 1, 1) } else { (year, m + 1) };
-    (format!("{month}-01"), format!("{ny:04}-{nm:02}-01"))
+    (format!("{month}-01"), format!("{}-01", crate::dates::add_months(month, 1)))
 }
 
 pub fn list_transactions<S: Store>(store: &S, f: &ListFilter, main_currency: &str) -> AppResult<TransactionPage> {
@@ -133,6 +129,11 @@ pub fn list_transactions<S: Store>(store: &S, f: &ListFilter, main_currency: &st
 
 pub fn get_transaction<S: Store>(store: &S, id: i64) -> AppResult<Transaction> {
     store.tx_get(id)?.map(Transaction::from).ok_or_else(|| AppError::new("tx.not_found", "That transaction no longer exists."))
+}
+
+/// The main currency of the settings (`getSettings(db).currency`).
+pub fn main_currency<S: Store>(store: &S) -> AppResult<String> {
+    Ok(crate::settings::get_settings(store)?.get("currency").and_then(serde_json::Value::as_str).unwrap_or("EUR").to_owned())
 }
 
 fn require_account<S: Store>(store: &S, id: i64) -> AppResult<kb_db::rows::AccountRow> {
@@ -371,9 +372,9 @@ fn fold(s: &str) -> String {
     js_trim(&collapse_spaces(&stripped)).to_owned()
 }
 
-/// `[\p{L}\p{N}]`, approximated by Rust's alphabetic and numeric properties.
+/// `[\p{L}\p{N}]`.
 fn is_word_char(c: char) -> bool {
-    c.is_alphabetic() || c.is_numeric()
+    is_letter(c) || c.is_numeric()
 }
 
 /// `(?:^|[^\p{L}\p{N}])p(?:$|[^\p{L}\p{N}])` found in `t`: `p` somewhere with no letter or digit right before or after.
@@ -399,24 +400,25 @@ pub fn text_matches(text: &str, pattern: &str, match_kind: &str) -> bool {
     }
 }
 
-fn norm_iban(s: Option<&str>) -> String {
+pub(crate) fn norm_iban(s: Option<&str>) -> String {
     s.unwrap_or("").chars().filter(|c| !is_js_space(*c)).collect::<String>().to_uppercase()
 }
 
-fn rule_matches(r: &RuleRow, t: &RuleText<'_>) -> bool {
-    if r.field == "iban" {
-        return t.counterparty_iban.is_some_and(|i| !i.is_empty()) && norm_iban(t.counterparty_iban) == norm_iban(Some(&r.pattern));
+/// Whether a rule (where it looks, its text, how it matches) fits the texts of a transaction.
+pub fn rule_matches(field: &str, pattern: &str, match_kind: &str, t: &RuleText<'_>) -> bool {
+    if field == "iban" {
+        return t.counterparty_iban.is_some_and(|i| !i.is_empty()) && norm_iban(t.counterparty_iban) == norm_iban(Some(pattern));
     }
-    let any = |texts: [Option<&str>; 2]| texts.into_iter().flatten().any(|x| !x.is_empty() && text_matches(x, &r.pattern, &r.match_kind));
-    if r.field != "description" && any([t.counterparty_name, t.bank_counterparty]) {
+    let any = |texts: [Option<&str>; 2]| texts.into_iter().flatten().any(|x| !x.is_empty() && text_matches(x, pattern, match_kind));
+    if field != "description" && any([t.counterparty_name, t.bank_counterparty]) {
         return true;
     }
-    r.field != "counterparty" && any([t.description, t.bank_description])
+    field != "counterparty" && any([t.description, t.bank_description])
 }
 
 /// The first matching rule in rule order (priority, then counterparty rules, then the longest text).
 pub fn match_rule<'r>(rules: &'r [RuleRow], t: &RuleText<'_>) -> Option<&'r RuleRow> {
-    rules.iter().find(|r| rule_matches(r, t))
+    rules.iter().find(|r| rule_matches(&r.field, &r.pattern, &r.match_kind, t))
 }
 
 #[cfg(test)]

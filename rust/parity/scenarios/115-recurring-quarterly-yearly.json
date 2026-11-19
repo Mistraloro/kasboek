@@ -1,0 +1,20 @@
+{
+  "name": "recurring: quarterly, yearly (two payments are enough) and the 31st rolling to short months",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-09-30","amountCents":-12000,"description":"Energy","counterpartyName":"Energy Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-12-31","amountCents":-12000,"description":"Energy","counterpartyName":"Energy Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-03-31","amountCents":-12000,"description":"Energy","counterpartyName":"Energy Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-30","amountCents":-12000,"description":"Energy","counterpartyName":"Energy Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-30","amountCents":-12000,"description":"Energy","counterpartyName":"Energy Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-10-12","amountCents":-60000,"description":"Insurance","counterpartyName":"Insure"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-12","amountCents":-63000,"description":"Insurance","counterpartyName":"Insure"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-05-31","amountCents":-2500,"description":"Month end sub","counterpartyName":"Monthend"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-30","amountCents":-2500,"description":"Month end sub","counterpartyName":"Monthend"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-31","amountCents":-2500,"description":"Month end sub","counterpartyName":"Monthend"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-31","amountCents":-2500,"description":"Month end sub","counterpartyName":"Monthend"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-30","amountCents":-2500,"description":"Month end sub","counterpartyName":"Monthend"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-31","amountCents":-2500,"description":"Month end sub","counterpartyName":"Monthend"}},
+    {"op":"recurring.list"}
+  ]
+}

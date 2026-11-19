@@ -1,0 +1,17 @@
+{
+  "name": "budgets: refunds lower spending, income and transfer categories and money in on uncategorised do not count",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2026-10","amountCents":10000}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-6000,"description":"Groceries","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":1500,"description":"Refund","categoryId":3}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-04","amountCents":-2000,"description":"Not categorised"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":900,"description":"Money in uncategorised"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-7000,"description":"Transfer out","categoryId":15}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":7000,"description":"Salary","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-07","amountCents":-400,"description":"Reversal","categoryId":1}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-08","amountCents":100,"description":"Housing refund only","categoryId":4}},
+    {"op":"budgets.list","input":{"month":"2026-10"}},
+    {"op":"summary.month","input":{"month":"2026-10"}}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "recurring: paired transfers and transfer categories are left out",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-04","amountCents":-10000,"description":"Savings plan","counterpartyName":"Me","categoryId":15}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-06","amountCents":-700,"description":"Pay","counterpartyName":"Streamer"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-04","amountCents":-10000,"description":"Savings plan","counterpartyName":"Me","categoryId":15}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-06","amountCents":-700,"description":"Pay","counterpartyName":"Streamer"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-04","amountCents":-10000,"description":"Savings plan","counterpartyName":"Me","categoryId":15}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-06","amountCents":-700,"description":"Pay","counterpartyName":"Streamer"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-04","amountCents":-10000,"description":"Savings plan","counterpartyName":"Me","categoryId":15}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-06","amountCents":-700,"description":"Pay","counterpartyName":"Streamer"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-04","amountCents":-10000,"description":"Savings plan","counterpartyName":"Me","categoryId":15}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-700,"description":"Pay","counterpartyName":"Streamer"}},
+    {"op":"recurring.list"}
+  ]
+}

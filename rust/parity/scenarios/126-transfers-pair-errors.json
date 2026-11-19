@@ -1,0 +1,28 @@
+{
+  "name": "transfers pair: not found, wrong directions, same account, different amounts; a failure rolls the whole call back",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"Out"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-06","amountCents":10000,"description":"In"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-1,"description":"x"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":1,"description":"y"}},
+    {"op":"transactions.create","input":{"accountId":2,"bookingDate":"2026-10-06","amountCents":9999,"description":"z"}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2},{"outId":1,"inId":99}]}},
+    {"op":"transactions.list","input":{"limit":10}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":2,"inId":1}]}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":1}]}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":3,"inId":4}]}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":5}]}},
+    {"op":"transfers.pair","input":{"pairs":[]}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1}]}},
+    {"op":"transfers.pair","input":{}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2,"costCents":-1}]}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2,"extra":1}]}},
+    {"op":"transfers.pair","input":{"pairs":[{"outId":1,"inId":2,"costCents":null}]}}
+  ]
+}

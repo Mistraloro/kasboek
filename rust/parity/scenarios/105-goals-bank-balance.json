@@ -1,0 +1,13 @@
+{
+  "name": "goals: a goal tracked by an account follows its recorded bank balance",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","openingBalanceCents":100}},
+    {"op":"balances.set","input":{"accountId":1,"date":"2026-11-01","balanceCents":40000}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-05","amountCents":5000,"description":"in"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-20","amountCents":-1000,"description":"future"}},
+    {"op":"goals.create","input":{"name":"Tracked","targetCents":100000,"accountId":1,"targetDate":"2027-11-14"}},
+    {"op":"goals.list"},
+    {"op":"accounts.update","input":{"id":1,"currency":"USD"}},
+    {"op":"goals.list"}
+  ]
+}

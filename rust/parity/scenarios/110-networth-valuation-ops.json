@@ -1,0 +1,13 @@
+{
+  "name": "valuations and balances still behave next to net worth: values on a bank account are refused, investments accepted",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"accounts.create","input":{"name":"Broker","kind":"investment"}},
+    {"op":"valuations.set","input":{"accountId":1,"date":"2026-10-01","valueCents":5}},
+    {"op":"valuations.set","input":{"accountId":2,"date":"2026-10-01","valueCents":5000}},
+    {"op":"valuations.set","input":{"accountId":2,"date":"2026-11-01","valueCents":4000,"note":" dip "}},
+    {"op":"networth.summary"},
+    {"op":"valuations.delete","input":{"accountId":2,"date":"2026-11-01"}},
+    {"op":"networth.summary"}
+  ]
+}

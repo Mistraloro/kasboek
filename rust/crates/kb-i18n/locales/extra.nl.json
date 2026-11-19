@@ -1,0 +1,16 @@
+{
+  "loading": {
+    "opening": "Je gegevens openen",
+    "migrating": "Je gegevens bijwerken",
+    "transactions": "Transacties laden",
+    "overview": "Het overzicht voorbereiden",
+    "unlocking": "Ontgrendelen…"
+  },
+  "native": {
+    "notPortedTitle": "Nog niet beschikbaar in deze versie",
+    "notPortedBody": "{{page}} wordt nog naar de nieuwe native app verplaatst. Je gegevens blijven ongemoeid: open Kasboek 0.22 om deze pagina te gebruiken.",
+    "opNotPorted": "{{op}} is nog niet beschikbaar in deze versie.",
+    "holdToShowNumbers": "Houd ingedrukt om de rekeningnummers te tonen",
+    "assistantNote": "De assistent is nog niet beschikbaar in deze versie."
+  }
+}

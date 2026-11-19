@@ -1,0 +1,456 @@
+// Lock (pages/auth/Lock.tsx), Setup (pages/auth/Setup.tsx, skeleton) and the loading view that replaces the Lock card
+// after an unlock (plan, section 5). All words come from `Tx` or from properties the owner fills in.
+import { Theme, Icons, Icon, Label, Button, Field, PasswordInput, Input, CodeInput, Checkbox, ProgressBar } from "@kb-ui";
+import { Tx } from "tx.slint";
+import { AuthLayout, AuthCard, LinkText, Choice, StrengthMeter, RuleRow } from "parts.slint";
+
+// A button as wide as its column.
+component Wide inherits Rectangle {
+    height: 36px;
+    @children
+}
+
+export component LockScreen inherits AuthLayout {
+    // "password" | "device".
+    in property <string> mode: "password";
+    // "windows-hello" | "touch-id" | "".
+    in property <string> device-kind: "windows-hello";
+    in property <string> device-name;
+    in property <string> body;
+    in property <string> error;
+    in property <string> throttle;
+    in property <string> remembered-note;
+    in property <bool> need-code: false;
+    // The data cannot be opened (status.error): the message to show instead of the form.
+    in property <string> cant-open;
+    in property <bool> busy: false;
+    in property <string> erase-word: "ERASE";
+    in-out property <string> view: "unlock";
+    in-out property <string> password;
+    in-out property <string> code;
+    in-out property <bool> remember: false;
+    in-out property <string> recovery-key;
+    in-out property <string> erase-text;
+    callback unlock(string, string, bool);
+    callback recover(string);
+    callback erase();
+    callback retry();
+
+    property <bool> device: root.mode == "device";
+    property <image> device-icon: root.device-kind == "touch-id" ? Icons.fingerprint-pattern : root.device-kind == "windows-hello" ? Icons.scan-face : Icons.key-round;
+    property <bool> can-unlock: !root.busy && (root.device || root.password != "") && (!root.need-code || root.code.character-count == 6);
+    property <bool> erase-ok: root.erase-text.to-uppercase() == root.erase-word.to-uppercase() && !root.busy;
+
+    if root.cant-open != "": AuthCard {
+        title: Tx.tr("auth.cantOpen");
+        body: root.cant-open;
+        VerticalLayout {
+            spacing: 8px;
+            Wide {
+                Button {
+                    width: parent.width;
+                    text: Tx.tr("auth.tryAgain");
+                    clicked => {
+                        root.retry();
+                    }
+                }
+            }
+            Wide {
+                Button {
+                    width: parent.width;
+                    variant: "danger";
+                    text: Tx.tr("auth.eraseTitle");
+                    clicked => {
+                        root.cant-open-erase = true;
+                    }
+                }
+            }
+        }
+    }
+    if root.cant-open == "" && root.view == "unlock": AuthCard {
+        title: Tx.tr("auth.unlockTitle");
+        body: root.device ? root.body : "";
+        VerticalLayout {
+            spacing: 16px;
+            if !root.device: Field {
+                label: Tx.tr("auth.password");
+                pw := PasswordInput {
+                    init => {
+                        self.focus();
+                    }
+                    text <=> root.password;
+                    label: Tx.tr("auth.password");
+                    eye-label: Tx.tr("auth.holdToShowPassword");
+                    enabled: !root.busy;
+                    accepted(t) => {
+                        if (root.can-unlock) {
+                            root.unlock(root.password, root.code, root.remember);
+                        }
+                    }
+                }
+            }
+            if root.need-code: Field {
+                label: Tx.tr("auth.code");
+                code-field := CodeInput {
+                    text <=> root.code;
+                    label: Tx.tr("auth.code");
+                    enabled: !root.busy;
+                    accepted(t) => {
+                        if (root.can-unlock) {
+                            root.unlock(root.password, root.code, root.remember);
+                        }
+                    }
+                }
+            }
+            if root.need-code: Checkbox {
+                checked <=> root.remember;
+                text: Tx.tr("auth.rememberComputer");
+                enabled: !root.busy;
+            }
+            if root.remembered-note != "": Label {
+                text: root.remembered-note;
+                font-size: Theme.fs-xs;
+                lh: Theme.lh-xs;
+                color: Theme.muted;
+                wrap: word-wrap;
+            }
+            if root.error != "": Label {
+                text: root.error;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.negative;
+                wrap: word-wrap;
+                accessible-role: AccessibleRole.text;
+                accessible-live-region: assertive;
+            }
+            if root.throttle != "" && root.error == "": Label {
+                text: root.throttle;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.warning;
+                wrap: word-wrap;
+                accessible-role: AccessibleRole.text;
+                accessible-live-region: polite;
+            }
+            Wide {
+                Button {
+                    width: parent.width;
+                    variant: "primary";
+                    has-icon: true;
+                    icon: root.device ? root.device-icon : Icons.lock;
+                    text: root.busy ? Tx.tr("loading.unlocking") : root.device ? Tx.tr("auth.unlockWith").replace-all("{{name}}", root.device-name) : Tx.tr("auth.unlock");
+                    enabled: root.can-unlock || root.busy;
+                    busy: root.busy;
+                    busy-label: Tx.tr("loading.unlocking");
+                    clicked => {
+                        root.unlock(root.password, root.code, root.remember);
+                    }
+                }
+            }
+        }
+        Rectangle {
+            height: 20px;
+        }
+        Rectangle {
+            height: Theme.lh-ui;
+            LinkText {
+                x: 0px;
+                text: Tx.tr("auth.forgot");
+                clicked => {
+                    root.view = "recovery";
+                }
+            }
+            LinkText {
+                x: parent.width - self.width;
+                text: Tx.tr("auth.eraseLink");
+                weight: 400;
+                tint: Theme.muted;
+                hover-tint: Theme.negative;
+                clicked => {
+                    root.view = "erase";
+                }
+            }
+        }
+    }
+    if root.cant-open == "" && root.view == "recovery": AuthCard {
+        title: Tx.tr("auth.recoveryUnlockTitle");
+        body: Tx.tr("auth.recoveryUnlockBody");
+        VerticalLayout {
+            spacing: 16px;
+            Field {
+                label: Tx.tr("auth.recoveryKey");
+                Input {
+                    text <=> root.recovery-key;
+                    label: Tx.tr("auth.recoveryKey");
+                    placeholder: "XXXX-XXXX-XXXX-…";
+                    numeric: true;
+                    enabled: !root.busy;
+                }
+            }
+            if root.error != "": Label {
+                text: root.error;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.negative;
+                wrap: word-wrap;
+                accessible-role: AccessibleRole.text;
+                accessible-live-region: assertive;
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: 8px;
+                Button {
+                    text: Tx.tr("auth.back");
+                    clicked => {
+                        root.view = "unlock";
+                    }
+                }
+                Button {
+                    variant: "primary";
+                    text: Tx.tr("auth.unlock");
+                    enabled: !root.busy && root.recovery-key.character-count >= 32;
+                    clicked => {
+                        root.recover(root.recovery-key);
+                    }
+                }
+            }
+        }
+    }
+    if root.view == "erase" || root.cant-open-erase: AuthCard {
+        title: Tx.tr("auth.eraseTitle");
+        body: Tx.tr("auth.eraseBody");
+        VerticalLayout {
+            spacing: 12px;
+            Field {
+                label: Tx.tr("auth.eraseType");
+                Input {
+                    text <=> root.erase-text;
+                    label: Tx.tr("auth.eraseType");
+                    placeholder: root.erase-word;
+                }
+            }
+            Wide {
+                Button {
+                    width: parent.width;
+                    variant: "danger";
+                    text: Tx.tr("auth.eraseConfirm");
+                    enabled: root.erase-ok;
+                    clicked => {
+                        root.erase();
+                    }
+                }
+            }
+            Wide {
+                Button {
+                    width: parent.width;
+                    text: Tx.tr("auth.back");
+                    clicked => {
+                        root.view = "unlock";
+                        root.cant-open-erase = false;
+                    }
+                }
+            }
+        }
+    }
+    property <bool> cant-open-erase: false;
+}
+
+export component SetupScreen inherits AuthLayout {
+    // "choose" | "password" | "recovery".
+    in-out property <string> step: "choose";
+    in property <string> body;
+    in property <string> device-kind: "";
+    in property <string> device-title;
+    in property <string> device-note;
+    in property <bool> device-enabled: false;
+    in property <bool> busy: false;
+    in property <string> error;
+    in property <string> recovery-key-top;
+    in property <string> recovery-key-bottom;
+    in property <int> strength;
+    in property <string> strength-text;
+    in property <[RuleRow]> rules;
+    property <string> mismatch: root.password-b != "" && root.password-a != root.password-b ? Tx.tr("auth.passwordMismatch") : "";
+    in-out property <string> password-a;
+    in-out property <string> password-b;
+    in-out property <bool> saved: false;
+    callback password-edited(string);
+    callback create-password(string);
+    callback create-device();
+    callback finished();
+
+    property <bool> ready: root.strength >= 4 && root.password-a != "" && root.password-a == root.password-b && !root.busy;
+
+    if root.step == "choose": AuthCard {
+        title: Tx.tr("auth.welcome");
+        body: root.body;
+        VerticalLayout {
+            spacing: 10px;
+            Choice {
+                icon: Icons.key-round;
+                title: Tx.tr("auth.choosePassword");
+                body: Tx.tr("auth.choosePasswordBody");
+                clicked => {
+                    root.step = "password";
+                }
+            }
+            Choice {
+                icon: root.device-kind == "touch-id" ? Icons.fingerprint-pattern : root.device-kind == "windows-hello" ? Icons.scan-face : Icons.key-round;
+                title: root.device-title;
+                body: Tx.tr("auth.chooseDeviceBody");
+                note: root.device-note;
+                enabled: root.device-enabled && !root.busy;
+                clicked => {
+                    root.create-device();
+                }
+            }
+            Choice {
+                icon: Icons.file-lock;
+                title: Tx.tr("auth.chooseImport");
+                body: Tx.tr("auth.chooseImportBody");
+                enabled: false;
+                note: Tx.tr("native.notPortedTitle");
+            }
+        }
+    }
+    if root.step == "password": VerticalLayout {
+        LinkText {
+            text: Tx.tr("auth.back");
+            tint: Theme.muted;
+            hover-tint: Theme.text;
+            weight: 400;
+            clicked => {
+                root.step = "choose";
+            }
+        }
+        Rectangle {
+            height: 12px;
+        }
+        AuthCard {
+            title: Tx.tr("auth.choosePassword");
+            body: Tx.tr("auth.passwordIntro").replace-all("{{n}}", "12");
+            VerticalLayout {
+                spacing: 16px;
+                Field {
+                    label: Tx.tr("auth.newPassword");
+                    PasswordInput {
+                        init => {
+                            self.focus();
+                        }
+                        text <=> root.password-a;
+                        label: Tx.tr("auth.newPassword");
+                        eye-label: Tx.tr("auth.holdToShowPassword");
+                        edited(t) => {
+                            root.password-edited(t);
+                        }
+                    }
+                }
+                StrengthMeter {
+                    strength: root.strength;
+                    has-text: root.password-a != "";
+                    text: root.strength-text;
+                    rules: root.rules;
+                }
+                Field {
+                    label: Tx.tr("auth.repeatPassword");
+                    error: root.mismatch;
+                    PasswordInput {
+                        text <=> root.password-b;
+                        label: Tx.tr("auth.repeatPassword");
+                        eye-label: Tx.tr("auth.holdToShowPassword");
+                        invalid: root.mismatch != "";
+                    }
+                }
+                if root.error != "": Label {
+                    text: root.error;
+                    font-size: Theme.fs-ui;
+                    lh: Theme.lh-ui;
+                    color: Theme.negative;
+                    wrap: word-wrap;
+                    accessible-role: AccessibleRole.text;
+                    accessible-live-region: assertive;
+                }
+                Wide {
+                    Button {
+                        width: parent.width;
+                        variant: "primary";
+                        text: root.busy ? Tx.tr("auth.working") : Tx.tr("auth.createAccount");
+                        enabled: root.ready;
+                        busy: root.busy;
+                        clicked => {
+                            root.create-password(root.password-a);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if root.step == "recovery": AuthCard {
+        title: Tx.tr("auth.recoveryTitle");
+        body: Tx.tr("auth.recoveryBody");
+        VerticalLayout {
+            spacing: 16px;
+            Rectangle {
+                height: keys.preferred-height + 32px;
+                border-radius: Theme.r-lg;
+                border-width: 1px;
+                border-color: Theme.border;
+                background: Theme.surface-2;
+                accessible-role: AccessibleRole.text;
+                accessible-label: Tx.tr("auth.recoveryKey");
+                accessible-description: root.saved ? Tx.tr("auth.recoveryHidden") : root.recovery-key-top + "-" + root.recovery-key-bottom;
+                keys := VerticalLayout {
+                    padding: 16px;
+                    Label {
+                        text: root.saved ? "••••-••••-••••-••••" : root.recovery-key-top;
+                        numeric: true;
+                        font-size: 17px;
+                        font-weight: 600;
+                        lh: 27.5px;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                    }
+                    Label {
+                        text: root.saved ? "••••-••••-••••-••••" : root.recovery-key-bottom;
+                        numeric: true;
+                        font-size: 17px;
+                        font-weight: 600;
+                        lh: 27.5px;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+            Checkbox {
+                checked <=> root.saved;
+                text: Tx.tr("auth.recoverySaved");
+            }
+            Wide {
+                Button {
+                    width: parent.width;
+                    variant: "primary";
+                    text: Tx.tr("auth.continue");
+                    enabled: root.saved;
+                    clicked => {
+                        root.finished();
+                    }
+                }
+            }
+        }
+    }
+}
+
+// The loading view: the Lock card is replaced in place by the name of the current step and a bar that moves only when
+// the work reports progress.
+export component LoadingScreen inherits AuthLayout {
+    in property <string> step-text;
+    in property <float> value;
+    AuthCard {
+        title: root.step-text;
+        accessible-role: none;
+        ProgressBar {
+            value: root.value;
+            label: root.step-text;
+        }
+    }
+}

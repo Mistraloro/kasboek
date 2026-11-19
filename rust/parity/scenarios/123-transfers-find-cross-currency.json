@@ -1,0 +1,24 @@
+{
+  "name": "transfers find: between currencies the value at the day’s rate, the bank cost and its margins",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main","iban":"BE68 5390 0754 7034"}},
+    {"op":"accounts.create","input":{"name":"Savings","kind":"savings","iban":"BE71 0961 2345 6769"}},
+    {"op":"accounts.create","input":{"name":"Dollar","currency":"USD","fxCostPct":1.5}},
+    {"op":"accounts.create","input":{"name":"Pound","currency":"GBP"}},
+    {"op":"@sql","input":{"sql":"INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2026-10-01',1.1,'ecb'),('USD','2026-10-20',1.2,'ecb'),('GBP','2026-10-01',0.85,'ecb')"}},
+    {"op":"@fxReload"},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-10000,"description":"To dollars"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-06","amountCents":10890,"description":"Dollars arrive"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-10","amountCents":-10000,"description":"Margin low"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-10","amountCents":10200,"description":"ratio low 0.927"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-15","amountCents":-10000,"description":"Out"}},
+    {"op":"transactions.create","input":{"accountId":4,"bookingDate":"2026-10-15","amountCents":8500,"description":"GBP in"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-21","amountCents":-10000,"description":"After rate change"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-21","amountCents":11900,"description":"In"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-22","amountCents":-5000,"description":"Back out dollars"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-23","amountCents":4100,"description":"Back in euro"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-28","amountCents":-5000,"description":"Negative arrival"}},
+    {"op":"transactions.create","input":{"accountId":3,"bookingDate":"2026-10-28","amountCents":-5500,"description":"Not a credit"}},
+    {"op":"transfers.find"}
+  ]
+}

@@ -697,6 +697,90 @@ Not confirmed (needs the CI on Windows and macOS): the parity suite and `cargo t
 the scenario files under Windows checkouts, `TZ=UTC` taking effect in the Node of those runners, and the file replace of
 `prefs.json` (`rename` over an existing file) on Windows.
 
+**M2 progress, slice 2 (rules, budgets, summaries, alerts, goals, recurring, transfers, net worth; Linux x64 only)**
+
+Done (`rust/crates/kb-core`, typed queries in `kb-db`, 64 new parity scenarios, a longer household):
+- Ported (25, so 55 of 154 operations now): `rules.list/create/preview/update/reorder/delete`, `budgets.list/set/copyPrevious`,
+  `summary.month/year/review`, `networth.summary`, `alerts.list`, `goals.list/create/update/delete`, `recurring.list/hide`,
+  `transfers.find/pair/unpair/cost/setCost`. The remaining valuations ops were already in slice 1. Rule matching (contains, word,
+  starts, iban, priority), the `effectiveMatch` rule (short "contains" texts become whole-word rules), `groupKey`, the exchange cost
+  and the fee split of a cross-currency pair follow the TypeScript functions one to one; error codes are the same. The last
+  recurring scan is kept per database with the key `today|total_changes()`, as in `recurring.ts`, and dropped when the store changes.
+- All SQL is new `Queries` methods in `kb-db` (statements copied, including `INCOME_SQL` / `SPENDING_SQL`, the `tx_lines` view and
+  the order of the rules), so the engine returns rows in the same order as for the TypeScript core. `kb-core` has no SQL.
+- Scenario harness: the random `transfer_pair` keys (8 random bytes in TypeScript, `Rng` in Rust) are numbered in order of first
+  appearance in the table dumps of both sides, so which rows share a pair is compared. 64 new scenarios (rules in every mode with
+  accents, case, iban and priorities, budgets near, at and over the limit, refunds and transfers kept out of spending, splits,
+  month and year boundaries, leap days, December to January, other currencies and missing rates, recurring detection over 14
+  months with a price change, double charges, weekly, quarterly, yearly and month-end payments, late and due statuses, hide and
+  show, cache behaviour, alerts on three different clocks, goals, net worth ranges, transfers within and across currencies with
+  bank cost, errors and rollbacks, locked refusals). The seeded household now adds 14 months of fixed payments, 18 own transfers
+  (6 across currencies), rules, budgets, goals, and compares `summary.month`, `.review` and `budgets.list` for each of 24 months,
+  `summary.year`, `networth.summary`, `recurring.list` (also after hide and show), `alerts.list` and `transfers.find/pair/cost`.
+- Ported TypeScript unit tests: `rust/crates/kb-core/tests/slice2.rs` (22 tests from `finance`, `features`, `recurring-hide`,
+  `recurring-cache` and `wealth`), plus unit tests of the date helpers, `groupKey` and the goal months.
+- Differences found and fixed while building it: `addMonths` of the TypeScript core goes through `new Date(y, m, 1)`, which reads
+  the years 0 to 99 as 1900 to 1999 and prints years without leading zeros (`0001-01` minus 5 months is `1900-08`); `monthRange`
+  uses it too. The word-boundary and `groupKey` letter test now follows `\p{L}` more closely (no combining marks, letter numbers or
+  circled letters, which Rust's `alphabetic` adds). Not an operation difference: a scenario of `op.not_ported` answers cannot run
+  through the differential suite (TypeScript answers them), so that is a cargo test.
+
+Not faithful (kept, none reachable with data the app writes):
+- `\p{L}` and `\p{N}` come from Rust's Unicode tables, not Node's ICU (the same for all text of the scenarios).
+- `slice(0, 60)` counts UTF-16 units. A cut through the middle of a surrogate pair drops the whole character, where JavaScript
+  keeps a lone surrogate that a Rust string cannot hold (names of recurring items, rule preview examples, review).
+- `Date.parse` is read only for `YYYY-MM-DD` (month 1 to 12, day 1 to 31, `2026-02-30` is 2 March, like V8). Other shapes give
+  NaN here; V8's legacy parser reads more.
+- `transfers.find` sorts with a merge sort that gives the stable order of JavaScript's sort even when a date does not read (NaN
+  days); `groupKey` leaves out the "message" part for transfers between people (only imports use it; they come with `kb-import`).
+- The fee-category search by name uses lower-casing, JavaScript uses the regular expression's own case folding; the same for all
+  letters of the languages Kasboek has.
+- `rules.create`, `transfers.pair` and the others write through `Store::transaction`; an engine error other than a unique clash is
+  `op.failed`, as in TypeScript, with the engine's text left out.
+
+Not done in slice 2 (op.not_ported, 99): memory, insights, import, export, sync, backup, assistant, mcp, update, app and `auth.*` (the
+last in `kb-session`), `fx.updateEcb`.
+
+Not confirmed (needs the CI on Windows and macOS): `cargo test` and the parity suite on the other five targets; the transfer pair keys
+use 8 random bytes from the injected `Rng` (the app must supply a real one).
+
+**M2/M5 progress: kb-session (account and session; Linux x64 only, the six-target CI has not run it)**
+
+Done (`rust/crates/kb-session`, README there):
+- Ported behaviour for behaviour: `core/account.ts` (AccountData v2, slots, vault, attempts and throttle 5 free tries then
+  30 * 2^(n-5) s up to 15 min, remember-2FA MAC for 30 days, unlock with password / device key / recovery key, change password,
+  passwordless switch, new recovery key, 2FA on and off), `main/session.ts` (setup / locked / unlocked, `status()` shape, `lock()` that
+  drops and zeroizes the keys, auto-lock hooks, reauth, erase and restore, adopt), the `account.json` file format behind an `OsSeal`
+  trait (`FileSeal` for tests, `Unsupported`), `quarantine.ts`, the legacy `keystore.json` migration, the password rules, and the
+  `auth.*` ops as `register_ops()` handlers for kb-core (`status`, `setup`, `unlock`, `unlockRecovery`, `lock`, `erase`,
+  `restoreErased`, `changePassword`, `usePasswordless`, `newRecoveryKey`, `forgetComputer`, `totpBegin/Enable/Disable`, plus the aliases
+  `exists`, `reauth`, `recover`, `switchToPasswordless`). Time and randomness are injected.
+- Spike G6, offline part: the read-only Chromium OSCrypt decoder (Windows `v10` AES-256-GCM with the `Local State` DPAPI key, macOS
+  `v10` AES-128-CBC with the Keychain password, Linux `v11` keyring and `v10` "peanuts"), tested with Node-made fixtures. The OS key
+  retrieval is the `OsKeyProvider` / `Dpapi` traits.
+- Tests: 31 in Rust (unit, 20 session scenarios on an encrypted database, 5 decoder), 17 parity cases (`rust/parity/session.spec.ts`): the
+  TypeScript session (Electron, device check and clock mocked) and the Rust driver run the same scripts (setup, lock, unlock ok and
+  failed with the throttle timing on an injected clock, recovery, 2FA with a fixed clock and 30-day remember, password change,
+  passwordless switch, erase / restore / purge); every status and error code is compared, and so is the decrypted `account.json`
+  (salts, IVs, ciphertexts and keys masked); files written by one side open on the other; password rules on 32 strings.
+- Difference found and mirrored: an empty password at unlock makes hash-wasm throw, so the app answers `op.failed` and counts no
+  attempt (the Rust side returned `auth.failed`).
+
+Stubbed: the real OS seal (DPAPI, Keychain, Secret Service), the Windows Hello / Touch ID prompt (`DeviceAuth` trait, `NoDevice`,
+`FakeDevice`), the QR code of `totpBegin` (hook, empty by default). Not verified: the async format of Electron 45's `safeStorage`
+against the documented prefixes (needs a real file per OS), `seal:'os-native'` re-sealing, the other five targets.
+
+Security review fixes: a device account is sealed again on every path that ends without an open database (guard object), recovery checks the
+throttle before the seal is opened, `save()` refuses a device slot without the OS seal, a stale `lastAuth` cannot lock out the password,
+`reauth` needs an unlocked session, `UnlockInput`/URI/CBC buffers are zeroized. Hardening the TypeScript lacks, on purpose: a remembered-computer
+date more than 30 days ahead is refused and the throttle never waits longer than its delay for a future `lastFailedAt`. The parity driver needs
+`cargo build -p kb-session --features parity` (the CI build step for the parity suite must add it).
+
+Deviations: a device account stays OS-sealed until the device prompt succeeded when start-up is given the `lastAuth` hint (plan
+section 5; the TypeScript opens it at start-up); `op.invalid_input` texts are not zod's; `slots` key order is fixed. The contract has
+no `auth.device*` ops and no `mode: none` (`none` is only a seal); the device check lives inside `unlock`, `setup`, `usePasswordless`
+and `erase`.
+
 **M3 progress (design system `rust/crates/kb-ui`; Linux x64 only, `.github/workflows/rust-ui.yml` has not run)**
 
 Done:
@@ -711,6 +795,37 @@ Done:
   landmarks in date (6 px), pageheader (5 px), monthnav (8 px), toast (6 px), and landmark count in input/password/select/segmented
   (the pixel analysis merges or splits faint disabled controls differently).
 - Owner decision on the over-gate items: the 5 components over the 3% pixel gate (password, select, date, badge, pageheader) are **accepted, polish later**. Their remaining differences are the small native details listed in the polish list below.
+
+**M4 progress (first screens, `rust/apps/kasboek`; Linux x64 only, `.github/workflows/rust-app.yml` has not run)**
+
+Done:
+- `kb-service`: `AppService` (`invoke(op, json)` as a future, event subscription with the `AppEvent` types of the contract plus `LoadProgress`),
+  `FixtureService` (invented household of the release screenshots, JSON in `rust/apps/kasboek/fixtures`, demo password `correct horse battery 12`,
+  throttle after three wrong tries) and `CoreService` (`kb_core::dispatch` on a real encrypted temporary database, one worker thread owns the
+  core; ops that are not ported answer `op.not_ported`). Login of both is a stand-in until `kb-session` is wired in.
+- `kb-rules`: `password.ts` and `iban.ts` ported (`check_password`, `valid_iban`, `mask_iban`, `find_ibans`, `mask_numbers`), compared with the
+  TypeScript functions on 60 inputs (`tools/gen-fixtures.mjs`). `mask_account` / `shown_account` are new (the renderer has no such functions).
+- `kb-i18n`: i18next-compatible lookup (dotted keys, `{{x}}`, plural suffixes with `_zero`, regional fallbacks, English last) for the 8 locales;
+  2,208 cases compared with i18next 27 (`tools/gen-fixtures.mjs`). New texts live in `crates/kb-i18n/locales/extra.<lang>.json`, merged at load.
+- App shell as in `App.tsx` (sidebar with icons, active state, Settings, Lock, version; top bar with the assistant toggle; placeholder pages and
+  assistant note), Lock (password and device mode, recovery, erase, error, throttle countdown, in-place "Unlocking…"), Setup skeleton (choose,
+  password with strength meter and rules, recovery key), loading view with real progress (180 ms / 300 ms gate, shares 10/20/40/30 %), Overview
+  (month nav, stats, alerts, Suggestions with "Show exactly what is sent", category bars, accounts with hold-to-show eye, 6-month bars,
+  uncategorised and unconverted rows). Light and dark; title bar colours on Windows 11 (DWM) and system theme detection; startup.log milestones;
+  `lastAuth` cache for the first frame; Hello / Touch ID prompt only on the button press (code from the spike, not built on Windows or macOS here).
+- Parity against the Electron stills (1440x900 at 2x): Lock 0.49 % pixels, landmarks 1 px (PASS); Overview 2.6 % pixels (under 3 %), landmark
+  offsets up to 4 css px (month navigation 4 px wider, stat cards 1.5 px, from the polish list items MonthNav and PageHeader), one extra landmark
+  (the eye in the Accounts header). AT-SPI dump: every control of Lock and Overview is a named, focusable item.
+
+Not done: Welcome, Tour, the assistant panel, every page but the Overview, the Setup import and 2FA steps, toasts from real operations,
+window blur hides revealed secrets (only locking does), month names in other languages, German and other long-string checks of these screens,
+transparent title bar on macOS. Needs Windows or macOS: Hello / Touch ID, DWM title bar, Narrator / VoiceOver, IME, the build of `titlebar.rs` and `device.rs`.
+The window is not created hidden: Slint 1.19 has no first-paint hook for the software renderer, so "first frame" is a timer after `show()`.
+
+New texts for the release branch's locale files (the app keeps them in `crates/kb-i18n/locales/extra.<lang>.json`; add them to the 8 files of
+`src/renderer/src/i18n/locales` if the Electron app should share them): `loading.opening`, `loading.migrating`, `loading.transactions`,
+`loading.overview`, `loading.unlocking`, `native.notPortedTitle`, `native.notPortedBody`, `native.opNotPorted`, `native.holdToShowNumbers`,
+`native.assistantNote` (translations in the extra files are mine and need a native check).
 
 **Polish list (accepted, adjust later; owner decision, see section 0)**
 

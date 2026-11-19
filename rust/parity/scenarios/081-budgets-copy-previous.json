@@ -1,0 +1,20 @@
+{
+  "name": "budgets copyPrevious: copies only missing ones, over a year boundary, twice",
+  "clock": "2026-01-31T10:00:00Z",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2025-12","amountCents":300}},
+    {"op":"budgets.set","input":{"categoryId":4,"month":"2025-12","amountCents":400}},
+    {"op":"budgets.set","input":{"categoryId":5,"month":"2025-12","amountCents":500}},
+    {"op":"budgets.set","input":{"categoryId":4,"month":"2026-01","amountCents":444}},
+    {"op":"budgets.copyPrevious","input":{"month":"2026-01"}},
+    {"op":"budgets.copyPrevious","input":{"month":"2026-01"}},
+    {"op":"budgets.list","input":{"month":"2026-01"}},
+    {"op":"budgets.copyPrevious","input":{"month":"2026-05"}},
+    {"op":"budgets.copyPrevious","input":{"month":"2026-00"}},
+    {"op":"budgets.copyPrevious","input":{}},
+    {"op":"budgets.set","input":{"categoryId":3,"month":"2024-02","amountCents":1}},
+    {"op":"budgets.copyPrevious","input":{"month":"2024-03"}},
+    {"op":"budgets.list","input":{"month":"2024-03"}}
+  ]
+}

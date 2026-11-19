@@ -10,12 +10,18 @@ use serde_json::Value;
 
 mod accounts;
 mod balances;
+mod budgets;
 mod categories;
 mod fx;
+mod goals;
 mod prefs;
+mod recurring;
+mod rules;
 mod searches;
 mod settings;
+mod summary;
 mod transactions;
+mod transfers;
 
 pub type Handler<S> = fn(&Core<S>, Value) -> AppResult<Done>;
 
@@ -67,6 +73,31 @@ pub fn handler<S: Store>(name: &str) -> Option<Handler<S>> {
         "transactions.rename" => transactions::rename::<S>,
         "transactions.categorize" => transactions::categorize::<S>,
         "transactions.delete" => transactions::delete::<S>,
+        "rules.list" => rules::list::<S>,
+        "rules.create" => rules::create::<S>,
+        "rules.preview" => rules::preview::<S>,
+        "rules.update" => rules::update::<S>,
+        "rules.reorder" => rules::reorder::<S>,
+        "rules.delete" => rules::delete::<S>,
+        "budgets.list" => budgets::list::<S>,
+        "budgets.set" => budgets::set::<S>,
+        "budgets.copyPrevious" => budgets::copy_previous::<S>,
+        "summary.month" => summary::month::<S>,
+        "summary.year" => summary::year::<S>,
+        "summary.review" => summary::review::<S>,
+        "networth.summary" => summary::networth::<S>,
+        "alerts.list" => summary::alerts::<S>,
+        "goals.list" => goals::list::<S>,
+        "goals.create" => goals::create::<S>,
+        "goals.update" => goals::update::<S>,
+        "goals.delete" => goals::delete::<S>,
+        "recurring.list" => recurring::list::<S>,
+        "recurring.hide" => recurring::hide::<S>,
+        "transfers.find" => transfers::find::<S>,
+        "transfers.pair" => transfers::pair::<S>,
+        "transfers.unpair" => transfers::unpair::<S>,
+        "transfers.cost" => transfers::cost::<S>,
+        "transfers.setCost" => transfers::set_cost::<S>,
         _ => return None,
     })
 }
@@ -103,4 +134,29 @@ pub const PORTED: &[&str] = &[
     "transactions.rename",
     "transactions.categorize",
     "transactions.delete",
+    "rules.list",
+    "rules.create",
+    "rules.preview",
+    "rules.update",
+    "rules.reorder",
+    "rules.delete",
+    "budgets.list",
+    "budgets.set",
+    "budgets.copyPrevious",
+    "summary.month",
+    "summary.year",
+    "summary.review",
+    "networth.summary",
+    "alerts.list",
+    "goals.list",
+    "goals.create",
+    "goals.update",
+    "goals.delete",
+    "recurring.list",
+    "recurring.hide",
+    "transfers.find",
+    "transfers.pair",
+    "transfers.unpair",
+    "transfers.cost",
+    "transfers.setCost",
 ];

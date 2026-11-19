@@ -204,3 +204,133 @@ pub struct ImportResetFacts {
     pub memory: bool,
     pub sync: bool,
 }
+
+/// The columns of a transaction a rule looks at.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RuleTextRow {
+    pub id: i64,
+    pub counterparty_name: Option<String>,
+    pub description: String,
+    pub bank_counterparty: Option<String>,
+    pub bank_description: Option<String>,
+    pub counterparty_iban: Option<String>,
+    pub category_id: Option<i64>,
+}
+
+/// An expense category with its budget for one month.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BudgetCategoryRow {
+    pub id: i64,
+    pub name: String,
+    pub amount_cents: Option<i64>,
+}
+
+/// One row of the year summary: a month and category with money in and out (main currency).
+#[derive(Debug, Clone, PartialEq)]
+pub struct YearRow {
+    /// `substr(booking_date, 6, 2)`.
+    pub month: String,
+    pub category_id: Option<i64>,
+    pub name: Option<String>,
+    pub kind: String,
+    pub income: f64,
+    pub outgoing: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct YearTotalRow {
+    pub year: i64,
+    pub income: f64,
+    pub spending: f64,
+}
+
+/// A payment of the last 14 months, for the review of unusual payments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewRow {
+    pub id: i64,
+    pub booking_date: String,
+    pub amount_cents: i64,
+    pub counterparty_name: Option<String>,
+    pub description: String,
+    pub category_name: Option<String>,
+    /// In the main currency, 0 without a rate.
+    pub main: f64,
+}
+
+/// A transaction as the recurring-payment scan reads it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecurringRow {
+    pub id: i64,
+    pub booking_date: String,
+    pub amount_cents: i64,
+    pub counterparty_name: Option<String>,
+    pub description: String,
+    pub bank_counterparty: Option<String>,
+    pub category_id: Option<i64>,
+    pub category_name: Option<String>,
+    pub account_id: i64,
+    pub account_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GoalRow {
+    pub id: i64,
+    pub name: String,
+    pub target_cents: i64,
+    pub target_date: Option<String>,
+    pub account_id: Option<i64>,
+    pub account_name: Option<String>,
+    pub account_currency: Option<String>,
+    pub saved_cents: Option<i64>,
+    pub archived: bool,
+}
+
+/// Every column of a goal row that `goals.update` writes.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GoalWrite {
+    pub name: String,
+    pub target_cents: i64,
+    pub target_date: Option<String>,
+    pub account_id: Option<i64>,
+    pub saved_cents: Option<i64>,
+    pub archived: bool,
+}
+
+/// Two unpaired transactions in different accounts a few days apart (`o` out, `i` in).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TransferCandidate {
+    pub oid: i64,
+    pub iid: i64,
+    pub o_date: String,
+    pub i_date: String,
+    pub o_amount: i64,
+    pub i_amount: i64,
+    pub o_currency: String,
+    pub i_currency: String,
+    pub o_name: String,
+    pub i_name: String,
+    pub o_cp_iban: Option<String>,
+    pub i_cp_iban: Option<String>,
+    pub o_acc_iban: Option<String>,
+    pub i_acc_iban: Option<String>,
+    pub o_cost_pct: Option<f64>,
+}
+
+/// What pairing needs to know of one half.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PairTx {
+    pub id: i64,
+    pub account_id: i64,
+    pub amount_cents: i64,
+    pub currency: String,
+    pub booking_date: String,
+    pub transfer_pair: Option<String>,
+    pub fx_cost_pct: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PairHalf {
+    pub id: i64,
+    pub amount_cents: i64,
+    pub currency: String,
+}

@@ -25,3 +25,18 @@ impl CryptoError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::slot::{derive_slot_key, Kdf};
+
+    #[test]
+    fn errors_do_not_echo_the_secret() {
+        let secret = "hunter1!secret";
+        let kdf = Kdf::Argon2id { m: u64::MAX, t: 1, p: 1, salt: "!!".into() };
+        let errors = [derive_slot_key(secret, &kdf).unwrap_err(), crate::encoding::base32_decode(secret).unwrap_err()];
+        for e in errors {
+            assert!(!format!("{e} {e:?}").contains(secret));
+        }
+    }
+}

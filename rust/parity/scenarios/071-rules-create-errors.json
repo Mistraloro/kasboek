@@ -1,0 +1,20 @@
+{
+  "name": "rules create: duplicates, unknown category, invalid input",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"Albert","categoryId":3}},
+    {"op":"rules.create","input":{"field":"any","pattern":"ALBERT","categoryId":4}},
+    {"op":"rules.create","input":{"field":"counterparty","pattern":"ALBERT","categoryId":4}},
+    {"op":"rules.create","input":{"field":"any","pattern":"nothing","categoryId":999}},
+    {"op":"rules.create","input":{"field":"any","pattern":"x","categoryId":3}},
+    {"op":"rules.create","input":{"field":"any","pattern":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","categoryId":3}},
+    {"op":"rules.create","input":{"field":"whatever","pattern":"abc","categoryId":3}},
+    {"op":"rules.create","input":{"field":"any","pattern":"abc","categoryId":3,"match":"regex"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"abc","categoryId":3,"applyToExisting":"yes"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"abc","categoryId":0}},
+    {"op":"rules.create","input":{"field":"any","pattern":"abc","categoryId":3,"extra":1}},
+    {"op":"rules.create","input":{}},
+    {"op":"rules.create"},
+    {"op":"rules.list"}
+  ]
+}

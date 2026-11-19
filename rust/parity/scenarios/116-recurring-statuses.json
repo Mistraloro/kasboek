@@ -1,0 +1,31 @@
+{
+  "name": "recurring: paid, due, late, later around the clock",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-03","amountCents":-1000,"description":"Paid this month","counterpartyName":"Paid this month"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-03","amountCents":-1000,"description":"Paid this month","counterpartyName":"Paid this month"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-1000,"description":"Paid this month","counterpartyName":"Paid this month"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-03","amountCents":-1000,"description":"Paid this month","counterpartyName":"Paid this month"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-20","amountCents":-2000,"description":"Due soon","counterpartyName":"Due soon"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-20","amountCents":-2000,"description":"Due soon","counterpartyName":"Due soon"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-20","amountCents":-2000,"description":"Due soon","counterpartyName":"Due soon"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-20","amountCents":-2000,"description":"Due soon","counterpartyName":"Due soon"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-28","amountCents":-3000,"description":"Late one","counterpartyName":"Late one"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-28","amountCents":-3000,"description":"Late one","counterpartyName":"Late one"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-28","amountCents":-3000,"description":"Late one","counterpartyName":"Late one"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-28","amountCents":-3000,"description":"Late one","counterpartyName":"Late one"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-06","amountCents":-4000,"description":"Barely late","counterpartyName":"Barely late"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-06","amountCents":-4000,"description":"Barely late","counterpartyName":"Barely late"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-06","amountCents":-4000,"description":"Barely late","counterpartyName":"Barely late"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-06","amountCents":-4000,"description":"Barely late","counterpartyName":"Barely late"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-01","amountCents":-5000,"description":"Later","counterpartyName":"Later"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-01","amountCents":-5000,"description":"Later","counterpartyName":"Later"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-01","amountCents":-5000,"description":"Later","counterpartyName":"Later"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-5000,"description":"Later","counterpartyName":"Later"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-30","amountCents":6000,"description":"Income due","counterpartyName":"Income due"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-30","amountCents":6000,"description":"Income due","counterpartyName":"Income due"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-30","amountCents":6000,"description":"Income due","counterpartyName":"Income due"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-30","amountCents":6000,"description":"Income due","counterpartyName":"Income due"}},
+    {"op":"recurring.list"}
+  ]
+}

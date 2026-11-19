@@ -1,0 +1,21 @@
+{
+  "name": "recurring: the same payee in and out is two items, hidden items leave the totals",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-03","amountCents":-5000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-06-20","amountCents":1000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-03","amountCents":-5000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-07-20","amountCents":1000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-03","amountCents":-5000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-20","amountCents":1000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-03","amountCents":-5000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-20","amountCents":1000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-03","amountCents":-5000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-20","amountCents":1000,"description":"Club","counterpartyName":"Club"}},
+    {"op":"recurring.list"},
+    {"op":"recurring.hide","input":{"key":"in:club"}},
+    {"op":"recurring.hide","input":{"key":"out:club"}},
+    {"op":"recurring.hide","input":{"key":"out:club","hidden":false}},
+    {"op":"recurring.list"}
+  ]
+}

@@ -1,0 +1,9 @@
+// The texts. `t` is answered by Rust from the locale files (kb-i18n); `rev` changes when the language does, so every
+// binding that reads `Tx.tr(...)` is worked out again. Texts with variables are made in Rust and handed in as properties.
+export global Tx {
+    in property <int> rev: 0;
+    pure callback t(string, int) -> string;
+    pure public function tr(key: string) -> string {
+        return root.t(key, root.rev);
+    }
+}

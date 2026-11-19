@@ -1,0 +1,17 @@
+{
+  "name": "rules delete: the list comes back, categories already given stay, unknown id changes nothing",
+  "clock": "2026-12-31T23:59:59Z",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-1,"description":"Foo bar"}},
+    {"op":"rules.create","input":{"field":"any","pattern":"foo","categoryId":3}},
+    {"op":"rules.create","input":{"field":"any","pattern":"bar","categoryId":4}},
+    {"op":"rules.delete","input":{"id":1}},
+    {"op":"rules.delete","input":{"id":1}},
+    {"op":"rules.delete","input":{"id":42}},
+    {"op":"rules.delete","input":{"id":-1}},
+    {"op":"transactions.list"},
+    {"op":"categories.update","input":{"id":4,"archived":true}},
+    {"op":"rules.list"}
+  ]
+}

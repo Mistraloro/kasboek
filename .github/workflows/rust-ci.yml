@@ -91,6 +91,8 @@ jobs:
         run: cargo clippy --workspace --locked --manifest-path rust/Cargo.toml -- -D warnings
       - name: Format check
         run: cargo fmt --all --check --manifest-path rust/Cargo.toml
+      - name: Build the session test driver (parity feature, never shipped)
+        run: cargo build -p kb-session --features parity --release --locked --manifest-path rust/Cargo.toml
       - name: Parity suite (TypeScript core against kb-cli)
         shell: bash
         env:

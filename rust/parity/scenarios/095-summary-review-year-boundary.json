@@ -1,0 +1,17 @@
+{
+  "name": "summary review: January looks back into the previous year, a payee seen once before is not \"higher\"",
+  "clock": "2026-02-10T10:00:00Z",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-10-10","amountCents":-1000,"description":"Oct shop","counterpartyName":"Shop A","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-11-10","amountCents":-1000,"description":"Nov shop","counterpartyName":"Shop A","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-12-10","amountCents":-1100,"description":"Dec shop","counterpartyName":"Shop A","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2025-12-11","amountCents":-500,"description":"One-off","counterpartyName":"Shop B","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-01-10","amountCents":-9000,"description":"Jan shop","counterpartyName":"Shop A","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-01-12","amountCents":-9000,"description":"Jan one-off","counterpartyName":"Shop B","categoryId":8}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-01-31","amountCents":-7000,"description":"Last day new","counterpartyName":"Shop C"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-02-01","amountCents":-9999,"description":"Feb","counterpartyName":"Shop C"}},
+    {"op":"summary.review","input":{"month":"2026-01"}},
+    {"op":"summary.review","input":{"month":"2026-02"}}
+  ]
+}

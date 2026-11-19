@@ -1,0 +1,40 @@
+[package]
+name = "kasboek"
+version = "0.22.0"
+description = "Kasboek, the native app: window, start-up, Lock, Setup and Overview on the design system, over the AppService seam"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[dependencies]
+kb-i18n = { path = "../../crates/kb-i18n" }
+kb-rules = { path = "../../crates/kb-rules" }
+kb-service.workspace = true
+kb-ui = { path = "../../crates/kb-ui" }
+serde_json.workspace = true
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06"] }
+
+# Windows: title bar colours (DWM), the Hello prompt and the process creation time. Not built elsewhere.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Foundation", "Security_Credentials_UI", "Win32_Foundation", "Win32_Graphics_Dwm", "Win32_System_Registry", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_System_WinRT", "Win32_UI_WindowsAndMessaging"] }
+raw-window-handle = "0.6"
+windows-future = "0.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+objc2 = "0.6"
+block2 = "0.6"
+objc2-foundation = "0.3"
+objc2-local-authentication = "0.3"
+
+[build-dependencies]
+slint-build = "1.19"
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[[bin]]
+name = "kasboek"
+path = "src/main.rs"

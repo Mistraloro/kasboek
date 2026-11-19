@@ -1,0 +1,26 @@
+{
+  "name": "recurring: a weekly payment (status never \"paid\"), a gap breaks it",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-03","amountCents":-2000,"description":"Cleaner 0","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-10","amountCents":-2000,"description":"Cleaner 1","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-17","amountCents":-2000,"description":"Cleaner 2","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-24","amountCents":-2000,"description":"Cleaner 3","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-31","amountCents":-2000,"description":"Cleaner 4","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-07","amountCents":-2000,"description":"Cleaner 5","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-14","amountCents":-2000,"description":"Cleaner 6","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-21","amountCents":-2000,"description":"Cleaner 7","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-28","amountCents":-2000,"description":"Cleaner 8","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-05","amountCents":-2000,"description":"Cleaner 9","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-12","amountCents":-2000,"description":"Cleaner 10","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-19","amountCents":-2000,"description":"Cleaner 11","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-26","amountCents":-2000,"description":"Cleaner 12","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-11-02","amountCents":-2000,"description":"Cleaner 13","counterpartyName":"Cleaner"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-03","amountCents":-777,"description":"Broken rhythm","counterpartyName":"Gap Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-10","amountCents":-777,"description":"Broken rhythm","counterpartyName":"Gap Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-08-17","amountCents":-777,"description":"Broken rhythm","counterpartyName":"Gap Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-13","amountCents":-777,"description":"Broken rhythm","counterpartyName":"Gap Co"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-09-20","amountCents":-777,"description":"Broken rhythm","counterpartyName":"Gap Co"}},
+    {"op":"recurring.list"}
+  ]
+}
