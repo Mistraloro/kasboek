@@ -44,7 +44,17 @@ export const cli = <T = any>(args: string[], input?: unknown): T => JSON.parse(c
 
 export function tempDir(prefix = 'kb-parity-'): { dir: string; remove: () => void } {
   const dir = mkdtempSync(join(process.env.KB_PARITY_TMP ?? tmpdir(), prefix))
-  return { dir, remove: () => rmSync(dir, { recursive: true, force: true }) }
+  return {
+    dir,
+    remove: () => {
+      // Windows can briefly keep a file locked after its handle closed (antivirus, indexer); a leftover temp dir is harmless.
+      try {
+        rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+      } catch (e) {
+        console.warn(`could not remove ${dir}: ${(e as Error).message}`)
+      }
+    }
+  }
 }
 
 /** Invented key: 32 bytes that protect nothing. */
