@@ -12,6 +12,7 @@ A simple, local-first budget app for Windows, macOS and Linux, with an AI assist
 > - Use a local model (Ollama, LM Studio, or any OpenAI-compatible server on your own computer) and everything stays on your computer.
 > - Account numbers are also hidden on screen by default (`BE…1234`); hold the eye next to one to see it. The setting is switched back on after restoring a backup or export, or joining sync.
 > - The assistant never types amounts into your data: Kasboek checks every amount against your data or the PDF's own text. It can never change its own permissions, settings, keys or addresses.
+> - Claude Desktop and Claude Code reach Kasboek through a small helper program on this computer, with no network connection of its own; see [the helper program](#the-helper-program-kasboek-mcp) below.
 
 See [PLAN.md](PLAN.md) for the design, the security model and what still needs testing.
 
@@ -225,7 +226,7 @@ when the assistant may otherwise import by itself.
 change). In "Smart", balances, deleting rules, new accounts, importing and the assistant's memory ask
 unless you allow them; changes to more than 100 transactions always ask, except in "Full access".
 Even in "Full access", saving an import read from a PDF and changes asked for through Claude Desktop
-or Claude Code still ask (the second can be switched off), and the assistant can never change
+or Claude Code still ask (that last one has its own switch, "Claude Desktop and Claude Code always ask"), and the assistant can never change
 settings, keys, addresses or its own permissions. Changes made without asking show in the chat.
 
 **Memory**: say "remember that …", or add items in Settings → Assistant → "What the assistant remembers". Up to
@@ -235,6 +236,33 @@ MCP. Account and card numbers are refused. Switch it off to stop sending it.
 **Claude Desktop / Claude Code (MCP)**: switch on “Claude Desktop & Claude Code (MCP)” in
 Settings → Assistant and press “Add to Claude Desktop” or “Add to Claude Code”. It works while
 Kasboek is running and unlocked; changes wait for your approval in Kasboek.
+
+### The helper program kasboek-mcp
+
+`kasboek-mcp` (`kasboek-mcp.exe` on Windows) is a small separate program installed next to Kasboek, in
+its resources folder. Claude Desktop and Claude Code start it, and it passes their requests to Kasboek over a
+local channel on this computer (a named pipe on Windows, a Unix socket elsewhere), with a token for each
+session. It makes no network connection and holds no keys or database.
+
+- **Only while Kasboek runs and is unlocked**, and only with “Claude Desktop & Claude Code (MCP)” switched on
+  in Settings → Assistant. If Kasboek isn't running when Claude starts the helper, the helper starts Kasboek
+  in the tray, locked, so you can unlock it.
+- **What a connected app can do**: read accounts, balances, transactions, categories, budgets, goals, rules,
+  recurring costs, transfers, summaries and imports, and make changes to them (categorise, split, rename,
+  edit, set budgets, save an import, and similar). Every change waits for your approval in Kasboek. “Claude
+  Desktop and Claude Code always ask” is on by default; if you switch it off, your usual permissions decide.
+- **What it can never do**: unlock Kasboek, change settings, keys, addresses or permissions, or delete
+  transactions, goals, import batches or memory notes. Account and card numbers, e-mail addresses and
+  international phone numbers are hidden in what it returns.
+- **Windows updates**: the helper also installs Kasboek updates. Kasboek makes its safety backup, then runs a
+  copy of the helper with `--apply-update`. It waits for Kasboek to close, checks the downloaded installer's
+  SHA-256, shows a small progress window, runs Windows Installer (msiexec), and starts Kasboek again. It does
+  nothing else.
+- **Turn it off or remove it**: the MCP switch in Settings → Assistant stops the connection; the assistant's
+  own switch doesn't affect it. To remove Kasboek from the Claude apps, use “Remove from Claude Desktop” or
+  “Remove from Claude Code” in the same section. Uninstalling Kasboek also removes these entries.
+- **Open source**: the helper's code is in [tools/kasboek-mcp](tools/kasboek-mcp) (GPL-3.0-only), and the
+  Build installers workflow builds it from that source.
 
 ## Sync
 
