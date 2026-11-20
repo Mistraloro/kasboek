@@ -744,6 +744,86 @@ last in `kb-session`), `fx.updateEcb`.
 Not confirmed (needs the CI on Windows and macOS): `cargo test` and the parity suite on the other five targets; the transfer pair keys
 use 8 random bytes from the injected `Rng` (the app must supply a real one).
 
+**M2 slice 3a: kb-import (CSV and CAMT import engine; Linux x64 only, the six-target CI has not run it)**
+
+Done (`rust/crates/kb-import`, `kb-core::import` and `ops/import.rs`, new `Queries` in `kb-db`; 68 of 154 operations ported):
+- `kb-import` (no storage): CSV decoding with `encoding_rs` as `TextDecoder` does it (UTF-8 with and without BOM, UTF-16 LE/BE with BOM,
+  else Windows-1252; a BOM of the chosen encoding is dropped, also a second one), RFC 4180 parser, delimiter detection, header row, the synonym
+  tables of 7 languages, `autoMap`, date order and decimal detection, bank layout labels, `normalizeRows` (debit/credit, direction column,
+  `invertSign`, named months, OGM, references), `parseAmount`, the fingerprint, `groupKey` (now with the "message" part for transfers
+  between people; `kb-core` calls it), `build_rows` (ready / duplicate / possible duplicate / problem / skipped, `Ledger` trait for the
+  account's existing rows, learned names), `file_balance`, reconciliation. The CAMT reader has its own safe XML parser (DOCTYPE refused,
+  five entities and character references, depth 64, 2,000,000 elements, no recursion) and `read_camt` with every review fix of the
+  TypeScript reader (CLBD only as closing, group by IBAN, counterparty by IBAN comparison, batch splitting, row budget, 20 MB).
+- `kb-core`: one open import per account in `Core` (cleared on lock), the 13 operations `import.analyze`, `.analyzeXml`, `.preview`,
+  `.current`, `.raw`, `.remap`, `.updateRows`, `.commit`, `.checkApply`, `.checkUndo`, `.discard`, `.batches`, `.undo`. Left as
+  `op.not_ported`: `import.analyzePdf`, `.pdfCancel` (PDF, `kb-pdf`) and the assistant ones (`.assist*`, `.pdfAssist*`). `checkApply` and
+  `checkUndo` answer what TypeScript does when no check exists (the check itself comes with `kb-assistant`). `kb-db` gets `csv_profile_*`,
+  `import_*` (by fingerprint, by reference, nearby, tidied) and `batch_*` queries; `rusqlite` now has its `cache` feature.
+- Header floor (privacy): the session remembers the header row found on opening; for the assistant `import.remap` refuses a header row above
+  it (`import.header_above`), `import.raw` and the previews leave out everything at or above it. This rule is NOT in the TypeScript of this
+  branch (it is commit 0f68857 on `claude/focused-pasteur-oeugzy`, which also changes `import.raw` to `preambleLines`); it is ported from that
+  commit for the assistant actor only and tested in `kb-core/tests/import.rs`, not differentially. The person's own calls keep this branch's shapes.
+- Harness: `parity/compare.ts` (shared comparison), `parity/import-data.ts` (invented files), `parity/import.spec.ts` (see below). `"$session"` in a
+  step input stands for the latest `sessionId`; `sessionId` and `committedAt` are masked.
+- Differential tests: 104 tests, 100+ scenarios (comma, semicolon, tab and pipe files; Belgian, Dutch, German, French, UK and US formats; 10
+  bank layouts; quoted and multi-line fields; BOM, UTF-16 and Windows-1252; thousands marks; negative forms; debit/credit and direction
+  columns; bad rows; duplicates across files, n-th copies, pending-then-booked, possible duplicates; rules and learned names; remap and
+  updateRows errors; saved and damaged layouts; balance columns; transfers paired at commit; batches and undo; CAMT 052/053/054 with batches,
+  reversals, versions, namespaces, encodings, hostile DTD/entity/attribute inputs, limits of 50,000 rows, 2,000,000 elements, 1,000 statements,
+  20 MB, 10 MB) and two seeded big files (50,000 CSV rows, 40,000 XML entries), all equal on results and database dumps.
+- Ported unit tests: `kb-import` (parsing helpers, amounts, XML reader, dates, reconciliation) and `tests/camt.rs` (reader, limits, encodings).
+- Differences found and fixed while building it: `Number(text)` reads hex, exponents and blank text, so dates such as `0x10-03-2026` are valid
+  (a `js_number` port); names of `Object.prototype` (`constructor`) in a date make it invalid; attribute names `__proto__` are dropped and
+  `Object.values` orders integer-like keys first (the namespace check reads that order); the engine's date parser reads February 30 as 2 March
+  but throws on month 13, so `updateRows` with such a date is `op.failed`; `Buffer.from(text, 'base64')` skips junk and stops at `=`; more than
+  six description columns make `mappingSchema.parse` throw in `autoMap` (`op.failed`); an XML with exactly 50,000 entries is refused by the
+  50,000-row cap because the header counts.
+
+Not faithful (kept):
+- `x-user-defined` as a declared XML encoding is refused (Node's ICU has no table; Electron would read it).
+- Doubles: sums (`inCents`, reconciliation) are f64 as in JavaScript; amounts are `i64`, equal for every value the app can hold (up to 2^53).
+- The text of `op.failed` and `op.invalid_input` is not compared (as everywhere); `\p{L}` / `\p{M}` / `\p{N}` use the `regex` crate's Unicode tables.
+- The assistant's header-floor shapes (above) have no TypeScript counterpart on this branch.
+
+**M2 slice 3b: kb-pdf (PDF text reader and statement logic; Linux x64 only, the six-target CI has not run it)**
+
+Done (`rust/crates/kb-pdf`): the spike C reader and the TypeScript PDF logic as one crate, not wired into the app yet.
+- Reader (`reader.rs`): hayro-interpret / hayro-syntax `=0.9.0` (no embedded CJK CMaps: pdf.js, as `extract.ts` calls it, has no cMapUrl either), `PdfText` in the
+  exact shape of `extract.ts` (shown page size after `/Rotate` and crop box, upright text, ligatures as letters, pdf.js gap rules), limits 150 pages / 100,000
+  pieces / 1,000,000 UTF-16 characters / 60 s, the four error codes with the English messages. `process.rs`: `run_reader_process()` (the `--pdf-reader` child:
+  stdin bytes, JSON lines on stdout as in `protocol.ts`, progress per page, 60 s watchdog, panic hook that answers `import.pdf_broken` also under
+  `panic = "abort"`) and `read_pdf_in_child()` (parent side: empty environment, `isPdfText` checks, timeout, cancel flag, kill). `cap.rs`: `CappedAlloc`, a global
+  allocator the app installs (`#[global_allocator]`), counting only after the child switched it on, 1 GiB.
+- Logic: `lines.rs` (toLines), `statement.rs` (readStatement: tables, header recognition, repeated headers and margins, carry-forward lines, yearless dates,
+  block layouts, IBAN column, other-account note, balances; `reconcile`, `runningMismatches`, the flip hint `reconciliationBanner`), `plan.rs` (the text sent to the
+  assistant: `firstLineSent`, `maskedLines` with kb-rules `mask_numbers` / `mask_iban`, `splitParts`, `splitPart`, `partText`, `lines_to_send`, `preview_text`),
+  `session.rs` (`analyze_pdf`: the grid and the `PdfSessionData` that kb-import's `analyzeGrid` takes). The CSV pieces `statement.ts` uses (parseDate, parseAmount,
+  detectDecimal, headerField) are private copies in `csvrules.rs`, because kb-pdf must not depend on kb-import; they are compared with the TypeScript in tests.
+  Not ported: `parsePdfPlan` and `applyRowsPlan` (reading and checking the assistant's answer), they belong to the assistant crate.
+- Tests: 35 in Rust (reader, errors, limits, rotation, protocol checks, 21 TypeScript fixtures for lines / statements / assistant text, CSV rules, plan, process
+  tests against the real binary with `--features parity`, 30,000 seeded mutants), parity spec `rust/parity/pdf.spec.ts` (needs `cargo build -p kb-pdf --features parity`, `KB_PDF_BIN`).
+
+Results (invented data only):
+- Differential, 63 PDFs (38 from the repo helpers and generated statement variants in `rust/parity/pdf/corpus.ts`, 25 from the spike generator `gen_py.py`: reportlab and by hand): the Rust
+  logic on pdf.js's text gives lines, cells, statements and assistant text **identical** to the TypeScript in 63 of 63 (exact numbers). Rust reader against pdf.js: page sizes and error codes
+  equal in all; cells equal in 60 of 63 (the 2 below, and 1 where Rust is right and pdf.js garbled); statements read from the Rust reader's text equal in 63 of 63. Remaining differences: `rl_courier` (a space is exactly 0.6 em, pdf.js
+  rounds either way; statement equal), `raw_differences` (non-embedded font whose `/Widths` differ from the substitute font: hayro stretches glyphs to the PDF width, so a word is cut;
+  real Arial / Times metrics do not show it), and `raw_cid_no_tounicode` (below, Rust is the better one).
+- Fonts without ToUnicode: the spike's statement that pdf.js reads them was wrong. For a CID font with Identity-H and no ToUnicode pdf.js returns **garbled text** (glyph numbers as
+  characters, no error), so the TypeScript import finds no table. The Rust reader recovers the text from the embedded font program (`recover.rs`): glyph id, as hayro resolved it
+  (also through `CIDToGIDMap`), reversed through the font's cmap, else the `post` / CFF glyph names (`uniXXXX`, Adobe names of Latin text). Measured on 6 generated files
+  (`gen_cid_matrix.py`): Identity CID font 1/1, `CIDToGIDMap` stream 1/1, no cmap but glyph names 1/1, simple symbolic TrueType 1/1 for ASCII (codes above 127 come out through hayro's
+  default encoding: wrong accents), font with neither cmap nor names 0/1 (answered `import.pdf_scanned`; pdf.js gives garbage there too). Bare CFF programs and OpenType-CFF were not tested (no
+  fixture font in the repo); Type3 fonts are not recovered.
+- Hostile: 3,338 files (38 hand-made, 3,300 mutants; `rust/parity/pdf/gen_hostile.py`, `run_hostile.py`) through the release reader process: 0 crashes, aborts, hangs or panic messages. 1,636 read, 569 broken, 1,128 scanned,
+  5 too large. The 2 GiB bomb answers `import.pdf_too_large` in 0.4 s; the exponential form ends at the 60 s deadline. In cargo: 30,000 seeded mutants (xorshift, no cargo-fuzz), 0 panics.
+- Binary: the reader plus logic add about 6.0 MB to a stripped release binary (LTO, `panic = "abort"`), about 1 MB of it regex and unicode tables that kb-import will share.
+- Assistant text: ported from the release branch (`linesToSend`, `laterPageLines`, commit 0f68857): only table rows are sent, the first page from the header (else the first transaction-like line),
+  later pages from their first transaction-like line, so a repeated holder name or address is not sent and a later page without a transaction is dropped; `assistant.pdf_no_table` replaces the
+  8-line guess. The parity spec compares with that TypeScript (`KB_TS_ROOT=<release checkout>`, since this branch's `src/` is behind it). Masking uses `kb_rules::mask::mask_private`; the assistant text equals the TypeScript on all 63 PDFs, including `ts_turned12`.
+- Only CI can confirm: the other five targets, Windows (`CreateProcess` with an empty environment, stdin/stdout pipes), macOS, the memory cap under real RAM limits, real bank PDFs.
+
 **M2/M5 progress: kb-session (account and session; Linux x64 only, the six-target CI has not run it)**
 
 Done (`rust/crates/kb-session`, README there):
@@ -822,6 +902,34 @@ window blur hides revealed secrets (only locking does), month names in other lan
 transparent title bar on macOS. Needs Windows or macOS: Hello / Touch ID, DWM title bar, Narrator / VoiceOver, IME, the build of `titlebar.rs` and `device.rs`.
 The window is not created hidden: Slint 1.19 has no first-paint hook for the software renderer, so "first frame" is a timer after `show()`.
 
+**M4/M5 progress: the app on real accounts and data (Linux x64 only; Windows and macOS not run)**
+- `kb-service` `CoreService` v2: one worker thread owns a `kb-session` `Session` and a `kb-core` `Core` on the data folder. `auth.*` ops come from
+  `kb_session::ops::register_ops` (contract names only), everything else from `kb_core::dispatch`. Rules of `ipc.ts`: `app.*` / `prefs.*` go ahead of the
+  session (own preferences core on `prefs.json`), every other op waits for the account file to be read (queue order), locked refusal except `PUBLIC_OPS`.
+  The session opens the database with the vault key; the core opens a second handle (no migration) and both are dropped on lock. `LoadProgress`:
+  `opening` and `migrating` from the service (migration reported as a whole: 0 of 15, then 15 of 15, because the session migrates inside its open call; a per-migration
+  step needs a progress hook in `kb-db`/`kb-session`), `transactions` and `overview` from the app's fetch. Idle timer (`autoLockMinutes` of prefs, every 15 s;
+  system idle time through the `OsEvents` trait, else time since the last service call or `AppService::activity`), lock on system lock/suspend through
+  `OsEvents` (stub `NoOsEvents`: no platform code yet). `lastAuth` is written to `prefs.json` after every `auth.*` call (the lock screen of the next start; also feeds
+  the `Hint`, so a passwordless account stays sealed until the device check). Data folder = Electron `userData` (`--data-dir`, `KASBOEK_DATA_DIR`).
+  Throttle seconds travel in the error `details`. No change to kb-core was needed (the `auth.*` ops are dispatched by the service).
+- App: `--service core` is the default when a data folder is given or exists (fixture flags and `--service fixture` keep the fixtures; `core-temp` = seeded
+  temporary database). Setup: password with meter and repeat, passwordless, recovery key with the "saved" box and 4-character confirmation
+  (`setup_rules.rs` = `recoveryKeyConfirmed`), 2FA step with QR (`qrcode` 0.15, MIT/Apache-2.0; SVG in `qrSvg`, drawn in Slint from runs of modules) and
+  6-digit code, import option disabled with "not available yet". Lock: password, recovery key, 2FA code, remember 30 days, throttle countdown, Hello / Touch ID through
+  `DeviceAuth` (`SessionDevice` wraps `device.rs`; the session asks during `auth.unlock`), erase with typed word. Settings -> Security (change password, passwordless,
+  new recovery key, 2FA on/off), Accounts page marked "Developer preview" (`accounts.create`, `transactions.create`). Overview runs on real ops; sections whose op is
+  not ported show their own "not available yet".
+- Tests: `kb-service/tests/core_service.rs` (setup, lock, five wrong tries and the throttle, unlock, refusals while locked, change password, recovery unlock, 2FA with
+  remember, idle and system lock, erase, second start); `tools/startup-test-core.sh` (hidden `--demo-setup`: account created, unlocked first frame time logged, second start
+  unlocks, third start stays locked, password in no file); `tools/a11y-flow.sh` drives Setup, Lock, Security and Accounts through AT-SPI. Parity: Lock 0.49 % (PASS); Overview unchanged
+  (2.6 % pixels). No Electron stills exist for Setup, Security or Accounts.
+- Not done / stubbed: the OS seal (the app passes `Unsupported`, so `account.json` is written with `seal: 'none'`, passwordless is refused, and `seal: 'os'` files from Electron
+  cannot be opened until `kb-oseal` is wired and `kb-session` reads `os-native`); default categories are not localised after setup; Setup import; clipboard copy of the recovery
+  key; "recovered, choose a new password" screen (Security works without the current password after a recovery unlock); window input does not count as activity (only service calls
+  and navigation), so the idle timer needs the OS idle time on Windows and macOS; the migration progress above.
+- Needs Windows or macOS: Hello / Touch ID inside `auth.unlock`, OS idle and lock/suspend events, the real seal.
+
 New texts for the release branch's locale files (the app keeps them in `crates/kb-i18n/locales/extra.<lang>.json`; add them to the 8 files of
 `src/renderer/src/i18n/locales` if the Electron app should share them): `loading.opening`, `loading.migrating`, `loading.transactions`,
 `loading.overview`, `loading.unlocking`, `native.notPortedTitle`, `native.notPortedBody`, `native.opNotPorted`, `native.holdToShowNumbers`,
@@ -836,6 +944,17 @@ New texts for the release branch's locale files (the app keeps them in `crates/k
 - MonthNav and Toast: landmark offsets of 8 px and 6 px; cause not yet explained (landmarks).
 - Badge: 3.07% pixel diff (pixels).
 - Gaps: see `rust/crates/kb-ui/README.md` (Slint limits). Windows and macOS were not run: UIA/Narrator/VoiceOver, real focus ring and IME in the fields, popup placement at window edges, fonts under DirectWrite/CoreText.
+
+**kb-oseal (OS seal, G6 second half; built and unit-tested on Linux, cross-checked for Windows and macOS only)**
+- `rust/crates/kb-oseal`: `OsSeal` implementations behind cfg: Windows DPAPI (`windows` crate, user scope, fixed entropy, blob `KBD1 || DPAPI`),
+  macOS Keychain wrap key (`security-framework`, item `Kasboek Wrap Key`, AES-256-GCM, blob `KBK1 || iv || ct || tag`), Linux Secret Service
+  (`oo7` 0.7, MIT, async-io runtime, no tokio, wrapped with `futures-lite::block_on`; item `service=Kasboek, account=wrap-key`), fallback `Unsupported`.
+  `legacy`: Electron key material per OS, `open_electron_account_json(data_dir)`, `plan_migration` / `MigrationPlan::apply` (re-seal as
+  `seal:'os-native'`, original kept as `account.electron.json`).
+- Needs the real OS (not confirmed): DPAPI calls and entropy on a real profile, Keychain access-control prompts and locked-keychain codes,
+  `oo7` against GNOME Keyring / KeePassXC (and collection unlock prompts), the exact attributes Electron 45 gives its Linux item
+  (`application=Kasboek`, label `Kasboek Safe Storage` assumed), KWallet (not supported), and that Electron's async values keep the OSCrypt layouts.
+- Open for kb-session: its store only knows `seal:'os'|'none'`; it must read and write `os-native` before the migration result is usable.
 
 ## Appendix: not verified offline (each is a spike or M1 task)
 

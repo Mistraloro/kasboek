@@ -70,7 +70,8 @@ export component PlaceholderPage inherits Rectangle {
 }
 
 export component Shell inherits Rectangle {
-    // "overview" | "transactions" | "budgets" | "recurring" | "goals" | "year" | "networth" | "import" | "settings".
+    // "overview" | "transactions" | "budgets" | "recurring" | "goals" | "year" | "networth" | "import" | "accounts" | "settings".
+    // The Overview, Accounts and Settings pages are children of the shell; the others are placeholders.
     in-out property <string> page: "overview";
     in-out property <bool> assistant-open: false;
     // Room the window controls take at the right of the top bar when they are drawn into it (Electron: 148px).
@@ -198,6 +199,14 @@ export component Shell inherits Rectangle {
                             root.go("import");
                         }
                     }
+                    NavItem {
+                        text: Tx.tr("settings.accounts");
+                        icon: Icons.landmark;
+                        active: root.page == "accounts";
+                        clicked => {
+                            root.go("accounts");
+                        }
+                    }
                 }
                 Rectangle {
                     vertical-stretch: 1;
@@ -306,7 +315,7 @@ export component Shell inherits Rectangle {
                     horizontal-stretch: 1;
                     clip: true;
                     @children
-                    if root.page != "overview": PlaceholderPage {
+                    if root.page != "overview" && root.page != "accounts" && root.page != "settings": PlaceholderPage {
                         title: title-of(root.page);
                         heading: root.placeholder-heading;
                         body: root.placeholder-body.replace-all("{{page}}", title-of(root.page));
@@ -323,6 +332,7 @@ export component Shell inherits Rectangle {
                         padding: 20px;
                         Label {
                             text: Tx.tr("nav.assistant");
+                            font-family: Theme.serif;
                             font-size: Theme.fs-card-title;
                             font-weight: 600;
                             lh: Theme.lh-card-title;

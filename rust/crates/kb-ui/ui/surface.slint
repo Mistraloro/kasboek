@@ -27,6 +27,7 @@ export component CardHeader inherits Rectangle {
             spacing: 2px;
             Label {
                 text: root.title;
+                font-family: Theme.serif;
                 font-size: Theme.fs-card-title;
                 font-weight: 600;
                 lh: Theme.lh-card-title;
@@ -141,6 +142,7 @@ export component EmptyState inherits Rectangle {
         }
         Label {
             text: root.title;
+            font-family: Theme.serif;
             font-weight: 600;
             horizontal-alignment: center;
             accessible-role: text;

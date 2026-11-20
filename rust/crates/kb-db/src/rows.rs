@@ -334,3 +334,41 @@ pub struct PairHalf {
     pub amount_cents: i64,
     pub currency: String,
 }
+
+/* ----- imports ----- */
+
+/// A transaction as duplicate detection looks at it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ImportedTx {
+    pub id: i64,
+    pub booking_date: String,
+    pub counterparty_name: Option<String>,
+    pub description: String,
+    pub bank_counterparty: Option<String>,
+    pub bank_description: Option<String>,
+    pub bank_reference: Option<String>,
+    pub fingerprint: Option<String>,
+}
+
+/// A transaction whose readable text differs from the bank's own (tidied in an earlier import).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TidiedTx {
+    pub counterparty_name: Option<String>,
+    pub description: String,
+    pub bank_counterparty: Option<String>,
+    pub bank_description: String,
+    pub counterparty_iban: Option<String>,
+    pub communication: Option<String>,
+    pub amount_cents: i64,
+}
+
+/// A committed import batch with how many of its transactions are still there.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BatchRow {
+    pub id: i64,
+    pub file_name: String,
+    pub account_name: String,
+    pub row_count: i64,
+    pub committed_at: String,
+    pub remaining: i64,
+}

@@ -215,3 +215,71 @@ mod imp {
         report(Event::Answered(Outcome::Unavailable, "this system has no device prompt (Windows Hello and Touch ID only)".into()));
     }
 }
+
+/// The device check of the session (`kb_session::device::DeviceAuth`): `verify` shows the prompt above and waits for its
+/// answer, so the unlock itself asks the person (once) instead of the screen. The session calls it from the service's worker
+/// thread, never from the UI thread.
+pub struct SessionDevice {
+    /// The window the prompt belongs to (the HWND on Windows), set once the window exists.
+    window: Arc<std::sync::Mutex<Option<isize>>>,
+}
+
+impl SessionDevice {
+    pub fn new(window: Arc<std::sync::Mutex<Option<isize>>>) -> Self {
+        Self { window }
+    }
+}
+
+/// What this system can offer. Windows Hello and Touch ID are assumed present on Windows and macOS: whether they are set up
+/// shows when the prompt answers `Unavailable` (reported as `auth.device_unavailable`).
+fn system_kind() -> Option<kb_session::device::DeviceKind> {
+    use kb_session::device::DeviceKind;
+    if cfg!(windows) {
+        Some(DeviceKind::WindowsHello)
+    } else if cfg!(target_os = "macos") {
+        Some(DeviceKind::TouchId)
+    } else {
+        None
+    }
+}
+
+impl kb_session::device::DeviceAuth for SessionDevice {
+    fn peek(&self) -> Option<Option<kb_session::device::DeviceKind>> {
+        Some(system_kind())
+    }
+
+    fn kind(&self) -> Option<kb_session::device::DeviceKind> {
+        system_kind()
+    }
+
+    fn verify(&self, reason: &str) -> Result<bool, kb_session::SessionError> {
+        use crate::log;
+        use kb_session::SessionError;
+        let (tx, rx) = std::sync::mpsc::channel::<Outcome>();
+        let pressed = std::time::Instant::now();
+        log::mark("device prompt requested");
+        let report: Report = Arc::new(move |event| {
+            let since = pressed.elapsed().as_millis();
+            match event {
+                Event::Info(text) => log::mark(&format!("device: {text}")),
+                Event::Shown(how) => {
+                    log::mark(&format!("device prompt shown ({how}), {since} ms after press"));
+                    log::mark(&format!("time-to-prompt {since} ms"));
+                }
+                Event::Answered(outcome, detail) => {
+                    log::mark(&format!("device answered ({}), {since} ms after press: {detail}", outcome.word()));
+                    log::flush();
+                    let _ = tx.send(outcome);
+                }
+            }
+        });
+        let window = *self.window.lock().unwrap_or_else(|e| e.into_inner());
+        request(window, reason, report);
+        match rx.recv_timeout(std::time::Duration::from_secs(300)) {
+            Ok(Outcome::Verified) => Ok(true),
+            Ok(Outcome::Cancelled) => Ok(false),
+            Ok(Outcome::Unavailable) => Err(SessionError::new("auth.device_unavailable", "Windows Hello could not be started.")),
+            Ok(Outcome::Failed) | Err(_) => Err(SessionError::new("auth.device_failed", "Verification was cancelled or failed.")),
+        }
+    }
+}

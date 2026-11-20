@@ -1,0 +1,394 @@
+// Pages inside the shell that read the globals of state.slint directly: Settings -> Security (minimal) and the Accounts page of
+// the developer preview. Both scroll like the Overview and report with toasts.
+import { Theme, Icons, Label, Button, Card, PageHeader, Field, Input, PasswordInput, CodeInput, Scrollbar, Badge } from "@kb-ui";
+import { Tx } from "tx.slint";
+import { StrengthMeter } from "parts.slint";
+import { RecoveryPanel, TotpPanel } from "panels.slint";
+import { Sec, Acc, Recovery, Totp } from "state.slint";
+
+component Section inherits Card {
+    in property <string> title;
+    in property <string> hint;
+    height: col.preferred-height + 2px;
+    col := VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+        Label {
+            text: root.title;
+            font-family: Theme.serif;
+            font-size: Theme.fs-card-title;
+            font-weight: 600;
+            lh: Theme.lh-card-title;
+            accessible-role: AccessibleRole.text;
+        }
+        if root.hint != "": Label {
+            text: root.hint;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+        @children
+    }
+}
+
+export component SecurityPage inherits Rectangle {
+    property <length> content-w: min(640px, root.width - 80px);
+    property <string> mismatch: Sec.next-b != "" && Sec.next-a != Sec.next-b ? Tx.tr("auth.passwordMismatch") : "";
+    property <bool> password-ready: Sec.strength >= 4 && Sec.next-a == Sec.next-b && (!Sec.need-current || Sec.current != "") && !Sec.busy;
+    property <bool> confirmed: !Sec.need-current || Sec.current != "";
+    background: Theme.bg;
+    init => {
+        Sec.opened();
+    }
+
+    flick := Flickable {
+        width: parent.width - 10px;
+        height: parent.height;
+        content-height: page.preferred-height + 16px + 64px;
+        interactive: false;
+        page := VerticalLayout {
+            x: (parent.width - root.content-w) / 2;
+            y: 14px;
+            width: root.content-w;
+            spacing: 16px;
+            PageHeader {
+                title: Tx.tr("nav.settings");
+                subtitle: Tx.tr("settings.securityHint");
+            }
+            if Sec.view == "main": Section {
+                title: Tx.tr("settings.keyStorage");
+                Label {
+                    text: Sec.key-storage;
+                    font-size: Theme.fs-ui;
+                    lh: Theme.lh-ui;
+                    wrap: word-wrap;
+                    accessible-role: AccessibleRole.text;
+                }
+            }
+            if Sec.view == "main" && Sec.need-current: Section {
+                title: Tx.tr("auth.currentPassword");
+                Field {
+                    label: Tx.tr("auth.currentPassword");
+                    PasswordInput {
+                        text <=> Sec.current;
+                        label: Tx.tr("auth.currentPassword");
+                        eye-label: Tx.tr("auth.holdToShowPassword");
+                        enabled: !Sec.busy;
+                    }
+                }
+            }
+            if Sec.view == "main": Section {
+                title: Sec.mode == "device" ? Tx.tr("settings.usePassword") : Tx.tr("settings.changePassword");
+                Field {
+                    label: Tx.tr("auth.newPassword");
+                    PasswordInput {
+                        text <=> Sec.next-a;
+                        label: Tx.tr("auth.newPassword");
+                        eye-label: Tx.tr("auth.holdToShowPassword");
+                        enabled: !Sec.busy;
+                        edited(t) => {
+                            Sec.password-edited(t);
+                        }
+                    }
+                }
+                StrengthMeter {
+                    strength: Sec.strength;
+                    has-text: Sec.next-a != "";
+                    text: Sec.strength-text;
+                    rules: Sec.rules;
+                }
+                Field {
+                    label: Tx.tr("auth.repeatPassword");
+                    error: root.mismatch;
+                    PasswordInput {
+                        text <=> Sec.next-b;
+                        label: Tx.tr("auth.repeatPassword");
+                        eye-label: Tx.tr("auth.holdToShowPassword");
+                        invalid: root.mismatch != "";
+                        enabled: !Sec.busy;
+                    }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        variant: "primary";
+                        text: Sec.mode == "device" ? Tx.tr("settings.usePassword") : Tx.tr("settings.changePassword");
+                        enabled: root.password-ready;
+                        busy: Sec.busy;
+                        clicked => {
+                            Sec.change-password(Sec.current, Sec.next-a);
+                        }
+                    }
+                }
+            }
+            if Sec.view == "main" && Sec.mode == "password": Section {
+                title: Sec.device-title;
+                hint: Tx.tr("auth.chooseDeviceBody");
+                if Sec.device-note != "": Label {
+                    text: Sec.device-note;
+                    font-size: Theme.fs-xs;
+                    lh: Theme.lh-xs;
+                    color: Theme.warning;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        text: Sec.device-title;
+                        enabled: Sec.device-enabled && root.confirmed && !Sec.busy;
+                        clicked => {
+                            Sec.use-passwordless(Sec.current);
+                        }
+                    }
+                }
+            }
+            if Sec.view == "main" && Sec.mode == "device": Section {
+                title: Sec.device-title;
+                hint: Tx.tr("settings.passwordlessOn");
+            }
+            if Sec.view == "main": Section {
+                title: Tx.tr("auth.recoveryKey");
+                hint: Tx.tr("settings.recoveryHint");
+                HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        text: Tx.tr("settings.newRecoveryKey");
+                        enabled: root.confirmed && !Sec.busy;
+                        clicked => {
+                            Sec.new-recovery-key(Sec.current);
+                        }
+                    }
+                }
+            }
+            if Sec.view == "main": Section {
+                title: Tx.tr("settings.twoFactor");
+                hint: Tx.tr("settings.twoFactorHint");
+                if !Sec.two-factor: HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        variant: "primary";
+                        text: Tx.tr("auth.totpTurnOn");
+                        enabled: !Sec.busy;
+                        clicked => {
+                            Sec.totp-begin();
+                        }
+                    }
+                }
+                if Sec.two-factor: Field {
+                    label: Tx.tr("settings.twoFactorOffBody");
+                    CodeInput {
+                        text <=> Sec.off-code;
+                        label: Tx.tr("settings.twoFactorOffBody");
+                        enabled: !Sec.busy;
+                    }
+                }
+                if Sec.two-factor: HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        variant: "danger";
+                        text: Tx.tr("settings.twoFactorOff");
+                        enabled: Sec.off-code.character-count == 6 && !Sec.busy;
+                        clicked => {
+                            Sec.totp-disable(Sec.off-code);
+                        }
+                    }
+                }
+            }
+            if Sec.view == "recovery": Section {
+                title: Tx.tr("auth.recoveryTitle");
+                hint: Tx.tr("settings.newRecoveryBody");
+                RecoveryPanel {
+                    key-top: Recovery.key-top;
+                    key-bottom: Recovery.key-bottom;
+                    ok: Recovery.ok;
+                    saved <=> Recovery.saved;
+                    check <=> Recovery.check;
+                    edited(saved, typed) => {
+                        Recovery.edited(saved, typed);
+                    }
+                    done => {
+                        Recovery.done();
+                    }
+                }
+            }
+            if Sec.view == "totp": Section {
+                title: Tx.tr("auth.totpTitle");
+                hint: Tx.tr("auth.totpBody");
+                TotpPanel {
+                    state: Totp.state;
+                    secret: Totp.secret;
+                    runs: Totp.runs;
+                    modules: Totp.modules;
+                    error: Totp.error;
+                    busy: Totp.busy;
+                    code <=> Totp.code;
+                    enable(c) => {
+                        Totp.enable(c);
+                    }
+                    skip => {
+                        Sec.back();
+                    }
+                }
+            }
+        }
+    }
+    Scrollbar {
+        x: parent.width - self.width;
+        height: parent.height;
+        content-height: flick.content-height;
+        visible-height: flick.height;
+        content-y <=> flick.content-y;
+    }
+}
+
+export component AccountsPage inherits Rectangle {
+    property <length> content-w: min(640px, root.width - 80px);
+    background: Theme.bg;
+    init => {
+        Acc.opened();
+    }
+
+    flick := Flickable {
+        width: parent.width - 10px;
+        height: parent.height;
+        content-height: page.preferred-height + 16px + 64px;
+        interactive: false;
+        page := VerticalLayout {
+            x: (parent.width - root.content-w) / 2;
+            y: 14px;
+            width: root.content-w;
+            spacing: 16px;
+            PageHeader {
+                title: Tx.tr("settings.accounts");
+                subtitle: Tx.tr("native.accountsBody");
+                Badge {
+                    text: Tx.tr("native.devPreview");
+                    tone: "warning";
+                }
+            }
+            Section {
+                title: Tx.tr("settings.accounts");
+                if Acc.rows.length == 0: Label {
+                    text: Tx.tr("native.noAccounts");
+                    font-size: Theme.fs-ui;
+                    lh: Theme.lh-ui;
+                    color: Theme.muted;
+                }
+                for a in Acc.rows: HorizontalLayout {
+                    height: Theme.lh-ui + 4px;
+                    accessible-role: AccessibleRole.text;
+                    accessible-label: a.name + ", " + a.balance;
+                    Label {
+                        text: a.name;
+                        font-size: Theme.fs-ui;
+                        lh: Theme.lh-ui;
+                        horizontal-stretch: 1;
+                    }
+                    Label {
+                        text: a.balance;
+                        numeric: true;
+                        font-size: Theme.fs-ui;
+                        lh: Theme.lh-ui;
+                        horizontal-alignment: right;
+                    }
+                }
+            }
+            Section {
+                title: Tx.tr("native.addAccount");
+                Field {
+                    label: Tx.tr("native.accountName");
+                    Input {
+                        text <=> Acc.name;
+                        label: Tx.tr("native.accountName");
+                        enabled: !Acc.busy;
+                    }
+                }
+                Field {
+                    label: Tx.tr("native.openingBalance");
+                    Input {
+                        text <=> Acc.opening;
+                        label: Tx.tr("native.openingBalance");
+                        placeholder: "0.00";
+                        numeric: true;
+                        enabled: !Acc.busy;
+                    }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        variant: "primary";
+                        text: Tx.tr("native.addAccount");
+                        enabled: Acc.name != "" && !Acc.busy;
+                        clicked => {
+                            Acc.add-account(Acc.name, Acc.opening);
+                        }
+                    }
+                }
+            }
+            Section {
+                title: Tx.tr("native.addTransaction");
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    for a[i] in Acc.rows: Button {
+                        text: a.name;
+                        variant: Acc.selected == i ? "primary" : "secondary";
+                        small: true;
+                        clicked => {
+                            Acc.selected = i;
+                        }
+                    }
+                }
+                Field {
+                    label: Tx.tr("native.date");
+                    Input {
+                        text <=> Acc.date;
+                        label: Tx.tr("native.date");
+                        numeric: true;
+                        enabled: !Acc.busy;
+                    }
+                }
+                Field {
+                    label: Tx.tr("native.description");
+                    Input {
+                        text <=> Acc.description;
+                        label: Tx.tr("native.description");
+                        enabled: !Acc.busy;
+                    }
+                }
+                Field {
+                    label: Tx.tr("native.amount");
+                    error: Acc.error;
+                    Input {
+                        text <=> Acc.amount;
+                        label: Tx.tr("native.amount");
+                        placeholder: "-12.50";
+                        numeric: true;
+                        invalid: Acc.error != "";
+                        enabled: !Acc.busy;
+                    }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Button {
+                        variant: "primary";
+                        text: Tx.tr("native.addTransaction");
+                        enabled: Acc.rows.length > 0 && Acc.description != "" && Acc.amount != "" && !Acc.busy;
+                        clicked => {
+                            Acc.add-transaction(Acc.selected, Acc.date, Acc.description, Acc.amount);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Scrollbar {
+        x: parent.width - self.width;
+        height: parent.height;
+        content-height: flick.content-height;
+        visible-height: flick.height;
+        content-y <=> flick.content-y;
+    }
+}

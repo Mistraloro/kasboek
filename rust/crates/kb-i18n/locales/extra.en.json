@@ -11,6 +11,18 @@
     "notPortedBody": "{{page}} is still being moved to the new native app. Your data is not affected: open Kasboek 0.22 to use this page.",
     "opNotPorted": "{{op}} is not available in this version yet.",
     "holdToShowNumbers": "Hold to show the account numbers",
-    "assistantNote": "The assistant is not available in this version yet."
+    "assistantNote": "The assistant is not available in this version yet.",
+    "devPreview": "Developer preview",
+    "accountsBody": "A temporary page to try the new app on real data: add an account and a transaction, then look at the Overview. The real Accounts and Transactions pages replace it.",
+    "noAccounts": "No accounts yet.",
+    "addAccount": "Add account",
+    "accountName": "Account name",
+    "openingBalance": "Opening balance",
+    "addTransaction": "Add transaction",
+    "date": "Date (YYYY-MM-DD)",
+    "description": "Description",
+    "amount": "Amount (negative for spending)",
+    "badAmount": "Enter an amount like -12.50.",
+    "saved": "Saved."
   }
 }

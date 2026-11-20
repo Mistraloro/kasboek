@@ -50,7 +50,7 @@ Real windows take the OS scale factor (`SLINT_SCALE_FACTOR=1.5` overrides); `--s
 
 **Tokens.** Colours, radii, type sizes and shadows come from `Theme`; font family names from `Fonts` (through `Theme.sans/num/serif`).
 No hex colour, font name or radius literal in a component, except sizes that are Tailwind arbitrary values of the renderer (then
-copy the value and say which class it is). Numbers use `Theme.num` (Inter with `tnum` frozen), the title `Theme.serif`.
+copy the value and say which class it is). Numbers use `Theme.num` (Inter with `tnum` frozen), data and running text `Theme.sans` (Inter); titles, headings, card titles, dialog titles, the logo and button labels use `Theme.serif` (Playfair Display, shipped as "Kasboek Display" because the OFL reserves its name for modified versions; see `tools/make-fonts.py`). The font has no `ij` ligature glyph (Dutch "ij" is two letters).
 Text height: set a CSS line box with `Label { lh: ... }`; Slint's own line height differs.
 
 **Fonts.** One place names them: `tools/fonts.json` (family, @fontsource-variable package, weights, frozen features). Edit it and run

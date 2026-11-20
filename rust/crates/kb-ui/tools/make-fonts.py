@@ -3,9 +3,15 @@
 
 Needs: pip install fonttools brotli opentype-feature-freezer
 Input : tools/fonts.json (the one place that names the fonts) and
-        node_modules/@fontsource-variable/<package>/files/<package>-latin-wght-normal.woff2 (OFL-1.1)
+        <package>/files/<package>-latin-wght-normal.woff2 (OFL-1.1) of the @fontsource-variable packages, looked up in
+        $KB_FONTSOURCE first, then node_modules/@fontsource-variable. Playfair Display is no dependency of the Electron
+        app: `npm pack @fontsource-variable/playfair-display@5.3.0`, unpack it as $KB_FONTSOURCE/playfair-display/.
 Output: assets/fonts/*.ttf   (Latin subset as shipped by fontsource), assets/fonts/<Family>-OFL.txt,
         ui/fonts.slint       (imports of the TTFs and the `Fonts` global with the family names)
+
+Playfair Display reserves its name (OFL 1.1 section 3), and a subset/instance is a Modified Version, so fonts.json gives that
+family the name "Kasboek Display" (the copyright and licence records in the name table stay); the licence text is shipped as
+the family's "licence" file.
 
 A family with "freeze": "tnum" gets that OpenType feature frozen into the glyphs (Inter Num, the renderer's `.num`
 class), because Slint has no font-feature-settings.
@@ -14,6 +20,7 @@ styles.css asks for cv11 and ss01, but the fontsource latin subset has no such f
 calt, ccmp, dnom, frac, locl, numr, pnum, tnum), so Chromium renders neither today. Nothing to freeze for them.
 """
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -26,6 +33,11 @@ KB_UI = Path(__file__).resolve().parents[1]
 ROOT = KB_UI.parents[2]
 OUT = KB_UI / "assets" / "fonts"
 SRC = ROOT / "node_modules" / "@fontsource-variable"
+
+
+def package_dir(package: str) -> Path:
+    extra = os.environ.get("KB_FONTSOURCE")
+    return Path(extra) / package if extra and (Path(extra) / package).is_dir() else SRC / package
 STYLE = {400: "Regular", 500: "Medium", 600: "SemiBold"}
 
 
@@ -66,7 +78,7 @@ def main() -> None:
     for fam in config["families"]:
         family = fam["family"]
         stem = family.replace(" ", "")
-        woff2 = SRC / fam["package"] / "files" / f"{fam['package']}-latin-wght-normal.woff2"
+        woff2 = package_dir(fam["package"]) / "files" / f"{fam['package']}-latin-wght-normal.woff2"
         for w in fam["weights"]:
             inst = instance(woff2, w, tmp)
             dst = OUT / f"{stem}-{STYLE[w]}.ttf"
@@ -80,7 +92,7 @@ def main() -> None:
             files.append(dst.name)
         if not fam.get("freeze") and fam["package"] not in licences:
             licences.add(fam["package"])
-            shutil.copy(SRC / fam["package"] / "LICENSE", OUT / f"{stem}-OFL.txt")
+            shutil.copy(package_dir(fam["package"]) / "LICENSE", OUT / fam.get("licence", f"{stem}-OFL.txt"))
     for p in tmp.iterdir():
         p.unlink()
     tmp.rmdir()

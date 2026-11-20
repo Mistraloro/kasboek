@@ -91,8 +91,8 @@ pub fn update(path: &Path, changes: &[(&str, Value)]) {
     }
 }
 
-/// The folder of this app's own files: `--data-dir`, else a folder of its own (never the data of the Electron app).
-pub fn data_dir(arg: Option<String>) -> PathBuf {
+/// The folder of the fixtures' own files: `--data-dir`, else a folder of its own (never the data of the Electron app).
+pub fn dev_data_dir(arg: Option<String>) -> PathBuf {
     if let Some(d) = arg {
         return d.into();
     }

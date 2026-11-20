@@ -123,9 +123,15 @@ fn stable_sort<T: Clone>(items: Vec<T>, cmp: &impl Fn(&T, &T) -> Ordering) -> Ve
 
 /// Unpaired transfers, the surest first; each transaction is in at most one pair.
 pub fn find_transfers<S: Store>(store: &S) -> AppResult<Vec<TransferPair>> {
+    find_transfers_of(store, None)
+}
+
+/// Like `find_transfers`, limited to pairs with one of these transactions (`onlyIds`: the ones an import just added).
+pub fn find_transfers_of<S: Store>(store: &S, only_ids: Option<&[i64]>) -> AppResult<Vec<TransferPair>> {
     let rows = store.transfer_candidates()?;
+    let only: Option<HashSet<i64>> = only_ids.map(|ids| ids.iter().copied().collect());
     let mut scored = Vec::new();
-    for r in &rows {
+    for r in rows.iter().filter(|r| only.as_ref().is_none_or(|ids| ids.contains(&r.oid) || ids.contains(&r.iid))) {
         // Sure when one side names the other account's number.
         let named = |cp: &Option<String>, acc: &Option<String>| {
             cp.as_deref().is_some_and(|c| !c.is_empty())

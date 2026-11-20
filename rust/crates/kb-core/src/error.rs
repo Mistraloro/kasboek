@@ -60,4 +60,11 @@ impl From<DbError> for AppError {
     }
 }
 
+/// The import code knows only the code and the plain text of its errors.
+impl From<kb_import::ImportError> for AppError {
+    fn from(e: kb_import::ImportError) -> Self {
+        Self::new(e.code, e.message)
+    }
+}
+
 pub type AppResult<T> = Result<T, AppError>;

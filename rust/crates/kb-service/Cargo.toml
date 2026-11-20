@@ -9,7 +9,10 @@ publish.workspace = true
 
 [dependencies]
 kb-core.workspace = true
+kb-crypto.workspace = true
 kb-db.workspace = true
+kb-session.workspace = true
+qrcode = { version = "0.15", default-features = false, features = ["svg"] }
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

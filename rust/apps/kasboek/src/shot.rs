@@ -1,6 +1,6 @@
 //! Offscreen screenshots of the screens (software renderer, no windowing system): `kasboek shot <screen> <light|dark> out.png`.
 //! The same controller and data as the real window; the screens are put in place synchronously.
-use crate::{app, arg, flag, prefs::Prefs, service_from, today_from, view, App, DateCheck, Lock, Rules, SetupState};
+use crate::{app, arg, flag, pick_service, prefs::Prefs, service_from, today_from, view, App, DateCheck, Kind, Lock, Rules, SetupState};
 use kb_service::LoadStep;
 use kb_ui::shot;
 use serde_json::json;
@@ -51,10 +51,16 @@ pub fn run(args: &[String]) -> i32 {
     if screen.as_str() == "overview" || screen.as_str() == "loading" {
         service_args.extend(["--state".into(), "unlocked".into()]);
     }
+    // These screens need the answers of the real core (a seeded temporary database).
+    if matches!(screen.as_str(), "setup-twofactor" | "security" | "accounts") {
+        service_args.extend(["--service".into(), "core-temp".into(), "--state".into(), "unlocked".into()]);
+    }
     if screen.starts_with("lock-device") {
         service_args.extend(["--mode".into(), "device".into(), "--device".into(), "windows-hello".into()]);
     }
-    let service = match service_from(&service_args) {
+    // The screens are drawn from the fixtures unless a real service is asked for.
+    let kind = pick_service(&service_args, false, false).unwrap_or(Kind::Fixture);
+    let service = match service_from(&service_args, kind, &std::env::temp_dir().join("kasboek-shot"), Default::default()) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{e}");
@@ -69,6 +75,8 @@ pub fn run(args: &[String]) -> i32 {
         today,
         fake_device: false,
         caption_inset: num("--inset", 148.0),
+        device_in_service: false,
+        demo_password: None,
     };
     let ctl = app::Ctl::attach(&ui, service.clone(), cfg, &prefs);
     ctl.set_theme(&ui, theme.as_str() == "dark");
@@ -100,10 +108,21 @@ pub fn run(args: &[String]) -> i32 {
                 ctl.password_edited(&pw);
             }
             if screen.as_str() == "setup-recovery" {
-                setup.set_recovery_key_top("ABCD-EFGH-JKLM-NPQR".into());
-                setup.set_recovery_key_bottom("STUV-WXYZ-2345-6789".into());
+                ctl.show_recovery(&ui, "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-6789");
                 setup.set_step("recovery".into());
             }
+        }
+        "setup-twofactor" => {
+            ctl.show_setup(&ui, &json!({ "device": "windows-hello", "keyProtection": "os", "deviceChecking": false, "legacyData": false }));
+            ui.global::<SetupState>().set_step("twofactor".into());
+            ctl.show_totp(&ui, kb_service::block_on(service.invoke("auth.totpBegin", json!({}))));
+        }
+        "security" | "accounts" => {
+            let call = |op: &str| kb_service::block_on(service.invoke(op, json!({})));
+            ctl.show_security(&ui, &call("auth.status").unwrap_or_default());
+            ctl.show_accounts(&ui, &call("accounts.list"));
+            ui.global::<crate::ShellState>().set_page(screen.as_str().replace("security", "settings").into());
+            ui.set_screen("shell".into());
         }
         "loading" => {
             ctl.progress(&ui, LoadStep::Opening, 1, 1);

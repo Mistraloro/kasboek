@@ -1,0 +1,244 @@
+// The recovery key panel (pages/auth/parts.tsx `RecoveryKeyPanel`) and the two-factor step (`TotpSetup`), shared by the Setup
+// flow and Settings -> Security. They hold no logic: the app checks the confirmation (src/setup_rules.rs) and talks to the core.
+import { Theme, Icons, Icon, Label, Button, Field, Input, CodeInput, Checkbox } from "@kb-ui";
+import { Tx } from "tx.slint";
+
+// One horizontal run of dark modules of the QR code: column, row and length, in modules.
+export struct QrRun {
+    x: int,
+    y: int,
+    w: int,
+}
+
+// A QR code drawn from rectangles (one per run), black on white, `module` px per module. The renderer-neutral way to draw it.
+component QrCode inherits Rectangle {
+    in property <[QrRun]> runs;
+    in property <int> modules;
+    in property <length> module: 4px;
+    in property <string> label;
+    width: root.modules * root.module;
+    height: root.modules * root.module;
+    background: #ffffff;
+    border-radius: Theme.r-md;
+    clip: true;
+    accessible-role: AccessibleRole.image;
+    accessible-label: root.label;
+    for run in root.runs: Rectangle {
+        x: run.x * root.module;
+        y: run.y * root.module;
+        width: run.w * root.module;
+        height: root.module;
+        background: #000000;
+    }
+}
+
+export component RecoveryPanel inherits VerticalLayout {
+    in property <string> key-top;
+    in property <string> key-bottom;
+    // `recoveryKeyConfirmed`: "saved" ticked and the last group typed back.
+    in property <bool> ok;
+    in-out property <bool> saved;
+    in-out property <string> check;
+    callback edited(bool, string);
+    callback done();
+    spacing: 16px;
+
+    Rectangle {
+        height: keys.preferred-height + 32px;
+        border-radius: Theme.r-lg;
+        border-width: 1px;
+        border-color: Theme.border;
+        background: Theme.surface-2;
+        accessible-role: AccessibleRole.text;
+        accessible-label: Tx.tr("auth.recoveryKey");
+        accessible-description: root.saved ? Tx.tr("auth.recoveryHidden") : root.key-top + "-" + root.key-bottom;
+        keys := VerticalLayout {
+            padding: 16px;
+            Label {
+                text: root.saved ? "••••-••••-••••-••••" : root.key-top;
+                numeric: true;
+                font-size: 17px;
+                font-weight: 600;
+                lh: 27.5px;
+                letter-spacing: 1px;
+                horizontal-alignment: center;
+            }
+            Label {
+                text: root.saved ? "••••-••••-••••-••••" : root.key-bottom;
+                numeric: true;
+                font-size: 17px;
+                font-weight: 600;
+                lh: 27.5px;
+                letter-spacing: 1px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 4px;
+        for tip in ["auth.recoveryTip1", "auth.recoveryTip2", "auth.recoveryTip3"]: Label {
+            text: "• " + Tx.tr(tip);
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+        }
+    }
+    Checkbox {
+        checked <=> root.saved;
+        text: Tx.tr("auth.recoverySaved");
+        toggled(c) => {
+            root.edited(c, root.check);
+        }
+    }
+    if root.saved: Field {
+        label: Tx.tr("auth.recoveryConfirm");
+        hint: Tx.tr("auth.recoveryHidden");
+        Input {
+            text <=> root.check;
+            label: Tx.tr("auth.recoveryConfirm");
+            numeric: true;
+            letter-spacing: 2px;
+            edited(t) => {
+                root.edited(root.saved, t);
+            }
+        }
+    }
+    Rectangle {
+        height: 36px;
+        Button {
+            width: parent.width;
+            variant: "primary";
+            text: Tx.tr("auth.continue");
+            enabled: root.ok;
+            clicked => {
+                root.done();
+            }
+        }
+    }
+}
+
+export component TotpPanel inherits VerticalLayout {
+    // "loading" | "ready" | "failed" (`totpStepView`: a failure shows the error and still allows "Not now").
+    in property <string> state;
+    in property <string> secret;
+    in property <[QrRun]> runs;
+    in property <int> modules;
+    in property <string> error;
+    in property <bool> busy;
+    in-out property <string> code;
+    callback enable(string);
+    callback skip();
+    spacing: 16px;
+
+    if root.state == "failed": Label {
+        text: root.error;
+        font-size: Theme.fs-ui;
+        lh: Theme.lh-ui;
+        color: Theme.warning;
+        wrap: word-wrap;
+        accessible-role: AccessibleRole.text;
+        accessible-live-region: assertive;
+    }
+    if root.state == "failed": HorizontalLayout {
+        alignment: end;
+        Button {
+            text: Tx.tr("auth.notNow");
+            clicked => {
+                root.skip();
+            }
+        }
+    }
+    if root.state == "ready": VerticalLayout {
+        spacing: 16px;
+        VerticalLayout {
+            spacing: 4px;
+            Label {
+                text: "1. " + Tx.tr("auth.totpStep1");
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.muted;
+                wrap: word-wrap;
+            }
+            Label {
+                text: "2. " + Tx.tr("auth.totpStep2");
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                color: Theme.muted;
+                wrap: word-wrap;
+            }
+        }
+        HorizontalLayout {
+            spacing: 16px;
+            alignment: start;
+            QrCode {
+                runs: root.runs;
+                modules: root.modules;
+                label: Tx.tr("auth.qrAlt");
+            }
+            VerticalLayout {
+                alignment: center;
+                spacing: 4px;
+                Label {
+                    text: Tx.tr("auth.totpManual");
+                    font-size: Theme.fs-ui;
+                    lh: Theme.lh-ui;
+                    color: Theme.muted;
+                    wrap: word-wrap;
+                }
+                Label {
+                    text: root.secret;
+                    numeric: true;
+                    font-size: Theme.fs-ui;
+                    font-weight: 600;
+                    lh: Theme.lh-ui;
+                    wrap: word-wrap;
+                    accessible-role: AccessibleRole.text;
+                }
+            }
+        }
+        Field {
+            label: Tx.tr("auth.totpStep3");
+            CodeInput {
+                text <=> root.code;
+                label: Tx.tr("auth.totpStep3");
+                enabled: !root.busy;
+                accepted(t) => {
+                    if (root.code.character-count == 6 && !root.busy) {
+                        root.enable(root.code);
+                    }
+                }
+            }
+        }
+        if root.error != "": Label {
+            text: root.error;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.negative;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+            accessible-live-region: assertive;
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            Button {
+                text: Tx.tr("auth.notNow");
+                clicked => {
+                    root.skip();
+                }
+            }
+            Button {
+                variant: "primary";
+                has-icon: true;
+                icon: Icons.check;
+                text: Tx.tr("auth.totpTurnOn");
+                enabled: root.code.character-count == 6 && !root.busy;
+                busy: root.busy;
+                clicked => {
+                    root.enable(root.code);
+                }
+            }
+        }
+    }
+}

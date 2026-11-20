@@ -18,6 +18,7 @@ pub mod error;
 pub mod finance;
 pub mod goals;
 mod grouping;
+pub mod import;
 pub mod input;
 pub mod jsstr;
 pub mod numbers;

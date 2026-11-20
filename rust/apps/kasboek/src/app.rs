@@ -4,8 +4,9 @@ use crate::device::{self, Event, Outcome, Report};
 use crate::format::Formats;
 use crate::loading::{self, Gate, Progress};
 use crate::prefs::{self, LastAuth, Prefs};
+use crate::setup_rules::{recovery_key_confirmed, recovery_key_tail, TotpBegin};
 use crate::view::{self, OverviewData, Res};
-use crate::{log, titlebar, App, Loading, Lock, Ov, RuleRow, SetupState, ShellState, Tx};
+use crate::{log, titlebar, App, Loading, Lock, Ov, QrRun, Recovery, RuleRow, SetupState, ShellState, Totp, Tx};
 use kb_i18n::Catalog;
 use kb_service::{AppError, AppEvent, AppService, LoadStep};
 use serde_json::{json, Value};
@@ -24,6 +25,11 @@ pub struct Config {
     pub fake_device: bool,
     /// The space the window controls take at the right of the top bar (Electron draws them into the page: 148 px).
     pub caption_inset: f32,
+    /// The service asks the person itself (Windows Hello / Touch ID inside `auth.unlock`): the button only starts the call.
+    /// Off for the fixtures, where this app shows the prompt first.
+    pub device_in_service: bool,
+    /// The development start `--demo-setup`: create the account (or unlock it) with this password without the screens.
+    pub demo_password: Option<String>,
 }
 
 #[derive(Default)]
@@ -41,15 +47,18 @@ struct State {
 }
 
 pub struct Ctl {
-    ui: slint::Weak<App>,
-    service: Arc<dyn AppService>,
-    cat: Rc<Catalog>,
+    pub(crate) ui: slint::Weak<App>,
+    pub(crate) service: Arc<dyn AppService>,
+    pub(crate) cat: Rc<Catalog>,
     prefs_path: PathBuf,
-    cfg: Config,
-    fmt: RefCell<Formats>,
+    pub(crate) cfg: Config,
+    pub(crate) fmt: RefCell<Formats>,
     state: RefCell<State>,
     status: RefCell<Value>,
     toasts: Rc<VecModel<crate::ToastItem>>,
+    /// The last group of the recovery key on screen, to check what the person types back. Nothing else of the key is kept.
+    recovery_tail: RefCell<String>,
+    demo_password: RefCell<Option<String>>,
     gate_timer: Timer,
     throttle_timer: Timer,
     device_started: Cell<Option<Instant>>,
@@ -60,13 +69,13 @@ thread_local! {
 }
 
 /// Runs `f` with the controller (UI thread only).
-fn with(f: impl FnOnce(&Rc<Ctl>)) {
+pub(crate) fn with(f: impl FnOnce(&Rc<Ctl>)) {
     if let Some(c) = CTL.with(|c| c.borrow().clone()) {
         f(&c);
     }
 }
 
-fn s(text: impl Into<SharedString>) -> SharedString {
+pub(crate) fn s(text: impl Into<SharedString>) -> SharedString {
     text.into()
 }
 
@@ -85,10 +94,12 @@ impl Ctl {
             cat,
             prefs_path: cfg.data_dir.join("prefs.json"),
             fmt: RefCell::new(Formats::from_json(&prefs.formats)),
+            demo_password: RefCell::new(cfg.demo_password.clone()),
             cfg,
             state: RefCell::new(State { month: today, ..State::default() }),
             status: RefCell::new(Value::Null),
             toasts,
+            recovery_tail: RefCell::new(String::new()),
             gate_timer: Timer::default(),
             throttle_timer: Timer::default(),
             device_started: Cell::new(None),
@@ -137,7 +148,7 @@ impl Ctl {
     }
 
     /// Runs a service call on a worker thread and hands the answer to `then` on the UI thread.
-    fn run(&self, op: &'static str, input: Value, then: impl FnOnce(&Rc<Ctl>, &App, Res) + Send + 'static) {
+    pub(crate) fn run(&self, op: &'static str, input: Value, then: impl FnOnce(&Rc<Ctl>, &App, Res) + Send + 'static) {
         let (service, weak) = (self.service.clone(), self.ui.clone());
         std::thread::spawn(move || {
             let res = kb_service::block_on(service.invoke(op, input));
@@ -155,7 +166,13 @@ impl Ctl {
         setup.on_password_edited(|t| with(|c| c.password_edited(&t)));
         setup.on_create_password(|p| with(|c| c.create(json!({ "mode": "password", "password": p.as_str() }))));
         setup.on_create_device(|| with(|c| c.create(json!({ "mode": "device" }))));
-        setup.on_finished(|| with(|c| c.start()));
+        setup.on_finished(|| with(|c| c.finish_setup()));
+        let recovery = ui.global::<Recovery>();
+        recovery.on_edited(|saved, typed| with(|c| c.recovery_edited(saved, &typed)));
+        recovery.on_done(|| with(|c| c.recovery_done()));
+        ui.global::<Totp>().on_enable(|code| with(|c| c.totp_enable(&code)));
+        self.wire_security(ui);
+        self.wire_accounts(ui);
         let shell = ui.global::<ShellState>();
         shell.on_go(|page| with(|c| c.go(&page)));
         shell.on_about(|| with(|c| c.go("settings")));
@@ -189,14 +206,17 @@ impl Ctl {
                     self.reload(None);
                 }
             }
-            AppEvent::Locked { .. } => self.start(),
+            AppEvent::Locked { .. } => {
+                self.forget_session_screens(ui);
+                self.start();
+            }
             _ => {}
         }
     }
 
     // ---- text helpers ----
 
-    fn err_text(&self, e: &AppError) -> String {
+    pub(crate) fn err_text(&self, e: &AppError) -> String {
         let key = format!("errors.{}", e.code.replace('.', "_"));
         let text = self.cat.t(&key);
         if text == key {
@@ -206,7 +226,7 @@ impl Ctl {
         }
     }
 
-    fn toast(&self, tone: &str, message: String) {
+    pub(crate) fn toast(&self, tone: &str, message: String) {
         let id = {
             let mut st = self.state.borrow_mut();
             st.toast_id += 1;
@@ -230,14 +250,17 @@ impl Ctl {
 
     fn apply_status(self: &Rc<Self>, ui: &App, st: &Value) {
         *self.status.borrow_mut() = st.clone();
-        match st["state"].as_str().unwrap_or("locked") {
-            "setup" => self.show_setup(ui, st),
-            "unlocked" => self.begin_load(ui),
+        let demo = self.demo_password.borrow_mut().take();
+        match (st["state"].as_str().unwrap_or("locked"), demo) {
+            ("setup", Some(password)) => self.demo_login("auth.setup", json!({ "mode": "password", "password": password })),
+            ("locked", Some(password)) => self.demo_login("auth.unlock", json!({ "password": password })),
+            ("setup", None) => self.show_setup(ui, st),
+            ("unlocked", _) => self.begin_load(ui),
             _ => self.show_lock(ui, st),
         }
     }
 
-    fn device_name(&self, kind: &str) -> String {
+    pub(crate) fn device_name(&self, kind: &str) -> String {
         self.cat.t(if kind == "touch-id" { "auth.touchId" } else { "auth.windowsHello" })
     }
 
@@ -321,8 +344,9 @@ impl Ctl {
         ui.set_screen(s("setup"));
     }
 
-    pub fn password_edited(&self, text: &str) {
-        let Some(ui) = self.ui.upgrade() else { return };
+    /// The strength meter of the shared rules: the segments, the word under them and the four ticked-off rules. The meter
+    /// reaches "strong" only when every rule passes, as the meter of the renderer counts.
+    pub(crate) fn strength_view(&self, text: &str) -> (i32, SharedString, Vec<RuleRow>) {
         let check = kb_rules::password::check_password(text);
         use kb_rules::password::PasswordIssue::{AppName, Common, Pattern};
         let has = |i| check.issues.contains(&i);
@@ -334,14 +358,16 @@ impl Ctl {
             rule(!text.is_empty() && !has(Common) && !has(AppName), self.cat.t("auth.ruleCommon")),
             rule(!text.is_empty() && !has(Pattern), self.cat.t("auth.rulePattern")),
         ];
+        let word = if text.is_empty() { self.cat.t("auth.strengthHint") } else { self.cat.t(&format!("auth.strength{}", check.strength)) };
+        (i32::from(check.strength), s(word), rules)
+    }
+
+    pub fn password_edited(&self, text: &str) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        let (strength, word, rules) = self.strength_view(text);
         let setup = ui.global::<SetupState>();
-        setup.set_strength(i32::from(check.strength));
-        // The strength meter reaches "strong" only when every rule passes, as the meter of the renderer counts.
-        setup.set_strength_text(s(if text.is_empty() {
-            self.cat.t("auth.strengthHint")
-        } else {
-            self.cat.t(&format!("auth.strength{}", check.strength))
-        }));
+        setup.set_strength(strength);
+        setup.set_strength_text(word);
         setup.set_rules(ModelRc::new(VecModel::from(rules)));
     }
 
@@ -354,13 +380,137 @@ impl Ctl {
             setup.set_busy(false);
             match res {
                 Ok(r) => {
-                    let key = r["recoveryKey"].as_str().unwrap_or("");
-                    let groups: Vec<&str> = key.split('-').collect();
-                    setup.set_recovery_key_top(s(groups.iter().take(4).copied().collect::<Vec<_>>().join("-")));
-                    setup.set_recovery_key_bottom(s(groups.iter().skip(4).copied().collect::<Vec<_>>().join("-")));
+                    c.show_recovery(ui, r["recoveryKey"].as_str().unwrap_or(""));
                     setup.set_step(s("recovery"));
                 }
                 Err(e) => setup.set_error(s(c.err_text(&e))),
+            }
+        });
+    }
+
+    /// Puts a recovery key on the recovery panel (Setup and Security share it) and keeps its last group for the check.
+    pub fn show_recovery(&self, ui: &App, key: &str) {
+        let groups: Vec<&str> = key.split('-').collect();
+        let recovery = ui.global::<Recovery>();
+        recovery.set_key_top(s(groups.iter().take(4).copied().collect::<Vec<_>>().join("-")));
+        recovery.set_key_bottom(s(groups.iter().skip(4).copied().collect::<Vec<_>>().join("-")));
+        recovery.set_saved(false);
+        recovery.set_check(s(""));
+        recovery.set_ok(false);
+        *self.recovery_tail.borrow_mut() = recovery_key_tail(key).to_string();
+    }
+
+    /// The key leaves the screen and the memory of this controller when the panel is done with.
+    fn hide_recovery(&self, ui: &App) {
+        let recovery = ui.global::<Recovery>();
+        recovery.set_key_top(s(""));
+        recovery.set_key_bottom(s(""));
+        recovery.set_saved(false);
+        recovery.set_check(s(""));
+        recovery.set_ok(false);
+        self.recovery_tail.borrow_mut().clear();
+    }
+
+    fn recovery_edited(&self, saved: bool, typed: &str) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        ui.global::<Recovery>().set_ok(recovery_key_confirmed(&self.recovery_tail.borrow(), saved, typed));
+    }
+
+    /// "Continue" on the recovery key: in the Setup flow the two-factor step follows, in Settings the page comes back.
+    fn recovery_done(self: &Rc<Self>) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        self.hide_recovery(&ui);
+        if ui.get_screen() == "setup" {
+            ui.global::<SetupState>().set_step(s("twofactor"));
+            self.totp_begin();
+        } else {
+            ui.global::<crate::Sec>().set_view(s("main"));
+        }
+    }
+
+    /// Asks the core for a new 2FA secret and shows it with its QR code. A failure shows the error and still allows "Not now".
+    pub(crate) fn totp_begin(self: &Rc<Self>) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        let totp = ui.global::<Totp>();
+        totp.set_state(s("loading"));
+        totp.set_error(s(""));
+        totp.set_code(s(""));
+        totp.set_busy(false);
+        self.run("auth.totpBegin", json!({}), |c, ui, res| c.show_totp(ui, res));
+    }
+
+    /// Shows the answer of `auth.totpBegin` on the two-factor panel.
+    pub fn show_totp(&self, ui: &App, res: Res) {
+        let totp = ui.global::<Totp>();
+        let outcome = match res {
+            Ok(r) => match qr_runs(r["uri"].as_str().unwrap_or("")) {
+                Some((modules, runs)) => {
+                    totp.set_secret(s(r["secret"].as_str().unwrap_or("")));
+                    totp.set_modules(modules);
+                    totp.set_runs(ModelRc::new(VecModel::from(runs)));
+                    TotpBegin::Ready
+                }
+                None => {
+                    totp.set_error(s(self.cat.t("errors.op_failed")));
+                    TotpBegin::Failed
+                }
+            },
+            Err(e) => {
+                let text = self.err_text(&e);
+                self.toast("error", text.clone());
+                totp.set_error(s(text));
+                TotpBegin::Failed
+            }
+        };
+        totp.set_state(s(outcome.word()));
+    }
+
+    fn totp_enable(&self, code: &str) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        let totp = ui.global::<Totp>();
+        totp.set_busy(true);
+        totp.set_error(s(""));
+        self.run("auth.totpEnable", json!({ "code": code }), |c, ui, res| {
+            let totp = ui.global::<Totp>();
+            totp.set_busy(false);
+            totp.set_code(s(""));
+            match res {
+                Ok(_) => {
+                    totp.set_secret(s(""));
+                    totp.set_runs(ModelRc::new(VecModel::<QrRun>::default()));
+                    c.toast("info", c.cat.t("auth.totpEnabled"));
+                    if ui.get_screen() == "setup" {
+                        c.finish_setup();
+                    } else {
+                        ui.global::<crate::Sec>().set_view(s("main"));
+                        c.refresh_security(ui);
+                    }
+                }
+                Err(e) => totp.set_error(s(c.err_text(&e))),
+            }
+        });
+    }
+
+    /// The first-run flow is over (recovery key stored, two-factor done or skipped): the app takes over.
+    pub(crate) fn finish_setup(self: &Rc<Self>) {
+        if let Some(ui) = self.ui.upgrade() {
+            let totp = ui.global::<Totp>();
+            totp.set_secret(s(""));
+            totp.set_runs(ModelRc::new(VecModel::<QrRun>::default()));
+            ui.global::<SetupState>().set_password_a(s(""));
+            ui.global::<SetupState>().set_password_b(s(""));
+        }
+        self.start();
+    }
+
+    /// `--demo-setup`: the same calls the screens make, without the screens (a development start; see main.rs).
+    fn demo_login(self: &Rc<Self>, op: &'static str, input: Value) {
+        log::mark(&format!("demo: {op}"));
+        self.run(op, input, |c, ui, res| match res {
+            Ok(_) => c.start(),
+            Err(e) => {
+                log::mark(&format!("demo: failed with {}", e.code));
+                c.show_lock(ui, &json!({ "state": "locked", "mode": "password", "throttleSeconds": 0, "error": { "code": e.code, "message": e.message } }));
             }
         });
     }
@@ -384,7 +534,7 @@ impl Ctl {
         }
         lock.set_busy(true);
         lock.set_error(s(""));
-        if device {
+        if device && !self.cfg.device_in_service {
             self.press_device(&ui, input);
         } else {
             self.submit(input);
@@ -400,7 +550,7 @@ impl Ctl {
                 Ok(st) => {
                     log::mark(&format!("kdf done ({:.0} ms)", started.elapsed().as_secs_f64() * 1000.0));
                     if let Some(auth) = LastAuth::from_status(&st) {
-                        prefs::update(&c.prefs_path, &[("lastAuth", auth.to_json())]);
+                        c.cache_pref("lastAuth", auth.to_json());
                     }
                     c.apply_status(ui, &st);
                 }
@@ -408,12 +558,15 @@ impl Ctl {
                     lock.set_busy(false);
                     lock.set_error(s(c.err_text(&e)));
                     lock.set_code(s(""));
-                    // The throttle after a wrong try comes from the status.
-                    c.run("auth.status", json!({}), |c, ui, res| {
-                        if let Ok(st) = res {
-                            c.start_throttle(ui, st["throttleSeconds"].as_u64().unwrap_or(0));
-                        }
-                    });
+                    // The throttle after a wrong try: the seconds are in the error's details, else the status says.
+                    match e.details.as_ref().and_then(|d| d["throttleSeconds"].as_u64()) {
+                        Some(seconds) => c.start_throttle(ui, seconds),
+                        None => c.run("auth.status", json!({}), |c, ui, res| {
+                            if let Ok(st) = res {
+                                c.start_throttle(ui, st["throttleSeconds"].as_u64().unwrap_or(0));
+                            }
+                        }),
+                    }
                 }
             }
         });
@@ -485,12 +638,25 @@ impl Ctl {
         });
     }
 
+    /// What a lock takes off the screens: the data of the Overview, revealed secrets, anything typed for Security.
+    fn forget_session_screens(&self, ui: &App) {
+        self.state.borrow_mut().data = None;
+        let session = ui.global::<crate::Session>();
+        session.set_hide_secrets(session.get_hide_secrets() + 1);
+        self.hide_recovery(ui);
+        self.clear_security(ui);
+    }
+
+    /// Writes a key that is not a preference of the contract into prefs.json (the service owns the file when it can).
+    pub(crate) fn cache_pref(&self, key: &str, value: Value) {
+        if !self.service.cache_pref(key, value.clone()) {
+            prefs::update(&self.prefs_path, &[(key, value)]);
+        }
+    }
+
     fn lock(&self) {
         self.run("auth.lock", json!({}), |c, ui, res| {
-            c.state.borrow_mut().data = None;
-            // Revealed secrets are hidden again when the app locks.
-            let session = ui.global::<crate::Session>();
-            session.set_hide_secrets(session.get_hide_secrets() + 1);
+            c.forget_session_screens(ui);
             let st = res.unwrap_or_else(|_| json!({ "state": "locked", "mode": "password", "throttleSeconds": 0 }));
             c.apply_status(ui, &st);
         });
@@ -642,6 +808,7 @@ impl Ctl {
     }
 
     fn go(&self, page: &str) {
+        self.service.activity();
         if let Some(ui) = self.ui.upgrade() {
             ui.global::<ShellState>().set_page(s(page));
         }
@@ -651,4 +818,29 @@ impl Ctl {
 /// The controller of this thread's window, if any.
 pub fn current() -> Option<Rc<Ctl>> {
     CTL.with(|c| c.borrow().clone())
+}
+
+/// The modules of the QR code of an `otpauth://` URI as horizontal runs of dark modules inside a 4-module quiet zone, and the
+/// width of the whole picture in modules. `None` when the text does not fit a QR code.
+fn qr_runs(uri: &str) -> Option<(i32, Vec<QrRun>)> {
+    const QUIET: i32 = 4;
+    let code = qrcode::QrCode::new(uri.as_bytes()).ok()?;
+    let width = code.width() as i32;
+    let colors = code.to_colors();
+    let mut runs = Vec::new();
+    for y in 0..width {
+        let mut x = 0;
+        while x < width {
+            if colors[(y * width + x) as usize] == qrcode::Color::Dark {
+                let start = x;
+                while x < width && colors[(y * width + x) as usize] == qrcode::Color::Dark {
+                    x += 1;
+                }
+                runs.push(QrRun { x: start + QUIET, y: y + QUIET, w: x - start });
+            } else {
+                x += 1;
+            }
+        }
+    }
+    Some((width + 2 * QUIET, runs))
 }

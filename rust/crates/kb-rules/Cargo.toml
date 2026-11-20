@@ -1,11 +1,24 @@
 [package]
 name = "kb-rules"
 version = "0.0.0"
-description = "Shared rules of the renderer ported to Rust: password rules and strength (src/shared/password.ts), IBAN finding and masking (src/shared/iban.ts)"
+description = "Shared rules of the renderer ported to Rust: password rules and strength (src/shared/password.ts), IBAN finding and masking, privacy masking of numbers, e-mail addresses and phone numbers (src/shared/iban.ts)"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+
+[features]
+# The dev driver of the parity suite (rust/parity/mask.spec.ts); it is not built by default and never shipped.
+parity = ["dep:serde_json"]
+
+[[bin]]
+name = "kb-rules-cli"
+path = "src/bin/kb-rules-cli.rs"
+required-features = ["parity"]
+
+[dependencies]
+unicode-normalization.workspace = true
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true

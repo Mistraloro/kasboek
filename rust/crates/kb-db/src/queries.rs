@@ -156,4 +156,26 @@ pub trait Queries {
     /// Active expense categories by sort order and id.
     fn expense_categories(&self) -> DbResult<Vec<(i64, String)>>;
     fn pair_clear(&self, pair: &str) -> DbResult<()>;
+
+    /* ----- imports ----- */
+    /// The saved column mapping (JSON text) of a header row, if any.
+    fn csv_profile_get(&self, signature: &str) -> DbResult<Option<String>>;
+    /// Saves a mapping; a layout with the same header signature only gets the new mapping.
+    fn csv_profile_save(&self, name: &str, bank: Option<&str>, signature: &str, mapping_json: &str) -> DbResult<()>;
+    /// The account's transactions with this fingerprint, by id.
+    fn import_by_fingerprint(&self, account_id: i64, fingerprint: &str) -> DbResult<Vec<ImportedTx>>;
+    /// The account's transactions with this bank reference, by id.
+    fn import_by_reference(&self, account_id: i64, reference: &str) -> DbResult<Vec<ImportedTx>>;
+    /// The account's transactions of this amount between two dates (inclusive), by id.
+    fn import_nearby(&self, account_id: i64, amount_cents: i64, from: &str, to: &str) -> DbResult<Vec<ImportedTx>>;
+    /// Transactions whose readable text differs from the bank's own, oldest first.
+    fn import_tidied(&self) -> DbResult<Vec<TidiedTx>>;
+    /// Starts a committed import batch and returns its id.
+    fn batch_insert(&self, account_id: i64, file_name: &str, layout: Option<&str>, row_count: i64) -> DbResult<i64>;
+    /// Ids of the transactions of a batch.
+    fn batch_tx_ids(&self, batch_id: i64) -> DbResult<Vec<i64>>;
+    /// The 20 latest committed batches, newest first.
+    fn batch_list(&self) -> DbResult<Vec<BatchRow>>;
+    /// Deletes the batch's transactions and marks it discarded; returns how many transactions were deleted.
+    fn batch_undo(&self, batch_id: i64) -> DbResult<u64>;
 }

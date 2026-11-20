@@ -1,8 +1,8 @@
 {
-  "_comment": "The ONE place that names the fonts. make-fonts.py reads this, writes assets/fonts/*.ttf and ui/fonts.slint (the Fonts global the whole design system uses). To change a font: change `package` (an @fontsource-variable package) and `family`, then run the script.",
+  "_comment": "The ONE place that names the fonts. make-fonts.py reads this, writes assets/fonts/*.ttf and ui/fonts.slint (the Fonts global the whole design system uses). To change a font: change `package` (an @fontsource-variable package) and `family`, then run the script. serif = titles, headings, card titles, the logo and button labels (Playfair Display under the name Kasboek Display, see make-fonts.py); sans and num = everything else.",
   "families": [
     { "role": "sans", "family": "Inter", "package": "inter", "weights": [400, 500, 600] },
     { "role": "num", "family": "Inter Num", "package": "inter", "weights": [400, 500, 600], "freeze": "tnum" },
-    { "role": "serif", "family": "Source Serif 4", "package": "source-serif-4", "weights": [500, 600] }
+    { "role": "serif", "family": "Kasboek Display", "package": "playfair-display", "weights": [500, 600], "licence": "PlayfairDisplay-OFL.txt" }
   ]
 }

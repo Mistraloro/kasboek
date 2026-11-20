@@ -3,7 +3,8 @@
 import { CategoryBar, MonthDatum } from "@kb-ui";
 import { AlertRow, TipRow, AccountRow } from "overview.slint";
 import { RuleRow } from "parts.slint";
-export { AlertRow, TipRow, AccountRow, RuleRow }
+import { QrRun } from "panels.slint";
+export { AlertRow, TipRow, AccountRow, RuleRow, QrRun }
 
 export global Lock {
     in property <string> mode;
@@ -35,18 +36,88 @@ export global SetupState {
     in property <bool> device-enabled;
     in property <bool> busy;
     in property <string> error;
-    in property <string> recovery-key-top;
-    in property <string> recovery-key-bottom;
     in property <int> strength;
     in property <string> strength-text;
     in property <[RuleRow]> rules;
     in-out property <string> password-a;
     in-out property <string> password-b;
-    in-out property <bool> saved;
     callback password-edited(string);
     callback create-password(string);
     callback create-device();
     callback finished();
+}
+
+// The recovery key panel and the two-factor step, as the Setup flow and Settings -> Security both show them.
+export global Recovery {
+    in property <string> key-top;
+    in property <string> key-bottom;
+    in property <bool> ok;
+    in-out property <bool> saved;
+    in-out property <string> check;
+    callback edited(bool, string);
+    callback done();
+}
+
+export global Totp {
+    in property <string> state;
+    in property <string> secret;
+    in property <[QrRun]> runs;
+    in property <int> modules;
+    in property <string> error;
+    in property <bool> busy;
+    in-out property <string> code;
+    callback enable(string);
+}
+
+// Settings -> Security (minimal). Messages and errors come as toasts.
+export global Sec {
+    // "main" | "recovery" | "totp"
+    in-out property <string> view: "main";
+    in property <string> mode;
+    in property <bool> two-factor;
+    in property <bool> need-current;
+    in property <bool> busy;
+    in property <string> key-storage;
+    in property <string> device-title;
+    in property <string> device-note;
+    in property <bool> device-enabled;
+    in property <int> strength;
+    in property <string> strength-text;
+    in property <[RuleRow]> rules;
+    in-out property <string> current;
+    in-out property <string> next-a;
+    in-out property <string> next-b;
+    in-out property <string> off-code;
+    callback opened();
+    callback password-edited(string);
+    callback change-password(string, string);
+    callback use-passwordless(string);
+    callback new-recovery-key(string);
+    callback totp-begin();
+    callback totp-disable(string);
+    callback back();
+}
+
+export struct AccountLine {
+    id: int,
+    name: string,
+    balance: string,
+}
+
+// Accounts (developer preview): add an account and a transaction, to see real numbers on the Overview.
+export global Acc {
+    in property <[AccountLine]> rows;
+    in property <string> error;
+    in property <bool> busy;
+    in-out property <int> selected: 0;
+    in-out property <string> name;
+    in-out property <string> opening;
+    in-out property <string> date;
+    in-out property <string> description;
+    in-out property <string> amount;
+    callback opened();
+    callback add-account(string, string);
+    callback add-transaction(int, string, string, string);
 }
 
 export global Loading {

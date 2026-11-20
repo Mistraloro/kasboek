@@ -5,9 +5,10 @@ import { Tx } from "tx.slint";
 import { LockScreen, SetupScreen, LoadingScreen } from "auth.slint";
 import { Shell } from "shell.slint";
 import { OverviewPage } from "overview.slint";
-import { Lock, SetupState, Loading, ShellState, Ov } from "state.slint";
-export { Theme, Session, UiText, Rules, DateCheck, Tx, ToastItem, Lock, SetupState, Loading, ShellState, Ov }
-export { AlertRow, TipRow, AccountRow, RuleRow } from "state.slint";
+import { SecurityPage, AccountsPage } from "pages.slint";
+import { Lock, SetupState, Loading, ShellState, Ov, Recovery, Totp, Sec, Acc } from "state.slint";
+export { Theme, Session, UiText, Rules, DateCheck, Tx, ToastItem, Lock, SetupState, Loading, ShellState, Ov, Recovery, Totp, Sec, Acc }
+export { AlertRow, TipRow, AccountRow, RuleRow, QrRun, AccountLine } from "state.slint";
 export { CategoryBar, MonthDatum } from "@kb-ui";
 
 export component App inherits Window {
@@ -74,14 +75,32 @@ export component App inherits Window {
         device-enabled: SetupState.device-enabled;
         busy: SetupState.busy;
         error: SetupState.error;
-        recovery-key-top: SetupState.recovery-key-top;
-        recovery-key-bottom: SetupState.recovery-key-bottom;
+        recovery-key-top: Recovery.key-top;
+        recovery-key-bottom: Recovery.key-bottom;
         strength: SetupState.strength;
         strength-text: SetupState.strength-text;
         rules: SetupState.rules;
         password-a <=> SetupState.password-a;
         password-b <=> SetupState.password-b;
-        saved <=> SetupState.saved;
+        saved <=> Recovery.saved;
+        recovery-check <=> Recovery.check;
+        recovery-ok: Recovery.ok;
+        totp-state: Totp.state;
+        totp-secret: Totp.secret;
+        totp-runs: Totp.runs;
+        totp-modules: Totp.modules;
+        totp-error: Totp.error;
+        totp-busy: Totp.busy;
+        totp-code <=> Totp.code;
+        recovery-edited(a0, a1) => {
+            Recovery.edited(a0, a1);
+        }
+        recovery-done() => {
+            Recovery.done();
+        }
+        totp-enable(a0) => {
+            Totp.enable(a0);
+        }
         password-edited(a0) => {
             SetupState.password-edited(a0);
         }
@@ -193,6 +212,14 @@ export component App inherits Window {
             go(p) => {
                 ShellState.go(p);
             }
+        }
+        if ShellState.page == "settings": SecurityPage {
+            width: parent.width;
+            height: parent.height;
+        }
+        if ShellState.page == "accounts": AccountsPage {
+            width: parent.width;
+            height: parent.height;
         }
     }
     ToastHost {

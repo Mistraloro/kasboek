@@ -11,12 +11,14 @@ publish = false
 
 # Shared dependency versions. The ones used by the spikes carry the same requirement strings as there.
 [workspace.dependencies]
-rusqlite = { version = "0.43", default-features = false, features = ["functions"] }
+rusqlite = { version = "0.43", default-features = false, features = ["functions", "cache"] }
 argon2 = "0.5"
 aes-gcm = "0.10"
 aes = "0.8"
 unicode-normalization = "0.1"
 base64 = "0.22"
+encoding_rs = "0.8"
+regex = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 hex = "0.4"
@@ -34,6 +36,7 @@ thiserror = "2"
 kb-crypto = { path = "crates/kb-crypto" }
 kb-db = { path = "crates/kb-db" }
 kb-core = { path = "crates/kb-core" }
+kb-import = { path = "crates/kb-import" }
 kb-service = { path = "crates/kb-service" }
 kb-session = { path = "crates/kb-session" }
 

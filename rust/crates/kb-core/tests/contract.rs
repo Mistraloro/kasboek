@@ -28,7 +28,7 @@ fn every_unported_operation_says_so_and_every_ported_one_exists() {
     for name in PORTED {
         assert!(OPS.iter().any(|(n, _, _)| n == name), "{name} is in the contract");
     }
-    assert_eq!(PORTED.len(), 55);
+    assert_eq!(PORTED.len(), 68);
     for (name, _, _) in OPS {
         let result = f.core.dispatch(name, json!({}), Actor::User);
         let ported = PORTED.contains(name);

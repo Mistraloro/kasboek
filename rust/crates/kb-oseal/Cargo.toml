@@ -1,0 +1,33 @@
+[package]
+name = "kb-oseal"
+version = "0.0.0"
+description = "Kasboek operating system seal for account.json: DPAPI, Keychain, Secret Service, and the Electron safeStorage key material"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+base64.workspace = true
+kb-crypto.workspace = true
+kb-session.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3"
+
+# Pure Rust Secret Service client. The async-io runtime (not tokio) keeps the crate free of a second runtime; calls are
+# made blocking with futures-lite.
+[target.'cfg(target_os = "linux")'.dependencies]
+futures-lite = "2"
+oo7 = { version = "0.7", default-features = false, features = ["async-std", "native_crypto"] }
+
+[dev-dependencies]
+hex.workspace = true
+tempfile.workspace = true
+aes-gcm.workspace = true

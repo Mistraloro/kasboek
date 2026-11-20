@@ -2,6 +2,8 @@
 //! original do, so indexes agree. `mask_account` and `shown_account` are new: the renderer has no such function (it
 //! shows the account number as typed), they serve the hide-account-numbers display of the native app.
 
+use unicode_normalization::UnicodeNormalization;
+
 // Length of an IBAN per country (the IBAN registry).
 const IBAN_LENGTH: &[(&str, usize)] = &[
     ("AD", 24),
@@ -106,18 +108,68 @@ pub fn valid_iban(iban: &str) -> bool {
     rem == 1
 }
 
-struct Hit {
-    index: usize,
-    cc: String,
-    iban: String,
-    used: usize,
+/// The characters that may separate the groups of an account or card number.
+pub(crate) fn is_sep(u: u16) -> bool {
+    matches!(u, 0x20 | 0x2e | 0x2d | 0x2f)
+}
+
+/// JavaScript's `\s`: not the same set as `char::is_whitespace` (U+0085 is not in it, U+FEFF is).
+pub(crate) fn is_js_space(c: char) -> bool {
+    matches!(
+        c,
+        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'
+    )
+}
+
+/// Compatibility forms (full-width digits, ...) as plain ones; all white space as one space; zero-width characters gone; every
+/// dash as a hyphen. NFKC would turn the `…` of a masked number into three dots, so it is applied between the `…`s only.
+pub fn fold(text: &str) -> String {
+    let normalized = text.split('\u{2026}').map(|part| part.nfkc().collect::<String>()).collect::<Vec<_>>().join("\u{2026}");
+    let mut out = String::with_capacity(normalized.len());
+    let mut in_space = false;
+    for c in normalized.chars() {
+        if matches!(c, '\u{ad}' | '\u{200b}'..='\u{200d}' | '\u{2060}' | '\u{feff}') {
+            continue;
+        }
+        let c = if matches!(c, '\u{2010}'..='\u{2015}' | '\u{2212}') { '-' } else { c };
+        if is_js_space(c) {
+            if !in_space {
+                out.push(' ');
+            }
+            in_space = true;
+        } else {
+            out.push(c);
+            in_space = false;
+        }
+    }
+    out
+}
+
+/// Runs a masking step on the folded text; a text that the step left alone is returned as it came.
+pub(crate) fn masking(text: &str, step: impl Fn(&[u16]) -> Vec<u16>) -> String {
+    let folded: Vec<u16> = fold(text).encode_utf16().collect();
+    let out = step(&folded);
+    if out == folded {
+        text.to_string()
+    } else {
+        String::from_utf16_lossy(&out)
+    }
+}
+
+pub(crate) struct Hit {
+    pub(crate) index: usize,
+    pub(crate) cc: String,
+    pub(crate) iban: String,
+    /// How many code units of the text the account number takes, separators included.
+    pub(crate) used: usize,
 }
 
 fn is_alnum(u: u16) -> bool {
     u < 128 && (u as u8).is_ascii_alphanumeric()
 }
 
-/// A match of `([A-Z]{2})(\d{2})((?:[ ]?[A-Z0-9]){10,30})` (case-insensitive) starting exactly at `i`: its length.
+/// A match of `([A-Z]{2})(\d{2})((?:[ .\-/]?[A-Z0-9]){10,30})` (case-insensitive) starting exactly at `i`: its length.
 fn match_at(t: &[u16], i: usize) -> Option<usize> {
     let letter = |u: u16| u < 128 && (u as u8).is_ascii_alphabetic();
     let digit = |u: u16| u < 128 && (u as u8).is_ascii_digit();
@@ -127,7 +179,7 @@ fn match_at(t: &[u16], i: usize) -> Option<usize> {
     let mut j = i + 4;
     let mut reps = 0;
     while reps < 30 {
-        if j + 1 < t.len() && t[j] == 0x20 && is_alnum(t[j + 1]) {
+        if j + 1 < t.len() && is_sep(t[j]) && is_alnum(t[j + 1]) {
             j += 2;
         } else if j < t.len() && is_alnum(t[j]) {
             j += 1;
@@ -139,34 +191,60 @@ fn match_at(t: &[u16], i: usize) -> Option<usize> {
     (reps >= 10).then_some(j - i)
 }
 
+/// For a country that is not in the table: the lengths (longest first, at least 15) at which the start of the text passes the
+/// checksum, all found in one pass over the text.
+fn lengths_with_valid_checksum(compact: &[u8]) -> Vec<usize> {
+    let digits = |c: u8| if c >= b'A' { (c - 55).to_string() } else { (c as char).to_string() };
+    let head: String = compact[..4].iter().map(|&c| digits(c)).collect();
+    let head_value: u64 = head.parse().unwrap_or(0);
+    let scale = 10u64.pow(head.len() as u32);
+    let mut found = Vec::new();
+    let mut rem: u64 = 0;
+    for len in 5..=compact.len() {
+        for d in digits(compact[len - 1]).bytes() {
+            rem = (rem * 10 + (d - b'0') as u64) % 97;
+        }
+        if len >= 15 && (rem * scale + head_value) % 97 == 1 {
+            found.push(len);
+        }
+    }
+    found.reverse();
+    found
+}
+
+/// The valid IBAN at the start of a candidate match, and how many code units of the match it used.
 fn resolve(m: &[u16], cc: &str) -> Option<(String, usize)> {
-    let compact: String = String::from_utf16_lossy(m).chars().filter(|c| !c.is_whitespace()).collect::<String>().to_uppercase();
-    let n = compact.len();
-    let lengths: Vec<usize> = match iban_length(cc) {
+    let compact: Vec<u8> = m.iter().filter(|&&u| !is_sep(u)).map(|&u| (u as u8).to_ascii_uppercase()).collect();
+    // Try the country's length first (the match may run on into other text), then shorter ones.
+    let lengths = match iban_length(cc) {
         Some(l) => vec![l],
-        None => (0..n.saturating_sub(13)).map(|i| n - i).collect(),
+        None => lengths_with_valid_checksum(&compact),
     };
     for len in lengths {
-        if len <= n && valid_iban(&compact[..len]) {
-            let (mut used, mut count) = (0, 0);
-            while count < len && used < m.len() {
-                if m[used] != 0x20 {
-                    count += 1;
+        if len <= compact.len() {
+            let candidate = std::str::from_utf8(&compact[..len]).expect("ASCII");
+            if valid_iban(candidate) {
+                let (mut used, mut count) = (0, 0);
+                while count < len && used < m.len() {
+                    if !is_sep(m[used]) {
+                        count += 1;
+                    }
+                    used += 1;
                 }
-                used += 1;
+                return Some((candidate.to_string(), used));
             }
-            return Some((compact[..len].to_string(), used));
         }
     }
     None
 }
 
-fn scan(t: &[u16]) -> Vec<Hit> {
+/// The valid IBANs in a (folded) text, in order of appearance. A failed candidate is tried again one character further, so a real
+/// one inside it is still found.
+pub(crate) fn scan(t: &[u16]) -> Vec<Hit> {
     let mut hits = Vec::new();
     let mut at = 0;
     while at < t.len() {
-        let Some(len) = (at..t.len()).find_map(|i| match_at(t, i).map(|l| (i, l))) else { break };
-        let (index, len) = len;
+        let Some((index, len)) = (at..t.len()).find_map(|i| match_at(t, i).map(|l| (i, l))) else { break };
         let cc = String::from_utf16_lossy(&t[index..index + 2]).to_uppercase();
         let prev_is_letter = index > 0 && t[index - 1] < 128 && (t[index - 1] as u8).is_ascii_alphabetic();
         let hit = if iban_length(&cc).is_some() || !prev_is_letter { resolve(&t[index..index + len], &cc) } else { None };
@@ -174,6 +252,7 @@ fn scan(t: &[u16]) -> Vec<Hit> {
             None => at = index + 1,
             Some((iban, used)) => {
                 hits.push(Hit { index, cc, iban, used });
+                // Carry on after the account number: another one may follow right behind it.
                 at = index + used;
             }
         }
@@ -181,27 +260,28 @@ fn scan(t: &[u16]) -> Vec<Hit> {
     hits
 }
 
-fn units(text: &str) -> Vec<u16> {
-    text.encode_utf16().collect()
-}
-
-/// Every IBAN becomes its country and the last four characters: `BE…7034`.
-pub fn mask_iban(text: &str) -> String {
-    let t = units(text);
-    let (mut out, mut at) = (String::new(), 0);
-    for h in scan(&t) {
-        out.push_str(&String::from_utf16_lossy(&t[at..h.index]));
-        out.push_str(&format!("{}…{}", h.cc, &h.iban[h.iban.len() - 4..]));
+pub(crate) fn ibans_hidden(t: &[u16]) -> Vec<u16> {
+    let (mut out, mut at) = (Vec::new(), 0);
+    for h in scan(t) {
+        out.extend_from_slice(&t[at..h.index]);
+        out.extend(format!("{}\u{2026}{}", h.cc, &h.iban[h.iban.len() - 4..]).encode_utf16());
         at = h.index + h.used;
     }
-    out.push_str(&String::from_utf16_lossy(&t[at..]));
+    out.extend_from_slice(&t[at..]);
     out
+}
+
+/// Every IBAN becomes its country and the last four characters: `BE…7034`. Text is folded first (see `fold`); a text with
+/// nothing to hide is returned exactly as it came.
+pub fn mask_iban(text: &str) -> String {
+    masking(text, ibans_hidden)
 }
 
 /// The valid IBANs in a text, without spaces and in order of appearance, each once.
 pub fn find_ibans(text: &str) -> Vec<String> {
+    let folded: Vec<u16> = fold(text).encode_utf16().collect();
     let mut seen: Vec<String> = Vec::new();
-    for h in scan(&units(text)) {
+    for h in scan(&folded) {
         if !seen.contains(&h.iban) {
             seen.push(h.iban);
         }
@@ -209,74 +289,7 @@ pub fn find_ibans(text: &str) -> Vec<String> {
     seen
 }
 
-fn is_digit(u: u16) -> bool {
-    (0x30..=0x39).contains(&u)
-}
-
-/// `^DATE(?:[ -]DATE)*$` with DATE = dd-mm-yyyy or yyyy-mm-dd (real day and month, year 19xx or 20xx).
-fn dates_only(m: &[u16]) -> bool {
-    let s: Vec<char> = String::from_utf16_lossy(m).chars().collect();
-    if s.len() % 11 != 10 {
-        return false;
-    }
-    let num = |a: &[char]| -> Option<u32> { a.iter().collect::<String>().parse().ok().filter(|_| a.iter().all(|c| c.is_ascii_digit())) };
-    let date = |d: &[char]| -> bool {
-        let dmy = d[2] == '-'
-            && d[5] == '-'
-            && num(&d[0..2]).is_some_and(|v| (1..=31).contains(&v))
-            && num(&d[3..5]).is_some_and(|v| (1..=12).contains(&v))
-            && num(&d[6..8]).is_some_and(|v| v == 19 || v == 20)
-            && num(&d[8..10]).is_some();
-        let ymd = d[4] == '-'
-            && d[7] == '-'
-            && num(&d[0..2]).is_some_and(|v| v == 19 || v == 20)
-            && num(&d[2..4]).is_some()
-            && num(&d[5..7]).is_some_and(|v| (1..=12).contains(&v))
-            && num(&d[8..10]).is_some_and(|v| (1..=31).contains(&v));
-        dmy || ymd
-    };
-    (0..s.len() / 11 + 1)
-        .all(|k| date(&s[k * 11..k * 11 + 10]) && (k * 11 + 10 == s.len() || s[k * 11 + 10] == ' ' || s[k * 11 + 10] == '-'))
-}
-
-/// IBANs as `mask_iban` shows them, and runs of 13 or more digits (card or account numbers) by their last four. Dates side by side stay.
-pub fn mask_numbers(text: &str) -> String {
-    let t = units(&mask_iban(text));
-    let (mut out, mut at, mut i) = (Vec::<u16>::new(), 0, 0);
-    while i < t.len() {
-        if !is_digit(t[i]) {
-            i += 1;
-            continue;
-        }
-        let (mut j, mut reps) = (i + 1, 0);
-        loop {
-            if j + 1 < t.len() && (t[j] == 0x20 || t[j] == 0x2d) && is_digit(t[j + 1]) {
-                j += 2;
-            } else if j < t.len() && is_digit(t[j]) {
-                j += 1;
-            } else {
-                break;
-            }
-            reps += 1;
-        }
-        if reps < 12 {
-            i += 1;
-            continue;
-        }
-        out.extend_from_slice(&t[at..i]);
-        if dates_only(&t[i..j]) {
-            out.extend_from_slice(&t[i..j]);
-        } else {
-            let digits: Vec<u16> = t[i..j].iter().copied().filter(|&u| is_digit(u)).collect();
-            out.push(0x2026);
-            out.extend_from_slice(&digits[digits.len() - 4..]);
-        }
-        at = j;
-        i = j;
-    }
-    out.extend_from_slice(&t[at..]);
-    String::from_utf16_lossy(&out)
-}
+pub use crate::mask::mask_numbers;
 
 /// An account number in groups of four, as the Accounts settings show it.
 fn grouped(iban: &str) -> String {

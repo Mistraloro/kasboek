@@ -1,8 +1,9 @@
 //! `AppService`: what the native screens talk to. It mirrors the renderer's bridge (`KasboekBridge` in
 //! src/shared/contract.ts): `invoke(op, input)` answers with the operation's JSON output or an [`AppError`], and
 //! listeners get [`AppEvent`]s. [`FixtureService`] answers from JSON fixtures (the invented household of the release
-//! screenshots), [`CoreService`] runs `kb_core::dispatch` on a real encrypted temporary database. The login operations
-//! of both are stand-ins until `kb-session` is wired in. Operations the core has not ported answer `op.not_ported`.
+//! screenshots), [`CoreService`] owns a `kb-session` `Session` and a `kb-core` `Core` on the real data folder: the
+//! `auth.*` operations and all ported operations, with the dispatch rules of `ipc.ts`. The login operations of the
+//! fixture are stand-ins. Operations the core has not ported answer `op.not_ported`.
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::future::Future;
@@ -12,11 +13,14 @@ use std::sync::Arc;
 mod core_service;
 mod exec;
 mod fixture;
+mod paths;
+mod prefs_store;
 
-pub use core_service::CoreService;
+pub use core_service::{ClockAdapter, CoreOptions, CoreService, NoOsEvents, OsEvents};
 pub use exec::block_on;
 pub use fixture::{FixtureConfig, FixtureService, DEMO_PASSWORD};
 pub use kb_core::AppError;
+pub use paths::resolve_data_dir;
 
 pub type OpFuture<'a> = Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>>;
 
@@ -75,6 +79,13 @@ pub trait AppService: Send + Sync {
     fn invoke(&self, op: &str, input: Value) -> OpFuture<'_>;
     /// Registers a listener. It is called from whatever thread raises the event.
     fn subscribe(&self, listener: Listener);
+    /// The person did something in the window (keeps the idle timer of the auto-lock from running). Nothing by default.
+    fn activity(&self) {}
+    /// Stores a value in `prefs.json` that is not a preference of the contract (the app's own caches: `lastAuth`,
+    /// `lastTheme`). `true` when this service wrote it; `false` leaves the writing to the caller.
+    fn cache_pref(&self, _key: &str, _value: Value) -> bool {
+        false
+    }
 }
 
 /// `op.not_ported`: the same code kb-core answers for an operation of the contract it does not have yet.

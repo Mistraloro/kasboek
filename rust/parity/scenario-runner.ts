@@ -4,7 +4,8 @@
 // scenario in Rust (rust/crates/kb-cli/src/scenario.rs), and scenarios.spec.ts diffs both outputs.
 //
 // Masked on both sides, because they are random or follow the wall clock: `uid` values (32 hex digits), every column named
-// `at` or ending in `_at`, and the keys createdAt / updatedAt of results.
+// `at` or ending in `_at`, and the keys createdAt / updatedAt / committedAt and sessionId of results. A string `"$session"` in
+// the input of a step stands for the sessionId the latest result had (the id of the open import).
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -61,8 +62,18 @@ function cell(value: unknown, column: string): unknown {
 function maskResult(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(maskResult)
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, (k === 'createdAt' || k === 'updatedAt') && typeof v === 'string' ? '<time>' : maskResult(v)]))
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, (k === 'createdAt' || k === 'updatedAt' || k === 'committedAt') && typeof v === 'string' ? '<time>' : k === 'sessionId' && typeof v === 'string' ? '<session>' : maskResult(v)])
+    )
   }
+  return value
+}
+
+/** Replaces the string "$session" anywhere in an input by the id of the import that is open. */
+function withSession(value: unknown, id: string | null): unknown {
+  if (value === '$session') return id
+  if (Array.isArray(value)) return value.map((v) => withSession(v, id))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, withSession(v, id)]))
   return value
 }
 
@@ -111,6 +122,7 @@ export async function runScenario(scenario: Scenario, env: RunnerEnv): Promise<O
   vi.setSystemTime(new Date(scenario.clock ?? DEFAULT_CLOCK))
   try {
     const results: unknown[] = []
+    let session: string | null = null
     for (const step of scenario.steps) {
       let result: unknown
       switch (step.op) {
@@ -134,8 +146,10 @@ export async function runScenario(scenario: Scenario, env: RunnerEnv): Promise<O
           result = { ok: true, data: resetImportedSettings(db, { keepSyncKey: (step.input as { keepSyncKey?: boolean } | undefined)?.keepSyncKey ?? false }) }
           break
         default:
-          result = await dispatch(step.op, step.input === undefined ? null : step.input, step.actor ?? 'user')
+          result = await dispatch(step.op, step.input === undefined ? null : withSession(step.input, session), step.actor ?? 'user')
       }
+      const found = (result as { ok?: boolean; data?: { sessionId?: unknown } } | undefined)?.data?.sessionId
+      if (typeof found === 'string') session = found
       results.push(maskResult(JSON.parse(JSON.stringify(result))))
     }
     let prefsFile: string | null = null

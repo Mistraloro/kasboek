@@ -3,6 +3,7 @@
 import { Theme, Icons, Icon, Label, Button, Field, PasswordInput, Input, CodeInput, Checkbox, ProgressBar } from "@kb-ui";
 import { Tx } from "tx.slint";
 import { AuthLayout, AuthCard, LinkText, Choice, StrengthMeter, RuleRow } from "parts.slint";
+import { RecoveryPanel, TotpPanel, QrRun } from "panels.slint";
 
 // A button as wide as its column.
 component Wide inherits Rectangle {
@@ -256,7 +257,7 @@ export component LockScreen inherits AuthLayout {
 }
 
 export component SetupScreen inherits AuthLayout {
-    // "choose" | "password" | "recovery".
+    // "choose" | "password" | "recovery" | "twofactor".
     in-out property <string> step: "choose";
     in property <string> body;
     in property <string> device-kind: "";
@@ -274,11 +275,24 @@ export component SetupScreen inherits AuthLayout {
     in-out property <string> password-a;
     in-out property <string> password-b;
     in-out property <bool> saved: false;
+    in-out property <string> recovery-check;
+    in property <bool> recovery-ok;
+    in property <string> totp-state;
+    in property <string> totp-secret;
+    in property <[QrRun]> totp-runs;
+    in property <int> totp-modules;
+    in property <string> totp-error;
+    in property <bool> totp-busy;
+    in-out property <string> totp-code;
     callback password-edited(string);
     callback create-password(string);
     callback create-device();
+    callback recovery-edited(bool, string);
+    callback recovery-done();
+    callback totp-enable(string);
     callback finished();
 
+    wide: root.step == "twofactor";
     property <bool> ready: root.strength >= 4 && root.password-a != "" && root.password-a == root.password-b && !root.busy;
 
     if root.step == "choose": AuthCard {
@@ -388,54 +402,50 @@ export component SetupScreen inherits AuthLayout {
     if root.step == "recovery": AuthCard {
         title: Tx.tr("auth.recoveryTitle");
         body: Tx.tr("auth.recoveryBody");
-        VerticalLayout {
-            spacing: 16px;
-            Rectangle {
-                height: keys.preferred-height + 32px;
-                border-radius: Theme.r-lg;
-                border-width: 1px;
-                border-color: Theme.border;
-                background: Theme.surface-2;
-                accessible-role: AccessibleRole.text;
-                accessible-label: Tx.tr("auth.recoveryKey");
-                accessible-description: root.saved ? Tx.tr("auth.recoveryHidden") : root.recovery-key-top + "-" + root.recovery-key-bottom;
-                keys := VerticalLayout {
-                    padding: 16px;
-                    Label {
-                        text: root.saved ? "••••-••••-••••-••••" : root.recovery-key-top;
-                        numeric: true;
-                        font-size: 17px;
-                        font-weight: 600;
-                        lh: 27.5px;
-                        letter-spacing: 1px;
-                        horizontal-alignment: center;
-                    }
-                    Label {
-                        text: root.saved ? "••••-••••-••••-••••" : root.recovery-key-bottom;
-                        numeric: true;
-                        font-size: 17px;
-                        font-weight: 600;
-                        lh: 27.5px;
-                        letter-spacing: 1px;
-                        horizontal-alignment: center;
-                    }
+        RecoveryPanel {
+            key-top: root.recovery-key-top;
+            key-bottom: root.recovery-key-bottom;
+            ok: root.recovery-ok;
+            saved <=> root.saved;
+            check <=> root.recovery-check;
+            edited(saved, typed) => {
+                root.recovery-edited(saved, typed);
+            }
+            done => {
+                root.recovery-done();
+            }
+        }
+    }
+    if root.step == "twofactor": VerticalLayout {
+        AuthCard {
+            title: Tx.tr("auth.totpTitle");
+            body: Tx.tr("auth.totpBody");
+            TotpPanel {
+                state: root.totp-state;
+                secret: root.totp-secret;
+                runs: root.totp-runs;
+                modules: root.totp-modules;
+                error: root.totp-error;
+                busy: root.totp-busy;
+                code <=> root.totp-code;
+                enable(c) => {
+                    root.totp-enable(c);
+                }
+                skip => {
+                    root.finished();
                 }
             }
-            Checkbox {
-                checked <=> root.saved;
-                text: Tx.tr("auth.recoverySaved");
-            }
-            Wide {
-                Button {
-                    width: parent.width;
-                    variant: "primary";
-                    text: Tx.tr("auth.continue");
-                    enabled: root.saved;
-                    clicked => {
-                        root.finished();
-                    }
-                }
-            }
+        }
+        Rectangle {
+            height: 12px;
+        }
+        Label {
+            text: Tx.tr("auth.totpLater");
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.muted;
+            horizontal-alignment: center;
+            wrap: word-wrap;
         }
     }
 }

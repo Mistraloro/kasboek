@@ -3,7 +3,8 @@ name: Rust app
 # Builds, tests and publishes the native app (rust/apps/kasboek, docs/rust-port-plan.md section 10, M4) on the six targets:
 #   Windows x64 + ARM64, macOS Apple Silicon + Intel, Linux x64 + ARM64.
 # Per machine: release build of `kasboek`, cargo test of the app and the crates it uses, a start-up test (the window opens, the
-# milestones of startup.log are written, the process exits), and the binary as artifact `kasboek-app-<os>-<arch>` with the
+# milestones of startup.log are written, the process exits), a start-up test of the real service path (an account is created in
+# a temporary folder, the unlocked Overview appears and its first-frame time is logged), and the binary as artifact `kasboek-app-<os>-<arch>` with the
 # test script. The Windows and macOS runs are the first real builds of the Windows Hello, Touch ID and title bar code.
 on:
   push:
@@ -12,6 +13,8 @@ on:
       - 'rust/apps/**'
       - 'rust/crates/kb-ui/**'
       - 'rust/crates/kb-service/**'
+      - 'rust/crates/kb-session/**'
+      - 'rust/crates/kb-crypto/**'
       - 'rust/crates/kb-i18n/**'
       - 'rust/crates/kb-rules/**'
       - 'rust/crates/kb-core/**'
@@ -97,30 +100,33 @@ jobs:
           ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
           mkdir -p stage
           cp "rust/target/release/kasboek$ext" stage/
-          cp rust/apps/kasboek/tools/startup-test.sh stage/
+          cp rust/apps/kasboek/tools/startup-test.sh rust/apps/kasboek/tools/startup-test-core.sh stage/
           cat > stage/README.txt <<EOF
           Kasboek native app, build of commit $GITHUB_SHA on $TAG.
           kasboek$ext is the release binary. startup-test.sh <binary> [--state unlocked] starts it for a moment and checks the
           milestones of startup.log (Linux: needs xvfb-run and libfontconfig1; Windows: run it from Git Bash).
+          startup-test-core.sh <binary> does the same on the real service: it creates an account in a temporary folder, unlocks it
+          again and checks the logged time of the first unlocked frame.
           EOF
           ls -l stage
 
       - name: Test
         shell: bash
         working-directory: rust
-        run: cargo test --locked -p kasboek -p kb-service -p kb-i18n -p kb-rules -p kb-ui
+        run: cargo test --locked -p kasboek -p kb-service -p kb-session -p kb-i18n -p kb-rules -p kb-ui
 
       - name: Clippy
         shell: bash
         working-directory: rust
         run: cargo clippy --locked -p kasboek -p kb-service -p kb-i18n -p kb-rules --all-targets -- -D warnings
 
-      - name: Start-up test
+      - name: Start-up tests (fixtures, then the real service)
         shell: bash
         run: |
           ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
           rust/apps/kasboek/tools/startup-test.sh "rust/target/release/kasboek$ext"
           rust/apps/kasboek/tools/startup-test.sh "rust/target/release/kasboek$ext" --state unlocked
+          rust/apps/kasboek/tools/startup-test-core.sh "rust/target/release/kasboek$ext"
 
       - name: Upload app
         if: always() && hashFiles('stage/**') != ''

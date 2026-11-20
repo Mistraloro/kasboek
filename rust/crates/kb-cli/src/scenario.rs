@@ -8,7 +8,8 @@
 //! `@resetImportedSettings` (`{"keepSyncKey"?}`).
 //!
 //! Masked in the output, because they are random or depend on the wall clock: `uid` values (32 hex digits), every column
-//! named `at` or ending in `_at`, and the keys `createdAt` / `updatedAt` of results. The random `transfer_pair` keys are
+//! named `at` or ending in `_at`, and the keys `createdAt` / `updatedAt` / `committedAt` and `sessionId` of results. A string
+//! `"$session"` in the input of a step stands for the `sessionId` the latest result had (the id of the open import). The random `transfer_pair` keys are
 //! numbered in order of first appearance (`<pair 1>`), so which rows share a pair is still compared.
 use crate::commands::CliError;
 use kb_core::{Actor, Core, CoreConfig, FixedClock, SeededRng};
@@ -84,19 +85,31 @@ fn cell_json(cell: &Cell, column: &str) -> Value {
     }
 }
 
-/// `createdAt` and `updatedAt` of a result are wall-clock times.
+/// `createdAt`, `updatedAt` and `committedAt` of a result are wall-clock times, and a `sessionId` is random.
 fn mask_result(value: &mut Value) {
     match value {
         Value::Object(map) => {
             for (key, v) in map.iter_mut() {
-                if (key == "createdAt" || key == "updatedAt") && v.is_string() {
+                if (key == "createdAt" || key == "updatedAt" || key == "committedAt") && v.is_string() {
                     *v = json!("<time>");
+                } else if key == "sessionId" && v.is_string() {
+                    *v = json!("<session>");
                 } else {
                     mask_result(v);
                 }
             }
         }
         Value::Array(items) => items.iter_mut().for_each(mask_result),
+        _ => {}
+    }
+}
+
+/// Replaces the string `"$session"` anywhere in an input by the id of the import that is open.
+fn with_session(value: &mut Value, id: &Option<String>) {
+    match value {
+        Value::String(s) if s == "$session" => *value = id.as_ref().map_or(Value::Null, |i| json!(i)),
+        Value::Array(items) => items.iter_mut().for_each(|v| with_session(v, id)),
+        Value::Object(map) => map.values_mut().for_each(|v| with_session(v, id)),
         _ => {}
     }
 }
@@ -176,12 +189,14 @@ fn run_in(dir: &Path, scenario: &Value, clock_ms: i64, languages: Vec<String>) -
     let steps =
         scenario.get("steps").and_then(Value::as_array).ok_or_else(|| CliError { code: "scenario".into(), message: "no steps".into() })?;
     let mut results = Vec::with_capacity(steps.len());
+    let mut session: Option<String> = None;
     for step in steps {
         let op = step
             .get("op")
             .and_then(Value::as_str)
             .ok_or_else(|| CliError { code: "scenario".into(), message: "step without op".into() })?;
-        let input = step.get("input").cloned().unwrap_or(Value::Null);
+        let mut input = step.get("input").cloned().unwrap_or(Value::Null);
+        with_session(&mut input, &session);
         let result = match op {
             "@lock" => {
                 core.set_unlocked(false);
@@ -202,6 +217,9 @@ fn run_in(dir: &Path, scenario: &Value, clock_ms: i64, languages: Vec<String>) -
             }
             _ => core.dispatch(op, input, actor(step.get("actor").and_then(Value::as_str))?),
         };
+        if let Some(id) = result.as_ref().ok().and_then(|d| d.get("sessionId")).and_then(Value::as_str) {
+            session = Some(id.to_owned());
+        }
         results.push(result_json(result));
     }
     let tables = dump(core.db().map_err(|e| CliError { code: e.code, message: e.message })?)?;

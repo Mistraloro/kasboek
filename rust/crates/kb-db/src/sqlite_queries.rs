@@ -991,4 +991,121 @@ impl Queries for SqliteStore {
         )?;
         Ok(())
     }
+
+    fn csv_profile_get(&self, signature: &str) -> DbResult<Option<String>> {
+        Ok(self
+            .conn
+            .prepare_cached("SELECT mapping_json FROM csv_profiles WHERE header_signature = ?")?
+            .query_row([signature], |r| r.get(0))
+            .optional()?)
+    }
+
+    fn csv_profile_save(&self, name: &str, bank: Option<&str>, signature: &str, mapping_json: &str) -> DbResult<()> {
+        self.conn.execute(
+            "INSERT INTO csv_profiles (name, bank, header_signature, mapping_json) VALUES (?, ?, ?, ?)
+         ON CONFLICT(header_signature) DO UPDATE SET mapping_json = excluded.mapping_json, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+            params![name, bank, signature, mapping_json],
+        )?;
+        Ok(())
+    }
+
+    fn import_by_fingerprint(&self, account_id: i64, fingerprint: &str) -> DbResult<Vec<ImportedTx>> {
+        imported(&self.conn, "WHERE account_id = ? AND fingerprint = ? ORDER BY id", params![account_id, fingerprint])
+    }
+
+    fn import_by_reference(&self, account_id: i64, reference: &str) -> DbResult<Vec<ImportedTx>> {
+        imported(&self.conn, "WHERE account_id = ? AND bank_reference = ? ORDER BY id", params![account_id, reference])
+    }
+
+    fn import_nearby(&self, account_id: i64, amount_cents: i64, from: &str, to: &str) -> DbResult<Vec<ImportedTx>> {
+        imported(
+            &self.conn,
+            "WHERE account_id = ? AND amount_cents = ? AND booking_date BETWEEN ? AND ? ORDER BY id",
+            params![account_id, amount_cents, from, to],
+        )
+    }
+
+    fn import_tidied(&self) -> DbResult<Vec<TidiedTx>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT counterparty_name, description, bank_counterparty, bank_description, counterparty_iban, communication, amount_cents FROM transactions
+       WHERE bank_description IS NOT NULL AND (coalesce(counterparty_name, '') <> coalesce(bank_counterparty, '') OR description <> bank_description)
+       ORDER BY booking_date, id",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(TidiedTx {
+                    counterparty_name: r.get(0)?,
+                    description: r.get(1)?,
+                    bank_counterparty: r.get(2)?,
+                    bank_description: r.get(3)?,
+                    counterparty_iban: r.get(4)?,
+                    communication: r.get(5)?,
+                    amount_cents: r.get(6)?,
+                })
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(rows)
+    }
+
+    fn batch_insert(&self, account_id: i64, file_name: &str, layout: Option<&str>, row_count: i64) -> DbResult<i64> {
+        self.conn.execute(
+            "INSERT INTO import_batches (account_id, file_name, csv_profile, row_count, status, committed_at) VALUES (?, ?, ?, ?, 'committed', strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+            params![account_id, file_name, layout, row_count],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    fn batch_tx_ids(&self, batch_id: i64) -> DbResult<Vec<i64>> {
+        let mut stmt = self.conn.prepare("SELECT id FROM transactions WHERE import_batch_id = ?")?;
+        let rows = stmt.query_map([batch_id], |r| r.get(0))?.collect::<Result<_, _>>()?;
+        Ok(rows)
+    }
+
+    fn batch_list(&self) -> DbResult<Vec<BatchRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT b.id, b.file_name, a.name AS account_name, b.row_count, b.committed_at,
+           (SELECT count(*) FROM transactions t WHERE t.import_batch_id = b.id) AS remaining
+         FROM import_batches b JOIN accounts a ON a.id = b.account_id WHERE b.status = 'committed' ORDER BY b.id DESC LIMIT 20",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(BatchRow {
+                    id: r.get("id")?,
+                    file_name: r.get("file_name")?,
+                    account_name: r.get("account_name")?,
+                    row_count: r.get("row_count")?,
+                    committed_at: r.get("committed_at")?,
+                    remaining: r.get("remaining")?,
+                })
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(rows)
+    }
+
+    fn batch_undo(&self, batch_id: i64) -> DbResult<u64> {
+        let deleted = self.conn.execute("DELETE FROM transactions WHERE import_batch_id = ?", [batch_id])?;
+        self.conn.execute("UPDATE import_batches SET status = 'discarded' WHERE id = ?", [batch_id])?;
+        Ok(deleted as u64)
+    }
+}
+
+/// The columns duplicate detection reads, of the transactions the `WHERE ... ORDER BY` part selects.
+fn imported(conn: &rusqlite::Connection, tail: &str, args: impl rusqlite::Params) -> DbResult<Vec<ImportedTx>> {
+    let sql = format!("SELECT id, booking_date, counterparty_name, description, bank_counterparty, bank_description, bank_reference, fingerprint FROM transactions {tail}");
+    let mut stmt = conn.prepare_cached(&sql)?;
+    let rows = stmt
+        .query_map(args, |r| {
+            Ok(ImportedTx {
+                id: r.get(0)?,
+                booking_date: r.get(1)?,
+                counterparty_name: r.get(2)?,
+                description: r.get(3)?,
+                bank_counterparty: r.get(4)?,
+                bank_description: r.get(5)?,
+                bank_reference: r.get(6)?,
+                fingerprint: r.get(7)?,
+            })
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(rows)
 }

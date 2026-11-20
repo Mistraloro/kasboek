@@ -1,0 +1,20 @@
+[package]
+name = "kb-import"
+version = "0.0.0"
+description = "Kasboek import engine without storage: CSV decoding, column mapping and normalising, the CAMT.052/053/054 reader, fingerprints, duplicate detection, reconciliation"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+encoding_rs.workspace = true
+hex.workspace = true
+kb-rules = { path = "../kb-rules" }
+regex.workspace = true
+serde.workspace = true
+sha2.workspace = true
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

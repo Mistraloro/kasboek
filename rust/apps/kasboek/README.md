@@ -7,16 +7,19 @@ of `kb-service` so that they run on fixtures now and on `kb-core` / `kb-session`
 ## Run
 
 ```sh
-cargo run --release -p kasboek                       # fixture service, Lock screen; password: correct horse battery 12
+cargo run --release -p kasboek -- --data-dir DIR     # the real service: Setup on an empty folder, Lock when an account exists
+cargo run --release -p kasboek                       # the real service when the Electron data folder exists, else the fixtures
+cargo run --release -p kasboek -- --service fixture  # fixture service, Lock screen; password: correct horse battery 12
 cargo run --release -p kasboek -- --state unlocked   # straight to the Overview
 cargo run --release -p kasboek -- --state setup      # the Setup screen
 cargo run --release -p kasboek -- --mode device --fake-device   # the "Unlock with Windows Hello" button (answers "verified" without the OS)
-cargo run --release -p kasboek -- --service core     # kb-core on a real encrypted temporary database (see "Stubbed")
+cargo run --release -p kasboek -- --service core-temp --state unlocked   # kb-core on a seeded temporary database
 ```
 
 Options: `--theme light|dark|system`, `--lang en|nl|fr|de|es|es-419|pt-PT|pt-BR`, `--scale N`, `--today YYYY-MM-DD`,
-`--slow-steps MS` (pause between the simulated loading steps, to see the loading view), `--data-dir DIR` (prefs.json; default
-`<config>/kasboek-native-dev`, never the Electron app's folder), `--log FILE`, `--exit-after-ms N`, `--exit-after-first-frame`,
+`--slow-steps MS` (pause between the simulated loading steps, to see the loading view), `--data-dir DIR` (real service: the data
+folder, default the Electron `userData` folder: `%APPDATA%\Kasboek`, `~/Library/Application Support/Kasboek`, `$XDG_CONFIG_HOME/Kasboek`;
+`KASBOEK_DATA_DIR` overrides the default; fixtures: prefs only, default `<config>/kasboek-native-dev`, never the Electron app's folder), `--log FILE`, `--exit-after-ms N`, `--exit-after-first-frame`,
 `--inset PX` (room for window controls drawn into the top bar; 12 by default, Electron uses 148).
 `startup.log` is written next to the binary (previous run: `startup.prev.log`) with the milestones of plan section 5.
 
@@ -28,6 +31,8 @@ kasboek shot lock-password|lock-device|lock-error|lock-busy|setup|setup-password
 python tools/parity.py <shots> <electron-stills>   # pixel diff and landmark offsets against docs/screenshots of the release branch
 tools/a11y-dump.sh target/release/kasboek [--state unlocked]    # AT-SPI tree (PYATSPI_PYTHON=/usr/bin/python3.12 where gi is for 3.12)
 tools/startup-test.sh target/release/kasboek                     # CI: window opens, milestones logged, clean exit
+tools/startup-test-core.sh target/release/kasboek                # CI: real service, account created in a temp folder, unlocked first frame logged
+tools/a11y-flow.sh target/release/kasboek                        # drives Setup, Lock, Security, Accounts through AT-SPI (PYATSPI_PYTHON as above)
 node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json from scripts/screenshots/data.mjs of the release branch
 ```
 
@@ -40,6 +45,8 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
 | `src/view.rs` | what the Overview asks the core for and how it reaches the screen (texts from `kb-i18n`, money from `format.rs`) |
 | `src/loading.rs` | real progress shares per step and the loading gate rules (tested) |
 | `src/prefs.rs` | prefs.json as far as the first frame needs it: theme, language, `lastAuth` cache |
+| `src/security.rs`, `src/accounts.rs`, `src/setup_rules.rs` | Settings -> Security, the Accounts developer preview, the recovery-key and 2FA rules of `setup-rules.ts` |
+| `ui/panels.slint`, `ui/pages.slint` | recovery key and 2FA panels (shared by Setup and Security), the Security and Accounts pages |
 | `src/log.rs`, `src/device.rs` | startup.log and the Hello / Touch ID prompt, moved here from the UI spike |
 | `src/titlebar.rs` | Windows 11 title bar colour (DWM), system theme detection |
 | `fixtures/household.json` | the invented household of the release screenshots (accounts, month summaries, budgets, tips) |
@@ -48,10 +55,15 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
 
 - Pages other than the Overview are placeholder cards ("Not available in this version yet"); the assistant panel is a note.
   Buttons whose operations do not exist (Review, Get tips, Not useful / Hide) show a toast naming the operation.
-- Login is simulated: `FixtureService` and `CoreService` accept the demo password; `kb-session` is not wired in yet.
-  `CoreService` runs the ported ops (`accounts.*`, `categories.*`, `prefs.*`, `settings.*`, ...) on a real database; every
-  Overview section whose op is not ported (or fails) shows its own "not available yet" text instead of crashing.
-- Setup: choose, password (live strength meter with the shared rules), recovery key. No import, no 2FA step, no clipboard copy.
+- Real now (`--service core`): accounts and login through `kb-session` (setup, unlock, lock, throttle, 2FA, recovery key, change of password,
+  erase), the database opens on unlock and closes on lock, auto-lock (idle minutes of the preferences) and the Overview on real ops. Setup: password with
+  meter, passwordless, recovery key with the typed confirmation, 2FA step with QR, import option disabled ("not available yet"). Settings -> Security is
+  minimal (password, passwordless, new recovery key, 2FA). The Accounts page is a **developer preview** to add an account and a transaction.
+- Stubbed: the OS seal (`Unsupported`: `account.json` is `seal: 'none'`, passwordless is refused, Electron `seal: 'os'` files do not open until
+  `kb-oseal` is wired), lock on system lock/suspend and the OS idle time (`OsEvents` stub; the timer counts service calls and navigation), default categories
+  are not localised after setup, no clipboard copy of the recovery key, no "choose a new password" screen after a recovery unlock, migrations are reported as one step.
+- The fixture service (`--service fixture`, screenshots) still simulates login. Pages other than Overview, Accounts and Settings are placeholder cards; buttons
+  whose operations do not exist (Review, Get tips, Not useful / Hide) show a toast naming the operation.
 - The window is shown with `show()`: Slint 1.19's software renderer has no first-paint hook, so "first frame" is the first
   timer tick after `show()` (an upper bound), as in the spike. The window is not created hidden.
 - Month names are English in all languages. The assistant panel, the Tour and Welcome are not built.

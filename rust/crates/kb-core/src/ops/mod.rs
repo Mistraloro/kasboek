@@ -14,6 +14,7 @@ mod budgets;
 mod categories;
 mod fx;
 mod goals;
+mod import;
 mod prefs;
 mod recurring;
 mod rules;
@@ -34,6 +35,17 @@ where
     let input: I = parse_input(raw)?;
     let audit = serde_json::to_value(&input).unwrap_or(Value::Null);
     Ok(Done { data: f(input)?, audit })
+}
+
+/// Like `run` for an operation that writes nothing: the audit log never sees its input, so it is not copied (an import
+/// carries the whole file).
+pub(crate) fn run_quiet<I, F>(raw: Value, f: F) -> AppResult<Done>
+where
+    I: DeserializeOwned,
+    F: FnOnce(I) -> AppResult<Value>,
+{
+    let input: I = parse_input(raw)?;
+    Ok(Done { data: f(input)?, audit: Value::Null })
 }
 
 pub(crate) fn json<T: Serialize>(value: &T) -> AppResult<Value> {
@@ -98,6 +110,19 @@ pub fn handler<S: Store>(name: &str) -> Option<Handler<S>> {
         "transfers.unpair" => transfers::unpair::<S>,
         "transfers.cost" => transfers::cost::<S>,
         "transfers.setCost" => transfers::set_cost::<S>,
+        "import.analyze" => import::analyze_op::<S>,
+        "import.analyzeXml" => import::analyze_xml_op::<S>,
+        "import.preview" => import::preview_op::<S>,
+        "import.current" => import::current::<S>,
+        "import.raw" => import::raw::<S>,
+        "import.remap" => import::remap_op::<S>,
+        "import.updateRows" => import::update_rows_op::<S>,
+        "import.commit" => import::commit_op::<S>,
+        "import.checkApply" => import::check_apply::<S>,
+        "import.checkUndo" => import::check_undo::<S>,
+        "import.discard" => import::discard_op::<S>,
+        "import.batches" => import::batches::<S>,
+        "import.undo" => import::undo::<S>,
         _ => return None,
     })
 }
@@ -159,4 +184,17 @@ pub const PORTED: &[&str] = &[
     "transfers.unpair",
     "transfers.cost",
     "transfers.setCost",
+    "import.analyze",
+    "import.analyzeXml",
+    "import.preview",
+    "import.current",
+    "import.raw",
+    "import.remap",
+    "import.updateRows",
+    "import.commit",
+    "import.checkApply",
+    "import.checkUndo",
+    "import.discard",
+    "import.batches",
+    "import.undo",
 ];

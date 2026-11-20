@@ -12,7 +12,9 @@ build = "build.rs"
 kb-i18n = { path = "../../crates/kb-i18n" }
 kb-rules = { path = "../../crates/kb-rules" }
 kb-service.workspace = true
+kb-session.workspace = true
 kb-ui = { path = "../../crates/kb-ui" }
+qrcode = { version = "0.15", default-features = false }
 serde_json.workspace = true
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06"] }
 

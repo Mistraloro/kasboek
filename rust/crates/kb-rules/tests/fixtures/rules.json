@@ -466,11 +466,11 @@
   },
   {
    "input": "tab\tBE68 5390 0754 7034",
-   "mask": "tab\tBE…7034",
+   "mask": "tab BE…7034",
    "found": [
     "BE68539007547034"
    ],
-   "numbers": "tab\tBE…7034"
+   "numbers": "tab BE…7034"
   },
   {
    "input": "BE68 5390 0754 7034BE68 5390 0754 7034",

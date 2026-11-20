@@ -210,6 +210,48 @@ impl<'de, const MAX: usize> Deserialize<'de> for Plain<MAX> {
     }
 }
 
+/// `z.string().min(MIN).max(MAX)`: not trimmed, the length counted in code points.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(transparent)]
+pub struct Text<const MIN: usize, const MAX: usize>(pub String);
+
+impl<'de, const MIN: usize, const MAX: usize> Deserialize<'de> for Text<MIN, MAX> {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        if (MIN..=MAX).contains(&zod_len(&s)) {
+            Ok(Self(s))
+        } else {
+            Err(de::Error::custom(format!("expected {MIN} to {MAX} characters")))
+        }
+    }
+}
+
+/// `z.string().uuid()`: 8-4-4-4-12 hex digits with a version from 1 to 8 and an RFC variant, or the nil or max UUID.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(transparent)]
+pub struct Uuid(pub String);
+
+fn is_uuid(s: &str) -> bool {
+    let b = s.as_bytes();
+    if b.len() != 36 {
+        return false;
+    }
+    let grouped = b.iter().enumerate().all(|(i, c)| if matches!(i, 8 | 13 | 18 | 23) { *c == b'-' } else { c.is_ascii_hexdigit() });
+    let nil = s == "00000000-0000-0000-0000-000000000000" || s.eq_ignore_ascii_case("ffffffff-ffff-ffff-ffff-ffffffffffff");
+    grouped && (nil || (matches!(b[14], b'1'..=b'8') && matches!(b[19], b'8' | b'9' | b'a' | b'b' | b'A' | b'B')))
+}
+
+impl<'de> Deserialize<'de> for Uuid {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        if is_uuid(&s) {
+            Ok(Self(s))
+        } else {
+            Err(de::Error::custom("Invalid UUID"))
+        }
+    }
+}
+
 /// `date`: `YYYY-MM-DD` (digits only; the calendar is not checked, as in zod).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
@@ -342,6 +384,24 @@ mod tests {
             assert_eq!(parse(bad.clone()).unwrap_err(), "op.invalid_input", "{bad}");
         }
         assert_eq!(parse(Value::Null).unwrap_err(), "op.invalid_input", "null becomes {{}}, and the name is required");
+    }
+
+    #[test]
+    fn uuids_follow_zod() {
+        let ok = |s: &str| serde_json::from_value::<Uuid>(json!(s)).is_ok();
+        assert!(ok("2f6c1e0a-5b8d-4c1e-9a7f-0123456789ab") && ok("2F6C1E0A-5B8D-1C1E-AA7F-0123456789AB"));
+        assert!(ok("00000000-0000-0000-0000-000000000000") && ok("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"));
+        for bad in [
+            "",
+            "2f6c1e0a-5b8d-4c1e-9a7f-0123456789a",
+            "2f6c1e0a-5b8d-0c1e-9a7f-0123456789ab",
+            "2f6c1e0a-5b8d-9c1e-9a7f-0123456789ab",
+            "2f6c1e0a-5b8d-4c1e-7a7f-0123456789ab",
+            "2f6c1e0a5b8d4c1e9a7f0123456789ab",
+            "2f6c1e0a-5b8d-4c1e-9a7f-0123456789ag",
+        ] {
+            assert!(!ok(bad), "{bad}");
+        }
     }
 
     #[test]

@@ -2,6 +2,7 @@
 //! `runOp` in src/core/ops.ts).
 use crate::clock::{Clock, Rng};
 use crate::error::{AppError, AppResult};
+use crate::import::ImportState;
 use crate::numbers;
 use crate::ops;
 use crate::prefs::PrefsFile;
@@ -9,7 +10,7 @@ use crate::recurring::RecurringSummary;
 use crate::table::{OPS, PUBLIC_OPS};
 use kb_db::Store;
 use serde_json::Value;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 
 /// Who asks: the person, the assistant (in-app or MCP), or Kasboek itself. Stored in the audit log.
@@ -45,6 +46,10 @@ pub struct Core<S: Store> {
     pub(crate) prefs: RefCell<PrefsFile>,
     /// The last recurring-payments scan: `(day and change count it was made for, result)`.
     pub(crate) recurring_cache: RefCell<Option<(String, RecurringSummary)>>,
+    /// The import that is open (CSV or XML file read, nothing written yet). Never outlives the login.
+    pub(crate) import: RefCell<ImportState>,
+    /// Who asked for the operation that is running (`dispatch` sets it; the import operations treat the assistant differently).
+    actor: Cell<Actor>,
 }
 
 pub struct CoreConfig {
@@ -64,7 +69,19 @@ impl<S: Store> Core<S> {
             rng,
             prefs: RefCell::new(PrefsFile::new(config.prefs_file, config.system_languages)),
             recurring_cache: RefCell::new(None),
+            import: RefCell::new(ImportState::default()),
+            actor: Cell::new(Actor::User),
         }
+    }
+
+    /// Who asked for the operation that is running.
+    pub(crate) fn actor(&self) -> Actor {
+        self.actor.get()
+    }
+
+    /// Forgets the open import (`clearImportSessions`): its rows never outlive the login.
+    pub fn clear_import(&self) {
+        *self.import.borrow_mut() = ImportState::default();
     }
 
     pub fn is_unlocked(&self) -> bool {
@@ -73,12 +90,16 @@ impl<S: Store> Core<S> {
 
     /// Lock or unlock without touching the database handle (the session owns that in the app).
     pub fn set_unlocked(&mut self, unlocked: bool) {
+        if !unlocked {
+            self.clear_import();
+        }
         self.unlocked = unlocked;
     }
 
     pub fn set_store(&mut self, store: Option<S>) {
         self.store = store;
         self.recurring_cache = RefCell::new(None);
+        self.clear_import();
     }
 
     /// The database, or `auth.locked` when there is none (`session.db()`).
@@ -117,6 +138,7 @@ pub fn dispatch<S: Store>(core: &Core<S>, op: &str, input: Value, actor: Actor) 
     let Some(handler) = ops::handler::<S>(name) else {
         return Err(AppError::new("op.not_ported", format!("The operation {name} is not ported to the native app yet.")));
     };
+    core.actor.set(actor);
     let Done { mut data, mut audit } = handler(core, input)?;
     if mutates {
         let details = if redacted(name) {
