@@ -30,7 +30,7 @@ export function fileKindOf(head: Uint8Array): 'pdf' | 'csv' | 'xml' {
 /** Error codes of reading an XML (CAMT) statement; the screen words each as errors.<code with "." as "_">. */
 export const XML_ERROR_CODES = ['import.xml_not_camt', 'import.xml_broken', 'import.xml_dtd', 'import.xml_too_large', 'import.xml_version', 'import.xml_accounts', 'import.xml_iban_mismatch', 'import.xml_currency'] as const
 
-export const PDF_ERROR_CODES = ['import.not_pdf', 'import.is_pdf', 'import.pdf_password', 'import.pdf_broken', 'import.pdf_too_large', 'import.pdf_scanned', 'import.pdf_busy'] as const
+export const PDF_ERROR_CODES = ['import.not_pdf', 'import.is_pdf', 'import.pdf_password', 'import.pdf_broken', 'import.pdf_too_large', 'import.pdf_scanned', 'import.pdf_busy', 'import.pdf_reader_unavailable'] as const
 
 /** Cancelling is the person's own choice: no message. */
 export const isCancelledRead = (code: string): boolean => code === 'import.pdf_cancelled'

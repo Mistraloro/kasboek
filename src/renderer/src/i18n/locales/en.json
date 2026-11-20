@@ -1406,6 +1406,7 @@
     "import_pdf_too_large": "This PDF is too large or too complex to read. Try a PDF of a single statement.",
     "import_pdf_scanned": "This PDF has no selectable text (probably a scan or photo). Ask your bank for a CSV, or for a PDF with text.",
     "import_pdf_busy": "Another PDF is still being read. Wait a moment and try again.",
+    "import_pdf_reader_unavailable": "The PDF reader could not be started. Restart Kasboek and try again; if it keeps happening, reinstall.",
     "insights_consent_needed": "Agree to send the summary to {{ai}} first.",
     "insights_busy": "Tips are already being written.",
     "insights_unchecked": "{{ai}}’s tips couldn’t be checked. Try again or choose another model.",

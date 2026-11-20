@@ -1407,6 +1407,7 @@
     "import_pdf_too_large": "Este PDF es demasiado grande o complejo para leerlo. Prueba con un PDF de un solo extracto.",
     "import_pdf_scanned": "Este PDF no tiene texto seleccionable (probablemente es un escaneo o una foto). Pide a tu banco un CSV o un PDF con texto.",
     "import_pdf_busy": "Todavía se está leyendo otro PDF. Espera un momento e inténtalo de nuevo.",
+    "import_pdf_reader_unavailable": "No se ha podido iniciar el lector de PDF. Reinicia Kasboek e inténtalo de nuevo; si sigue ocurriendo, reinstala la aplicación.",
     "insights_consent_needed": "Acepta primero enviar el resumen a {{ai}}.",
     "insights_busy": "Ya se están escribiendo consejos.",
     "insights_unchecked": "No se pudieron comprobar los consejos de {{ai}}. Inténtalo de nuevo o elige otro modelo.",

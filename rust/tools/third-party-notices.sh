@@ -6,6 +6,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 out="$(realpath -m "${1:-THIRD-PARTY-NOTICES.txt}")"
+mkdir -p "$(dirname "$out")"
 cd "$here"
 cargo about generate --locked --workspace --fail --config about.toml --manifest-path Cargo.toml --output-file "$out" about.hbs
 echo "wrote $out"

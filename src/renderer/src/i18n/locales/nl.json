@@ -1406,6 +1406,7 @@
     "import_pdf_too_large": "Deze pdf is te groot of te ingewikkeld om te lezen. Probeer een pdf met één afschrift.",
     "import_pdf_scanned": "Deze pdf bevat geen selecteerbare tekst (waarschijnlijk een scan of foto). Vraag je bank om een CSV, of om een pdf met tekst.",
     "import_pdf_busy": "Er wordt nog een andere pdf gelezen. Wacht even en probeer opnieuw.",
+    "import_pdf_reader_unavailable": "De pdf-lezer kon niet gestart worden. Start Kasboek opnieuw op en probeer het nog eens; als het blijft gebeuren, installeer de app opnieuw.",
     "insights_consent_needed": "Ga eerst akkoord met het versturen van de samenvatting naar {{ai}}.",
     "insights_busy": "Er worden al tips geschreven.",
     "insights_unchecked": "De tips van {{ai}} konden niet worden gecontroleerd. Probeer het opnieuw of kies een ander model.",

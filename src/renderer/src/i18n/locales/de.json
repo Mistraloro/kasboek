@@ -1406,6 +1406,7 @@
     "import_pdf_too_large": "Dieses PDF ist zu groß oder zu komplex zum Lesen. Versuche ein PDF mit einem einzelnen Kontoauszug.",
     "import_pdf_scanned": "Dieses PDF enthält keinen markierbaren Text (wahrscheinlich ein Scan oder Foto). Bitte deine Bank um eine CSV-Datei oder ein PDF mit Text.",
     "import_pdf_busy": "Ein anderes PDF wird noch gelesen. Warte einen Moment und versuche es erneut.",
+    "import_pdf_reader_unavailable": "Der PDF-Leser konnte nicht gestartet werden. Starte Kasboek neu und versuche es erneut; falls es weiterhin passiert, installiere die App neu.",
     "insights_consent_needed": "Stimme zuerst zu, die Zusammenfassung an {{ai}} zu senden.",
     "insights_busy": "Es werden bereits Tipps geschrieben.",
     "insights_unchecked": "Die Tipps von {{ai}} konnten nicht geprüft werden. Versuche es erneut oder wähle ein anderes Modell.",
