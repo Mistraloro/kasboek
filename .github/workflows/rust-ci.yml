@@ -83,12 +83,19 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
 
+      # Slint (the kasboek app crate) needs fontconfig to build; xvfb gives the window tests a display; libxkbcommon-x11 is loaded at run time.
+      - name: Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libfontconfig1-dev libxkbcommon-x11-0 libxcb-xkb1 libx11-xcb1
+
       - name: Build (release)
         run: cargo build --workspace --release --locked --manifest-path rust/Cargo.toml
       - name: Test
         run: cargo test --workspace --locked --manifest-path rust/Cargo.toml
       - name: Clippy (warnings are errors)
-        run: cargo clippy --workspace --locked --manifest-path rust/Cargo.toml -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked --manifest-path rust/Cargo.toml -- -D warnings
       - name: Format check
         run: cargo fmt --all --check --manifest-path rust/Cargo.toml
       - name: Build the session test driver (parity feature, never shipped)

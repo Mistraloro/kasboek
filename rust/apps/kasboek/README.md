@@ -59,6 +59,12 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
 - Account numbers show only while the eye in the Accounts header is held (and are masked in the accessibility tree); the
   renderer shows none there.
 
+## Linux: fontconfig
+
+The app embeds its fonts, but Slint 1.19 always pulls in `fontique` (shared font collection), which links `libfontconfig` on
+Linux; no Slint feature switches that off (only `fontconfig-dlopen` on `i-slint-common`, which Slint does not expose). So building
+needs `libfontconfig1-dev` and the binary needs `libfontconfig1` at run time (see the `Linux packages` step in the workflows).
+
 ## Needs Windows or macOS to confirm
 
 Windows Hello and Touch ID prompts, the DWM title bar colours, Narrator / VoiceOver, IME and dead keys in the fields, fonts under

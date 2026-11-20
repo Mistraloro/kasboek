@@ -77,14 +77,33 @@ jobs:
           key: rust-app-${{ env.TAG }}-${{ env.RUST_VERSION }}-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: rust-app-${{ env.TAG }}-${{ env.RUST_VERSION }}-
 
-      - name: Linux packages (window, accessibility, virtual display)
+      # Slint needs fontconfig to build (and at run time); xvfb gives the start-up test a display; libxkbcommon-x11 is loaded at run time.
+      - name: Linux packages
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb libxkbcommon-x11-0 libfontconfig1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libfontconfig1-dev libxkbcommon-x11-0 libxcb-xkb1 libx11-xcb1
 
       - name: Build (release)
         shell: bash
         working-directory: rust
         run: cargo build --release --locked -p kasboek
+
+      # Staged right after the build, so that the artifact exists (with the binary, the test script and a README) even when
+      # a later test step fails. A failing build step fails the job before this step runs.
+      - name: Stage
+        shell: bash
+        run: |
+          ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
+          mkdir -p stage
+          cp "rust/target/release/kasboek$ext" stage/
+          cp rust/apps/kasboek/tools/startup-test.sh stage/
+          cat > stage/README.txt <<EOF
+          Kasboek native app, build of commit $GITHUB_SHA on $TAG.
+          kasboek$ext is the release binary. startup-test.sh <binary> [--state unlocked] starts it for a moment and checks the
+          milestones of startup.log (Linux: needs xvfb-run and libfontconfig1; Windows: run it from Git Bash).
+          EOF
+          ls -l stage
 
       - name: Test
         shell: bash
@@ -103,17 +122,8 @@ jobs:
           rust/apps/kasboek/tools/startup-test.sh "rust/target/release/kasboek$ext"
           rust/apps/kasboek/tools/startup-test.sh "rust/target/release/kasboek$ext" --state unlocked
 
-      - name: Stage
-        shell: bash
-        run: |
-          ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
-          mkdir -p stage
-          cp "rust/target/release/kasboek$ext" stage/
-          cp rust/apps/kasboek/tools/startup-test.sh stage/
-          ls -l stage
-
       - name: Upload app
-        if: always()
+        if: always() && hashFiles('stage/**') != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kasboek-app-${{ env.TAG }}

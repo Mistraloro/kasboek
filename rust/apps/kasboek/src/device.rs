@@ -57,7 +57,9 @@ mod imp {
 
     /// The HWND of the Slint window, as a number (a raw pointer cannot go to another thread).
     pub fn window_id(window: &slint::Window) -> Option<isize> {
-        match window.window_handle().window_handle().ok()?.as_raw() {
+        let binding = window.window_handle();
+        let handle = binding.window_handle().ok()?;
+        match handle.as_raw() {
             RawWindowHandle::Win32(h) => Some(h.hwnd.get()),
             _ => None,
         }
@@ -169,8 +171,8 @@ mod imp {
     /// LAError codes (LocalAuthentication/LAError.h) grouped for the log.
     fn classify(code: isize) -> Outcome {
         match code {
-            -2 | -4 | -9 => Outcome::Cancelled,        // user cancel, system cancel, app cancel
-            -5 | -6 | -7 | -8 => Outcome::Unavailable, // no passcode, no Touch ID, none enrolled, locked out
+            -2 | -4 | -9 => Outcome::Cancelled, // user cancel, system cancel, app cancel
+            -8..=-5 => Outcome::Unavailable,    // no passcode, no Touch ID, none enrolled, locked out
             _ => Outcome::Failed,
         }
     }

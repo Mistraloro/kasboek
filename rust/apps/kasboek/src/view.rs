@@ -374,8 +374,8 @@ pub fn apply(ui: &App, cat: &Catalog, fallback: &Formats, d: &OverviewData, opts
                 .into(),
             );
             ov.set_tips_empty(cat.tv("insights.empty", &[("month", &label)]).into());
-            ov.set_tips_show_get((configured && !facts.is_empty()).into());
-            ov.set_tips_has_sent((configured && !facts.is_empty() && d.preview.is_ok()).into());
+            ov.set_tips_show_get(configured && !facts.is_empty());
+            ov.set_tips_has_sent(configured && !facts.is_empty() && d.preview.is_ok());
             ov.set_sent_text(d.preview.as_ref().ok().and_then(|p| p["text"].as_str()).unwrap_or("").into());
         }
         Err(e) => {

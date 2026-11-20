@@ -90,7 +90,7 @@ pub fn normalize(code: &str) -> &'static str {
 /// CLDR plural category of a whole number (what `Intl.PluralRules` gives for the eight languages).
 pub fn plural_category(lang: &str, n: i64) -> &'static str {
     let n = n.unsigned_abs();
-    let millions = n != 0 && n % 1_000_000 == 0;
+    let millions = n != 0 && n.is_multiple_of(1_000_000);
     match lang {
         "en" | "nl" | "de" => {
             if n == 1 {

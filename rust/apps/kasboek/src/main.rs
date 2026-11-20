@@ -104,9 +104,8 @@ fn run(args: &[String]) {
     if let Some(l) = arg(args, "--lang") {
         prefs.language = l;
     }
-    match arg(args, "--theme").as_deref() {
-        Some(t @ ("light" | "dark" | "system")) => prefs.theme = t.to_string(),
-        _ => {}
+    if let Some(t @ ("light" | "dark" | "system")) = arg(args, "--theme").as_deref() {
+        prefs.theme = t.to_string();
     }
     log::mark("prefs read");
     let exit_after_ms = arg(args, "--exit-after-ms").and_then(|v| v.parse::<u64>().ok());

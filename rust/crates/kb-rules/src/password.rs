@@ -92,7 +92,7 @@ fn has_pattern(pw: &str) -> bool {
     // Four consecutive characters going up or down (code points, as `[...slice]` splits them).
     for i in 0..units.len().saturating_sub(3) {
         let c: Vec<u32> = char::decode_utf16(units[i..i + 4].iter().copied())
-            .map(|r| r.map_or_else(|e| e.unpaired_surrogate() as u32, |ch| first_unit(ch)))
+            .map(|r| r.map_or_else(|e| e.unpaired_surrogate() as u32, first_unit))
             .collect();
         let up = c.iter().enumerate().all(|(j, &v)| j == 0 || v == c[j - 1] + 1);
         let down = c.iter().enumerate().all(|(j, &v)| j == 0 || v + 1 == c[j - 1]);

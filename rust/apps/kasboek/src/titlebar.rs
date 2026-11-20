@@ -9,7 +9,8 @@ pub fn apply(window: &slint::Window, dark: bool, bg: u32, text: u32) {
     use windows::core::BOOL;
     use windows::Win32::Foundation::{COLORREF, HWND};
     use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR, DWMWA_USE_IMMERSIVE_DARK_MODE};
-    let Ok(handle) = window.window_handle().window_handle() else { return };
+    let binding = window.window_handle();
+    let Ok(handle) = binding.window_handle() else { return };
     let RawWindowHandle::Win32(h) = handle.as_raw() else { return };
     let hwnd = HWND(h.hwnd.get() as *mut core::ffi::c_void);
     // COLORREF is 0x00BBGGRR.
