@@ -117,6 +117,17 @@ names and amounts; the column layout is what matters.
   with an export), never sent to the page; requests go from the main process only.
 * **Refusal fallbacks**: Opus 5.5, Sonnet 5.5 and Fable 5.2 requests use server-side fallbacks, so a
   safety-classifier decline is retried on a suitable model in the same call.
+* **Assistant off switch** (`assistantEnabled`, default on, this computer only, Settings → Assistant,
+  at the top): turns the whole assistant off. The page hides the panel and its toggle, the review,
+  tips, check and PDF-read buttons with their consent dialogs, the Settings content (except the
+  switch and the Claude apps section), the tour and welcome steps and the page context; the local
+  tips and the local CSV/PDF/XML import stay. The main process refuses every assistant operation
+  (`assistant.*`, `import.assist*`/`pdfAssist*`, `insights.preview/run/cancel/status`, `memory.*`,
+  `summary.review` for the app's own pages) with `assistant.disabled` (`main/assistant-guard.ts`), and
+  `activeProvider` / the Claude client refuse too, so no request reaches a provider. Switching it off
+  cancels running jobs and clears the chat. An import or sync join never switches it on: it is not in
+  `UNTRUSTED_AFTER_IMPORT`, and if it is off on this computer the restored data is written off too.
+  MCP is separate (own switch, tool list unchanged).
 * **MCP server**: `Kasboek --mcp` is a stdio MCP server for Claude Desktop, Claude Code or any MCP
   client. It holds no keys and opens no database: it forwards calls over a named pipe / Unix socket
   (per-start token) to the running app, which must be unlocked with MCP switched on. Changes wait

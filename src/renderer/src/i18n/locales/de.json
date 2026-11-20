@@ -325,7 +325,8 @@
         "replaces": "Änderungen, die du bisher an Zeilen gemacht hast, werden durch das Lesen des Assistenten ersetzt.",
         "edited_one": "{{count}} Zeile, die du bearbeitet hast, wird ersetzt.",
         "edited_other": "{{count}} Zeilen, die du bearbeitet hast, werden ersetzt."
-      }
+      },
+      "askBank": "Bitte deine Bank um einen CSV-Export dieses Auszugs oder um ein PDF mit einer Umsatztabelle."
     },
     "lockedWhileAssisting": "{{ai}} arbeitet an diesen Zeilen. Änderungen jetzt gingen verloren, daher ist das Bearbeiten bis zum Ende gesperrt.",
     "consent": {
@@ -349,7 +350,8 @@
         "not_booked_one": "{{count}} nicht gebuchter Eintrag (ausstehend oder nur zur Information) wurde ausgelassen.",
         "not_booked_other": "{{count}} nicht gebuchte Einträge (ausstehend oder nur zur Information) wurden ausgelassen."
       }
-    }
+    },
+    "anyBankLocal": "Funktioniert mit CSV-Exporten jeder Bank: Kasboek liest die Spaltennamen (Niederländisch, Französisch, Englisch oder Deutsch) und merkt sich jedes Format nach dem ersten Import. PDF-Kontoauszüge mit einer Umsatztabelle werden auf diesem Computer gelesen; nichts wird irgendwohin gesendet. XML-Kontoauszüge (CAMT.053, von vielen europäischen Banken angeboten) werden ebenfalls auf diesem Computer gelesen: Beträge, Daten, Namen und Salden kommen direkt aus der Datei."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -420,7 +422,9 @@
     "reasoningHint": "Wie viel das Modell vor der Antwort nachdenkt: weniger ist schneller und günstiger, mehr hilft bei schwierigen Fragen. Nicht jedes Modell hat diese Einstellung; lehnt ein Modell sie ab, fragt Kasboek ohne.",
     "reasoningUnsupported": "Dieses Modell nimmt keine Einstellung fürs Nachdenken an und nutzt seine eigene.",
     "autoDone": "Ohne Nachfrage erledigt:",
-    "autoFailed": "Ohne Nachfrage versucht, aber es hat nicht geklappt:"
+    "autoFailed": "Ohne Nachfrage versucht, aber es hat nicht geklappt:",
+    "enabled": "Den Assistenten verwenden",
+    "enabledHint": "Ausschalten, um den Assistenten und jede Funktion, die Text an einen KI-Anbieter sendet, auszublenden; Kasboek arbeitet dann ganz für sich."
   },
   "modal": {
     "discardAsk": "Eingegebenes verwerfen?",
@@ -589,7 +593,8 @@
         "failed": "Kasboek zeichnet jetzt ohne Grafikkarte: Sie hat Kasboek bei einem früheren Start nicht angezeigt.",
         "flag": "Kasboek zeichnet jetzt ohne Grafikkarte: Es wurde mit --disable-gpu gestartet."
       }
-    }
+    },
+    "insightsHintLocal": "Tipps aus deinen eigenen Daten, auf diesem Computer. Es wird nichts gesendet."
   },
   "auth": {
     "welcome": "Willkommen bei Kasboek",
@@ -798,7 +803,9 @@
     },
     "desktopOpen": "Claude Desktop ist noch geöffnet. Es speichert beim Beenden seine eigenen Einstellungen und würde Kasboek wieder entfernen. Beende es zuerst vollständig (auch über das Symbol im Infobereich oder in der Menüleiste).",
     "addAnyway": "Trotzdem hinzufügen",
-    "overwritten": "Kasboek wurde aus den Einstellungen von Claude Desktop entfernt, vermutlich beim Beenden von Claude Desktop. Beende es vollständig und füge Kasboek dann erneut hinzu."
+    "overwritten": "Kasboek wurde aus den Einstellungen von Claude Desktop entfernt, vermutlich beim Beenden von Claude Desktop. Beende es vollständig und füge Kasboek dann erneut hinzu.",
+    "sectionTitle": "Claude-Apps",
+    "separateNote": "Verbundene Claude-Apps sind vom Assistenten in Kasboek getrennt. Sie haben unten einen eigenen Schalter und funktionieren weiter, wenn der Assistent ausgeschaltet ist."
   },
   "fx": {
     "title": "Währungen",
@@ -1360,7 +1367,9 @@
       "import": "Hol einen CSV-Export oder PDF-Kontoauszug deiner Bank herein. Lass ihn vom Assistenten prüfen, bevor du speicherst.",
       "assistant": "Öffne oder schließe den Assistenten. Frag etwas zu deinem Geld oder lass ihn Änderungen machen, die auf dein OK warten.",
       "settings": "Konten, Sicherungen, Synchronisieren zwischen Computern, der Assistent, Formate und mehr.",
-      "lock": "Sperr Kasboek, wenn du kurz weggehst. Nach einer Weile sperrt es sich auch selbst."
+      "lock": "Sperr Kasboek, wenn du kurz weggehst. Nach einer Weile sperrt es sich auch selbst.",
+      "importLocal": "Hol einen CSV-Export oder PDF-Kontoauszug deiner Bank herein. Nichts wird gespeichert, bevor du zustimmst.",
+      "settingsLocal": "Konten, Sicherungen, Synchronisieren zwischen Computern, Formate und mehr."
     }
   },
   "webdav": {
@@ -1426,7 +1435,8 @@
     "import_xml_version": "Diese Version des CAMT-Formats wird nicht unterstützt. Frag deine Bank nach CAMT.053 in Version 001.02 oder neuer.",
     "import_xml_accounts": "Diese Datei enthält Kontoauszüge für mehr als ein Konto, und keines davon ist das gewählte Konto. Trage die IBAN des Kontos unter Einstellungen → Konten ein, wähle das Konto und öffne die Datei erneut.",
     "import_xml_iban_mismatch": "Die IBAN in dieser Datei ist nicht die IBAN des gewählten Kontos. Wähle das Konto, zu dem die Datei gehört, oder korrigiere die IBAN unter Einstellungen → Konten.",
-    "import_xml_currency": "Diese Datei ist in einer anderen Währung als das gewählte Konto. Wähle das Konto in dieser Währung."
+    "import_xml_currency": "Diese Datei ist in einer anderen Währung als das gewählte Konto. Wähle das Konto in dieser Währung.",
+    "assistant_disabled": "Der Assistent ist ausgeschaltet. Schalte ihn unter Einstellungen → Assistent ein."
   },
   "insights": {
     "title": "Vorschläge",

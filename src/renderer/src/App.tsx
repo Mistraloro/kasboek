@@ -12,7 +12,7 @@ import { ToastProvider, useToast } from './components/Toast'
 import { cx } from './components/ui'
 import { call } from './lib/api'
 import { AuthProvider, useAuth } from './lib/auth'
-import { PrefsProvider, SettingsProvider, usePrefs } from './lib/settings'
+import { PrefsProvider, SettingsProvider, useAssistantEnabled, usePrefs } from './lib/settings'
 import { Lock } from './pages/auth/Lock'
 import { RecoveredModal } from './pages/auth/RecoveredModal'
 import { Setup } from './pages/auth/Setup'
@@ -91,6 +91,7 @@ function Shell() {
     setNavKey((k) => k + 1)
   }
   const setPage = (p: Page): void => go(p)
+  const assistantEnabled = useAssistantEnabled()
   const [assistantOpen, setAssistantOpen] = useState(true)
   // Pages can ask for the assistant panel (e.g. "Review this month").
   useEffect(() => {
@@ -163,20 +164,22 @@ function Shell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className={cx('drag flex h-11 shrink-0 items-center justify-end', isMac ? 'pr-3' : 'pr-[148px]')}>
           <UpdateButton />
-          <button
-            type="button"
-            data-tour="assistant"
-            onClick={() => setAssistantOpen((v) => !v)}
-            aria-pressed={assistantOpen}
-            title={t('nav.toggleAssistant')}
-            className={cx(
-              'no-drag inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors',
-              assistantOpen ? 'text-accent' : 'text-muted hover:text-text'
-            )}
-          >
-            <PanelRight size={15} />
-            {t('nav.assistant')}
-          </button>
+          {assistantEnabled && (
+            <button
+              type="button"
+              data-tour="assistant"
+              onClick={() => setAssistantOpen((v) => !v)}
+              aria-pressed={assistantOpen}
+              title={t('nav.toggleAssistant')}
+              className={cx(
+                'no-drag inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium transition-colors',
+                assistantOpen ? 'text-accent' : 'text-muted hover:text-text'
+              )}
+            >
+              <PanelRight size={15} />
+              {t('nav.assistant')}
+            </button>
+          )}
         </div>
         <div className="flex min-h-0 flex-1">
           <main className="min-w-0 flex-1 overflow-y-auto">
@@ -194,7 +197,7 @@ function Shell() {
               </Suspense>
             </div>
           </main>
-          {assistantOpen && <AssistantPanel go={setPage} />}
+          {assistantEnabled && assistantOpen && <AssistantPanel go={setPage} />}
         </div>
       </div>
       <Tour go={setPage} openAssistant={() => setAssistantOpen(true)} />

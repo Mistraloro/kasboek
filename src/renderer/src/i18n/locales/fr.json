@@ -326,7 +326,8 @@
         "edited_one": "{{count}} ligne que tu as modifiée sera remplacée.",
         "edited_many": "{{count}} lignes que tu as modifiées seront remplacées.",
         "edited_other": "{{count}} lignes que tu as modifiées seront remplacées."
-      }
+      },
+      "askBank": "Demandez à votre banque un export CSV de ce relevé, ou un PDF avec un tableau d’opérations."
     },
     "lockedWhileAssisting": "{{ai}} travaille sur ces lignes. Les modifications faites maintenant seraient perdues : la modification est désactivée jusqu’à la fin.",
     "consent": {
@@ -350,7 +351,8 @@
         "not_booked_one": "{{count}} opération non comptabilisée (en attente ou à titre d’information) a été ignorée.",
         "not_booked_other": "{{count}} opérations non comptabilisées (en attente ou à titre d’information) ont été ignorées."
       }
-    }
+    },
+    "anyBankLocal": "Fonctionne avec les exports CSV de toutes les banques : Kasboek lit les noms de colonnes (néerlandais, français, anglais ou allemand) et retient chaque mise en page après le premier import. Les relevés PDF contenant un tableau d’opérations sont lus sur cet ordinateur ; rien n’est envoyé nulle part. Les relevés XML (CAMT.053, proposés par de nombreuses banques européennes) sont eux aussi lus sur cet ordinateur : montants, dates, noms et soldes viennent directement du fichier."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -421,7 +423,9 @@
     "reasoningHint": "Combien le modèle réfléchit avant de répondre : moins est plus rapide et moins cher, plus aide pour les questions difficiles. Tous les modèles n’ont pas ce réglage ; si un modèle le refuse, Kasboek demande sans.",
     "reasoningUnsupported": "Ce modèle n’accepte pas de réglage de réflexion et utilise le sien.",
     "autoDone": "Fait sans demander :",
-    "autoFailed": "Essayé sans demander, mais sans succès :"
+    "autoFailed": "Essayé sans demander, mais sans succès :",
+    "enabled": "Utiliser l’assistant",
+    "enabledHint": "Désactivez pour masquer l’assistant et toute fonction qui envoie du texte à un fournisseur d’IA ; Kasboek fonctionne alors entièrement seul."
   },
   "modal": {
     "discardAsk": "Abandonner ce que vous avez saisi ?",
@@ -590,7 +594,8 @@
         "failed": "Kasboek dessine maintenant sans la carte graphique : elle n’a pas affiché Kasboek lors d’un démarrage précédent.",
         "flag": "Kasboek dessine maintenant sans la carte graphique : il a été lancé avec --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Des conseils tirés de vos propres données, sur cet ordinateur. Rien n’est envoyé."
   },
   "auth": {
     "welcome": "Bienvenue dans Kasboek",
@@ -799,7 +804,9 @@
     },
     "desktopOpen": "Claude Desktop est encore ouvert. Il enregistre ses propres réglages en quittant et retirerait à nouveau Kasboek. Quittez-le d’abord complètement (aussi depuis l’icône de la zone de notification ou de la barre des menus).",
     "addAnyway": "Ajouter quand même",
-    "overwritten": "Kasboek a été retiré des réglages de Claude Desktop, sans doute quand Claude Desktop s’est fermé. Quittez-le complètement, puis ajoutez à nouveau Kasboek."
+    "overwritten": "Kasboek a été retiré des réglages de Claude Desktop, sans doute quand Claude Desktop s’est fermé. Quittez-le complètement, puis ajoutez à nouveau Kasboek.",
+    "sectionTitle": "Applications Claude",
+    "separateNote": "Les applications Claude connectées sont indépendantes de l’assistant de Kasboek. Elles ont leur propre commutateur ci-dessous et continuent de fonctionner quand l’assistant est désactivé."
   },
   "fx": {
     "title": "Devises",
@@ -1361,7 +1368,9 @@
       "import": "Importez un export CSV ou un relevé PDF de votre banque. Faites-le vérifier par l'assistant avant d'enregistrer.",
       "assistant": "Ouvrez ou fermez l'assistant. Posez une question sur votre argent, ou laissez-le faire des changements qui attendent votre accord.",
       "settings": "Comptes, sauvegardes, synchronisation entre ordinateurs, l'assistant, formats et plus encore.",
-      "lock": "Verrouillez Kasboek quand vous vous absentez. Il se verrouille aussi tout seul après un moment."
+      "lock": "Verrouillez Kasboek quand vous vous absentez. Il se verrouille aussi tout seul après un moment.",
+      "importLocal": "Importez un export CSV ou un relevé PDF de votre banque. Rien n’est enregistré avant votre accord.",
+      "settingsLocal": "Comptes, sauvegardes, synchronisation entre ordinateurs, formats et plus encore."
     }
   },
   "webdav": {
@@ -1427,7 +1436,8 @@
     "import_xml_version": "Cette version du format CAMT n’est pas prise en charge. Demandez à votre banque du CAMT.053 en version 001.02 ou ultérieure.",
     "import_xml_accounts": "Ce fichier contient des relevés de plusieurs comptes, et aucun n’est le compte choisi. Ajoutez l’IBAN du compte dans Réglages → Comptes, choisissez ce compte et rouvrez le fichier.",
     "import_xml_iban_mismatch": "L’IBAN de ce fichier n’est pas celui du compte choisi. Choisissez le compte auquel le fichier appartient, ou corrigez l’IBAN dans Réglages → Comptes.",
-    "import_xml_currency": "Ce fichier est dans une autre devise que le compte choisi. Choisissez le compte dans cette devise."
+    "import_xml_currency": "Ce fichier est dans une autre devise que le compte choisi. Choisissez le compte dans cette devise.",
+    "assistant_disabled": "L’assistant est désactivé. Activez-le dans Réglages → Assistant."
   },
   "insights": {
     "title": "Suggestions",

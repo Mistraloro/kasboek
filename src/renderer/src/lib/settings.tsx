@@ -78,7 +78,7 @@ export function usePrefsFmt(): Fmt {
 
 interface SettingsValue extends PrefsValue {
   settings: Settings
-  update: (patch: { currency?: string; fxAutoUpdate?: boolean; hideAccountNumbers?: boolean }) => Promise<void>
+  update: (patch: { currency?: string; fxAutoUpdate?: boolean; hideAccountNumbers?: boolean; assistantEnabled?: boolean }) => Promise<void>
   /** Money in the main currency, or in `currency` when given. */
   money: (cents: number, currency?: string) => string
   fmt: Fmt
@@ -92,7 +92,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void call('settings.get').then(setSettings)
   }, [])
-  const update = useCallback(async (patch: { currency?: string; fxAutoUpdate?: boolean; hideAccountNumbers?: boolean }) => setSettings(await call('settings.update', patch)), [])
+  const update = useCallback(async (patch: { currency?: string; fxAutoUpdate?: boolean; hideAccountNumbers?: boolean; assistantEnabled?: boolean }) => setSettings(await call('settings.update', patch)), [])
   const value = useMemo(() => {
     if (!settings) return null
     const fmt: Fmt = { formats: prefsValue.prefs.formats, language: prefsValue.prefs.language }
@@ -106,4 +106,12 @@ export function useSettings(): SettingsValue {
   const v = useContext(Ctx)
   if (!v) throw new Error('useSettings outside SettingsProvider')
   return v
+}
+
+/**
+ * Whether the assistant is on ("Use the assistant" in Settings → Assistant). Every piece of the page that belongs to the assistant
+ * (the panel, its buttons, checks, tips, texts and consent dialogs) renders only when this is true; tests/assistant-off.test.ts checks it.
+ */
+export function useAssistantEnabled(): boolean {
+  return useSettings().settings.assistantEnabled
 }

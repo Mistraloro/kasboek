@@ -63,9 +63,14 @@ export function compactResult(op: OpName, data: unknown, input?: unknown): strin
   return compact(op, maskResult(op === 'settings.get' ? assistantSettings(data) : data), input)
 }
 
-const HIDDEN_SETTINGS = new Set(['autoBackupFolder', 'lastBackupFile', 'aiBaseUrl', 'baseUrl'])
+const HIDDEN_SETTINGS = new Set([
+  'autoBackupFolder', 'lastBackupFile', 'aiBaseUrl', 'baseUrl',
+  // The assistant's own configuration: whether it is on, which provider and models, what it may do, what it remembers and sees.
+  'assistantEnabled', 'aiProvider', 'aiProviders', 'aiChatModel', 'aiCsvModel', 'aiPdfModel', 'aiReasoning', 'aiCsvReasoning',
+  'chatModel', 'chatEffort', 'csvModel', 'csvEffort', 'permissions', 'memoryEnabled', 'pageContextEnabled', 'mcpEnabled', 'aiInsightsConsent', 'aiCheckConsent'
+])
 
-/** What the assistant may know of the settings: not where the person keeps backups, nor which servers are used. */
+/** What the assistant may know of the settings: not where the person keeps backups, nor which servers are used, nor how it is set up itself. */
 function assistantSettings(data: unknown): unknown {
   if (!data || typeof data !== 'object') return data
   if (Array.isArray(data)) return data.map(assistantSettings)

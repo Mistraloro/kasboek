@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader, cx } from '../components/ui'
-import { ClaudeSection, PermissionsSection } from './SettingsClaude'
+import { AssistantSwitchSection, ClaudeSection, ConnectedAppsSection, PermissionsSection } from './SettingsClaude'
+import { useAssistantEnabled } from '../lib/settings'
 import { MemorySection } from './SettingsMemory'
 import { SETTINGS_TABS, onSettingsTab, openSettingsTab, settingsTab, type SettingsTab } from '../lib/settings-tab'
 import { AboutSection } from './settings-sections/AboutSection'
@@ -17,6 +18,7 @@ import { TransferSection } from './settings-sections/TransferSection'
 
 export function SettingsPage() {
   const { t } = useTranslation()
+  const assistantEnabled = useAssistantEnabled()
   const [tab, setTabState] = useState<SettingsTab>(settingsTab())
   const setTab = (next: SettingsTab): void => openSettingsTab(next)
   useEffect(() => onSettingsTab(setTabState), [])
@@ -61,9 +63,15 @@ export function SettingsPage() {
         )}
         {tab === 'assistant' && (
           <>
-            <ClaudeSection />
-            <PermissionsSection />
-            <MemorySection />
+            <AssistantSwitchSection />
+            {assistantEnabled && (
+              <>
+                <ClaudeSection />
+                <PermissionsSection />
+                <MemorySection />
+              </>
+            )}
+            <ConnectedAppsSection />
           </>
         )}
       </div>

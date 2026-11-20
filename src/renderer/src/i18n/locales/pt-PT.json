@@ -326,7 +326,8 @@
         "edited_one": "{{count}} linha que editou será substituída.",
         "edited_many": "{{count}} linhas que editou serão substituídas.",
         "edited_other": "{{count}} linhas que editou serão substituídas."
-      }
+      },
+      "askBank": "Peça ao seu banco um CSV deste extrato, ou um PDF com uma tabela de movimentos."
     },
     "lockedWhileAssisting": "{{ai}} está a trabalhar nestas linhas. As alterações feitas agora perder-se-iam, por isso a edição fica desativada até terminar.",
     "consent": {
@@ -350,7 +351,8 @@
         "not_booked_one": "{{count}} movimento não contabilizado (pendente ou apenas informativo) foi ignorado.",
         "not_booked_other": "{{count}} movimentos não contabilizados (pendentes ou apenas informativos) foram ignorados."
       }
-    }
+    },
+    "anyBankLocal": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum. Os extratos XML (CAMT.053, oferecidos por muitos bancos europeus) também são lidos neste computador: valores, datas, nomes e saldos vêm diretamente do ficheiro."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -421,7 +423,9 @@
     "reasoningHint": "Quanto o modelo pensa antes de responder: menos é mais rápido e barato, mais ajuda com perguntas difíceis. Nem todos os modelos têm esta definição; se um modelo a recusar, o Kasboek pergunta sem ela.",
     "reasoningUnsupported": "Este modelo não aceita uma definição de raciocínio e usa a sua.",
     "autoDone": "Feito sem perguntar:",
-    "autoFailed": "Tentado sem perguntar, mas não resultou:"
+    "autoFailed": "Tentado sem perguntar, mas não resultou:",
+    "enabled": "Usar o assistente",
+    "enabledHint": "Desative para ocultar o assistente e todas as funções que enviam texto a um fornecedor de IA; o Kasboek passa a funcionar totalmente por si."
   },
   "modal": {
     "discardAsk": "Descartar o que escreveu?",
@@ -590,7 +594,8 @@
         "failed": "O Kasboek desenha agora sem a placa gráfica: ela não mostrou o Kasboek num arranque anterior.",
         "flag": "O Kasboek desenha agora sem a placa gráfica: foi iniciado com --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Dicas obtidas dos seus próprios dados, neste computador. Nada é enviado."
   },
   "auth": {
     "welcome": "Bem-vindo ao Kasboek",
@@ -799,7 +804,9 @@
     },
     "desktopOpen": "O Claude Desktop ainda está aberto. Guarda as suas próprias definições ao fechar e voltaria a retirar o Kasboek. Feche-o primeiro por completo (também a partir do ícone da área de notificação ou da barra de menus).",
     "addAnyway": "Adicionar mesmo assim",
-    "overwritten": "O Kasboek foi retirado das definições do Claude Desktop, provavelmente quando o Claude Desktop fechou. Feche-o por completo e adicione o Kasboek de novo."
+    "overwritten": "O Kasboek foi retirado das definições do Claude Desktop, provavelmente quando o Claude Desktop fechou. Feche-o por completo e adicione o Kasboek de novo.",
+    "sectionTitle": "Aplicações Claude",
+    "separateNote": "As aplicações Claude ligadas são independentes do assistente do Kasboek. Têm o seu próprio interruptor abaixo e continuam a funcionar com o assistente desativado."
   },
   "fx": {
     "title": "Moedas",
@@ -1361,7 +1368,9 @@
       "import": "Traga um ficheiro CSV ou um extrato em PDF do seu banco. Deixe o assistente verificá-lo antes de guardar.",
       "assistant": "Abra ou feche o assistente. Pergunte sobre o seu dinheiro, ou deixe-o fazer alterações que aguardam a sua aprovação.",
       "settings": "Contas, cópias de segurança, sincronização entre computadores, o assistente, formatos e mais.",
-      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho ao fim de algum tempo."
+      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho ao fim de algum tempo.",
+      "importLocal": "Traga um ficheiro CSV ou um extrato em PDF do seu banco. Nada é guardado até aprovar.",
+      "settingsLocal": "Contas, cópias de segurança, sincronização entre computadores, formatos e mais."
     }
   },
   "webdav": {
@@ -1427,7 +1436,8 @@
     "import_xml_version": "Esta versão do formato CAMT não é suportada. Peça ao seu banco CAMT.053 na versão 001.02 ou posterior.",
     "import_xml_accounts": "Este ficheiro contém extratos de mais de uma conta e nenhuma é a conta escolhida. Adicione o IBAN da conta em Definições → Contas, escolha essa conta e abra o ficheiro de novo.",
     "import_xml_iban_mismatch": "O IBAN deste ficheiro não é o IBAN da conta escolhida. Escolha a conta a que o ficheiro pertence ou corrija o IBAN em Definições → Contas.",
-    "import_xml_currency": "Este ficheiro está noutra moeda que a conta escolhida. Escolha a conta nessa moeda."
+    "import_xml_currency": "Este ficheiro está noutra moeda que a conta escolhida. Escolha a conta nessa moeda.",
+    "assistant_disabled": "O assistente está desativado. Ative-o em Definições → Assistente."
   },
   "insights": {
     "title": "Sugestões",

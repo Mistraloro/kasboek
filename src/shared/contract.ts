@@ -262,7 +262,7 @@ export const contract = {
 
   /* ----- Data ----- */
   'settings.get': { input: empty, output: out<Settings>() },
-  'settings.update': { input: z.object({ currency, fxAutoUpdate: z.boolean(), hideAccountNumbers: z.boolean() }).partial().strict(), output: out<Settings>() },
+  'settings.update': { input: z.object({ currency, fxAutoUpdate: z.boolean(), hideAccountNumbers: z.boolean(), assistantEnabled: z.boolean() }).partial().strict(), output: out<Settings>() },
 
   /* ----- Net worth, investments, year ----- */
   'networth.summary': {

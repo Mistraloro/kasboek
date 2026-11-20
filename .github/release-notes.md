@@ -4,6 +4,9 @@ Kasboek — a private, local-first budget app with an AI assistant built in. You
 
 (0.22.1 includes everything of 0.22; the 0.22.0 build was never published.)
 
+**New**
+- **A switch to turn the assistant off completely** (Settings → Assistant → Use the assistant). Off hides every assistant button, dialog and tour step, refuses all assistant operations in the app itself, stops anything running, and never sends text to an AI provider. Kasboek then works fully on its own: local CSV, PDF and XML import and the local tips stay. Importing or restoring data never switches it back on. Claude apps connected over MCP are separate and keep their own switch.
+
 **Privacy**
 - **Account numbers are hidden on screen by default.** An IBAN shows as `BE…1234` (country and last four characters) everywhere: accounts, transactions, import preview, rules and the assistant panel. Hold the small eye next to it to show the full number for a moment; the eye no longer opens the edit window. You can switch this off in Settings → Appearance. Importing a file never switches it off, and it is switched back on after restoring a backup or export or joining sync.
 - **The assistant and connected apps (MCP) no longer see account or card numbers, e-mail addresses or international phone numbers (starting with + or 00).** This holds for chat, CSV checks, PDF reading, tips, memory notes and what you type. Your own account number shows as `BE…1234`. Amounts, dates and category names stay readable so the assistant can still answer questions. Hiding also holds for numbers written with dots, slashes or line breaks.

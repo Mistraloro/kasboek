@@ -11,7 +11,7 @@ import { dateExample, datePlaceholder, parseTypedDate } from '@shared/format'
 import { call, useOp } from '../../lib/api'
 import { formatDate } from '../../lib/format'
 import { Masked, useHideNumbers } from '../../lib/hide-numbers'
-import { useSettings } from '../../lib/settings'
+import { useAssistantEnabled, useSettings } from '../../lib/settings'
 import { errText } from '../auth/parts'
 import { CategorySelect } from '../Transactions'
 import { PromptModal } from '../../components/PromptModal'
@@ -54,6 +54,7 @@ export function PreviewView({
   const { money, fmt } = useSettings()
   const hideNumbers = useHideNumbers()
   const assistant = useAssistant()
+  const assistantEnabled = useAssistantEnabled()
   const categories = useOp('categories.list')
   // Seconds since the check started, so a slow answer visibly isn't stuck.
   const [elapsed, setElapsed] = useState(0)
@@ -135,7 +136,7 @@ export function PreviewView({
 
   // "Read with the assistant" for a PDF the local reader couldn't read or whose totals don't add up.
   const aiRunning = assisting !== null && assistKind === 'pdf'
-  const aiRead: ReactNode = aiRunning ? (
+  const aiRead: ReactNode = !assistantEnabled ? null : aiRunning ? (
     <>
       <span className="text-xs text-muted">
         {progress && progress.parts > 1 ? t('import.pdf.ai.readingPages', { done: progress.done, total: progress.total }) : t('import.pdf.ai.reading')} <span className="num">{clock(elapsed)}</span>
@@ -168,8 +169,8 @@ export function PreviewView({
             {preview.layout && <Badge tone="accent">{t('import.layoutRecognised')}</Badge>}
             {pdf && <Badge>PDF</Badge>}
             {xml && <Badge>XML</Badge>}
-            {pdf?.readBy === 'assistant' && <Badge tone="accent">{t('import.pdf.readBy', { ai: assistant?.providerName ?? 'Claude' })}</Badge>}
-            {!noTable && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
+            {assistantEnabled && pdf?.readBy === 'assistant' && <Badge tone="accent">{t('import.pdf.readBy', { ai: assistant?.providerName ?? 'Claude' })}</Badge>}
+            {!noTable && (assistantEnabled || preview.mappingSource !== 'assistant') && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
           </span>
         }
         action={
@@ -217,7 +218,7 @@ export function PreviewView({
                 </Button>
               )
             ) : (
-              <span className="text-xs text-muted">{t('import.claudeOff')}</span>
+              assistantEnabled && <span className="text-xs text-muted">{t('import.claudeOff')}</span>
             )}
             <Button size="sm" icon={<Columns3 size={14} />} disabled={locked} onClick={() => setMappingOpen(true)}>{t('import.columns')}</Button>
           </span>
@@ -235,7 +236,7 @@ export function PreviewView({
             )}
           </div>
         )}
-        {locked && <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{t('import.lockedWhileAssisting', { ai: assistant?.providerName ?? 'Claude' })}</p>}
+        {assistantEnabled && locked && <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{t('import.lockedWhileAssisting', { ai: assistant?.providerName ?? 'Claude' })}</p>}
         {notes.length > 0 && (
           <ul className="mt-3 list-disc space-y-0.5 border-t border-border pt-3 pl-5 text-[13px] text-muted">
             {notes.map((n, i) => <li key={i}>{n}</li>)}
@@ -243,11 +244,11 @@ export function PreviewView({
         )}
       </Card>}
 
-      {preview.check && <CheckSummaryCard preview={preview} onChange={onChange} />}
+      {assistantEnabled && preview.check && <CheckSummaryCard preview={preview} onChange={onChange} />}
 
       {noTable ? (
         <Card className="px-5 py-6 text-[13px] text-muted">
-          <p><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.pdf.noTable')}</p>
+          <p><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.pdf.noTable')}{!assistantEnabled && <> {t('import.pdf.askBank')}</>}</p>
           {notes.length > 0 && <ul className="mt-3 list-disc space-y-0.5 pl-5">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button variant={onAssistPdf ? undefined : 'primary'} onClick={onCancel} disabled={aiRunning}>{t('import.pdf.chooseAnother')}</Button>
@@ -346,8 +347,8 @@ export function PreviewView({
           onClose={() => setFixing(null)}
         />
       )}
-      <CheckConsentModal open={checkConsentOpen} preview={preview} onClose={() => setCheckConsentOpen(false)} onSend={() => { setCheckConsentOpen(false); onAssist?.(preview, true, () => undefined) }} />
-      <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />
+      {assistantEnabled && <CheckConsentModal open={checkConsentOpen} preview={preview} onClose={() => setCheckConsentOpen(false)} onSend={() => { setCheckConsentOpen(false); onAssist?.(preview, true, () => undefined) }} />}
+      {assistantEnabled && <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />}
       {!noTable && <MappingModal key={JSON.stringify(preview.mapping)} open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />}
     </>
   )

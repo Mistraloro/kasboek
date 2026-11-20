@@ -325,7 +325,8 @@
         "replaces": "Changes you made to rows so far are replaced by the assistant’s reading.",
         "edited_one": "{{count}} row you edited will be replaced.",
         "edited_other": "{{count}} rows you edited will be replaced."
-      }
+      },
+      "askBank": "Ask your bank for a CSV export of this statement, or for a PDF with a table of transactions."
     },
     "lockedWhileAssisting": "{{ai}} is working on these rows. Changes made now would be lost, so editing is off until it is done.",
     "consent": {
@@ -349,7 +350,8 @@
         "not_booked_one": "{{count}} entry that is not booked (pending or for information only) was left out.",
         "not_booked_other": "{{count}} entries that are not booked (pending or for information only) were left out."
       }
-    }
+    },
+    "anyBankLocal": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere. XML statements (CAMT.053, offered by many European banks) are read on this computer too: amounts, dates, names and balances come straight from the file."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -420,7 +422,9 @@
     "reasoningHint": "How much the model thinks before answering: less is faster and cheaper, more helps with harder questions. Not every model has this setting; if a model refuses it, Kasboek asks without it.",
     "reasoningUnsupported": "This model doesn't take a reasoning setting and uses its own.",
     "autoDone": "Done without asking:",
-    "autoFailed": "Tried without asking, but it didn’t work:"
+    "autoFailed": "Tried without asking, but it didn’t work:",
+    "enabled": "Use the assistant",
+    "enabledHint": "Turn off to hide the assistant and every feature that sends text to an AI provider; Kasboek then works fully on its own."
   },
   "modal": {
     "discardAsk": "Discard what you typed?",
@@ -589,7 +593,8 @@
         "failed": "Kasboek now draws without the graphics card: it did not show Kasboek on an earlier start.",
         "flag": "Kasboek now draws without the graphics card: it was started with --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Tips found from your own data, on this computer. Nothing is sent anywhere."
   },
   "auth": {
     "welcome": "Welcome to Kasboek",
@@ -798,7 +803,9 @@
     },
     "desktopOpen": "Claude Desktop is still open. It saves its own settings when it quits and would remove Kasboek again. Quit it completely first (also from the tray icon or menu bar).",
     "addAnyway": "Add anyway",
-    "overwritten": "Kasboek was removed from Claude Desktop's settings, probably when Claude Desktop quit. Quit it completely, then add Kasboek again."
+    "overwritten": "Kasboek was removed from Claude Desktop's settings, probably when Claude Desktop quit. Quit it completely, then add Kasboek again.",
+    "sectionTitle": "Claude apps",
+    "separateNote": "Connected Claude apps are separate from the assistant in Kasboek. They have their own switch below and keep working when the assistant is turned off."
   },
   "fx": {
     "title": "Currencies",
@@ -1360,7 +1367,9 @@
       "import": "Bring in a CSV export or PDF statement from your bank. Check it with the assistant before you save it.",
       "assistant": "Open or close the assistant. Ask about your money, or let it make changes that wait for your OK.",
       "settings": "Accounts, backups, sync between computers, the assistant, formats and more.",
-      "lock": "Lock Kasboek when you step away. It also locks by itself after a while."
+      "lock": "Lock Kasboek when you step away. It also locks by itself after a while.",
+      "importLocal": "Bring in a CSV export or PDF statement from your bank. Nothing is saved until you approve.",
+      "settingsLocal": "Accounts, backups, sync between computers, formats and more."
     }
   },
   "webdav": {
@@ -1426,7 +1435,8 @@
     "import_xml_version": "This version of the CAMT format is not supported. Ask your bank for CAMT.053 in version 001.02 or later.",
     "import_xml_accounts": "This file holds statements for more than one account, and none of them is the chosen account. Add the account’s IBAN under Settings → Accounts, choose that account and open the file again.",
     "import_xml_iban_mismatch": "The IBAN in this file is not the IBAN of the chosen account. Choose the account this file belongs to, or correct the IBAN under Settings → Accounts.",
-    "import_xml_currency": "This file is in another currency than the chosen account. Choose the account in that currency."
+    "import_xml_currency": "This file is in another currency than the chosen account. Choose the account in that currency.",
+    "assistant_disabled": "The assistant is turned off. Turn it on in Settings → Assistant."
   },
   "insights": {
     "title": "Suggestions",

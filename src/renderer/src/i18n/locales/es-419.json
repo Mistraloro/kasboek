@@ -211,7 +211,8 @@
     "step": {
       "budgets": "Fija un monto por categoría y mes y ve cuánto queda. Las reglas que clasifican los movimientos automáticamente también están aquí.",
       "goals": "Ahorra para algo: un monto para una fecha, con lo que debes apartar cada mes.",
-      "settings": "Cuentas, copias de seguridad, sincronización entre computadoras, el asistente, formatos y más."
+      "settings": "Cuentas, copias de seguridad, sincronización entre computadoras, el asistente, formatos y más.",
+      "settingsLocal": "Cuentas, copias de seguridad, sincronización entre computadoras, formatos y más."
     }
   },
   "webdav": {

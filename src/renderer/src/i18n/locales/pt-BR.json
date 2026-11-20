@@ -74,7 +74,8 @@
         "edited_one": "{{count}} linha que você editou será substituída.",
         "edited_many": "{{count}} linhas que você editou serão substituídas.",
         "edited_other": "{{count}} linhas que você editou serão substituídas."
-      }
+      },
+      "askBank": "Peça ao seu banco um CSV deste extrato, ou um PDF com uma tabela de lançamentos."
     },
     "consent": {
       "title": "Verificar este arquivo com {{ai}}",
@@ -87,7 +88,8 @@
       "show": "Mostrar exatamente o que é enviado",
       "send": "Enviar para {{aiCompany}}",
       "sendLocal": "Enviar para {{ai}}"
-    }
+    },
+    "anyBankLocal": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação. Os extratos em PDF com uma tabela de lançamentos são lidos neste computador; nada é enviado para lugar nenhum. Os extratos XML (CAMT.053, oferecidos por muitos bancos europeus) também são lidos neste computador."
   },
   "assistant": {
     "example3": "Coloque meus movimentos sem categoria na categoria certa.",
@@ -412,7 +414,8 @@
       "goals": "Economize para algo: um valor até uma data, com o que deve reservar por mês.",
       "year": "O ano inteiro por mês e categoria, com exportação CSV e PDF para os impostos ou o contador.",
       "import": "Traga um arquivo CSV ou um extrato em PDF do seu banco. Deixe o assistente verificá-lo antes de salvar.",
-      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo."
+      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo.",
+      "importLocal": "Traga um arquivo CSV ou um extrato em PDF do seu banco. Nada é salvo até você aprovar."
     }
   },
   "webdav": {

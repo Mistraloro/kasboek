@@ -171,6 +171,11 @@ export interface Settings {
   aiCsvReasoning: ReasoningLevel
   /** What the assistant may change without asking. */
   permissions: PermissionSettings
+  /**
+   * The assistant as a whole (panel, buttons, checks, tips and the main process behind them). Off: nothing is sent to any AI
+   * provider and nothing about it is shown. This computer only; an import never switches it on (see resetImportedSettings).
+   */
+  assistantEnabled: boolean
   /** The assistant remembers facts and preferences between conversations (this computer only). */
   memoryEnabled: boolean
   /** The chat tells the assistant which page is open (see shared/page-context.ts). */

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { app, BrowserWindow, dialog, ipcMain, shell, type WebFrameMain } from 'electron'
 import { AppError } from '@core/errors'
 import { coreOps, fxStatus, runOp, type OpContext, type OpTable } from '@core/ops'
-import { getSettings, updateSettings } from '@core/settings'
+import { getSetting, getSettings, updateSettings } from '@core/settings'
 import { TRANSFER_EXTENSION } from '@core/transfer-format'
 import type { OpName } from '@shared/contract'
 import { graphicsStatus, markPainted, startupLog } from './graphics'
@@ -18,6 +18,7 @@ import { forgetFacts, insightsView } from '@core/insights'
 import * as session from './session'
 import * as jobs from './assistant/jobs'
 import { applyTheme } from './theme'
+import { assistantRefusal } from './assistant-guard'
 import { lockedRefusal } from './lock-guard'
 import { isTrustedFrameUrl } from './trusted-url'
 import { backupList, backupStatus, describeTransfer, exportFileName, importTransfer, pickBackup, runAutoBackup, runAutoBackupIfDue, writeTransfer } from './transfer/service'
@@ -82,6 +83,12 @@ export function cancelRunningJobs(): void {
   jobs.cancelAllAssists()
   insights.loaded()?.cancelInsights()
   pdfRead.abort()
+}
+
+/** The assistant being switched off: its running jobs and tips stop, the conversation is cleared. Nothing runs on afterwards. */
+function stopAssistant(): void {
+  cancelRunningJobs()
+  chat.loaded()?.resetChat()
 }
 
 let milestonesLogged = 0
@@ -191,6 +198,17 @@ const desktopOps: OpTable = {
       const next = updatePrefs(patch.graphics ? { ...patch, graphicsFailed: false } : patch)
       if (patch.theme) applyTheme(next.theme)
       if (patch.keepInTray !== undefined) syncTray()
+      return next
+    }
+  },
+
+  // The core operation, plus: switching the assistant off stops what it is doing at once.
+  'settings.update': {
+    mutates: true,
+    assistant: false,
+    handler: (ctx, patch) => {
+      const next = coreOps['settings.update']!.handler(ctx, patch) as ReturnType<typeof getSettings>
+      if (patch.assistantEnabled === false) stopAssistant()
       return next
     }
   },
@@ -625,6 +643,9 @@ export async function dispatch(name: OpName, input: unknown, actor: OpContext['a
   if (opWaitsForSession(name)) await session.whenSessionReady()
   const refusal = lockedRefusal(name, session.isUnlocked())
   if (refusal) return refusal
+  // Checked here, in the main process, so a page that ignores the setting still can't reach a provider.
+  const off = session.isUnlocked() ? assistantRefusal(name, actor, input, getSetting(session.db(), 'assistantEnabled')) : null
+  if (off) return off
   const result = await runOp(allOps, opContext(actor), name, input)
   // Tell open pages to refresh, e.g. when Claude changed a budget.
   if (result.ok && allOps[name]?.mutates) {

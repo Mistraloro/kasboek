@@ -10,15 +10,22 @@ import { shownText } from '@shared/hide-numbers'
 import { call } from '../lib/api'
 import { useHideNumbers } from '../lib/hide-numbers'
 import { usePageContext } from '../lib/page-context'
+import { useAssistantEnabled } from '../lib/settings'
 import { openSettingsTab } from '../lib/settings-tab'
 import { setAiName } from '../i18n'
 import { errText } from '../pages/auth/parts'
 import { useToast } from './Toast'
 import { Badge, Button, cx } from './ui'
 
+/** The assistant's state, or null while it is switched off (assistantEnabled): then nothing asks the main process about it and every caller shows nothing. */
 export function useAssistant(): AssistantStatus | null {
+  const assistantEnabled = useAssistantEnabled()
   const [status, setStatus] = useState<AssistantStatus | null>(null)
   useEffect(() => {
+    if (!assistantEnabled) {
+      setStatus(null)
+      return
+    }
     const apply = (s: AssistantStatus): void => {
       // Texts name the chosen assistant ("Check with Mistral") through {{ai}} and {{aiCompany}}.
       setAiName(s.providerName, s.company)
@@ -28,8 +35,8 @@ export function useAssistant(): AssistantStatus | null {
     return window.kasboek.onEvent((e) => {
       if (e.type === 'assistant.update') apply(e.status)
     })
-  }, [])
-  return status
+  }, [assistantEnabled])
+  return assistantEnabled ? status : null
 }
 
 /** Minimal formatting: # headings, **bold**, `code`, line breaks and "- " bullets. No HTML is ever injected. */

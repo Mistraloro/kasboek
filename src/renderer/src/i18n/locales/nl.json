@@ -325,7 +325,8 @@
         "replaces": "Wijzigingen die je tot nu toe aan regels hebt gemaakt, worden vervangen door wat de assistent leest.",
         "edited_one": "{{count}} regel die je hebt aangepast wordt vervangen.",
         "edited_other": "{{count}} regels die je hebt aangepast worden vervangen."
-      }
+      },
+      "askBank": "Vraag je bank om een CSV-export van dit afschrift, of om een pdf met een tabel van transacties."
     },
     "lockedWhileAssisting": "{{ai}} werkt aan deze regels. Wijzigingen nu zouden verloren gaan, dus bewerken staat uit tot het klaar is.",
     "consent": {
@@ -349,7 +350,8 @@
         "not_booked_one": "{{count}} niet geboekte transactie (openstaand of alleen ter informatie) is overgeslagen.",
         "not_booked_other": "{{count}} niet geboekte transacties (openstaand of alleen ter informatie) zijn overgeslagen."
       }
-    }
+    },
+    "anyBankLocal": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd. Xml-afschriften (CAMT.053, aangeboden door veel Europese banken) worden ook op deze computer gelezen: bedragen, datums, namen en saldo’s komen rechtstreeks uit het bestand."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -420,7 +422,9 @@
     "reasoningHint": "Hoeveel het model nadenkt voor het antwoordt: minder is sneller en goedkoper, meer helpt bij moeilijke vragen. Niet elk model heeft deze instelling; weigert een model ze, dan vraagt Kasboek het zonder.",
     "reasoningUnsupported": "Dit model neemt geen instelling voor nadenken aan en gebruikt zijn eigen.",
     "autoDone": "Gedaan zonder te vragen:",
-    "autoFailed": "Zonder te vragen geprobeerd, maar het lukte niet:"
+    "autoFailed": "Zonder te vragen geprobeerd, maar het lukte niet:",
+    "enabled": "De assistent gebruiken",
+    "enabledHint": "Zet uit om de assistent en elke functie die tekst naar een AI-aanbieder stuurt te verbergen; Kasboek werkt dan helemaal zelfstandig."
   },
   "modal": {
     "discardAsk": "Wat je hebt ingevuld weggooien?",
@@ -589,7 +593,8 @@
         "failed": "Kasboek tekent nu zonder grafische kaart: die toonde Kasboek niet bij een vorige start.",
         "flag": "Kasboek tekent nu zonder grafische kaart: het werd gestart met --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Tips uit je eigen gegevens, op deze computer. Er wordt niets verstuurd."
   },
   "auth": {
     "welcome": "Welkom bij Kasboek",
@@ -798,7 +803,9 @@
     },
     "desktopOpen": "Claude Desktop is nog open. Het bewaart zijn eigen instellingen bij het afsluiten en zou Kasboek dan weer verwijderen. Sluit het eerst helemaal af (ook via het pictogram in het systeemvak of de menubalk).",
     "addAnyway": "Toch toevoegen",
-    "overwritten": "Kasboek is uit de instellingen van Claude Desktop verwijderd, waarschijnlijk toen Claude Desktop afsloot. Sluit het helemaal af en voeg Kasboek opnieuw toe."
+    "overwritten": "Kasboek is uit de instellingen van Claude Desktop verwijderd, waarschijnlijk toen Claude Desktop afsloot. Sluit het helemaal af en voeg Kasboek opnieuw toe.",
+    "sectionTitle": "Claude-apps",
+    "separateNote": "Gekoppelde Claude-apps staan los van de assistent in Kasboek. Ze hebben hieronder een eigen schakelaar en blijven werken als de assistent uit staat."
   },
   "fx": {
     "title": "Munten",
@@ -1360,7 +1367,9 @@
       "import": "Haal een CSV-export of pdf-afschrift van je bank binnen. Laat het de assistent nakijken voor je bewaart.",
       "assistant": "Open of sluit de assistent. Vraag iets over je geld, of laat hem wijzigingen maken die op je akkoord wachten.",
       "settings": "Rekeningen, back-ups, synchroniseren tussen computers, de assistent, notaties en meer.",
-      "lock": "Vergrendel Kasboek als je even weggaat. Na een tijdje vergrendelt het ook vanzelf."
+      "lock": "Vergrendel Kasboek als je even weggaat. Na een tijdje vergrendelt het ook vanzelf.",
+      "importLocal": "Haal een CSV-export of pdf-afschrift van je bank binnen. Er wordt niets bewaard voor je akkoord gaat.",
+      "settingsLocal": "Rekeningen, back-ups, synchroniseren tussen computers, notaties en meer."
     }
   },
   "webdav": {
@@ -1426,7 +1435,8 @@
     "import_xml_version": "Deze versie van het CAMT-formaat wordt niet ondersteund. Vraag je bank om CAMT.053 in versie 001.02 of nieuwer.",
     "import_xml_accounts": "Dit bestand bevat afschriften van meer dan één rekening en geen daarvan is de gekozen rekening. Voeg het IBAN van de rekening toe onder Instellingen → Rekeningen, kies die rekening en open het bestand opnieuw.",
     "import_xml_iban_mismatch": "Het IBAN in dit bestand is niet het IBAN van de gekozen rekening. Kies de rekening waar dit bestand bij hoort, of corrigeer het IBAN onder Instellingen → Rekeningen.",
-    "import_xml_currency": "Dit bestand is in een andere valuta dan de gekozen rekening. Kies de rekening in die valuta."
+    "import_xml_currency": "Dit bestand is in een andere valuta dan de gekozen rekening. Kies de rekening in die valuta.",
+    "assistant_disabled": "De assistent staat uit. Zet hem aan bij Instellingen → Assistent."
   },
   "insights": {
     "title": "Suggesties",
