@@ -712,6 +712,23 @@ describe('session', () => {
       expect((d.prepare('SELECT COUNT(*) AS n FROM memories').get() as { n: number }).n).toBe(0)
     })
 
+    it('never switches the assistant on: off here stays off after restoring a file made while it was on', async () => {
+      await session.setup('password', PASSWORD)
+      const file = await exportFile()
+      updateSettings(session.db(), { assistantEnabled: false })
+      await transfer.importTransfer({ token: (await transfer.describeTransfer(file)).token, password: PASSWORD })
+      expect(getSettings(session.db()).assistantEnabled).toBe(false)
+    })
+
+    it('keeps a file’s own "off" even when the assistant is on here', async () => {
+      await session.setup('password', PASSWORD)
+      updateSettings(session.db(), { assistantEnabled: false })
+      const off = await exportFile('off.kasboek')
+      updateSettings(session.db(), { assistantEnabled: true })
+      await transfer.importTransfer({ token: (await transfer.describeTransfer(off)).token, password: PASSWORD })
+      expect(getSettings(session.db()).assistantEnabled).toBe(false)
+    })
+
     it('switches sync off after an import that is not a join, and keeps it on for a join', async () => {
       await session.setup('password', PASSWORD)
       seedForeignSettings()

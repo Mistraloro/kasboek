@@ -11,6 +11,7 @@ publish.workspace = true
 hex.workspace = true
 kb-db.workspace = true
 kb-import.workspace = true
+kb-rules = { path = "../kb-rules" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

@@ -3,13 +3,20 @@ name: Rust CI
 # Builds and tests the Rust workspace of the native port (rust/Cargo.toml, docs/rust-port-plan.md) on the six targets:
 #   Windows x64 + ARM64, macOS Apple Silicon + Intel, Linux x64 + ARM64.
 # Per machine: release build, cargo test, clippy with warnings as errors, rustfmt check, and the parity suite
-# (rust/parity: the app's own TypeScript core against the Rust binary kb-cli, both ways).
+# (rust/parity: the app's own TypeScript core against the Rust binaries kb-cli, kb-rules-cli, kb-pdf-cli and kb-session-cli, both
+# ways; the TypeScript in src/ of this branch is the reference, it is kept level with the release branch by merging it in),
+# the real-OS tests of kb-oseal (unlocked Secret Service on Linux, DPAPI on Windows, the keychain on macOS), and the supply-chain
+# checks of cargo-deny (rust/deny.toml: advisories, licences, sources).
 # The spikes (rust/spike) have their own workflow, rust-spike.yml.
 on:
   push:
     branches: [rust-native]
     paths:
       - 'rust/**'
+      - 'src/core/**'
+      - 'src/shared/**'
+      - 'src/main/**'
+      - 'package-lock.json'
       - '.github/workflows/rust-ci.yml'
   workflow_dispatch:
 
@@ -25,6 +32,8 @@ env:
   # The version the workspace is built and tested with (rust-version in rust/Cargo.toml is 1.97).
   RUST_VERSION: 1.97.0
   CARGO_TERM_COLOR: never
+  # The version of cargo-deny the supply-chain job installs.
+  CARGO_DENY_VERSION: 0.22.0
 
 jobs:
   rust:
@@ -88,20 +97,104 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb libfontconfig1-dev libxkbcommon-x11-0 libxcb-xkb1 libx11-xcb1
+          # gnome-keyring, dbus-run-session and secret-tool: the kb-oseal tests run against a real, unlocked Secret Service.
+          sudo apt-get install -y --no-install-recommends xvfb libfontconfig1-dev libxkbcommon-x11-0 libxcb-xkb1 libx11-xcb1 gnome-keyring libsecret-tools dbus dbus-user-session
+
+      # The PDF parity spec (rust/parity/pdf.spec.ts) adds 25 of its 63 files (embedded fonts, rotation, CID fonts) made by reportlab.
+      # They are optional in the spec: without python3 and reportlab they are left out, and this step says so instead of failing.
+      - name: Python with reportlab (PDF parity files)
+        shell: bash
+        run: |
+          venv="$RUNNER_TEMP/pyvenv"
+          if python3 -m venv "$venv" && { "$venv"/bin/python -m pip install --quiet reportlab 2>/dev/null || "$venv"/Scripts/python -m pip install --quiet reportlab; }; then
+            bin="$venv/bin"; [ -d "$venv/Scripts" ] && bin="$venv/Scripts"
+            # The spec runs `python3 -I`; the Windows venv only has python.exe.
+            [ -e "$bin/python3" ] || [ -e "$bin/python3.exe" ] || cp "$bin/python.exe" "$bin/python3.exe"
+            echo "$bin" >> "$GITHUB_PATH"
+            echo "reportlab ready: the 25 reportlab files of the PDF parity corpus run"
+          else
+            echo "::warning::python3 with reportlab is not available on this runner: the 25 reportlab files of the PDF parity corpus are skipped"
+          fi
 
       - name: Build (release)
         run: cargo build --workspace --release --locked --manifest-path rust/Cargo.toml
+      # The dev drivers of the parity suite (feature parity; never shipped): kb-rules-cli, kb-pdf-cli, kb-session-cli.
+      - name: Build the parity drivers (parity feature)
+        run: cargo build -p kb-rules -p kb-pdf -p kb-session --features parity --bins --release --locked --manifest-path rust/Cargo.toml
       - name: Test
         run: cargo test --workspace --locked --manifest-path rust/Cargo.toml
+      - name: Test kb-pdf against the real reader process (parity feature)
+        run: cargo test -p kb-pdf --features parity --locked --manifest-path rust/Cargo.toml
       - name: Clippy (warnings are errors)
-        run: cargo clippy --workspace --all-targets --locked --manifest-path rust/Cargo.toml -- -D warnings
+        run: |
+          cargo clippy --workspace --all-targets --locked --manifest-path rust/Cargo.toml -- -D warnings
+          cargo clippy -p kb-rules -p kb-pdf -p kb-session --features parity --all-targets --locked --manifest-path rust/Cargo.toml -- -D warnings
       - name: Format check
         run: cargo fmt --all --check --manifest-path rust/Cargo.toml
-      - name: Build the session test driver (parity feature, never shipped)
-        run: cargo build -p kb-session --features parity --release --locked --manifest-path rust/Cargo.toml
-      - name: Parity suite (TypeScript core against kb-cli)
+
+      # The tests of kb-oseal (rust/crates/kb-oseal/tests/real_os.rs) run in the steps above too, but only here do they meet a real
+      # key store: without one the Linux and macOS tests skip themselves.
+      - name: kb-oseal real OS (Linux, unlocked gnome-keyring)
+        if: runner.os == 'Linux'
+        run: rust/tools/oseal-real-os-linux.sh
+      - name: kb-oseal real OS (macOS, unlocked keychain)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # A keychain of its own, unlocked and without a timeout, as the default one: no prompt can appear on a runner.
+          keychain="$RUNNER_TEMP/kasboek-ci.keychain-db"
+          security create-keychain -p kasboek-ci "$keychain"
+          security set-keychain-settings "$keychain"
+          security unlock-keychain -p kasboek-ci "$keychain"
+          security default-keychain -d user -s "$keychain"
+          security list-keychains -d user -s "$keychain"
+          cargo test -p kb-oseal --test real_os --locked --manifest-path rust/Cargo.toml -- --nocapture --test-threads=1 2>&1 | tee "$RUNNER_TEMP/oseal.log"
+          if grep -q "SKIPPED" "$RUNNER_TEMP/oseal.log"; then
+            echo "::warning::kb-oseal macOS tests skipped: the keychain could not be used on this runner (see the log lines marked SKIPPED)"
+          fi
+      - name: kb-oseal real OS (Windows, DPAPI)
+        if: runner.os == 'Windows'
+        run: cargo test -p kb-oseal --test real_os --locked --manifest-path rust/Cargo.toml -- --nocapture
+
+      # The specs find the binaries in rust/target/release; the variables say so explicitly and the step fails early when one is missing.
+      # KB_TS_ROOT is not set: src/ of this branch is the TypeScript the specs compare with (see the header).
+      - name: Parity suite (TypeScript core against kb-cli, kb-rules-cli, kb-pdf-cli, kb-session-cli)
         shell: bash
         env:
           KB_PARITY_TMP: ${{ runner.temp }}
-        run: npx vitest run --config rust/parity/vitest.config.ts
+        run: |
+          ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"
+          export KB_CLI_BIN="$PWD/rust/target/release/kb-cli$ext"
+          export KB_RULES_BIN="$PWD/rust/target/release/kb-rules-cli$ext"
+          export KB_PDF_BIN="$PWD/rust/target/release/kb-pdf-cli$ext"
+          export KB_SESSION_CLI="$PWD/rust/target/release/kb-session-cli$ext"
+          for bin in "$KB_CLI_BIN" "$KB_RULES_BIN" "$KB_PDF_BIN" "$KB_SESSION_CLI"; do
+            [ -x "$bin" ] || { echo "::error::missing $bin"; exit 1; }
+          done
+          # All specs of rust/parity run; among them mask (kb-rules), pdf (kb-pdf), import, scenarios, contract and session.
+          npx vitest run --config rust/parity/vitest.config.ts
+
+  # Advisories (RustSec), licences and sources of all dependencies, for all six targets (rust/deny.toml). Vulnerabilities and
+  # licence violations fail; unmaintained crates only warn.
+  supply-chain:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update
+          rustup default "$RUST_VERSION"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: deny-cache
+        with:
+          path: ~/.cargo/bin/cargo-deny
+          key: cargo-deny-${{ env.CARGO_DENY_VERSION }}-${{ env.RUST_VERSION }}
+      - name: Install cargo-deny
+        if: steps.deny-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-deny --version "$CARGO_DENY_VERSION" --locked
+      - name: cargo deny check
+        run: cargo deny --manifest-path rust/Cargo.toml check -W unmaintained

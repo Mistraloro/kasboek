@@ -1,0 +1,21 @@
+Kasboek native app: third-party notices
+
+Kasboek itself is licensed under GPL-3.0-only. It contains the following third-party software, each under the licence shown.
+
+Overview
+{{#each overview}}
+  {{name}} ({{count}} crates)
+{{/each}}
+
+{{#each licenses}}
+================================================================================
+{{name}}
+
+Used by:
+{{#each used_by}}
+  {{crate.name}} {{crate.version}}{{#if crate.repository}} ({{crate.repository}}){{/if}}
+{{/each}}
+
+{{text}}
+
+{{/each}}

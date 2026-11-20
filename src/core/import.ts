@@ -62,6 +62,11 @@ interface Session {
   mapping: CsvMapping | null
   mappingSource: ImportPreview['mappingSource']
   layout: string | null
+  /**
+   * The header row found when the file was opened. Above it are the lines of the bank and the holder
+   * (name, address, account number); the assistant never gets rows at or above it, and cannot move the header up past it.
+   */
+  headerFloor: number
   overrides: Map<number, RowOverride>
   notes: string[]
   check: CheckState | null
@@ -150,6 +155,7 @@ function openSession(
     mapping,
     mappingSource: source,
     layout: detectLayout(input.rows[mapping?.headerRow ?? 0] ?? []),
+    headerFloor: mapping?.headerRow ?? 0,
     overrides: new Map(),
     notes: [],
     check: null
@@ -202,6 +208,7 @@ export function replaceGrid(db: Db, id: string, grid: string[][], mapping: CsvMa
   s.mapping = next.mapping
   s.mappingSource = next.source
   s.layout = detectLayout(grid[next.mapping?.headerRow ?? 0] ?? [])
+  s.headerFloor = next.mapping?.headerRow ?? 0
   s.overrides = new Map()
   s.notes = []
   s.check = null
@@ -232,6 +239,8 @@ export function remap(db: Db, id: string, mapping: unknown, source: ImportPrevie
   const cols = parsed.columns
   const all = [cols.bookingDate, cols.valueDate, cols.amount, cols.debit, cols.credit, cols.direction, cols.currency, cols.counterpartyName, cols.counterpartyIban, cols.communication, cols.bankReference, cols.status, ...cols.description]
   if (all.some((c) => c !== undefined && c >= width) || parsed.headerRow >= s.rows.length - 1) throw new AppError('import.bad_mapping', 'That column doesn’t exist in this file.')
+  if (source === 'assistant' && parsed.headerRow < s.headerFloor)
+    throw new AppError('import.header_above', `The header row can’t be moved above row ${s.headerFloor}: the lines above the table hold personal details and are not available to you. Keep headerRow at ${s.headerFloor} or higher.`)
   s.mapping = parsed
   s.mappingSource = source
   s.layout = detectLayout(s.rows[parsed.headerRow] ?? []) ?? s.layout
@@ -578,18 +587,34 @@ function checkSummary(c: CheckState): CheckSummary {
   return { ...c.summary, categorised: c.parts.categories.length, renamed: c.parts.names.length, fixed: c.parts.fixes.length }
 }
 
-/** Raw rows for the assistant: header plus a window of data rows. */
-export function rawWindow(id: string, from = 0, count = 40): { headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preamble: string[][] } {
+/** How many data rows (counted from the one after the mapping's header row) lie at or above the header row found on opening: not for the assistant. */
+const hiddenRows = (s: Session): number => Math.max(0, s.headerFloor - (s.mapping?.headerRow ?? 0))
+
+/**
+ * Raw rows for the assistant: header plus a window of data rows. An index counts from the row after
+ * headerRow. Rows at or above the header found on opening are never returned, nor their count
+ * (it is the person's own choice of header row that can put them there, never the assistant's).
+ */
+export function rawWindow(id: string, from = 0, count = 40): { headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preambleLines: number } {
   const s = session(id)
   const hr = s.mapping?.headerRow ?? 0
+  const hidden = hiddenRows(s)
   const data = s.rows.slice(hr + 1)
+  const start = Math.max(from, hidden)
   return {
     headerRow: hr,
-    header: s.rows[hr] ?? [],
-    rows: data.slice(from, from + count).map((cells, i) => ({ index: from + i, cells })),
+    header: hidden ? [] : (s.rows[hr] ?? []),
+    rows: data.slice(start, from + count).map((cells, i) => ({ index: start + i, cells })),
     totalRows: data.length,
-    preamble: s.rows.slice(0, hr)
+    preambleLines: hr
   }
+}
+
+/** A preview as the assistant gets it: without rows from above the header found on opening, and without the header names then. */
+export function assistantView(p: ImportPreview): ImportPreview {
+  const s = sessions.get(p.sessionId)
+  const hidden = s ? hiddenRows(s) : 0
+  return hidden ? { ...p, headers: [], sample: [], rows: p.rows.filter((r) => r.index >= hidden) } : p
 }
 
 export function commit(db: Db, id: string, saveProfile: boolean): ImportCommitResult {

@@ -143,7 +143,10 @@ export async function runScenario(scenario: Scenario, env: RunnerEnv): Promise<O
           result = { ok: true, data: null }
           break
         case '@resetImportedSettings':
-          result = { ok: true, data: resetImportedSettings(db, { keepSyncKey: (step.input as { keepSyncKey?: boolean } | undefined)?.keepSyncKey ?? false }) }
+          {
+            const opts = (step.input ?? {}) as { keepSyncKey?: boolean; assistantOff?: boolean }
+            result = { ok: true, data: resetImportedSettings(db, { keepSyncKey: opts.keepSyncKey ?? false, assistantOff: opts.assistantOff ?? false }) }
+          }
           break
         default:
           result = await dispatch(step.op, step.input === undefined ? null : withSession(step.input, session), step.actor ?? 'user')

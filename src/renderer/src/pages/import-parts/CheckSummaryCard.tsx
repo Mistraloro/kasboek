@@ -5,6 +5,7 @@ import type { CheckPart, ImportPreview } from '@shared/types'
 import { Button, Card } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { call } from '../../lib/api'
+import { Iban, Masked } from '../../lib/hide-numbers'
 import { useSettings } from '../../lib/settings'
 import { errText } from '../auth/parts'
 
@@ -89,7 +90,7 @@ export function CheckSummaryCard({ preview, onChange }: { preview: ImportPreview
                     <label className="flex items-center gap-2">
                       <input type="checkbox" className="accent-[var(--accent)]" checked={rules.has(r.id)} onChange={(ev) => setRules((s) => toggle(s, r.id, ev.target.checked))} />
                       <span className="min-w-0 flex-1 truncate">
-                        <span className="text-muted">{t(`budgets.field.${r.field}`)} {t(`budgets.match.${r.match}`)}</span> “{r.pattern}” → <span className="font-medium">{r.categoryName}</span>
+                        <span className="text-muted">{t(`budgets.field.${r.field}`)} {t(`budgets.match.${r.match}`)}</span> “{r.field === 'iban' ? <Iban value={r.pattern} /> : <Masked text={r.pattern} />}” → <span className="font-medium">{r.categoryName}</span>
                       </span>
                       <span className="num text-muted">{t('import.check.ruleReach', { here: r.rowsHere, existing: r.existing })}</span>
                     </label>

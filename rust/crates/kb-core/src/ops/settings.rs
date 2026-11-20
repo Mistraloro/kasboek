@@ -19,6 +19,10 @@ struct UpdateIn {
     currency: Option<Currency>,
     #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
     fx_auto_update: Option<bool>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    hide_account_numbers: Option<bool>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    assistant_enabled: Option<bool>,
 }
 
 pub fn update<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {

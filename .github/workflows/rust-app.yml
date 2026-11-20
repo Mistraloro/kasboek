@@ -5,7 +5,7 @@ name: Rust app
 # Per machine: release build of `kasboek`, cargo test of the app and the crates it uses, a start-up test (the window opens, the
 # milestones of startup.log are written, the process exits), a start-up test of the real service path (an account is created in
 # a temporary folder, the unlocked Overview appears and its first-frame time is logged), and the binary as artifact `kasboek-app-<os>-<arch>` with the
-# test script. The Windows and macOS runs are the first real builds of the Windows Hello, Touch ID and title bar code.
+# test script and THIRD-PARTY-NOTICES (the licences of all dependencies, made once by the `notices` job with cargo-about). The Windows and macOS runs are the first real builds of the Windows Hello, Touch ID and title bar code.
 on:
   push:
     branches: [rust-native]
@@ -19,6 +19,12 @@ on:
       - 'rust/crates/kb-rules/**'
       - 'rust/crates/kb-core/**'
       - 'rust/crates/kb-db/**'
+      - 'rust/crates/kb-import/**'
+      - 'rust/crates/kb-pdf/**'
+      - 'rust/crates/kb-oseal/**'
+      - 'rust/about.toml'
+      - 'rust/about.hbs'
+      - 'rust/tools/third-party-notices.sh'
       - 'rust/Cargo.toml'
       - 'rust/Cargo.lock'
       - 'src/renderer/src/i18n/locales/**'
@@ -35,9 +41,42 @@ concurrency:
 env:
   RUST_VERSION: 1.97.0
   CARGO_TERM_COLOR: never
+  CARGO_ABOUT_VERSION: 0.9.3
 
 jobs:
+  # THIRD-PARTY-NOTICES for the artifacts: one file for all six targets (rust/about.toml lists them). Fails when a dependency has a
+  # licence that rust/about.toml does not accept.
+  notices:
+    name: third-party notices
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --no-self-update
+          rustup default "$RUST_VERSION"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: about-cache
+        with:
+          path: ~/.cargo/bin/cargo-about
+          key: cargo-about-${{ env.CARGO_ABOUT_VERSION }}-${{ env.RUST_VERSION }}
+      - name: Install cargo-about
+        if: steps.about-cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-about --version "$CARGO_ABOUT_VERSION" --locked --features cli
+      - name: Write THIRD-PARTY-NOTICES
+        run: rust/tools/third-party-notices.sh notices/THIRD-PARTY-NOTICES.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: third-party-notices
+          path: notices
+          retention-days: 30
+          if-no-files-found: error
+
   app:
+    needs: notices
     name: ${{ matrix.os_name }}-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -94,6 +133,11 @@ jobs:
         working-directory: rust
         run: cargo build --release --locked -p kasboek --features dev-start
 
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: third-party-notices
+          path: notices
+
       # Staged right after the build, so that the artifact exists (with the binary, the test script and a README) even when
       # a later test step fails. A failing build step fails the job before this step runs.
       - name: Stage
@@ -103,12 +147,14 @@ jobs:
           mkdir -p stage
           cp "rust/target/release/kasboek$ext" stage/
           cp rust/apps/kasboek/tools/startup-test.sh rust/apps/kasboek/tools/startup-test-core.sh stage/
+          cp notices/THIRD-PARTY-NOTICES.txt stage/
           cat > stage/README.txt <<EOF
           Kasboek native app, build of commit $GITHUB_SHA on $TAG.
           kasboek$ext is the release binary. startup-test.sh <binary> [--state unlocked] starts it for a moment and checks the
           milestones of startup.log (Linux: needs xvfb-run and libfontconfig1; Windows: run it from Git Bash).
           startup-test-core.sh <binary> does the same on the real service: it creates an account in a temporary folder, unlocks it
           again and checks the logged time of the first unlocked frame.
+          THIRD-PARTY-NOTICES.txt holds the licences of all libraries the app contains.
           EOF
           ls -l stage
 

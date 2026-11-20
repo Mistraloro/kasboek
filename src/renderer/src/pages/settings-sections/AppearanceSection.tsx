@@ -11,7 +11,7 @@ import { Row } from './Row'
 
 export function AppearanceSection() {
   const { t } = useTranslation()
-  const { prefs, updatePrefs } = useSettings()
+  const { prefs, updatePrefs, settings, update } = useSettings()
   return (
     <Card>
       <CardHeader title={t('settings.appearance')} description={t('settings.appearanceHint')} />
@@ -34,6 +34,9 @@ export function AppearanceSection() {
       </Row>
       <Row label={t('settings.keepInTray')} hint={t('settings.keepInTrayHint')}>
         <Switch label={t('settings.keepInTray')} checked={prefs.keepInTray} onChange={(v) => void updatePrefs({ keepInTray: v })} />
+      </Row>
+      <Row label={t('settings.hideNumbers')} hint={t('settings.hideNumbersHint')}>
+        <Switch label={t('settings.hideNumbers')} checked={settings.hideAccountNumbers} onChange={(v) => void update({ hideAccountNumbers: v })} />
       </Row>
       <GraphicsRow />
     </Card>

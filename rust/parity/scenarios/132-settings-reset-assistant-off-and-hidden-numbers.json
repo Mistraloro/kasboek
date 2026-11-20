@@ -1,0 +1,13 @@
+{
+  "name": "reset after import: the assistant stays off when it is off here, account numbers are hidden again, a file never switches the assistant on",
+  "steps": [
+    {"op": "@sql", "input": {"sql": "INSERT INTO settings (key, value) VALUES ('hideAccountNumbers','false'),('assistantEnabled','true')"}},
+    {"op": "@resetImportedSettings", "input": {"assistantOff": true}},
+    {"op": "settings.get"},
+    {"op": "@sql", "input": {"sql": "UPDATE settings SET value = 'false' WHERE key = 'assistantEnabled'"}},
+    {"op": "@resetImportedSettings", "input": {}},
+    {"op": "settings.get"},
+    {"op": "settings.update", "input": {"assistantEnabled": true, "hideAccountNumbers": false}},
+    {"op": "settings.get"}
+  ]
+}

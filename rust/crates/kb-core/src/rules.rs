@@ -2,9 +2,11 @@
 //! itself is in `finance.rs`.
 use crate::error::{AppError, AppResult};
 use crate::finance::{categorize_transactions, norm_iban, require_category, rule_matches, RuleText};
-use crate::jsstr::{js_trim, slice_units};
+use crate::jsstr::js_trim;
 use kb_db::rows::RuleTextRow;
 use kb_db::{DbError, Store};
+use kb_rules::iban::valid_iban;
+use kb_rules::mask::cut_text;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
@@ -93,7 +95,7 @@ pub fn preview_rule<S: Store>(store: &S, field: &str, pattern: &str, match_kind:
         })
         .filter(|e| seen.insert(*e))
         .take(3)
-        .map(|e| slice_units(e, 60).to_owned())
+        .map(|e| cut_text(e, 60))
         .collect();
     Ok(RulePreview {
         matches: hits.len() as i64,
@@ -128,6 +130,35 @@ fn duplicate(e: DbError) -> AppError {
 
 fn find<S: Store>(store: &S, id: i64) -> AppResult<Option<Rule>> {
     Ok(list_rules(store)?.into_iter().find(|r| r.id == id))
+}
+
+/// The pattern a rule is saved with (`rulePattern` in src/core/finance.ts). An account number can be taken from a transaction
+/// (`from_transaction_id`) because the assistant never sees whole account numbers; from the assistant, an iban pattern that is
+/// not a valid account number (such as a masked one) is refused.
+pub fn rule_pattern<S: Store>(
+    store: &S,
+    field: Option<&str>,
+    pattern: Option<&str>,
+    from_transaction_id: Option<i64>,
+    from_assistant: bool,
+) -> AppResult<Option<String>> {
+    if let Some(id) = from_transaction_id {
+        if field != Some("iban") {
+            return Err(AppError::new("rules.from_transaction", "fromTransactionId only works with field iban."));
+        }
+        let row = store.tx_get(id)?.ok_or_else(|| AppError::new("transactions.not_found", "That transaction does not exist."))?;
+        return match row.counterparty_iban.as_deref() {
+            None | Some("") => Err(AppError::new("rules.no_iban", "That transaction has no counterparty account number.")),
+            iban => Ok(Some(norm_iban(iban))),
+        };
+    }
+    if from_assistant && field == Some("iban") && pattern.is_some_and(|p| !valid_iban(&norm_iban(Some(p)))) {
+        return Err(AppError::new(
+            "rules.iban_hidden",
+            "Account numbers are hidden from you, so this is not a usable account number. Use fromTransactionId (a transaction with that counterparty) instead of a pattern.",
+        ));
+    }
+    Ok(pattern.map(str::to_owned))
 }
 
 pub fn create_rule<S: Store>(

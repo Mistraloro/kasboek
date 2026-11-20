@@ -30,8 +30,10 @@ pub fn defaults() -> Map<String, Value> {
         "aiReasoning": "default",
         "aiCsvReasoning": "default",
         "permissions": { "mode": "ask", "rules": {}, "mcpAlwaysAsk": true },
+        "assistantEnabled": true,
         "memoryEnabled": true,
         "pageContextEnabled": true,
+        "hideAccountNumbers": true,
         "aiInsightsConsent": null,
         "aiCheckConsent": null
     }) else {
@@ -68,9 +70,9 @@ pub fn update_settings<S: Store>(store: &S, patch: &Map<String, Value>) -> AppRe
     get_settings(store)
 }
 
-/// Settings that decide where data is sent, what the assistant may do and where files are written, plus the agreements
-/// to send tips data and CSV rows to a provider.
-const UNTRUSTED_AFTER_IMPORT: [&str; 10] = [
+/// Settings that decide where data is sent, what the assistant may do and where files are written, plus the choice to hide
+/// account numbers on screen (a file must not switch it off) and the agreements to send tips data and CSV rows to a provider.
+const UNTRUSTED_AFTER_IMPORT: [&str; 11] = [
     "aiBaseUrl",
     "aiProvider",
     "aiProviders",
@@ -79,14 +81,17 @@ const UNTRUSTED_AFTER_IMPORT: [&str; 10] = [
     "autoBackupFolder",
     "autoBackupEnabled",
     "memoryEnabled",
+    "hideAccountNumbers",
     "aiInsightsConsent",
     "aiCheckConsent",
 ];
 
 /// After an import or a sync join: what a file from elsewhere must not bring (its AI address, permissions, backup folder,
 /// memory, agreements, API keys, and the sync key unless this is a join) goes back to the defaults. One transaction.
+/// `assistantEnabled` is not in that list: an import never switches the assistant on, and when it is off on this computer
+/// (`assistant_off`) it is written off again, whatever the file says.
 /// Returns which of those actually held something, in the order of `ImportReset` in src/shared/types.ts.
-pub fn reset_imported_settings<S: Store>(store: &S, keep_sync_key: bool) -> AppResult<Vec<&'static str>> {
+pub fn reset_imported_settings<S: Store>(store: &S, keep_sync_key: bool, assistant_off: bool) -> AppResult<Vec<&'static str>> {
     Ok(store.transaction::<_, kb_db::DbError, _>(|s| {
         let ImportResetFacts { ai_key, ai_endpoint, permissions, mcp, auto_backup, memory, sync } = s.import_reset_facts(keep_sync_key)?;
         let found: Vec<&'static str> = [
@@ -102,6 +107,9 @@ pub fn reset_imported_settings<S: Store>(store: &S, keep_sync_key: bool) -> AppR
         .filter_map(|(hit, name)| hit.then_some(name))
         .collect();
         s.import_reset_apply(&UNTRUSTED_AFTER_IMPORT, keep_sync_key)?;
+        if assistant_off {
+            s.setting_set("assistantEnabled", "false")?;
+        }
         Ok(found)
     })?)
 }

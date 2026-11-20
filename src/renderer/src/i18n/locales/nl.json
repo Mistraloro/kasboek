@@ -312,8 +312,7 @@
         "sendsRemote_other": "Hiermee wordt de tekst van {{count}} pagina’s naar {{aiCompany}} gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
         "sendsLocal_one": "Hiermee wordt de tekst van {{count}} pagina alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
         "sendsLocal_other": "Hiermee wordt de tekst van {{count}} pagina’s alleen naar {{ai}} op deze computer of dit netwerk gestuurd: datums, bedragen, omschrijvingen en de namen van wie je betaalde of wie jou betaalde.",
-        "hiddenTop": "Reken- en kaartnummers worden verborgen, de bovenkant van de eerste pagina (waar meestal je naam en adres staan) blijft weg en de pdf zelf wordt niet verstuurd.",
-        "hiddenNoTop": "Reken- en kaartnummers worden verborgen en de pdf zelf wordt niet verstuurd. Kasboek kon niet zien waar de tabel begint, dus de bovenkant van de eerste pagina zit erbij en je naam en adres kunnen in de tekst staan.",
+        "hiddenTop": "Reken- en kaartnummers, e-mailadressen en telefoonnummers worden verborgen, alleen de regels van de transactietabel worden verstuurd (alles boven de tabel en de bovenkant van elke volgende pagina, waar meestal je naam en adres staan, blijft weg) en de pdf zelf wordt niet verstuurd.",
         "verify": "Kasboek leest elk bedrag uit de eigen tekst van de pdf en toont elke rij voordat er iets wordt opgeslagen.",
         "show": "Toon precies wat wordt verstuurd",
         "stats": "Pagina’s: {{pages}} · ongeveer {{tokens}} tokens · verzoeken: {{parts}}",
@@ -326,7 +325,8 @@
         "replaces": "Wijzigingen die je tot nu toe aan regels hebt gemaakt, worden vervangen door wat de assistent leest.",
         "edited_one": "{{count}} regel die je hebt aangepast wordt vervangen.",
         "edited_other": "{{count}} regels die je hebt aangepast worden vervangen."
-      }
+      },
+      "askBank": "Vraag je bank om een CSV-export van dit afschrift, of om een pdf met een tabel van transacties."
     },
     "lockedWhileAssisting": "{{ai}} werkt aan deze regels. Wijzigingen nu zouden verloren gaan, dus bewerken staat uit tot het klaar is.",
     "consent": {
@@ -350,7 +350,8 @@
         "not_booked_one": "{{count}} niet geboekte transactie (openstaand of alleen ter informatie) is overgeslagen.",
         "not_booked_other": "{{count}} niet geboekte transacties (openstaand of alleen ter informatie) zijn overgeslagen."
       }
-    }
+    },
+    "anyBankLocal": "Werkt met CSV-exports van elke bank: Kasboek leest de kolomnamen (Nederlands, Frans, Engels of Duits) en onthoudt elke indeling na de eerste import. Pdf-afschriften met een tabel van transacties worden op deze computer gelezen; er wordt niets verstuurd. Xml-afschriften (CAMT.053, aangeboden door veel Europese banken) worden ook op deze computer gelezen: bedragen, datums, namen en saldo’s komen rechtstreeks uit het bestand."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -361,7 +362,7 @@
     "placeholder": "Vraag het aan {{ai}}…",
     "setupBody": "Koppel een AI-assistent (Claude, Mistral, Gemini, een lokaal model en meer) om vragen te stellen over je budget, budgetten in te stellen, verrichtingen in te delen en CSV-bestanden na te kijken.",
     "setupButton": "Assistent instellen",
-    "privacy": "Je berichten, en de gegevens die {{ai}} opzoekt om te antwoorden, worden naar {{aiCompany}} gestuurd. Er wordt niets verstuurd tot je iets vraagt.",
+    "privacy": "Je berichten, en de gegevens die {{ai}} opzoekt om te antwoorden, worden naar {{aiCompany}} gestuurd. Er wordt niets verstuurd tot je iets vraagt. Rekening- en kaartnummers worden verborgen voordat er iets wordt verstuurd.",
     "newChat": "Nieuw gesprek",
     "looking": "Kijkt naar: {{page}}",
     "lookingRows_one": "Kijkt naar: {{page}}, {{count}} rij",
@@ -421,7 +422,9 @@
     "reasoningHint": "Hoeveel het model nadenkt voor het antwoordt: minder is sneller en goedkoper, meer helpt bij moeilijke vragen. Niet elk model heeft deze instelling; weigert een model ze, dan vraagt Kasboek het zonder.",
     "reasoningUnsupported": "Dit model neemt geen instelling voor nadenken aan en gebruikt zijn eigen.",
     "autoDone": "Gedaan zonder te vragen:",
-    "autoFailed": "Zonder te vragen geprobeerd, maar het lukte niet:"
+    "autoFailed": "Zonder te vragen geprobeerd, maar het lukte niet:",
+    "enabled": "De assistent gebruiken",
+    "enabledHint": "Zet uit om de assistent en elke functie die tekst naar een AI-aanbieder stuurt te verbergen; Kasboek werkt dan helemaal zelfstandig."
   },
   "modal": {
     "discardAsk": "Wat je hebt ingevuld weggooien?",
@@ -498,6 +501,10 @@
     "autoLockHint": "Vergrendelt ook als het scherm vergrendelt of de computer slaapt.",
     "keepInTray": "Kasboek in het systeemvak laten draaien als ik het venster sluit",
     "keepInTrayHint": "Uit: het venster sluiten sluit Kasboek af. Aan: Kasboek blijft draaien in het systeemvak (de menubalk op een Mac), zodat Claude het kan blijven gebruiken. Open het weer via het pictogram of de snelkoppeling.",
+    "hideNumbers": "Rekeningnummers op het scherm verbergen",
+    "hideNumbersHint": "Toon van een rekeningnummer alleen het land en de laatste 4 tekens (BE…1234), voor het geval iemand meekijkt. Houd het oogje naast een nummer ingedrukt om het te zien zolang je drukt. Exports en back-ups blijven ongewijzigd.",
+    "holdToShowNumber": "Ingedrukt houden om het nummer te tonen",
+    "holdToShowNumberOf": "Ingedrukt houden om het rekeningnummer van {{name}} te tonen",
     "insights": "Suggesties op het overzicht",
     "insightsHint": "Tips uit je eigen gegevens, op deze computer. Er wordt niets verstuurd, tenzij je op “Tips halen” drukt en daarmee akkoord ging: dan krijgt de assistent een korte, afgeschermde samenvatting om ze te schrijven.",
     "insightsRestore": "Verborgen tips opnieuw tonen",
@@ -586,7 +593,8 @@
         "failed": "Kasboek tekent nu zonder grafische kaart: die toonde Kasboek niet bij een vorige start.",
         "flag": "Kasboek tekent nu zonder grafische kaart: het werd gestart met --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Tips uit je eigen gegevens, op deze computer. Er wordt niets verstuurd."
   },
   "auth": {
     "welcome": "Welkom bij Kasboek",
@@ -749,7 +757,7 @@
   },
   "mcp": {
     "title": "Claude Desktop & Claude Code (MCP)",
-    "hint": "Laat Claude-apps op deze computer je budget lezen en wijzigingen voorstellen terwijl Kasboek open en ontgrendeld is.",
+    "hint": "Laat Claude-apps op deze computer je budget lezen en wijzigingen voorstellen terwijl Kasboek open en ontgrendeld is. Rekening- en kaartnummers blijven voor hen verborgen.",
     "desktop": "Claude Desktop (claude_desktop_config.json)",
     "code": "Claude Code (terminal)",
     "note": "Werkt alleen terwijl Kasboek draait en ontgrendeld is. Elke wijziging verschijnt hier zodat jij ze kunt goedkeuren. Wat Claude leest, stuurt die app naar Anthropic.",
@@ -795,7 +803,9 @@
     },
     "desktopOpen": "Claude Desktop is nog open. Het bewaart zijn eigen instellingen bij het afsluiten en zou Kasboek dan weer verwijderen. Sluit het eerst helemaal af (ook via het pictogram in het systeemvak of de menubalk).",
     "addAnyway": "Toch toevoegen",
-    "overwritten": "Kasboek is uit de instellingen van Claude Desktop verwijderd, waarschijnlijk toen Claude Desktop afsloot. Sluit het helemaal af en voeg Kasboek opnieuw toe."
+    "overwritten": "Kasboek is uit de instellingen van Claude Desktop verwijderd, waarschijnlijk toen Claude Desktop afsloot. Sluit het helemaal af en voeg Kasboek opnieuw toe.",
+    "sectionTitle": "Claude-apps",
+    "separateNote": "Gekoppelde Claude-apps staan los van de assistent in Kasboek. Ze hebben hieronder een eigen schakelaar en blijven werken als de assistent uit staat."
   },
   "fx": {
     "title": "Munten",
@@ -1297,7 +1307,7 @@
     "provider": "AI-aanbieder",
     "keySaved": "Sleutel bewaard ({{hint}}).",
     "local": "{{name}} draait op je eigen computer en heeft geen sleutel nodig. Start het voor je de assistent gebruikt.",
-    "privacy": "Als je de assistent gebruikt, gaan je berichten en de gegevens die hij opzoekt naar {{company}}. Er wordt niets verstuurd tot je iets vraagt.",
+    "privacy": "Als je de assistent gebruikt, gaan je berichten en de gegevens die hij opzoekt naar {{company}}. Er wordt niets verstuurd tot je iets vraagt. Rekening- en kaartnummers worden verborgen voordat er iets wordt verstuurd.",
     "privacyLocal": "Alles blijft op je computer.",
     "skip": "Nu overslaan",
     "next": "Volgende",
@@ -1357,7 +1367,9 @@
       "import": "Haal een CSV-export of pdf-afschrift van je bank binnen. Laat het de assistent nakijken voor je bewaart.",
       "assistant": "Open of sluit de assistent. Vraag iets over je geld, of laat hem wijzigingen maken die op je akkoord wachten.",
       "settings": "Rekeningen, back-ups, synchroniseren tussen computers, de assistent, notaties en meer.",
-      "lock": "Vergrendel Kasboek als je even weggaat. Na een tijdje vergrendelt het ook vanzelf."
+      "lock": "Vergrendel Kasboek als je even weggaat. Na een tijdje vergrendelt het ook vanzelf.",
+      "importLocal": "Haal een CSV-export of pdf-afschrift van je bank binnen. Er wordt niets bewaard voor je akkoord gaat.",
+      "settingsLocal": "Rekeningen, back-ups, synchroniseren tussen computers, notaties en meer."
     }
   },
   "webdav": {
@@ -1406,6 +1418,7 @@
     "assistant_bad_plan": "Het antwoord van {{ai}} kon niet worden gelezen. Probeer opnieuw, of probeer een ander model.",
     "assistant_pdf_not_pdf": "Deze import is geen pdf-afschrift.",
     "assistant_pdf_empty": "Deze pdf bevat geen tekst om te lezen.",
+    "assistant_pdf_no_table": "Er zijn geen transactieregels gevonden in deze pdf, dus er is niets verstuurd.",
     "assistant_pdf_too_long": "Dit afschrift heeft te veel pagina’s voor de assistent (de limiet is 40 pagina’s). Probeer een afschrift van een kortere periode.",
     "assistant_pdf_no_rows": "{{ai}} vond geen transacties die bij de tekst van dit afschrift pasten. Er is niets gewijzigd.",
     "assistant_failed_network": "{{ai}} is niet bereikbaar{{detail}}. Controleer het adres en je verbinding, en of de dienst draait.",
@@ -1422,7 +1435,8 @@
     "import_xml_version": "Deze versie van het CAMT-formaat wordt niet ondersteund. Vraag je bank om CAMT.053 in versie 001.02 of nieuwer.",
     "import_xml_accounts": "Dit bestand bevat afschriften van meer dan één rekening en geen daarvan is de gekozen rekening. Voeg het IBAN van de rekening toe onder Instellingen → Rekeningen, kies die rekening en open het bestand opnieuw.",
     "import_xml_iban_mismatch": "Het IBAN in dit bestand is niet het IBAN van de gekozen rekening. Kies de rekening waar dit bestand bij hoort, of corrigeer het IBAN onder Instellingen → Rekeningen.",
-    "import_xml_currency": "Dit bestand is in een andere valuta dan de gekozen rekening. Kies de rekening in die valuta."
+    "import_xml_currency": "Dit bestand is in een andere valuta dan de gekozen rekening. Kies de rekening in die valuta.",
+    "assistant_disabled": "De assistent staat uit. Zet hem aan bij Instellingen → Assistent."
   },
   "insights": {
     "title": "Suggesties",

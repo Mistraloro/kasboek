@@ -9,6 +9,8 @@ import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
 import { usePublishPageContext } from '../lib/page-context'
 import { formatDate } from '../lib/format'
+import { Masked, useHideNumbers, useMasked } from '../lib/hide-numbers'
+import { shownText } from '@shared/hide-numbers'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { Stat } from './Overview'
@@ -78,6 +80,7 @@ function CategoryDialog({ item, onClose, onChanged }: { item: RecurringItem; onC
   const toast = useToast()
   const categories = useOp('categories.list')
   const [categoryId, setCategoryId] = useState<number | null>(item.categoryId)
+  const itemName = useMasked(item.name)
   const [rule, setRule] = useState(false)
   const [busy, setBusy] = useState(false)
   // What the rule would match, shown before it is made: the payee text can also fit other payments.
@@ -110,7 +113,7 @@ function CategoryDialog({ item, onClose, onChanged }: { item: RecurringItem; onC
   return (
     <Modal open title={t('recurring.categoryTitle')} onClose={onClose} dirty={categoryId !== item.categoryId || rule}>
       <div className="flex flex-col gap-4 text-[13px]">
-        <p>{t('recurring.categoryIntro', { count: item.transactionIds.length, name: item.name })}</p>
+        <p>{t('recurring.categoryIntro', { count: item.transactionIds.length, name: itemName })}</p>
         <CategorySelect value={categoryId} categories={categories.data ?? []} onChange={setCategoryId} label={t('recurring.categoryTitle')} />
         <label className={categoryId === null ? 'flex items-center gap-2 text-muted' : 'flex items-center gap-2'}>
           <input type="checkbox" className="accent-[var(--accent)]" checked={rule && categoryId !== null} disabled={categoryId === null} onChange={(e) => setRule(e.target.checked)} />
@@ -138,6 +141,7 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
+  const hideNumbers = useHideNumbers()
   const data = useOp('recurring.list')
   useEffect(() => window.kasboek.onEvent((e) => e.type === 'data.changed' && void data.reload()), []) // eslint-disable-line react-hooks/exhaustive-deps
   // Items just hidden here: shown as a line with Undo where the row was, for a few seconds.
@@ -177,7 +181,7 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
         {list.map((i) =>
           justHidden.some((h) => h.key === i.key) ? (
             <div key={i.key} className="flex items-center gap-3 border-b border-border px-5 py-3 text-[13px] last:border-b-0">
-              <p className="min-w-0 flex-1 truncate text-muted">{t(direction === 'out' ? 'recurring.noLongerCost' : 'recurring.noLongerIncome', { name: i.name })}</p>
+              <p className="min-w-0 flex-1 truncate text-muted">{t(direction === 'out' ? 'recurring.noLongerCost' : 'recurring.noLongerIncome', { name: shownText(i.name, hideNumbers) })}</p>
               <Button size="sm" variant="ghost" onClick={() => void setHidden(i, false)}>
                 {t('recurring.undo')}
               </Button>
@@ -185,7 +189,7 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
           ) : (
             <div key={i.key} className="flex items-center gap-4 border-b border-border px-5 py-3 text-[13px] last:border-b-0">
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{i.name}</p>
+                <p className="truncate font-medium"><Masked text={i.name} /></p>
                 <p className="text-xs text-muted">
                   {t(`recurring.frequency.${i.frequency}`)} · {i.categoryName ?? t('transactions.uncategorized')} · {i.accountName}
                 </p>
@@ -203,7 +207,7 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
               <Badge tone={TONE[i.status]}>{t(`recurring.status.${i.status}`)}</Badge>
               <span className="num w-28 text-right font-medium">{money(i.typicalCents)}</span>
               <RowMenu
-                label={t('recurring.actions', { name: i.name })}
+                label={t('recurring.actions', { name: shownText(i.name, hideNumbers) })}
                 items={[
                   { label: t(direction === 'out' ? 'recurring.notFixed' : 'recurring.notFixedIncome'), onSelect: () => void setHidden(i, true) },
                   { label: t('recurring.showPayments'), onSelect: () => go('transactions', { search: i.name }) },
@@ -247,7 +251,7 @@ export function RecurringPage({ go }: { go: (p: Page, filter?: Record<string, un
               {hidden.map((i) => (
                 <div key={i.key} className="flex items-center gap-4 border-t border-border px-5 py-3 text-[13px]">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{i.name}</p>
+                    <p className="truncate font-medium"><Masked text={i.name} /></p>
                     <p className="text-xs text-muted">
                       {t(`recurring.frequency.${i.frequency}`)} · {i.accountName}
                     </p>

@@ -16,6 +16,7 @@ import { NEAR, listAlerts } from './alerts'
 import type { Db } from './database'
 import { convert } from './fx'
 import { listBudgets } from './finance'
+import { maskPrivate } from '@shared/iban'
 import { findRecurring, median } from './recurring'
 import { categoryTrend, monthReview } from './review'
 import { getSettings } from './settings'
@@ -138,22 +139,22 @@ function draftFacts(db: Db, month: string, today: string): Draft[] {
       const base = { recurringKey: i.key, transactionIds: i.transactionIds.slice(-L.maxTransactionIds) }
       // More expensive than the payment before (money out is negative, so a rise is below zero).
       if (i.priceChangeCents !== null && i.priceChangeCents < 0 && daysBetween(i.lastDate, today) <= L.priceUpDays)
-        add('price_up', `${i.key}:${i.lastDate.slice(0, 7)}`, { name: { text: i.name }, from: { money: Math.abs(i.lastCents - i.priceChangeCents), currency: cur }, to: { money: Math.abs(i.lastCents), currency: cur }, change: { money: Math.abs(i.priceChangeCents), currency: cur }, date: { date: i.lastDate } }, weightOf(i, i.priceChangeCents), base)
-      if (i.status === 'late') add('late', `${i.key}:${i.nextDate}`, { name: { text: i.name }, amount: { money: Math.abs(i.typicalCents), currency: cur }, date: { date: i.nextDate } }, weightOf(i, i.typicalCents), base)
+        add('price_up', `${i.key}:${i.lastDate.slice(0, 7)}`, { name: { text: maskPrivate(i.name) }, from: { money: Math.abs(i.lastCents - i.priceChangeCents), currency: cur }, to: { money: Math.abs(i.lastCents), currency: cur }, change: { money: Math.abs(i.priceChangeCents), currency: cur }, date: { date: i.lastDate } }, weightOf(i, i.priceChangeCents), base)
+      if (i.status === 'late') add('late', `${i.key}:${i.nextDate}`, { name: { text: maskPrivate(i.name) }, amount: { money: Math.abs(i.typicalCents), currency: cur }, date: { date: i.nextDate } }, weightOf(i, i.typicalCents), base)
       const inDays = daysBetween(today, i.nextDate)
       const big = usualCost !== null && (inMain(Math.abs(i.typicalCents), cur) ?? 0) >= usualCost * L.upcomingTimesMedian
       if (inDays >= 0 && inDays <= L.upcomingDays && (i.frequency === 'quarterly' || i.frequency === 'yearly' || big))
-        add('upcoming', `${i.key}:${i.nextDate}`, { name: { text: i.name }, amount: { money: Math.abs(i.typicalCents), currency: cur }, date: { date: i.nextDate } }, weightOf(i, i.typicalCents), base)
+        add('upcoming', `${i.key}:${i.nextDate}`, { name: { text: maskPrivate(i.name) }, amount: { money: Math.abs(i.typicalCents), currency: cur }, date: { date: i.nextDate } }, weightOf(i, i.typicalCents), base)
       if (i.frequency === 'monthly') {
         const twice = chargedTwice(recent, i)
-        if (twice) add('charged_twice', `${i.key}:${twice.month}`, { name: { text: i.name }, amount: { money: Math.abs(twice.last.amount_cents), currency: cur }, count: { count: twice.list.length }, date: { date: twice.last.booking_date } }, weightOf(i, twice.last.amount_cents), { recurringKey: i.key, transactionIds: twice.list.map((r) => r.id) })
+        if (twice) add('charged_twice', `${i.key}:${twice.month}`, { name: { text: maskPrivate(i.name) }, amount: { money: Math.abs(twice.last.amount_cents), currency: cur }, count: { count: twice.list.length }, date: { date: twice.last.booking_date } }, weightOf(i, twice.last.amount_cents), { recurringKey: i.key, transactionIds: twice.list.map((r) => r.id) })
       }
     }
 
     // Fixed costs together (a later step can look for overlaps), in the main currency.
     const converted = costs.flatMap((i) => {
       const v = inMain(Math.abs(i.monthlyCents), currency(i))
-      return v === null ? [] : [{ name: i.name, cents: v }]
+      return v === null ? [] : [{ name: maskPrivate(i.name), cents: v }]
     })
     if (converted.length >= L.subscriptionsMin) {
       const total = converted.reduce((t, c) => t + c.cents, 0)
@@ -195,7 +196,7 @@ function draftFacts(db: Db, month: string, today: string): Draft[] {
 
   // Payments that stand out in the month shown.
   for (const u of shown.unusual)
-    add('unusual', String(u.id), { name: { text: u.name }, amount: { money: u.cents, currency: main }, ...(u.usualCents !== null ? { usual: { money: u.usualCents, currency: main } } : {}), date: { date: u.date }, reason: { text: u.reason } }, u.cents, { transactionIds: [u.id] })
+    add('unusual', String(u.id), { name: { text: maskPrivate(u.name) }, amount: { money: u.cents, currency: main }, ...(u.usualCents !== null ? { usual: { money: u.usualCents, currency: main } } : {}), date: { date: u.date }, reason: { text: u.reason } }, u.cents, { transactionIds: [u.id] })
 
   return drafts
 }

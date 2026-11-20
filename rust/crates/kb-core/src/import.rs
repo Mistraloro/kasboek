@@ -6,7 +6,7 @@
 //! Not ported yet: PDF statements and the assistant's check (they need `kb-pdf` and `kb-assistant`), so a session never holds
 //! a check, notes or PDF data, and `checkApply` and `checkUndo` answer what the TypeScript core answers without one.
 use crate::balance::{balance_on, set_bank_balance, BankBalanceResult};
-use crate::core::{Actor, Core};
+use crate::core::Core;
 use crate::error::{AppError, AppResult};
 use crate::finance::{match_rule, RuleText};
 use crate::input::{optional, IntIn, LenVec};
@@ -630,7 +630,9 @@ pub struct RawRow {
     cells: Vec<String>,
 }
 
-/// Raw rows for the assistant: header plus a window of data rows.
+/// Raw rows for the assistant: header plus a window of data rows. An index counts from the row after `header_row`. Rows at or
+/// above the header found on opening are never returned, nor their count, whoever asks (it is the person's own choice of header
+/// row that can put them there), and the lines above the header are only counted.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawWindow {
@@ -638,46 +640,28 @@ pub struct RawWindow {
     header: Vec<String>,
     rows: Vec<RawRow>,
     total_rows: usize,
-    /// The lines above the header (the person's own view; the assistant gets only how many there are).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    preamble: Option<Vec<Vec<String>>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    preamble_lines: Option<usize>,
+    preamble_lines: usize,
 }
 
-pub fn raw_window<S: Store>(core: &Core<S>, id: &str, from: usize, count: usize, actor: Actor) -> AppResult<RawWindow> {
+pub fn raw_window<S: Store>(core: &Core<S>, id: &str, from: usize, count: usize) -> AppResult<RawWindow> {
     let mut state = core.import.borrow_mut();
     let s = state.find(id)?;
     let hr = s.mapping.as_ref().map_or(0, |m| m.header_row);
     let data = s.rows.get(hr + 1..).unwrap_or_default();
-    let window = |start: usize| -> Vec<RawRow> {
-        data.iter()
+    let hidden = s.hidden_rows();
+    let start = from.max(hidden);
+    Ok(RawWindow {
+        header_row: hr,
+        header: if hidden > 0 { Vec::new() } else { s.rows.get(hr).cloned().unwrap_or_default() },
+        rows: data
+            .iter()
             .enumerate()
             .skip(start)
             .take((from + count).saturating_sub(start))
             .map(|(index, cells)| RawRow { index, cells: cells.clone() })
-            .collect()
-    };
-    if actor == Actor::Assistant {
-        // Rows at or above the header found on opening are never returned, nor their count (it is the person's own choice of
-        // header row that can put them there, never the assistant's).
-        let hidden = s.hidden_rows();
-        return Ok(RawWindow {
-            header_row: hr,
-            header: if hidden > 0 { Vec::new() } else { s.rows.get(hr).cloned().unwrap_or_default() },
-            rows: window(from.max(hidden)),
-            total_rows: data.len(),
-            preamble: None,
-            preamble_lines: Some(hr),
-        });
-    }
-    Ok(RawWindow {
-        header_row: hr,
-        header: s.rows.get(hr).cloned().unwrap_or_default(),
-        rows: window(from),
+            .collect(),
         total_rows: data.len(),
-        preamble: Some(s.rows.iter().take(hr).cloned().collect()),
-        preamble_lines: None,
+        preamble_lines: hr,
     })
 }
 

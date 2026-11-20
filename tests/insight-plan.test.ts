@@ -43,6 +43,13 @@ describe('factsPayload', () => {
     expect(fields).toEqual({ f1: ['name', 'from', 'to', 'change', 'date'], f2: ['name', 'spent', 'budget', 'percent', 'month'] })
   })
 
+  it('masks spaced IBANs with 00 groups, e-mail and phone numbers in names', () => {
+    const f = fact(8, 'late', { name: { text: 'Rent DE89 3704 0044 0532 0130 00 ilse@example.test +32 475 12 34 56' }, amount: eur(90000), date: { date: '2026-11-01' } })
+    const { text } = factsPayload([f], OPTS)
+    expect(text).toContain('DE…3000')
+    for (const secret of ['3704', '0532', 'ilse@', '475 12']) expect(text).not.toContain(secret)
+  })
+
   it('masks account numbers in names and cuts names at 40 characters', () => {
     const iban = fact(5, 'late', { name: { text: 'Landlord BE68 5390 0754 7034' }, amount: eur(90000), date: { date: '2026-11-01' } })
     const card = fact(6, 'unusual', { name: { text: 'Shop 4929 1234 5678 9012' }, amount: eur(9900), date: { date: '2026-11-02' }, reason: { text: 'new' } })

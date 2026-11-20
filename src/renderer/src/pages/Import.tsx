@@ -10,7 +10,7 @@ import { ApiError, call, useOp } from '../lib/api'
 import { errorMessage } from '../lib/error-message'
 import { openSettingsTab } from '../lib/settings-tab'
 import { formatDateTime } from '../lib/format'
-import { useSettings } from '../lib/settings'
+import { useAssistantEnabled, useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { useAssistant } from '../components/AssistantPanel'
 import { ImportBalanceCheck } from '../components/BankBalance'
@@ -40,6 +40,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const account = accountId ?? accounts.data?.find((a) => !a.archived)?.id ?? null
   const assistant = useAssistant()
+  const assistantEnabled = useAssistantEnabled()
   // When the running check started (null: none), so the timer continues after switching tabs.
   const [assisting, setAssisting] = useState<number | null>(null)
   const [assistKind, setAssistKind] = useState<AssistKind>('check')
@@ -52,13 +53,14 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
     void call('import.current').then(async (p) => {
       if (!p) return
       setPreview((cur) => cur ?? p)
-      const st = await call('import.assistStatus', { sessionId: p.sessionId })
+      // Nothing runs for the assistant while it is off, and the main process refuses to be asked.
+      const st = assistantEnabled ? await call('import.assistStatus', { sessionId: p.sessionId }) : null
       if (st?.running) {
         setAssisting(st.startedAt)
         setAssistKind(st.kind)
       }
     })
-  }, [])
+  }, [assistantEnabled])
   useEffect(
     () =>
       window.kasboek.onEvent((e) => {
@@ -212,7 +214,7 @@ export function ImportPage({ go }: { go: (p: Page) => void }) {
             )}
             <input ref={fileInput} type="file" accept=".csv,.txt,.pdf,.xml,text/csv,application/pdf,text/xml,application/xml" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void open(f) }} />
           </div>
-          <p className="mt-4 text-[13px] text-muted">{t('import.anyBank')}</p>
+          <p className="mt-4 text-[13px] text-muted">{t(assistantEnabled ? 'import.anyBank' : 'import.anyBankLocal')}</p>
         </>
       )}
       {(batches.data ?? []).length > 0 && (

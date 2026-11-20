@@ -7,7 +7,7 @@ import type { InsightFact, InsightSuggestion, InsightsPreview, InsightsView } fr
 import type { Page } from '../App'
 import { ApiError, call } from '../lib/api'
 import { formatDate, monthLabel } from '../lib/format'
-import { useSettings } from '../lib/settings'
+import { useAssistantEnabled, useSettings } from '../lib/settings'
 import { openSettingsTab } from '../lib/settings-tab'
 import { errText } from '../pages/auth/parts'
 import { useAssistant } from './AssistantPanel'
@@ -54,6 +54,7 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
   const { t } = useTranslation()
   const { fmt, money } = useSettings()
   const assistant = useAssistant()
+  const assistantEnabled = useAssistantEnabled()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [view, setView] = useState<InsightsView | null>(null)
   const [failed, setFailed] = useState(false)
@@ -76,11 +77,13 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
   }, [month])
 
   const refreshStatus = useCallback(() => {
+    // Nothing is writing tips while the assistant is off, and the main process refuses to be asked.
+    if (!assistantEnabled) return
     const asked = ++latestStatus.current
     call('insights.status')
       .then((st) => asked === latestStatus.current && setRun(st))
       .catch(() => undefined)
-  }, [])
+  }, [assistantEnabled])
   // When the card shows, the month changes or the window comes back: a run may have started or ended meanwhile.
   useEffect(() => {
     refreshStatus()
@@ -142,7 +145,8 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
     void call('assistant.send', { text: t('insights.askPrompt', { tip: `${tip.title} ${tip.body}` }) }).catch((e) => setAiError(errText(e)))
   }
 
-  const ai = view?.ai ?? null
+  // Tips an assistant wrote earlier are not shown while it is off; the local ones stay.
+  const ai = assistantEnabled ? (view?.ai ?? null) : null
   const writing = !!run?.running && run.month === month
   const writingOther = !!run?.running && run.month !== month
   const otherReason = writingOther && run?.month ? t('insights.runningOther', { ai: aiName, month: monthLabel(new Date(Number(run.month.slice(0, 4)), Number(run.month.slice(5)) - 1, 1), fmt) }) : undefined
@@ -260,7 +264,7 @@ export function Suggestions({ month, monthText, go }: { month: string; monthText
           )}
         </div>
       )}
-      <ConsentModal open={consent} month={month} onClose={() => setConsent(false)} onSend={() => { setConsent(false); write(true) }} />
+      {assistantEnabled && <ConsentModal open={consent} month={month} onClose={() => setConsent(false)} onSend={() => { setConsent(false); write(true) }} />}
     </Card>
   )
 }

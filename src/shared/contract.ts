@@ -262,7 +262,7 @@ export const contract = {
 
   /* ----- Data ----- */
   'settings.get': { input: empty, output: out<Settings>() },
-  'settings.update': { input: z.object({ currency, fxAutoUpdate: z.boolean() }).partial().strict(), output: out<Settings>() },
+  'settings.update': { input: z.object({ currency, fxAutoUpdate: z.boolean(), hideAccountNumbers: z.boolean(), assistantEnabled: z.boolean() }).partial().strict(), output: out<Settings>() },
 
   /* ----- Net worth, investments, year ----- */
   'networth.summary': {
@@ -574,11 +574,13 @@ export const contract = {
   'rules.list': { description: 'List categorisation rules ("text in counterparty/description → category").', input: empty, output: out<Rule[]>() },
   'rules.create': {
     description:
-      'Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. field iban: pattern is the counterparty’s account number, matched exactly (good for transfers to the person’s own accounts). New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.',
+      'Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. field iban: the counterparty’s account number, matched exactly (good for transfers to the person’s own accounts); account numbers are hidden from you, so give fromTransactionId (a transaction with that counterparty) instead of a pattern. New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.',
     input: z
       .object({
         field: z.enum(['counterparty', 'description', 'any', 'iban']),
-        pattern: z.string().trim().min(2).max(100),
+        pattern: z.string().trim().min(2).max(100).optional(),
+        /** For field iban: fill the pattern with this transaction’s counterparty account number. */
+        fromTransactionId: id.optional(),
         match: z.enum(['contains', 'word', 'starts']).default('contains'),
         categoryId: id,
         applyToExisting: z.boolean().default(true)
@@ -587,11 +589,14 @@ export const contract = {
     output: out<{ rule: Rule; applied: number }>()
   },
   'rules.preview': {
-    description: 'Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples.',
+    description:
+      'Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples. For field iban, give fromTransactionId (a transaction with that counterparty) instead of a pattern, as with rules_create.',
     input: z
       .object({
         field: z.enum(['counterparty', 'description', 'any', 'iban']),
-        pattern: z.string().trim().min(1).max(100),
+        pattern: z.string().trim().min(1).max(100).optional(),
+        /** For field iban: look for this transaction’s counterparty account number. */
+        fromTransactionId: id.optional(),
         match: z.enum(['contains', 'word', 'starts']).default('contains'),
         categoryId: id.nullable().default(null)
       })
@@ -605,6 +610,8 @@ export const contract = {
         id,
         field: z.enum(['counterparty', 'description', 'any', 'iban']).optional(),
         pattern: z.string().trim().min(2).max(100).optional(),
+        /** For field iban: fill the pattern with this transaction’s counterparty account number. */
+        fromTransactionId: id.optional(),
         match: z.enum(['contains', 'word', 'starts']).optional(),
         categoryId: id.optional(),
         applyToExisting: z.boolean().default(false)
@@ -644,9 +651,9 @@ export const contract = {
     output: out<ImportPreview | null>()
   },
   'import.raw': {
-    description: 'Raw cells of the open CSV import (header row, any info lines above it, and a window of data rows by index). Use it to understand the file before changing the mapping.',
+    description: 'Raw cells of the open CSV import (header row, how many info lines sit above it (their text is not shown), and a window of data rows by index). Use it to understand the file before changing the mapping.',
     input: z.object({ from: z.number().int().min(0).default(0), count: z.number().int().min(1).max(200).default(40) }).strict(),
-    output: out<{ headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preamble: string[][] }>()
+    output: out<{ headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preambleLines: number }>()
   },
   'import.remap': {
     description:

@@ -280,8 +280,10 @@
         "rules": {},
         "mcpAlwaysAsk": true
       },
+      "assistantEnabled": true,
       "memoryEnabled": true,
       "pageContextEnabled": true,
+      "hideAccountNumbers": true,
       "aiInsightsConsent": null,
       "aiCheckConsent": null
     },
@@ -1895,6 +1897,12 @@
             "type": "string"
           },
           "fxAutoUpdate": {
+            "type": "boolean"
+          },
+          "hideAccountNumbers": {
+            "type": "boolean"
+          },
+          "assistantEnabled": {
             "type": "boolean"
           }
         },
@@ -3864,7 +3872,7 @@
       "mutates": true,
       "assistant": true,
       "public": false,
-      "description": "Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. field iban: pattern is the counterparty’s account number, matched exactly (good for transfers to the person’s own accounts). New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.",
+      "description": "Create a rule that puts transactions whose counterparty and/or description matches `pattern` (case-insensitive) into a category. match: contains (anywhere, default), word (as a whole word) or starts (at the start); texts shorter than 4 characters always match as a whole word. field iban: the counterparty’s account number, matched exactly (good for transfers to the person’s own accounts); account numbers are hidden from you, so give fromTransactionId (a transaction with that counterparty) instead of a pattern. New imports use it; applyToExisting also categorises uncategorised transactions now. Check first with rules_preview.",
       "outputType": "{ rule: Rule; applied: number }",
       "input": {
         "type": "object",
@@ -3882,6 +3890,11 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 100
+          },
+          "fromTransactionId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "match": {
             "default": "contains",
@@ -3904,7 +3917,6 @@
         },
         "required": [
           "field",
-          "pattern",
           "categoryId"
         ],
         "additionalProperties": false
@@ -3915,7 +3927,7 @@
       "mutates": false,
       "assistant": true,
       "public": false,
-      "description": "Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples.",
+      "description": "Shows what a rule would match before creating it: how many transactions, how many are uncategorised, how many already sit in another category, and a few examples. For field iban, give fromTransactionId (a transaction with that counterparty) instead of a pattern, as with rules_create.",
       "outputType": "RulePreview",
       "input": {
         "type": "object",
@@ -3933,6 +3945,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 100
+          },
+          "fromTransactionId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "match": {
             "default": "contains",
@@ -3958,8 +3975,7 @@
           }
         },
         "required": [
-          "field",
-          "pattern"
+          "field"
         ],
         "additionalProperties": false
       }
@@ -3992,6 +4008,11 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 100
+          },
+          "fromTransactionId": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           },
           "match": {
             "type": "string",
@@ -4303,8 +4324,8 @@
       "mutates": false,
       "assistant": true,
       "public": false,
-      "description": "Raw cells of the open CSV import (header row, any info lines above it, and a window of data rows by index). Use it to understand the file before changing the mapping.",
-      "outputType": "{ headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preamble: string[][] }",
+      "description": "Raw cells of the open CSV import (header row, how many info lines sit above it (their text is not shown), and a window of data rows by index). Use it to understand the file before changing the mapping.",
+      "outputType": "{ headerRow: number; header: string[]; rows: { index: number; cells: string[] }[]; totalRows: number; preambleLines: number }",
       "input": {
         "type": "object",
         "properties": {

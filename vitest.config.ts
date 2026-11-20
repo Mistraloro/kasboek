@@ -12,7 +12,9 @@ export default defineConfig({
     pool: 'forks',
     // CI machines (Windows especially) are slow at disk and memory work, and 68 files at once starve each other:
     // use half the cores there and allow more time per test.
-    maxWorkers: process.env.CI ? '50%' : undefined,
+    // Windows runners are the slowest at disk work: two workers there, which stops files starving each other.
+    maxWorkers: process.env.CI ? (process.platform === 'win32' ? 2 : '50%') : undefined,
+    setupFiles: ['tests/setup.ts'],
     testTimeout: process.env.CI ? 60_000 : 30_000
   }
 })

@@ -1,0 +1,26 @@
+# cargo-about configuration: the licence texts of all dependencies, for THIRD-PARTY-NOTICES shipped with the native app
+# (rust/tools/third-party-notices.sh). The accepted list mirrors rust/deny.toml.
+accepted = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "BSL-1.0",
+  "CC0-1.0",
+  "0BSD",
+  "Unlicense",
+  "GPL-3.0-only",
+]
+targets = [
+  "x86_64-pc-windows-msvc",
+  "aarch64-pc-windows-msvc",
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+]
+workarounds = ["ring"]

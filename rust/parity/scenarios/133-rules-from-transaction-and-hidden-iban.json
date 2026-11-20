@@ -1,0 +1,23 @@
+{
+  "name": "rules: an iban rule from a transaction's account number; the assistant may not give a masked or invalid account number",
+  "steps": [
+    {"op":"accounts.create","input":{"name":"Main"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-01","amountCents":-5000,"description":"To savings","counterpartyName":"Me"}},
+    {"op":"transactions.create","input":{"accountId":1,"bookingDate":"2026-10-02","amountCents":-300,"description":"No number","counterpartyName":"Me"}},
+    {"op":"@sql","input":{"sql":"UPDATE transactions SET counterparty_iban = 'BE62 5100 0754 7061' WHERE id = 1"}},
+    {"op":"rules.preview","input":{"field":"iban","fromTransactionId":1,"categoryId":15}},
+    {"op":"rules.preview","input":{"field":"iban","fromTransactionId":2}},
+    {"op":"rules.preview","input":{"field":"iban","fromTransactionId":99}},
+    {"op":"rules.preview","input":{"field":"any","fromTransactionId":1}},
+    {"op":"rules.preview","input":{"field":"iban"}},
+    {"op":"rules.preview","input":{"field":"iban","pattern":"BE62 **** **** 7061"},"actor":"assistant"},
+    {"op":"rules.preview","input":{"field":"iban","pattern":"BE62 5100 0754 7061"},"actor":"assistant"},
+    {"op":"rules.create","input":{"field":"iban","fromTransactionId":1,"categoryId":15},"actor":"assistant"},
+    {"op":"rules.create","input":{"field":"iban","pattern":"BE62 **** **** 7061","categoryId":15},"actor":"assistant"},
+    {"op":"rules.list"},
+    {"op":"rules.update","input":{"id":1,"field":"description"},"actor":"assistant"},
+    {"op":"rules.update","input":{"id":1,"field":"description","pattern":"savings"},"actor":"assistant"},
+    {"op":"rules.update","input":{"id":1,"field":"iban","fromTransactionId":1}},
+    {"op":"rules.list"}
+  ]
+}

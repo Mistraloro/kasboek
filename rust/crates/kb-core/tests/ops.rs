@@ -190,7 +190,7 @@ fn settings_default_update_and_import_reset() {
     );
     assert_eq!(f.ok("settings.get", json!({}))["memoryEnabled"], false);
     assert!(f.ok("settings.get", json!({}))["lastBackupAt"].is_null(), "a damaged value falls back to the default");
-    let found = kb_core::settings::reset_imported_settings(f.core.db().unwrap(), false).unwrap();
+    let found = kb_core::settings::reset_imported_settings(f.core.db().unwrap(), false, false).unwrap();
     assert_eq!(found, ["aiKey", "aiEndpoint", "memory"]);
     let s = f.ok("settings.get", json!({}));
     assert_eq!((s["memoryEnabled"].as_bool(), s["aiProvider"].as_str()), (Some(true), Some("anthropic")));

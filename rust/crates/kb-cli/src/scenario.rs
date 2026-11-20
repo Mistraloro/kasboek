@@ -5,7 +5,7 @@
 //! Scenario: `{"name", "clock": "2026-11-14T10:00:00Z", "languages": ["en"], "prefs": "<prefs.json text>" | null,
 //! "steps": [{"op", "input", "actor"?}]}`. Steps whose op starts with `@` are harness steps: `@lock` and `@unlock` (the
 //! session), `@sql` (`{"sql"}`: seed invented rows), `@fxReload` (after `@sql` changed `fx_rates`) and
-//! `@resetImportedSettings` (`{"keepSyncKey"?}`).
+//! `@resetImportedSettings` (`{"keepSyncKey"?, "assistantOff"?}`).
 //!
 //! Masked in the output, because they are random or depend on the wall clock: `uid` values (32 hex digits), every column
 //! named `at` or ending in `_at`, and the keys `createdAt` / `updatedAt` / `committedAt` and `sessionId` of results. A string
@@ -213,7 +213,8 @@ fn run_in(dir: &Path, scenario: &Value, clock_ms: i64, languages: Vec<String>) -
             "@fxReload" => core.db().and_then(|db| Ok(db.reload_fx_rates()?)).map(|()| Value::Null),
             "@resetImportedSettings" => {
                 let keep = input.get("keepSyncKey").and_then(Value::as_bool).unwrap_or(false);
-                core.db().and_then(|db| kb_core::settings::reset_imported_settings(db, keep)).map(|found| json!(found))
+                let assistant_off = input.get("assistantOff").and_then(Value::as_bool).unwrap_or(false);
+                core.db().and_then(|db| kb_core::settings::reset_imported_settings(db, keep, assistant_off)).map(|found| json!(found))
             }
             _ => core.dispatch(op, input, actor(step.get("actor").and_then(Value::as_str))?),
         };

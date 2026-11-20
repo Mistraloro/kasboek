@@ -1,9 +1,11 @@
 //! `rules.list`, `.create`, `.preview`, `.update`, `.reorder`, `.delete`.
 use super::{json, run};
+use crate::core::Actor;
 use crate::core::{Core, Done};
+use crate::error::AppError;
 use crate::error::AppResult;
 use crate::input::{is_none, nullable, optional, Empty, Id, LenVec, Trimmed};
-use crate::rules::{create_rule, delete_rule, list_rules, preview_rule, reorder_rules, update_rule, RuleChange};
+use crate::rules::{create_rule, delete_rule, list_rules, preview_rule, reorder_rules, rule_pattern, update_rule, RuleChange};
 use kb_db::Store;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -51,6 +53,18 @@ fn yes() -> bool {
     true
 }
 
+/// The text a new or previewed rule looks for: the given pattern, or the account number of a transaction.
+fn given_pattern<S: Store>(
+    db: &S,
+    field: Field,
+    pattern: Option<&str>,
+    from_transaction_id: Option<Id>,
+    actor: Actor,
+) -> AppResult<String> {
+    rule_pattern(db, Some(field.as_str()), pattern, from_transaction_id.map(|t| t.0), actor == Actor::Assistant)?
+        .ok_or_else(|| AppError::new("rules.pattern", "Give the text the rule looks for (pattern)."))
+}
+
 pub fn list<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |_: Empty| json(&list_rules(core.db()?)?))
 }
@@ -59,7 +73,10 @@ pub fn list<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct CreateIn {
     field: Field,
-    pattern: Trimmed<2, 100>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    pattern: Option<Trimmed<2, 100>>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    from_transaction_id: Option<Id>,
     #[serde(default, rename = "match")]
     match_kind: Match,
     category_id: Id,
@@ -69,7 +86,9 @@ struct CreateIn {
 
 pub fn create<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: CreateIn| {
-        json(&create_rule(core.db()?, i.field.as_str(), &i.pattern.0, i.match_kind.as_str(), i.category_id.0, i.apply_to_existing)?)
+        let db = core.db()?;
+        let pattern = given_pattern(db, i.field, i.pattern.as_ref().map(|p| p.0.as_str()), i.from_transaction_id, core.actor())?;
+        json(&create_rule(db, i.field.as_str(), &pattern, i.match_kind.as_str(), i.category_id.0, i.apply_to_existing)?)
     })
 }
 
@@ -77,7 +96,10 @@ pub fn create<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct PreviewIn {
     field: Field,
-    pattern: Trimmed<1, 100>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    pattern: Option<Trimmed<1, 100>>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    from_transaction_id: Option<Id>,
     #[serde(default, rename = "match")]
     match_kind: Match,
     #[serde(default, deserialize_with = "nullable")]
@@ -86,7 +108,9 @@ struct PreviewIn {
 
 pub fn preview<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: PreviewIn| {
-        json(&preview_rule(core.db()?, i.field.as_str(), &i.pattern.0, i.match_kind.as_str(), i.category_id.map(|c| c.0))?)
+        let db = core.db()?;
+        let pattern = given_pattern(db, i.field, i.pattern.as_ref().map(|p| p.0.as_str()), i.from_transaction_id, core.actor())?;
+        json(&preview_rule(db, i.field.as_str(), &pattern, i.match_kind.as_str(), i.category_id.map(|c| c.0))?)
     })
 }
 
@@ -98,6 +122,8 @@ struct UpdateIn {
     field: Option<Field>,
     #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
     pattern: Option<Trimmed<2, 100>>,
+    #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
+    from_transaction_id: Option<Id>,
     #[serde(default, rename = "match", deserialize_with = "optional", skip_serializing_if = "is_none")]
     match_kind: Option<Match>,
     #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
@@ -108,12 +134,25 @@ struct UpdateIn {
 
 pub fn update<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: UpdateIn| {
+        let db = core.db()?;
+        let from_assistant = core.actor() == Actor::Assistant;
+        let old = list_rules(db)?.into_iter().find(|r| r.id == i.id.0);
+        let field = i.field.map(Field::as_str).or(old.as_ref().map(|r| r.field.as_str()));
+        let pattern = i.pattern.as_ref().map(|p| p.0.as_str());
+        // The assistant can't see the stored account number: moving the rule to another field without a new text would keep it as that text.
+        if from_assistant && old.as_ref().is_some_and(|r| r.field == "iban") && field != Some("iban") && pattern.is_none() {
+            return Err(AppError::new(
+                "rules.iban_field",
+                "This rule looks for an account number, which is hidden from you. To change where it looks, also give the new text (pattern).",
+            ));
+        }
+        let pattern = rule_pattern(db, field, pattern, i.from_transaction_id.map(|t| t.0), from_assistant)?;
         json(&update_rule(
-            core.db()?,
+            db,
             &RuleChange {
                 id: i.id.0,
                 field: i.field.map(Field::as_str),
-                pattern: i.pattern.as_ref().map(|p| p.0.as_str()),
+                pattern: pattern.as_deref(),
                 match_kind: i.match_kind.map(Match::as_str),
                 category_id: i.category_id.map(|c| c.0),
                 apply_to_existing: i.apply_to_existing,

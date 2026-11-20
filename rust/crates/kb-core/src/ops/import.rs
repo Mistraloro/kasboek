@@ -109,7 +109,7 @@ fn default_count() -> IntIn<1, 200> {
 pub fn raw<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run_quiet(raw, |i: RawIn| {
         let id = session_of(core, None)?;
-        json(&raw_window(core, &id, i.from.0 as usize, i.count.0 as usize, core.actor())?)
+        json(&raw_window(core, &id, i.from.0 as usize, i.count.0 as usize)?)
     })
 }
 

@@ -12,7 +12,7 @@ import { makeSlot } from '@core/crypto'
 import { integrityOk, openDatabase, snapshotEncrypted } from '@core/database'
 import { AppError } from '@core/errors'
 import { MIGRATIONS, schemaVersion } from '@core/migrations'
-import { getSettings, resetImportedSettings, updateSettings } from '@core/settings'
+import { getSetting, getSettings, resetImportedSettings, updateSettings } from '@core/settings'
 import { encodeTransfer, openTransfer, readTransferHeader, TRANSFER_EXTENSION } from '@core/transfer-format'
 import { planRetention, timeFromName, type Tier } from '@core/backup-tiers'
 import type { BackupEntryInfo, BackupStatus, ImportReset, PickedTransfer } from '@shared/types'
@@ -211,7 +211,7 @@ export async function importTransfer(input: {
     const check = openDatabase(staged, vault.dbKey, { migrate: false })
     try {
       if (!integrityOk(check)) throw new AppError('transfer.corrupt', 'The data inside this file is damaged.')
-      reset = resetImportedSettings(check, { keepSyncKey: opts.joining })
+      reset = resetImportedSettings(check, { keepSyncKey: opts.joining, assistantOff: isUnlocked() && !getSetting(db(), 'assistantEnabled') })
     } finally {
       check.close()
     }

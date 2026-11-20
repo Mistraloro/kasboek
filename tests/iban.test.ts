@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findIbans, maskIban, maskNumbers, validIban } from '@shared/iban'
+import { cutText, findIbans, maskAccount, maskContacts, maskIban, maskNumbers, maskPrivate, validIban } from '@shared/iban'
 
 describe('IBAN helpers', () => {
   it('checks the checksum', () => {
@@ -28,7 +28,8 @@ describe('IBAN helpers', () => {
     expect(maskNumbers('van 2026-10-01 2026-10-02 tot')).toBe('van 2026-10-01 2026-10-02 tot')
     expect(maskNumbers('01-10-2026 02-10-2026 03-10-2026')).toBe('01-10-2026 02-10-2026 03-10-2026')
     expect(maskNumbers('card 4111-1111-1111-1111')).toBe('card …1111')
-    expect(maskNumbers('ref 01-10-2026 02-10-2026 98765')).toBe('ref …8765')
+    expect(maskNumbers('ref 01-10-2026 02-10-2026 98765')).toBe('ref 01-10-2026 02-10-2026 98765')
+    expect(maskNumbers('ref 01-10-2026 02-10-2026 98765 4321 1111')).toBe('ref 01-10-2026 02-10-2026 …1111')
     expect(maskNumbers('mandaat 20261001000123456789')).toBe('mandaat …6789')
   })
 
@@ -94,5 +95,112 @@ describe('IBAN helpers', () => {
     expect(maskIban(`naar ${grouped(iban)}.`)).toBe(`naar ${mask}.`)
     expect(findIbans(`REF${iban}`)).toEqual([iban])
     expect(maskNumbers(`REF${iban}`)).toBe(`REF${mask}`)
+  })
+})
+
+// All numbers here are invented or the published examples of the IBAN standard.
+describe('maskPrivate: numbers first, then contacts', () => {
+  it('keeps spaced IBANs whole, also with groups that start with 00 (the phone rule must not eat them)', () => {
+    expect(maskPrivate('naar DE89 3704 0044 0532 0130 00 voor huur')).toBe('naar DE…3000 voor huur')
+    expect(maskPrivate('BE38 0014 7710 5230')).toBe('BE…5230')
+    expect(maskPrivate('NL91 ABNA 0417 1643 00')).toBe('NL…4300')
+    expect(maskPrivate('GB29 NWBK 6016 1331 9268 19 ok')).toBe('GB…6819 ok')
+    expect(maskContacts(maskNumbers('DE89 3704 0044 0532 0130 00'))).toBe('DE…3000')
+  })
+
+  it('finds an IBAN with dots, hyphens, slashes, double spaces, tabs, non-breaking spaces, line breaks and zero-width characters', () => {
+    for (const text of ['NL91-ABNA-0417-1643-00', 'NL91.ABNA.0417.1643.00', 'NL91/ABNA/0417/1643/00', 'NL91  ABNA  0417  1643  00', 'NL91\tABNA\t0417\t1643\t00', 'NL91\u00a0ABNA\u00a00417\u00a01643\u00a000', 'NL91 ABNA\n0417 1643\r\n00', 'NL91\u200bABNA0417164300', 'NL91\u2013ABNA\u20130417\u20131643\u201300', 'ＮＬ９１ＡＢＮＡ０４１７１６４３００'])
+      expect(maskPrivate(`to ${text} thanks`), JSON.stringify(text)).toBe('to NL…4300 thanks')
+    expect(maskPrivate('BE68.5390.0754.7034')).toBe('BE…7034')
+  })
+
+  it('masks card numbers written with dots, slashes, hyphens, full-width digits or line breaks', () => {
+    for (const text of ['4111.1111.1111.1111', '4111/1111/1111/1111', '4111-1111-1111-1111', '４１１１ １１１１ １１１１ １１１１', '4111 1111\n1111 1111']) expect(maskPrivate(`card ${text} paid`), JSON.stringify(text)).toBe('card …1111 paid')
+  })
+
+  it('keeps dates and amounts next to numbers', () => {
+    expect(maskPrivate('Ref 01-10-2026 02-10-2026 1250')).toBe('Ref 01-10-2026 02-10-2026 1250')
+    expect(maskPrivate('Betaling 03-10-2026 1234567 Delhaize')).toBe('Betaling 03-10-2026 1234567 Delhaize')
+    expect(maskPrivate('on 03/10/2026 and 03.10.2026 and 2026/10/03')).toBe('on 03/10/2026 and 03.10.2026 and 2026/10/03')
+    expect(maskPrivate('total 1.234.567,89 and +1.234.567 and 1,234,567.89')).toBe('total 1.234.567,89 and +1.234.567 and 1,234,567.89')
+    expect(maskPrivate('card 4111 1111 1111 1111 on 01-10-2026')).toBe('card …1111 on 01-10-2026')
+    expect(maskPrivate('mandaat 20261001000123456789')).toBe('mandaat …6789')
+  })
+
+  it('hides international phone numbers (+ or 00) and e-mail addresses, also on odd white space', () => {
+    expect(maskPrivate('call +32 475 12 34 56 now')).toBe('call …phone… now')
+    expect(maskPrivate('call 0044\u00a07946\u00a00958 now')).toBe('call …phone… now')
+    expect(maskPrivate('mail ilse.vermeulen@example.test bye')).toBe('mail …@… bye')
+    expect(maskPrivate('ＩＬＳＥ＠example.test x')).toBe('…@… x')
+  })
+
+  it('returns the text as it came when nothing is hidden', () => {
+    for (const text of ['Bakery Roos  12\n', 'tab\tseparated', 'ﬁnal 5 a@b', '1 2 3'])  expect(maskPrivate(text)).toBe(text)
+  })
+
+  it('does not change a masked text again', () => {
+    for (const text of ['NL…4300', '…1111', '…@… …phone…', 'to BE…7034 and …1111 and …@…']) expect(maskPrivate(text)).toBe(text)
+  })
+
+  it('cuts first, so that a number at the cut is hidden whole', () => {
+    const text = `${'a '.repeat(995)}NL91 ABNA 0417 1643 00 tail`
+    const out = maskPrivate(text, 1995)
+    expect(out).not.toMatch(/ABNA|0417|1643/)
+    expect(out.endsWith('…')).toBe(true)
+    expect(maskPrivate('short', 100)).toBe('short')
+  })
+})
+
+describe('maskAccount shows at most the country and the last four', () => {
+  it.each([
+    ['NL91ABNA0417164300', 'NL…4300'],
+    ['NL91 ABNA 0417 1643 00', 'NL…4300'],
+    ['123-4567890-12', '…9012'],
+    ['12345678', '…5678'],
+    ['AB123456789', 'AB…6789'],
+    ['XX1234567890123', 'XX…0123'],
+    ['1234', '…'],
+    ['AB12', '…'],
+    ['', '…'],
+    ['NL…4300', 'NL…4300']
+  ])('%s -> %s', (value, shown) => {
+    expect(maskAccount(value)).toBe(shown)
+  })
+
+  it('never returns a value of nine characters or fewer whole', () => {
+    for (const v of ['12345', '123456', '1234567', '12345678', '123456789', 'AB1234567']) expect(maskAccount(v)).not.toContain(v.slice(0, 5))
+  })
+})
+
+describe('masking a huge text is fast', () => {
+  const huge = (unit: string): string => unit.repeat(Math.ceil(200_000 / unit.length)).slice(0, 200_000)
+  it.each([
+    ['no spaces', 'x'],
+    ['many @', '@'],
+    ['@ between letters', 'a@'],
+    ['many digits', '1'],
+    ['digits with spaces', '1 '],
+    ['dotted letters', 'x.'],
+    ['IBAN-like starts', 'ab12']
+  ])('a text of 200,000 characters (%s), cut to 2,000 first', (_name, unit) => {
+    const started = performance.now()
+    maskPrivate(huge(unit), 2000)
+    expect(performance.now() - started).toBeLessThan(process.env.CI ? 1000 : 50)
+  })
+
+  it('finds e-mail addresses without scanning a long text over and over', () => {
+    const started = performance.now()
+    expect(maskContacts(`${'x'.repeat(200_000)} ilse@example.test`)).toBe(`${'x'.repeat(200_000)} …@…`)
+    expect(maskContacts('@'.repeat(200_000))).toBe('@'.repeat(200_000))
+    expect(performance.now() - started).toBeLessThan(process.env.CI ? 2000 : 500)
+  })
+})
+
+describe('cutText', () => {
+  it('cuts a text, but never through a number: that number is left out whole', () => {
+    expect(cutText('short', 60)).toBe('short')
+    expect(cutText(`${'a'.repeat(50)} NL91ABNA0417164300 more`, 60)).toBe(`${'a'.repeat(50)} `)
+    expect(cutText(`${'a'.repeat(50)} 4111 1111 1111 1111 more`, 60)).toBe(`${'a'.repeat(50)} `)
+    expect(cutText(`${'a'.repeat(70)} NL91ABNA0417164300`, 60)).toBe('a'.repeat(60))
   })
 })

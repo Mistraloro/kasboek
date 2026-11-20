@@ -44,13 +44,19 @@ fn the_assistant_never_sees_the_lines_above_the_header() {
     assert!(raw.get("preamble").is_none());
     assert_eq!(raw["preambleLines"], 0);
     assert!(raw["rows"].as_array().unwrap().iter().all(|r| r["index"].as_u64().unwrap() >= 2));
+    // Whoever asks: the rows from above the header found on opening stay hidden while the header sits above it.
+    let user_raw = f.ok("import.raw", json!({}));
+    assert_eq!((&user_raw["header"], &user_raw["preambleLines"]), (&json!([]), &json!(0)));
+    assert!(user_raw["rows"].as_array().unwrap().iter().all(|r| r["index"].as_u64().unwrap() >= 2));
     // The assistant cannot move the header above the one found on opening.
     let err = as_assistant("import.remap", json!({ "mapping": mapping })).unwrap_err();
     assert_eq!(err.code, "import.header_above");
     let low = json!({"delimiter": ";", "headerRow": 2, "dateOrder": "DMY", "decimal": ",", "columns": {"bookingDate": 0, "amount": 2, "description": [1]}});
     assert_eq!(as_assistant("import.remap", json!({ "mapping": low })).unwrap()["mappingSource"], "assistant");
-    // The person still sees everything.
-    assert_eq!(f.ok("import.raw", json!({}))["preamble"].as_array().unwrap().len(), 2);
+    // Back at the real header the lines above it are only counted, for the person too.
+    let user_raw = f.ok("import.raw", json!({}));
+    assert_eq!((&user_raw["header"], &user_raw["preambleLines"]), (&json!(["Datum", "Omschrijving", "Bedrag"]), &json!(2)));
+    assert!(user_raw.get("preamble").is_none());
 }
 
 #[test]

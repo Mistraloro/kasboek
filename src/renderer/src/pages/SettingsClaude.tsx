@@ -12,6 +12,7 @@ import { ModelPicker } from '../components/ModelPicker'
 import { Badge, Button, Card, CardHeader, Field, Input, Modal, PasswordInput, Select, Switch } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { call, useOp } from '../lib/api'
+import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { Row } from './settings-sections/Row'
 
@@ -186,7 +187,6 @@ export function ClaudeSection() {
           <Switch label={t('assistant.pageContext')} checked={s.pageContextEnabled} onChange={(pageContextEnabled) => configure({ pageContextEnabled })} />
         </Row>
       )}
-      {s && <McpRows enabled={s.mcpEnabled} onChange={(mcpEnabled) => configure({ mcpEnabled })} />}
 
       <AddProviderModal
         open={addOpen}
@@ -238,6 +238,36 @@ export function ClaudeSection() {
           </div>
         </form>
       </Modal>
+    </Card>
+  )
+}
+
+/** The switch for the whole assistant, at the top of the tab. Off: nothing else of the assistant is shown or can run (see assistantEnabled). */
+export function AssistantSwitchSection() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { settings, update } = useSettings()
+  return (
+    <Card>
+      <Row label={t('assistant.enabled')} hint={t('assistant.enabledHint')}>
+        <Switch label={t('assistant.enabled')} checked={settings.assistantEnabled} onChange={(assistantEnabled) => void update({ assistantEnabled }).catch((e) => toast(errText(e), 'error'))} />
+      </Row>
+    </Card>
+  )
+}
+
+/** Claude Desktop and Claude Code connected over MCP: a separate integration with its own switch, which stays as it is when the assistant is off. */
+export function ConnectedAppsSection() {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const settings = useOp('settings.get')
+  useEffect(() => window.kasboek.onEvent((e) => e.type === 'settings.changed' && void settings.reload()), [settings.reload]) // eslint-disable-line react-hooks/exhaustive-deps
+  const s = settings.data
+  if (!s) return null
+  return (
+    <Card>
+      <CardHeader title={t('mcp.sectionTitle')} description={t('mcp.separateNote')} />
+      <McpRows enabled={s.mcpEnabled} onChange={(mcpEnabled) => void call('assistant.configure', { mcpEnabled }).then(() => settings.reload(), (e) => toast(errText(e), 'error'))} />
     </Card>
   )
 }
