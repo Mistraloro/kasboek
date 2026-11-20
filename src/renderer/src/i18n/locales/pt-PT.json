@@ -312,8 +312,7 @@
         "sendsRemote_other": "Isto envia o texto de {{count}} páginas para {{aiCompany}}: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
         "sendsLocal_one": "Isto envia o texto de {{count}} página apenas para {{ai}} neste computador ou nesta rede: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
         "sendsLocal_other": "Isto envia o texto de {{count}} páginas apenas para {{ai}} neste computador ou nesta rede: datas, valores, descrições e os nomes de quem pagou ou de quem lhe pagou.",
-        "hiddenTop": "Os números de conta e de cartão ficam ocultos, o topo da primeira página (onde normalmente estão o seu nome e morada) fica de fora e o próprio PDF não é enviado.",
-        "hiddenNoTop": "Os números de conta e de cartão ficam ocultos e o próprio PDF não é enviado. O Kasboek não conseguiu saber onde a tabela começa, por isso o topo da primeira página está incluído e o seu nome e morada podem estar no texto.",
+        "hiddenTop": "Os números de conta e de cartão, os e-mails e os números de telefone ficam ocultos, só são enviadas as linhas da tabela de movimentos (tudo o que está acima da tabela e o topo de cada página seguinte, onde normalmente estão o seu nome e morada, fica de fora) e o próprio PDF não é enviado.",
         "verify": "O Kasboek lê cada valor do próprio texto do PDF e mostra cada linha antes de guardar o que quer que seja.",
         "show": "Mostrar exatamente o que é enviado",
         "stats": "Páginas: {{pages}} · cerca de {{tokens}} tokens · pedidos: {{parts}}",
@@ -327,7 +326,8 @@
         "edited_one": "{{count}} linha que editou será substituída.",
         "edited_many": "{{count}} linhas que editou serão substituídas.",
         "edited_other": "{{count}} linhas que editou serão substituídas."
-      }
+      },
+      "askBank": "Peça ao seu banco um CSV deste extrato, ou um PDF com uma tabela de movimentos."
     },
     "lockedWhileAssisting": "{{ai}} está a trabalhar nestas linhas. As alterações feitas agora perder-se-iam, por isso a edição fica desativada até terminar.",
     "consent": {
@@ -351,7 +351,8 @@
         "not_booked_one": "{{count}} movimento não contabilizado (pendente ou apenas informativo) foi ignorado.",
         "not_booked_other": "{{count}} movimentos não contabilizados (pendentes ou apenas informativos) foram ignorados."
       }
-    }
+    },
+    "anyBankLocal": "Funciona com ficheiros CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e memoriza cada formato após a primeira importação. Os extratos em PDF com uma tabela de movimentos são lidos neste computador; nada é enviado para lado nenhum. Os extratos XML (CAMT.053, oferecidos por muitos bancos europeus) também são lidos neste computador: valores, datas, nomes e saldos vêm diretamente do ficheiro."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -362,7 +363,7 @@
     "placeholder": "Pergunte a {{ai}}…",
     "setupBody": "Ligue um assistente de IA (Claude, Mistral, Gemini, um modelo local e outros) para fazer perguntas sobre o seu orçamento, definir orçamentos, classificar movimentos e rever ficheiros CSV.",
     "setupButton": "Configurar um assistente",
-    "privacy": "As suas mensagens, e os dados que {{ai}} consulta para responder, são enviados para {{aiCompany}}. Nada é enviado até perguntar algo.",
+    "privacy": "As suas mensagens, e os dados que {{ai}} consulta para responder, são enviados para {{aiCompany}}. Nada é enviado até perguntar algo. Os números de conta e de cartão ficam ocultos antes de qualquer envio.",
     "newChat": "Nova conversa",
     "looking": "A ver: {{page}}",
     "lookingRows_one": "A ver: {{page}}, {{count}} linha",
@@ -422,7 +423,9 @@
     "reasoningHint": "Quanto o modelo pensa antes de responder: menos é mais rápido e barato, mais ajuda com perguntas difíceis. Nem todos os modelos têm esta definição; se um modelo a recusar, o Kasboek pergunta sem ela.",
     "reasoningUnsupported": "Este modelo não aceita uma definição de raciocínio e usa a sua.",
     "autoDone": "Feito sem perguntar:",
-    "autoFailed": "Tentado sem perguntar, mas não resultou:"
+    "autoFailed": "Tentado sem perguntar, mas não resultou:",
+    "enabled": "Usar o assistente",
+    "enabledHint": "Desative para ocultar o assistente e todas as funções que enviam texto a um fornecedor de IA; o Kasboek passa a funcionar totalmente por si."
   },
   "modal": {
     "discardAsk": "Descartar o que escreveu?",
@@ -499,6 +502,10 @@
     "autoLockHint": "Também bloqueia quando o ecrã bloqueia ou o computador entra em suspensão.",
     "keepInTray": "Manter o Kasboek na área de notificação ao fechar a janela",
     "keepInTrayHint": "Desativado: fechar a janela fecha o Kasboek. Ativado: o Kasboek continua na área de notificação (a barra de menus no Mac) para o Claude o poder continuar a usar. Abra-o de novo pelo ícone ou pelo atalho.",
+    "hideNumbers": "Ocultar os números de conta no ecrã",
+    "hideNumbersHint": "Mostrar apenas o país e os últimos 4 carateres de um número de conta (BE…1234), caso alguém esteja a ver. Mantenha premido o olho junto a um número para o ver enquanto premir. As exportações e as cópias de segurança não mudam.",
+    "holdToShowNumber": "Mantenha premido para mostrar o número",
+    "holdToShowNumberOf": "Mantenha premido para mostrar o número da conta de {{name}}",
     "insights": "Sugestões na Visão geral",
     "insightsHint": "Dicas obtidas dos seus próprios dados, neste computador. Nada é enviado, a menos que carregue em «Obter dicas» e tenha aceitado: nesse caso o assistente recebe um breve resumo mascarado para as escrever.",
     "insightsRestore": "Mostrar novamente as dicas ocultas",
@@ -587,7 +594,8 @@
         "failed": "O Kasboek desenha agora sem a placa gráfica: ela não mostrou o Kasboek num arranque anterior.",
         "flag": "O Kasboek desenha agora sem a placa gráfica: foi iniciado com --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Dicas obtidas dos seus próprios dados, neste computador. Nada é enviado."
   },
   "auth": {
     "welcome": "Bem-vindo ao Kasboek",
@@ -750,7 +758,7 @@
   },
   "mcp": {
     "title": "Claude Desktop e Claude Code (MCP)",
-    "hint": "Deixe as aplicações Claude deste computador ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado.",
+    "hint": "Deixe as aplicações Claude deste computador ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado. Os números de conta e de cartão ficam ocultos para elas.",
     "desktop": "Claude Desktop (claude_desktop_config.json)",
     "code": "Claude Code (terminal)",
     "note": "Só funciona enquanto o Kasboek está aberto e desbloqueado. Cada alteração aparece aqui para a aprovar. O que o Claude lê é enviado para a Anthropic por essa aplicação.",
@@ -796,7 +804,9 @@
     },
     "desktopOpen": "O Claude Desktop ainda está aberto. Guarda as suas próprias definições ao fechar e voltaria a retirar o Kasboek. Feche-o primeiro por completo (também a partir do ícone da área de notificação ou da barra de menus).",
     "addAnyway": "Adicionar mesmo assim",
-    "overwritten": "O Kasboek foi retirado das definições do Claude Desktop, provavelmente quando o Claude Desktop fechou. Feche-o por completo e adicione o Kasboek de novo."
+    "overwritten": "O Kasboek foi retirado das definições do Claude Desktop, provavelmente quando o Claude Desktop fechou. Feche-o por completo e adicione o Kasboek de novo.",
+    "sectionTitle": "Aplicações Claude",
+    "separateNote": "As aplicações Claude ligadas são independentes do assistente do Kasboek. Têm o seu próprio interruptor abaixo e continuam a funcionar com o assistente desativado."
   },
   "fx": {
     "title": "Moedas",
@@ -1298,7 +1308,7 @@
     "provider": "Fornecedor de IA",
     "keySaved": "Chave guardada ({{hint}}).",
     "local": "O {{name}} funciona no seu próprio computador e não precisa de chave. Abra-o antes de usar o assistente.",
-    "privacy": "Quando usa o assistente, as suas mensagens e os dados que ele consulta vão para a {{company}}. Nada é enviado até perguntar alguma coisa.",
+    "privacy": "Quando usa o assistente, as suas mensagens e os dados que ele consulta vão para a {{company}}. Nada é enviado até perguntar alguma coisa. Os números de conta e de cartão ficam ocultos antes de qualquer envio.",
     "privacyLocal": "Tudo fica no seu computador.",
     "skip": "Saltar por agora",
     "next": "Seguinte",
@@ -1358,7 +1368,9 @@
       "import": "Traga um ficheiro CSV ou um extrato em PDF do seu banco. Deixe o assistente verificá-lo antes de guardar.",
       "assistant": "Abra ou feche o assistente. Pergunte sobre o seu dinheiro, ou deixe-o fazer alterações que aguardam a sua aprovação.",
       "settings": "Contas, cópias de segurança, sincronização entre computadores, o assistente, formatos e mais.",
-      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho ao fim de algum tempo."
+      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho ao fim de algum tempo.",
+      "importLocal": "Traga um ficheiro CSV ou um extrato em PDF do seu banco. Nada é guardado até aprovar.",
+      "settingsLocal": "Contas, cópias de segurança, sincronização entre computadores, formatos e mais."
     }
   },
   "webdav": {
@@ -1407,6 +1419,7 @@
     "assistant_bad_plan": "Não foi possível ler a resposta de {{ai}}. Tente novamente, ou tente outro modelo.",
     "assistant_pdf_not_pdf": "Esta importação não é um extrato em PDF.",
     "assistant_pdf_empty": "Este PDF não tem texto para ler.",
+    "assistant_pdf_no_table": "Não foram encontradas linhas de transações neste PDF, por isso não foi enviado nada.",
     "assistant_pdf_too_long": "Este extrato tem demasiadas páginas para o assistente (o limite é de 40 páginas). Tente um extrato de um período mais curto.",
     "assistant_pdf_no_rows": "{{ai}} não encontrou movimentos que correspondam ao texto deste extrato. Nada foi alterado.",
     "assistant_failed_network": "Não é possível contactar {{ai}}{{detail}}. Verifique o endereço e a sua ligação, e se o serviço está a funcionar.",
@@ -1423,7 +1436,8 @@
     "import_xml_version": "Esta versão do formato CAMT não é suportada. Peça ao seu banco CAMT.053 na versão 001.02 ou posterior.",
     "import_xml_accounts": "Este ficheiro contém extratos de mais de uma conta e nenhuma é a conta escolhida. Adicione o IBAN da conta em Definições → Contas, escolha essa conta e abra o ficheiro de novo.",
     "import_xml_iban_mismatch": "O IBAN deste ficheiro não é o IBAN da conta escolhida. Escolha a conta a que o ficheiro pertence ou corrija o IBAN em Definições → Contas.",
-    "import_xml_currency": "Este ficheiro está noutra moeda que a conta escolhida. Escolha a conta nessa moeda."
+    "import_xml_currency": "Este ficheiro está noutra moeda que a conta escolhida. Escolha a conta nessa moeda.",
+    "assistant_disabled": "O assistente está desativado. Ative-o em Definições → Assistente."
   },
   "insights": {
     "title": "Sugestões",

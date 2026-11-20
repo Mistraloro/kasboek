@@ -117,10 +117,51 @@ names and amounts; the column layout is what matters.
   with an export), never sent to the page; requests go from the main process only.
 * **Refusal fallbacks**: Opus 5.5, Sonnet 5.5 and Fable 5.2 requests use server-side fallbacks, so a
   safety-classifier decline is retried on a suitable model in the same call.
+* **Assistant off switch** (`assistantEnabled`, default on, this computer only, Settings → Assistant,
+  at the top): turns the whole assistant off. The page hides the panel and its toggle, the review,
+  tips, check and PDF-read buttons with their consent dialogs, the Settings content (except the
+  switch and the Claude apps section), the tour and welcome steps and the page context; the local
+  tips and the local CSV/PDF/XML import stay. The main process refuses every assistant operation
+  (`assistant.*`, `import.assist*`/`pdfAssist*`, `insights.preview/run/cancel/status`, `memory.*`,
+  `summary.review` for the app's own pages) with `assistant.disabled` (`main/assistant-guard.ts`), and
+  `activeProvider` / the Claude client refuse too, so no request reaches a provider. Switching it off
+  cancels running jobs and clears the chat. An import or sync join never switches it on: it is not in
+  `UNTRUSTED_AFTER_IMPORT`, and if it is off on this computer the restored data is written off too.
+  MCP is separate (own switch, tool list unchanged).
 * **MCP server**: `Kasboek --mcp` is a stdio MCP server for Claude Desktop, Claude Code or any MCP
   client. It holds no keys and opens no database: it forwards calls over a named pipe / Unix socket
   (per-start token) to the running app, which must be unlocked with MCP switched on. Changes wait
   for approval in the app.
+* **Privacy audit of tool results**: results left through `compactResult` (chat and MCP) with no
+  masking, so IBANs, card numbers, e-mail, phone numbers and the holder's lines above a CSV table
+  could reach the AI provider. Fixed in one deep pass (`maskResult` in `assistant/tools.ts`): every
+  text is run through `maskContacts` + `maskNumbers`, `iban` / `counterpartyIban` / the pattern of an
+  iban rule show as `CC…1234`; `import.raw` returns `preambleLines` (a count) instead of the text;
+  `settings.get` drops backup folder/file and base URLs; the 60-character shortenings of rule
+  examples, recurring names and review names mask before cutting. Rules on an account number are made
+  with `fromTransactionId` (filled locally); the assistant cannot pass a masked or invalid number.
+  Test: `tests/assistant-masking.test.ts`.
+* **Review of the 0.22.0 masking (fixed)**: one `maskPrivate(text, max?)` in `shared/iban.ts` (numbers and
+  IBANs first, then e-mail and phone: the other way round the phone rule ate groups of spaced IBANs) is used
+  for tool results, the PDF text, the CSV check, the page context, tips names, the memory in the system
+  prompt and the typed chat message. Texts are folded first (NFKC, one space, zero-width gone, one hyphen);
+  IBAN and card groups may be separated by space, dot, hyphen or slash; dates and amounts stay;
+  `maskAccount` shows at most `CC…1234` (`…1234` for a local number). E-mail is a scan from each `@` with
+  limits (it was quadratic) and strings are cut at 2,000 characters before masking; `maskResult` no longer
+  passes a subtree deeper than 30 levels (it gives `…`). Recurring and review names stay raw in core (rules
+  and searches are made from them; cut by `cutText` so no number is cut in two) and are masked in
+  `compactResult` and, on screen, by `<Masked>`. Transaction rows no longer nest the eye in a button,
+  the eye stops click propagation and says what it reveals; text fields show masked until focused
+  (`MaskedInput`); `rules.preview` takes `fromTransactionId`; the assistant cannot move an account number
+  rule to another field without a new pattern; the assistant gets no CSV row above the header found on
+  opening (`headerFloor` in `core/import.ts`) and cannot remap above it; a PDF sends only table rows
+  (later pages from their first transaction line); "no transaction rows found" is its own message.
+  `hideAccountNumbers` is switched back ON after restoring a backup or export or joining sync (also for
+  the person's own backup), like the other settings a file must not bring.
+  Accepted: masked text can be guessed back by searching (the search runs on the real data and the
+  assistant can see how many rows match); a CSV where no header is detected has no floor, so rows below
+  the first line are visible to the assistant; a typed `+`/`00` rule means only international phone
+  numbers are hidden.
 * **Other LLMs later**: everything goes through the operation contract, whose input schemas are
   plain JSON Schema for tools. MCP already works with any MCP-capable client; an in-app adapter
   for another provider would replace `src/main/assistant/claude.ts`.
@@ -427,8 +468,10 @@ Installer feedback from testing the 0.9.0 `.msi` on Windows:
    (`cancelAssist`, `cancelInsights`, `pdfRead.abort()`); (5) `window.prompt` is used in `Import.tsx:490,510`, `Budgets.tsx:143`,
    `Transactions.tsx:162,214` and Electron does not implement it (it throws; to be confirmed on a build): replace by small
    modals; (6) memoise `findRecurring` per (data version, day) and debounce `insights.get` on `data.changed`.
-   *Other bugs and risks:* an IBAN glued to preceding letters is not masked (`src/shared/iban.ts:7` lookbehind); when no table
-   header is found the PDF first-page header (holder name, address) is sent whole (`pdf-plan.ts:100`, `pdf.ts:62-70`);
+   *Other bugs and risks:* an IBAN glued to preceding letters is not masked (`src/shared/iban.ts:7` lookbehind); ~~when no table
+   header is found the PDF first-page header (holder name, address) is sent whole~~ (fixed: without a table header, sending starts at the first
+   line with a date and an amount, and nothing is sent when there is none; e-mail addresses and phone numbers are masked; the preview
+   and the calls both come from `linesToSend`);
    restarting a job for the same session broadcasts a stale `import.checkDone` that resets the screen (`jobs.ts:383-400`);
    a refused second `import.analyzePdf` clears the cancel handle of the first (`ipc.ts:403-418`); an AI read replaces the grid
    and silently drops edits made during the run (`pdf.ts:128-145`); `CLAUDE_PDF_MODEL` is hard-coded and PDF/tips calls reuse the

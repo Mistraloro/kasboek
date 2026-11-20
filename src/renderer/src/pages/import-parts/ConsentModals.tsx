@@ -32,7 +32,7 @@ export function PdfConsentModal({ open, preview, onClose, onSend }: { open: bool
     [
       t(preview.pdf?.tableFound === false ? 'import.pdf.ai.introNoTable' : 'import.pdf.ai.introMismatch'),
       t(local ? 'import.pdf.ai.sendsLocal' : 'import.pdf.ai.sendsRemote', { count: info.pages }),
-      t(info.preambleLeftOut ? 'import.pdf.ai.hiddenTop' : 'import.pdf.ai.hiddenNoTop'),
+      t('import.pdf.ai.hiddenTop'),
       t('import.pdf.ai.verify'),
       t('import.pdf.ai.replaces')
     ].join(' ')

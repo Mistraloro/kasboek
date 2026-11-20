@@ -5,13 +5,46 @@ A simple, local-first budget app for Windows, macOS and Linux, with an AI assist
 
 > **Privacy first, also in the AI assistant**
 >
-> - Account and card numbers (IBANs, long digit strings) are hidden before a CSV, PDF statement or tip text goes to an AI provider.
-> - Nothing is sent until you ask. You choose the provider, and PDF reading, "Check with …" and Overview tips each ask first and show exactly what is sent.
-> - The PDF file itself is never sent, only its text, and the preview shows you exactly what that is. Your name and address above the table are normally left out. Overview tips send only a short rounded summary, never account or card numbers, balances or income.
-> - Use a local model (Ollama, LM Studio, or any OpenAI-compatible server on your own computer) and nothing leaves your computer.
-> - The assistant can't write amounts into your data: Kasboek checks every amount against your data or the PDF's own text. You decide what it may change by itself or only after your OK, and it can never change its own permissions, settings, keys or addresses.
+> - Account and card numbers, e-mail addresses and international phone numbers (starting with + or 00) are hidden before text goes to an AI provider or to a connected app such as Claude Desktop: in chat, CSV checks, PDF reading, tips, memory notes and what you type yourself.
+> - Nothing is sent without your agreement. You choose the provider, and PDF reading, "Check with …" and Overview tips each ask first and show exactly what is sent.
+> - For a CSV, nothing above the header row is sent, and the assistant can't move the header up past the one Kasboek found. For a PDF, only the rows of the transaction table are sent: everything above the table and the top of every later page is left out. Overview tips send only a short rounded summary.
+> - **Use the assistant** (Settings → Assistant) turns the assistant off completely: its panel, buttons, checks, AI tips and every request to an AI provider are gone, and Kasboek works fully on its own (local CSV, PDF and XML import and the local tips stay). It is a per-computer setting, and restoring a backup, export or sync join never turns it on. Claude apps connected over MCP are separate and keep their own switch.
+> - Use a local model (Ollama, LM Studio, or any OpenAI-compatible server on your own computer) and everything stays on your computer.
+> - Account numbers are also hidden on screen by default (`BE…1234`); hold the eye next to one to see it. The setting is switched back on after restoring a backup or export, or joining sync.
+> - The assistant never types amounts into your data: Kasboek checks every amount against your data or the PDF's own text. It can never change its own permissions, settings, keys or addresses.
+> - Claude Desktop and Claude Code reach Kasboek through a small helper program on this computer, with no network connection of its own; see [the helper program](#the-helper-program-kasboek-mcp) below.
 
 See [PLAN.md](PLAN.md) for the design, the security model and what still needs testing.
+
+## Screenshots
+
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png"><img src="docs/screenshots/overview-light.png" alt="Kasboek Overview with income, spending, budget left, suggestions and spending by category" width="880"></picture>
+</p>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/transactions-dark.png"><img src="docs/screenshots/transactions-light.png" alt="Kasboek Transactions page with filters for account, category and month, a saved search, totals and a list of grocery payments" width="280"></picture><br><sub>Transactions: search, filters and saved searches</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/budgets-dark.png"><img src="docs/screenshots/budgets-light.png" alt="Kasboek Budgets page with a monthly budget per category and progress bars, Dining out over its limit" width="280"></picture><br><sub>Budgets: spending against monthly limits</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/fixed-costs-dark.png"><img src="docs/screenshots/fixed-costs-light.png" alt="Kasboek Fixed costs page listing rent, energy, internet and subscriptions with paid and due status and price changes" width="280"></picture><br><sub>Fixed costs: subscriptions and bills found for you</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/goals-dark.png"><img src="docs/screenshots/goals-light.png" alt="Kasboek Savings goals page with progress bars and the amount to set aside per month" width="280"></picture><br><sub>Savings goals</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/net-worth-dark.png"><img src="docs/screenshots/net-worth-light.png" alt="Kasboek Net worth page with a chart of net worth per month and the totals owned and owed" width="280"></picture><br><sub>Net worth over time</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/year-dark.png"><img src="docs/screenshots/year-light.png" alt="Kasboek Year page with a bar chart of income and spending per month" width="280"></picture><br><sub>Year view: months side by side</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/import-csv-dark.png"><img src="docs/screenshots/import-csv-light.png" alt="Kasboek import preview of a CSV bank export showing detected columns, categories and one duplicate row" width="280"></picture><br><sub>CSV import preview with detected columns</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/import-pdf-dark.png"><img src="docs/screenshots/import-pdf-light.png" alt="Kasboek import preview of a PDF statement with the banner saying the amounts add up to the closing balance" width="280"></picture><br><sub>PDF statement read on your computer, with balance check</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-assistant-dark.png"><img src="docs/screenshots/settings-assistant-light.png" alt="Kasboek Settings page, Assistant tab, with provider, API key, chat and CSV check models" width="280"></picture><br><sub>Settings: choose your assistant</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/assistant-dark.png"><img src="docs/screenshots/assistant-light.png" alt="Kasboek Overview with the assistant panel open, answering how much was spent on groceries last month" width="280"></picture><br><sub>The assistant panel, next to your data</sub></td>
+    <td align="center" width="33%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/lock-dark.png"><img src="docs/screenshots/lock-light.png" alt="Kasboek lock screen asking for the password" width="280"></picture><br><sub>Locked until you unlock it</sub></td>
+  </tr>
+</table>
+
+<sub>The screenshots show invented people, payees and amounts. They follow your GitHub light or dark theme, and account numbers are hidden by default, as in the app. To remake them, see [scripts/screenshots](scripts/screenshots/README.md).</sub>
 
 ## What it does
 
@@ -193,7 +226,7 @@ when the assistant may otherwise import by itself.
 change). In "Smart", balances, deleting rules, new accounts, importing and the assistant's memory ask
 unless you allow them; changes to more than 100 transactions always ask, except in "Full access".
 Even in "Full access", saving an import read from a PDF and changes asked for through Claude Desktop
-or Claude Code still ask (the second can be switched off), and the assistant can never change
+or Claude Code still ask (that last one has its own switch, "Claude Desktop and Claude Code always ask"), and the assistant can never change
 settings, keys, addresses or its own permissions. Changes made without asking show in the chat.
 
 **Memory**: say "remember that …", or add items in Settings → Assistant → "What the assistant remembers". Up to
@@ -203,6 +236,33 @@ MCP. Account and card numbers are refused. Switch it off to stop sending it.
 **Claude Desktop / Claude Code (MCP)**: switch on “Claude Desktop & Claude Code (MCP)” in
 Settings → Assistant and press “Add to Claude Desktop” or “Add to Claude Code”. It works while
 Kasboek is running and unlocked; changes wait for your approval in Kasboek.
+
+### The helper program kasboek-mcp
+
+`kasboek-mcp` (`kasboek-mcp.exe` on Windows) is a small separate program installed next to Kasboek, in
+its resources folder. Claude Desktop and Claude Code start it, and it passes their requests to Kasboek over a
+local channel on this computer (a named pipe on Windows, a Unix socket elsewhere), with a token for each
+session. It makes no network connection and holds no keys or database.
+
+- **Only while Kasboek runs and is unlocked**, and only with “Claude Desktop & Claude Code (MCP)” switched on
+  in Settings → Assistant. If Kasboek isn't running when Claude starts the helper, the helper starts Kasboek
+  in the tray, locked, so you can unlock it.
+- **What a connected app can do**: read accounts, balances, transactions, categories, budgets, goals, rules,
+  recurring costs, transfers, summaries and imports, and make changes to them (categorise, split, rename,
+  edit, set budgets, save an import, and similar). Every change waits for your approval in Kasboek. “Claude
+  Desktop and Claude Code always ask” is on by default; if you switch it off, your usual permissions decide.
+- **What it can never do**: unlock Kasboek, change settings, keys, addresses or permissions, or delete
+  transactions, goals, import batches or memory notes. Account and card numbers, e-mail addresses and
+  international phone numbers are hidden in what it returns.
+- **Windows updates**: the helper also installs Kasboek updates. Kasboek makes its safety backup, then runs a
+  copy of the helper with `--apply-update`. It waits for Kasboek to close, checks the downloaded installer's
+  SHA-256, shows a small progress window, runs Windows Installer (msiexec), and starts Kasboek again. It does
+  nothing else.
+- **Turn it off or remove it**: the MCP switch in Settings → Assistant stops the connection; the assistant's
+  own switch doesn't affect it. To remove Kasboek from the Claude apps, use “Remove from Claude Desktop” or
+  “Remove from Claude Code” in the same section. Uninstalling Kasboek also removes these entries.
+- **Open source**: the helper's code is in [tools/kasboek-mcp](tools/kasboek-mcp) (GPL-3.0-only), and the
+  Build installers workflow builds it from that source.
 
 ## Sync
 

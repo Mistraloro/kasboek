@@ -312,8 +312,7 @@
         "sendsRemote_other": "This sends the text of {{count}} pages to {{aiCompany}}: dates, amounts, descriptions and the names of who you paid or who paid you.",
         "sendsLocal_one": "This sends the text of {{count}} page only to {{ai}} on this computer or network: dates, amounts, descriptions and the names of who you paid or who paid you.",
         "sendsLocal_other": "This sends the text of {{count}} pages only to {{ai}} on this computer or network: dates, amounts, descriptions and the names of who you paid or who paid you.",
-        "hiddenTop": "Account and card numbers are hidden, the top of the first page (where your name and address usually are) is left out, and the PDF itself is not sent.",
-        "hiddenNoTop": "Account and card numbers are hidden and the PDF itself is not sent. Kasboek couldn’t tell where the table starts, so the top of the first page is included and your name and address may be in the text.",
+        "hiddenTop": "Account and card numbers, e-mail addresses and phone numbers are hidden, only the rows of the transaction table are sent (everything above the table, and the top of every later page, where your name and address usually are, is left out), and the PDF itself is not sent.",
         "verify": "Kasboek reads every amount from the PDF’s own text and shows every row before anything is saved.",
         "show": "Show exactly what is sent",
         "stats": "Pages: {{pages}} · about {{tokens}} tokens · requests: {{parts}}",
@@ -326,7 +325,8 @@
         "replaces": "Changes you made to rows so far are replaced by the assistant’s reading.",
         "edited_one": "{{count}} row you edited will be replaced.",
         "edited_other": "{{count}} rows you edited will be replaced."
-      }
+      },
+      "askBank": "Ask your bank for a CSV export of this statement, or for a PDF with a table of transactions."
     },
     "lockedWhileAssisting": "{{ai}} is working on these rows. Changes made now would be lost, so editing is off until it is done.",
     "consent": {
@@ -350,7 +350,8 @@
         "not_booked_one": "{{count}} entry that is not booked (pending or for information only) was left out.",
         "not_booked_other": "{{count}} entries that are not booked (pending or for information only) were left out."
       }
-    }
+    },
+    "anyBankLocal": "Works with CSV exports from any bank: Kasboek reads the column names (Dutch, French, English or German) and remembers each layout after the first import. PDF statements with a table of transactions are read on this computer; nothing is sent anywhere. XML statements (CAMT.053, offered by many European banks) are read on this computer too: amounts, dates, names and balances come straight from the file."
   },
   "assistant": {
     "title": "{{ai}}",
@@ -361,7 +362,7 @@
     "placeholder": "Ask {{ai}}…",
     "setupBody": "Connect an AI assistant (Claude, Mistral, Gemini, a local model and more) to ask questions about your budget, set budgets, sort transactions and check CSV files.",
     "setupButton": "Set up an assistant",
-    "privacy": "Your messages, and the data {{ai}} looks up to answer them, are sent to {{aiCompany}}. Nothing is sent until you ask something.",
+    "privacy": "Your messages, and the data {{ai}} looks up to answer them, are sent to {{aiCompany}}. Nothing is sent until you ask something. Account and card numbers are hidden before anything is sent.",
     "newChat": "New conversation",
     "looking": "Looking at: {{page}}",
     "lookingRows_one": "Looking at: {{page}}, {{count}} row",
@@ -421,7 +422,9 @@
     "reasoningHint": "How much the model thinks before answering: less is faster and cheaper, more helps with harder questions. Not every model has this setting; if a model refuses it, Kasboek asks without it.",
     "reasoningUnsupported": "This model doesn't take a reasoning setting and uses its own.",
     "autoDone": "Done without asking:",
-    "autoFailed": "Tried without asking, but it didn’t work:"
+    "autoFailed": "Tried without asking, but it didn’t work:",
+    "enabled": "Use the assistant",
+    "enabledHint": "Turn off to hide the assistant and every feature that sends text to an AI provider; Kasboek then works fully on its own."
   },
   "modal": {
     "discardAsk": "Discard what you typed?",
@@ -498,6 +501,10 @@
     "autoLockHint": "Also locks when the screen locks or the computer sleeps.",
     "keepInTray": "Keep Kasboek running in the tray when I close the window",
     "keepInTrayHint": "Off: closing the window quits Kasboek. On: Kasboek stays in the tray (the menu bar on a Mac) so Claude can keep using it. Open it again from the tray icon or its shortcut.",
+    "hideNumbers": "Hide account numbers on screen",
+    "hideNumbersHint": "Show only the country and the last 4 characters of an account number (BE…1234), in case someone is watching. Hold the eye next to a number to see it for as long as you press. Exports and backups are not changed.",
+    "holdToShowNumber": "Hold to show the number",
+    "holdToShowNumberOf": "Hold to show the account number of {{name}}",
     "insights": "Suggestions on the Overview",
     "insightsHint": "Tips found from your own data, on this computer. Nothing is sent unless you press “Get tips” and agreed to it: then the assistant gets a short, masked summary to write them.",
     "insightsRestore": "Show hidden tips again",
@@ -586,7 +593,8 @@
         "failed": "Kasboek now draws without the graphics card: it did not show Kasboek on an earlier start.",
         "flag": "Kasboek now draws without the graphics card: it was started with --disable-gpu."
       }
-    }
+    },
+    "insightsHintLocal": "Tips found from your own data, on this computer. Nothing is sent anywhere."
   },
   "auth": {
     "welcome": "Welcome to Kasboek",
@@ -749,7 +757,7 @@
   },
   "mcp": {
     "title": "Claude Desktop & Claude Code (MCP)",
-    "hint": "Let Claude apps on this computer read your budget and propose changes while Kasboek is open and unlocked.",
+    "hint": "Let Claude apps on this computer read your budget and propose changes while Kasboek is open and unlocked. Account and card numbers are hidden from them.",
     "desktop": "Claude Desktop (claude_desktop_config.json)",
     "code": "Claude Code (terminal)",
     "note": "Works only while Kasboek is running and unlocked. Every change shows up here for you to approve. What Claude reads is sent to Anthropic by that app.",
@@ -795,7 +803,9 @@
     },
     "desktopOpen": "Claude Desktop is still open. It saves its own settings when it quits and would remove Kasboek again. Quit it completely first (also from the tray icon or menu bar).",
     "addAnyway": "Add anyway",
-    "overwritten": "Kasboek was removed from Claude Desktop's settings, probably when Claude Desktop quit. Quit it completely, then add Kasboek again."
+    "overwritten": "Kasboek was removed from Claude Desktop's settings, probably when Claude Desktop quit. Quit it completely, then add Kasboek again.",
+    "sectionTitle": "Claude apps",
+    "separateNote": "Connected Claude apps are separate from the assistant in Kasboek. They have their own switch below and keep working when the assistant is turned off."
   },
   "fx": {
     "title": "Currencies",
@@ -1297,7 +1307,7 @@
     "provider": "AI provider",
     "keySaved": "Key saved ({{hint}}).",
     "local": "{{name}} runs on your own computer and needs no key. Start it before you use the assistant.",
-    "privacy": "When you use the assistant, your messages and the data it looks up go to {{company}}. Nothing is sent until you ask something.",
+    "privacy": "When you use the assistant, your messages and the data it looks up go to {{company}}. Nothing is sent until you ask something. Account and card numbers are hidden before anything is sent.",
     "privacyLocal": "Everything stays on your computer.",
     "skip": "Skip for now",
     "next": "Next",
@@ -1357,7 +1367,9 @@
       "import": "Bring in a CSV export or PDF statement from your bank. Check it with the assistant before you save it.",
       "assistant": "Open or close the assistant. Ask about your money, or let it make changes that wait for your OK.",
       "settings": "Accounts, backups, sync between computers, the assistant, formats and more.",
-      "lock": "Lock Kasboek when you step away. It also locks by itself after a while."
+      "lock": "Lock Kasboek when you step away. It also locks by itself after a while.",
+      "importLocal": "Bring in a CSV export or PDF statement from your bank. Nothing is saved until you approve.",
+      "settingsLocal": "Accounts, backups, sync between computers, formats and more."
     }
   },
   "webdav": {
@@ -1406,6 +1418,7 @@
     "assistant_bad_plan": "{{ai}}’s answer couldn’t be read. Try again, or try another model.",
     "assistant_pdf_not_pdf": "This import is not a PDF statement.",
     "assistant_pdf_empty": "This PDF has no text to read.",
+    "assistant_pdf_no_table": "No transaction rows were found in this PDF, so nothing was sent.",
     "assistant_pdf_too_long": "This statement has too many pages for the assistant to read (the limit is 40 pages). Try a statement for a shorter period.",
     "assistant_pdf_no_rows": "{{ai}} didn’t find transactions that could be matched to the text of this statement. Nothing was changed.",
     "assistant_failed_network": "Can’t reach {{ai}}{{detail}}. Check the address and your connection, and that the service is running.",
@@ -1422,7 +1435,8 @@
     "import_xml_version": "This version of the CAMT format is not supported. Ask your bank for CAMT.053 in version 001.02 or later.",
     "import_xml_accounts": "This file holds statements for more than one account, and none of them is the chosen account. Add the account’s IBAN under Settings → Accounts, choose that account and open the file again.",
     "import_xml_iban_mismatch": "The IBAN in this file is not the IBAN of the chosen account. Choose the account this file belongs to, or correct the IBAN under Settings → Accounts.",
-    "import_xml_currency": "This file is in another currency than the chosen account. Choose the account in that currency."
+    "import_xml_currency": "This file is in another currency than the chosen account. Choose the account in that currency.",
+    "assistant_disabled": "The assistant is turned off. Turn it on in Settings → Assistant."
   },
   "insights": {
     "title": "Suggestions",

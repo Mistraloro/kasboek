@@ -5,11 +5,13 @@ import type { ImportCommitResult, ImportPreview, ImportRow } from '@shared/types
 import { Badge, Button, Card, PageHeader, Switch, cx } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { parseAmount } from '@shared/amount'
+import { shownText } from '@shared/hide-numbers'
 import { reconciliationBanner } from '@shared/pdf-import'
 import { dateExample, datePlaceholder, parseTypedDate } from '@shared/format'
 import { call, useOp } from '../../lib/api'
 import { formatDate } from '../../lib/format'
-import { useSettings } from '../../lib/settings'
+import { Masked, useHideNumbers } from '../../lib/hide-numbers'
+import { useAssistantEnabled, useSettings } from '../../lib/settings'
 import { errText } from '../auth/parts'
 import { CategorySelect } from '../Transactions'
 import { PromptModal } from '../../components/PromptModal'
@@ -50,7 +52,9 @@ export function PreviewView({
   const { t } = useTranslation()
   const toast = useToast()
   const { money, fmt } = useSettings()
+  const hideNumbers = useHideNumbers()
   const assistant = useAssistant()
+  const assistantEnabled = useAssistantEnabled()
   const categories = useOp('categories.list')
   // Seconds since the check started, so a slow answer visibly isn't stuck.
   const [elapsed, setElapsed] = useState(0)
@@ -132,7 +136,7 @@ export function PreviewView({
 
   // "Read with the assistant" for a PDF the local reader couldn't read or whose totals don't add up.
   const aiRunning = assisting !== null && assistKind === 'pdf'
-  const aiRead: ReactNode = aiRunning ? (
+  const aiRead: ReactNode = !assistantEnabled ? null : aiRunning ? (
     <>
       <span className="text-xs text-muted">
         {progress && progress.parts > 1 ? t('import.pdf.ai.readingPages', { done: progress.done, total: progress.total }) : t('import.pdf.ai.reading')} <span className="num">{clock(elapsed)}</span>
@@ -165,8 +169,8 @@ export function PreviewView({
             {preview.layout && <Badge tone="accent">{t('import.layoutRecognised')}</Badge>}
             {pdf && <Badge>PDF</Badge>}
             {xml && <Badge>XML</Badge>}
-            {pdf?.readBy === 'assistant' && <Badge tone="accent">{t('import.pdf.readBy', { ai: assistant?.providerName ?? 'Claude' })}</Badge>}
-            {!noTable && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
+            {assistantEnabled && pdf?.readBy === 'assistant' && <Badge tone="accent">{t('import.pdf.readBy', { ai: assistant?.providerName ?? 'Claude' })}</Badge>}
+            {!noTable && (assistantEnabled || preview.mappingSource !== 'assistant') && <Badge>{t(`import.source.${preview.mappingSource}`)}</Badge>}
           </span>
         }
         action={
@@ -214,7 +218,7 @@ export function PreviewView({
                 </Button>
               )
             ) : (
-              <span className="text-xs text-muted">{t('import.claudeOff')}</span>
+              assistantEnabled && <span className="text-xs text-muted">{t('import.claudeOff')}</span>
             )}
             <Button size="sm" icon={<Columns3 size={14} />} disabled={locked} onClick={() => setMappingOpen(true)}>{t('import.columns')}</Button>
           </span>
@@ -232,7 +236,7 @@ export function PreviewView({
             )}
           </div>
         )}
-        {locked && <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{t('import.lockedWhileAssisting', { ai: assistant?.providerName ?? 'Claude' })}</p>}
+        {assistantEnabled && locked && <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{t('import.lockedWhileAssisting', { ai: assistant?.providerName ?? 'Claude' })}</p>}
         {notes.length > 0 && (
           <ul className="mt-3 list-disc space-y-0.5 border-t border-border pt-3 pl-5 text-[13px] text-muted">
             {notes.map((n, i) => <li key={i}>{n}</li>)}
@@ -240,11 +244,11 @@ export function PreviewView({
         )}
       </Card>}
 
-      {preview.check && <CheckSummaryCard preview={preview} onChange={onChange} />}
+      {assistantEnabled && preview.check && <CheckSummaryCard preview={preview} onChange={onChange} />}
 
       {noTable ? (
         <Card className="px-5 py-6 text-[13px] text-muted">
-          <p><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.pdf.noTable')}</p>
+          <p><AlertTriangle size={15} className="mr-2 inline text-warning" />{t('import.pdf.noTable')}{!assistantEnabled && <> {t('import.pdf.askBank')}</>}</p>
           {notes.length > 0 && <ul className="mt-3 list-disc space-y-0.5 pl-5">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button variant={onAssistPdf ? undefined : 'primary'} onClick={onCancel} disabled={aiRunning}>{t('import.pdf.chooseAnother')}</Button>
@@ -297,14 +301,14 @@ export function PreviewView({
                       )}
                     </td>
                     <td className="max-w-0 px-2 py-2">
-                      <p className="truncate"><span className="font-medium text-text">{r.counterpartyName || r.description}</span>{r.counterpartyName && <span className="ml-2 text-[13px] text-muted">{r.description}</span>}</p>
-                      {(r.note || r.communication) && <p className="truncate text-xs text-muted">{r.note ? `✦ ${r.note}` : r.communication}</p>}
+                      <p className="truncate"><span className="font-medium text-text"><Masked text={r.counterpartyName || r.description} /></span>{r.counterpartyName && <span className="ml-2 text-[13px] text-muted"><Masked text={r.description} /></span>}</p>
+                      {(r.note || r.communication) && <p className="truncate text-xs text-muted"><Masked text={r.note ? `✦ ${r.note}` : (r.communication ?? '')} /></p>}
                       {r.match && r.status === 'possible_duplicate' && (
-                        <p className="truncate text-xs text-muted">{t('import.matches', { date: formatDate(r.match.bookingDate, fmt), text: r.match.counterpartyName || r.match.description })}</p>
+                        <p className="truncate text-xs text-muted">{t('import.matches', { date: formatDate(r.match.bookingDate, fmt), text: shownText(r.match.counterpartyName || r.match.description || '', hideNumbers) })}</p>
                       )}
                     </td>
                     <td className="px-2 py-1.5">
-                      <CategorySelect label={t('transactions.category')} className="h-8 text-[13px]" disabled={locked} value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
+                      <CategorySelect label={t('transactions.category')} className="h-8 min-w-48 text-[13px]" disabled={locked} value={r.categoryId} categories={categories.data ?? []} onChange={(id) => update([{ index: r.index, categoryId: id }])} />
                     </td>
                     <td className={cx('num px-2 py-2 text-right font-medium whitespace-nowrap', r.status === 'ready' && (r.amountCents ?? 0) > 0 && 'text-accent', r.status === 'ready' && (r.amountCents ?? 0) <= 0 && 'text-text')}>
                       {r.amountCents === null ? (
@@ -343,8 +347,8 @@ export function PreviewView({
           onClose={() => setFixing(null)}
         />
       )}
-      <CheckConsentModal open={checkConsentOpen} preview={preview} onClose={() => setCheckConsentOpen(false)} onSend={() => { setCheckConsentOpen(false); onAssist?.(preview, true, () => undefined) }} />
-      <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />
+      {assistantEnabled && <CheckConsentModal open={checkConsentOpen} preview={preview} onClose={() => setCheckConsentOpen(false)} onSend={() => { setCheckConsentOpen(false); onAssist?.(preview, true, () => undefined) }} />}
+      {assistantEnabled && <PdfConsentModal open={consentOpen} preview={preview} onClose={() => setConsentOpen(false)} onSend={() => { setConsentOpen(false); onAssistPdf?.(preview) }} />}
       {!noTable && <MappingModal key={JSON.stringify(preview.mapping)} open={mappingOpen} preview={preview} onClose={() => setMappingOpen(false)} onApplied={(p) => { onChange(p); setMappingOpen(false) }} />}
     </>
   )

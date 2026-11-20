@@ -52,6 +52,10 @@
     "autoLockHint": "También bloquea cuando se bloquea la pantalla o la computadora entra en suspensión.",
     "keepInTray": "Mantener Kasboek en la bandeja al cerrar la ventana",
     "keepInTrayHint": "Desactivado: al cerrar la ventana se cierra Kasboek. Activado: Kasboek sigue en la bandeja (la barra de menús en una Mac) para que Claude pueda seguir usándolo. Ábrelo de nuevo desde el icono o su acceso directo.",
+    "hideNumbers": "Ocultar los números de cuenta en pantalla",
+    "hideNumbersHint": "Mostrar solo el país y los últimos 4 caracteres de un número de cuenta (BE…1234), por si alguien está mirando. Mantén presionado el ojo junto a un número para verlo mientras presionas. Las exportaciones y los respaldos no cambian.",
+    "holdToShowNumber": "Mantén presionado para mostrar el número",
+    "holdToShowNumberOf": "Mantén presionado para mostrar el número de cuenta de {{name}}",
     "keyStorageOsHint": "Los datos están ligados a esta computadora y esta cuenta de usuario.",
     "rememberedHint": "Recordado en esta computadora hasta el {{date}}. Otras computadoras, importaciones y exportaciones siguen pidiendo el código.",
     "forgetComputer": "Olvidar esta computadora",
@@ -89,7 +93,7 @@
     "addKey": "Agregar clave API"
   },
   "mcp": {
-    "hint": "Deja que las apps de Claude de esta computadora lean tu presupuesto y propongan cambios mientras Kasboek está abierto y desbloqueado.",
+    "hint": "Deja que las apps de Claude de esta computadora lean tu presupuesto y propongan cambios mientras Kasboek está abierto y desbloqueado. Los números de cuenta y de tarjeta quedan ocultos para ellas.",
     "codeNotFound": "No se encontró Claude Code en esta computadora. Usa «Configurar a mano» más abajo.",
     "state": {
       "absent": "Sin agregar",
@@ -207,7 +211,8 @@
     "step": {
       "budgets": "Fija un monto por categoría y mes y ve cuánto queda. Las reglas que clasifican los movimientos automáticamente también están aquí.",
       "goals": "Ahorra para algo: un monto para una fecha, con lo que debes apartar cada mes.",
-      "settings": "Cuentas, copias de seguridad, sincronización entre computadoras, el asistente, formatos y más."
+      "settings": "Cuentas, copias de seguridad, sincronización entre computadoras, el asistente, formatos y más.",
+      "settingsLocal": "Cuentas, copias de seguridad, sincronización entre computadoras, formatos y más."
     }
   },
   "webdav": {

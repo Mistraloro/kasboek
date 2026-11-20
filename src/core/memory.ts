@@ -7,6 +7,7 @@ import type { Memory, MemoryState } from '@shared/types'
 import type { Db } from './database'
 import { AppError } from './errors'
 import { getSettings, updateSettings } from './settings'
+import { maskPrivate } from '@shared/iban'
 import { SENSITIVE_MESSAGE, looksSensitive } from '@shared/sensitive'
 
 export { looksSensitive }
@@ -78,7 +79,7 @@ export function setMemoryEnabled(db: Db, enabled: boolean): MemoryState {
 export function memoryPrompt(db: Db): string {
   const s = memoryState(db)
   if (!s.enabled) return ''
-  const items = s.items.map((m) => `- [${m.id}] ${m.text}`).join('\n')
+  const items = s.items.map((m) => `- [${m.id}] ${maskPrivate(m.text, 500)}`).join('\n')
   return `What you remember from earlier conversations (${s.items.length}/${s.limit}; the person saved or approved each item; ids in brackets):
 ${items || '(nothing yet)'}
 

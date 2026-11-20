@@ -13,7 +13,7 @@ import { Badge, Button, Field, PasswordInput, Segmented, Select, Switch, cx } fr
 import { LANGUAGES } from '../i18n'
 import { ApiError, call } from '../lib/api'
 import { FORMAT_PRESETS, formatDate as fmtDate, formatMoney as fmtMoney, formatTime as fmtTime, matchingPreset, type FormatPrefs } from '@shared/format'
-import { usePrefs } from '../lib/settings'
+import { useAssistantEnabled, usePrefs } from '../lib/settings'
 import { AuthCard, AuthLayout } from './auth/AuthLayout'
 import { errText } from './auth/parts'
 
@@ -106,6 +106,9 @@ export function Welcome() {
   const toast = useToast()
   const { prefs, updatePrefs } = usePrefs()
   const assistant = useAssistant()
+  const assistantEnabled = useAssistantEnabled()
+  // Without the assistant there is no step about it (nor about its AI provider).
+  const steps: readonly Step[] = assistantEnabled ? STEPS : STEPS.filter((x) => x !== 'assistant')
   const [step, setStep] = useState<Step>('intro')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [backup, setBackup] = useState<BackupStatus | null>(null)
@@ -122,7 +125,7 @@ export function Welcome() {
   const provider: ProviderId = settings?.aiProvider ?? 'anthropic'
   const preset = presetFor(provider, settings?.aiProviders[provider]?.name)
   const hasKey = !!assistant?.keyHint && assistant.provider === provider
-  const at = STEPS.indexOf(step)
+  const at = steps.indexOf(step)
   const go = (s: Step): void => setStep(s)
   const fail = (e: unknown): void => toast(errText(e), 'error')
 
@@ -163,8 +166,8 @@ export function Welcome() {
   }
 
   const dots = (
-    <div className="mb-4 flex justify-center gap-1.5" aria-label={t('tour.progress', { n: at + 1, total: STEPS.length })}>
-      {STEPS.map((s, i) => <span key={s} className={cx('h-1.5 w-6 rounded-full', i <= at ? 'bg-accent' : 'bg-border')} />)}
+    <div className="mb-4 flex justify-center gap-1.5" aria-label={t('tour.progress', { n: at + 1, total: steps.length })}>
+      {steps.map((s, i) => <span key={s} className={cx('h-1.5 w-6 rounded-full', i <= at ? 'bg-accent' : 'bg-border')} />)}
     </div>
   )
   const nav = (back: Step | null, next: ReactNode) => (
@@ -183,7 +186,7 @@ export function Welcome() {
             <Choice icon={<ShieldCheck size={16} />} title={t('welcome.introPrivate')} hint={t('welcome.introPrivateHint')} />
             <Choice icon={<FileUp size={16} />} title={t('welcome.introImport')} hint={t('welcome.introImportHint')} />
             <Choice icon={<PiggyBank size={16} />} title={t('welcome.introPlan')} hint={t('welcome.introPlanHint')} />
-            <Choice icon={<Bot size={16} />} title={t('welcome.introAssistant')} hint={t('welcome.introAssistantHint')} />
+            {assistantEnabled && <Choice icon={<Bot size={16} />} title={t('welcome.introAssistant')} hint={t('welcome.introAssistantHint')} />}
           </div>
           {nav(null, <Button variant="primary" onClick={() => go('basics')}>{t('welcome.start')}</Button>)}
         </AuthCard>
@@ -257,11 +260,11 @@ export function Welcome() {
             </Choice>
             <p className="text-xs text-muted">{t('welcome.safetyRecovery')}</p>
           </div>
-          {nav('basics', <Button variant="primary" onClick={() => go('assistant')}>{t('welcome.next')}</Button>)}
+          {nav('basics', <Button variant="primary" onClick={() => go(steps[steps.indexOf('safety') + 1]!)}>{t('welcome.next')}</Button>)}
         </AuthCard>
       )}
 
-      {step === 'assistant' && (
+      {assistantEnabled && step === 'assistant' && (
         <AuthCard title={t('welcome.aiTitle')} body={t('welcome.aiBody')}>
           <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); saveKey() }}>
             <Field label={t('welcome.provider')}>
@@ -301,7 +304,7 @@ export function Welcome() {
       {step === 'claude' && (
         <AuthCard title={t('welcome.claudeTitle')} body={t('welcome.claudeBody')}>
           <ClaudeApps enabled={!!settings?.mcpEnabled} onEnabled={(mcpEnabled) => void call('assistant.configure', { mcpEnabled }).then(setSettings, fail)} />
-          {nav('assistant', <Button variant="primary" onClick={() => go('updates')}>{t('welcome.next')}</Button>)}
+          {nav(steps[steps.indexOf('claude') - 1]!, <Button variant="primary" onClick={() => go('updates')}>{t('welcome.next')}</Button>)}
         </AuthCard>
       )}
 

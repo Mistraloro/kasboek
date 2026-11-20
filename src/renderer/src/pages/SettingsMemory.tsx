@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardHeader, Input, Modal, Switch } from '../compon
 import { useToast } from '../components/Toast'
 import { ApiError, call, useOp } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { Masked } from '../lib/hide-numbers'
 import { useSettings } from '../lib/settings'
 import { errText } from './auth/parts'
 import { Row } from './settings-sections/Row'
@@ -70,7 +71,7 @@ export function MemorySection() {
                   </form>
                 ) : (
                   <>
-                    <span className="min-w-0 flex-1 break-words">{m.text}</span>
+                    <span className="min-w-0 flex-1 break-words"><Masked text={m.text} /></span>
                     <span className="shrink-0 text-xs text-muted" title={formatDate(m.updatedAt.slice(0, 10), fmt)}>
                       {m.source === 'assistant' ? (
                         <Badge>

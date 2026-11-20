@@ -4,6 +4,7 @@ import { app } from 'electron'
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
+import { requireAssistant } from '@core/settings'
 import type { ErrorDetails, ProviderFailureKind } from '@shared/error-text'
 import { claudeEffort, type Effort } from '@shared/reasoning'
 
@@ -13,6 +14,7 @@ export const API_KEY = 'anthropicApiKey'
 const baseURL = (): string | undefined => (app.isPackaged ? undefined : process.env['KASBOEK_ANTHROPIC_BASE_URL'] || undefined)
 
 export function client(db: Db): Anthropic {
+  requireAssistant(db)
   const apiKey = getSecret(db, API_KEY)
   if (!apiKey) throw new AppError('assistant.no_key', 'Add your Anthropic API key in Settings → Assistant first.')
   return new Anthropic({ apiKey, baseURL: baseURL(), maxRetries: 2, timeout: 10 * 60 * 1000 })

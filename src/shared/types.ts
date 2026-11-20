@@ -171,10 +171,17 @@ export interface Settings {
   aiCsvReasoning: ReasoningLevel
   /** What the assistant may change without asking. */
   permissions: PermissionSettings
+  /**
+   * The assistant as a whole (panel, buttons, checks, tips and the main process behind them). Off: nothing is sent to any AI
+   * provider and nothing about it is shown. This computer only; an import never switches it on (see resetImportedSettings).
+   */
+  assistantEnabled: boolean
   /** The assistant remembers facts and preferences between conversations (this computer only). */
   memoryEnabled: boolean
   /** The chat tells the assistant which page is open (see shared/page-context.ts). */
   pageContextEnabled: boolean
+  /** Account numbers show as BE…1234 on screen until the person reveals one (this computer only; an import cannot switch it off). */
+  hideAccountNumbers: boolean
   /**
    * The person agreed to send the tips summary to this AI provider at this address with this model (see
    * core/insight-plan.ts for what is sent); null = not asked yet. `baseUrl` (normalised) and `model` are
@@ -860,8 +867,6 @@ export interface PdfAssistPreview {
   approxTokens: number
   /** Exactly the text that is sent, masked. */
   text: string
-  /** Whether the part above the table of transactions (name and address blocks, the first page's header) is left out. */
-  preambleLeftOut: boolean
 }
 
 export interface ImportBatch {

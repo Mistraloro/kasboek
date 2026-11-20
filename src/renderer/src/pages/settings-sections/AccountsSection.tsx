@@ -1,11 +1,12 @@
 import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ACCOUNT_KINDS, type AccountKind, type AccountWithBalance } from '@shared/types'
 import { Button, Card, CardHeader, Field, Input, Modal, Select } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { call, useOp } from '../../lib/api'
 import { formatDate, formatNumber } from '../../lib/format'
+import { Iban, IbanInput } from '../../lib/hide-numbers'
 import { useSettings } from '../../lib/settings'
 import { CurrencySelect } from '../../components/CurrencySelect'
 import { errText } from '../auth/parts'
@@ -22,6 +23,10 @@ export function AccountsSection() {
   const { settings } = useSettings()
   const { fmt, money } = useSettings()
   const today = localToday()
+  const accountHint = (a: AccountWithBalance): ReactNode => {
+    const parts: ReactNode[] = [t(`accountKind.${a.kind}`), a.bank, a.iban ? <Iban key="iban" value={a.iban} /> : '', a.currency !== settings.currency ? a.currency : ''].filter(Boolean)
+    return parts.length ? parts.flatMap((p, i) => (i ? [' · ', p] : [p])) : undefined
+  }
   const [form, setForm] = useState({ name: '', bank: '', iban: '', currency: 'EUR', kind: 'current' as AccountKind, balance: '', balanceDate: today, fxCost: '' })
   const [balanceOf, setBalanceOf] = useState<AccountWithBalance | null>(null)
   const [initialForm, setInitialForm] = useState(form)
@@ -70,7 +75,7 @@ export function AccountsSection() {
         <Row
           key={a.id}
           label={<span className={a.archived ? 'text-muted line-through' : undefined}>{a.name}</span>}
-          hint={[t(`accountKind.${a.kind}`), a.bank, a.iban ? a.iban.replace(/(.{4})/g, '$1 ').trim() : '', a.currency !== settings.currency ? a.currency : ''].filter(Boolean).join(' · ') || undefined}
+          hint={accountHint(a)}
         >
           <span className="num mr-2 text-right text-[13px]">
             <span className="block font-medium">{money(a.balanceCents, a.currency)}</span>
@@ -99,7 +104,7 @@ export function AccountsSection() {
           <Field label={t('settings.accountCurrency')} hint={editing !== 'new' && editing && editing.transactionCount > 0 && form.currency !== editing.currency ? t('settings.accountCurrencyChange', { from: editing.currency, to: form.currency }) : undefined}>
             {(id) => <CurrencySelect id={id} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />}
           </Field>
-          <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <Input id={id} value={form.iban} onChange={(e) => setForm({ ...form, iban: e.target.value })} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
+          <Field label={t('settings.iban')} hint={t('settings.ibanOptional')}>{(id) => <IbanInput id={id} value={form.iban} onChange={(iban) => setForm({ ...form, iban })} placeholder="BE68 5390 0754 7034" className="num" />}</Field>
           <Field label={t('settings.fxCost')} hint={fxCostBad ? <span className="text-negative">{t('settings.fxCostBad')}</span> : t('settings.fxCostHint')}>
             {(id) => <Input id={id} value={form.fxCost} inputMode="decimal" className="num w-32!" placeholder="1,5" onChange={(e) => setForm({ ...form, fxCost: e.target.value })} />}
           </Field>

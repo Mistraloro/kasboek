@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { autoMap } from '@core/csv/mapping'
 import { normalizeRows } from '@core/csv/normalize'
-import { PdfRowsPlan, applyRowsPlan, firstLineSent, maskedLines, parsePdfPlan, partText, splitParts, tableStart, type PdfRowsPlan as Plan } from '@core/pdf-plan'
+import { PdfRowsPlan, applyRowsPlan, firstLineSent, linesToSend, maskedLines, parsePdfPlan, partText, previewText, splitParts, tableStart, type PdfRowsPlan as Plan } from '@core/pdf-plan'
 import type { PdfLine } from '@core/pdf/lines'
 
 // All data here is invented.
@@ -84,11 +84,56 @@ describe('masked lines', () => {
     const text = maskedLines(lines, { skipBefore: firstLineSent(lines) }).map((m) => m.text).join('\n')
     expect(text).not.toMatch(/Jansen|Main Street|Statement/)
     expect(text).toMatch(/Shop[\s\S]*More about the shop[\s\S]*Salary/)
-    // Nothing that looks like a transaction on the first page: its first 8 lines go, the rest stays.
-    const odd = Array.from({ length: 12 }, (_, i) => line(i, [[40, `Words ${i}`]]))
-    expect(firstLineSent(odd)).toBe(8)
-    expect(firstLineSent([line(0, [[40, 'Only a name']])])).toBeNull()
+    // A first page with only free text: the first transaction-like line, even on a later page.
+    const later = [...Array.from({ length: 12 }, (_, i) => line(i, [[40, `Words ${i}`]])), line(12, [[60, '03/11'], [140, 'Shop'], [510, '1,00-']], 2)]
+    expect(firstLineSent(later)).toBe(12)
     expect(firstLineSent([])).toBeNull()
+  })
+
+  it('sends nothing when there is neither a table header nor a transaction-like line', () => {
+    const words = Array.from({ length: 12 }, (_, i) => line(i, [[40, `Words ${i}`]]))
+    expect(firstLineSent(words)).toBeNull()
+    expect(linesToSend(words)).toEqual([])
+    expect(linesToSend([])).toEqual([])
+  })
+
+  describe('a statement whose header has no recognisable table header', () => {
+    const OWN_IBAN = 'BE68 5390 0754 7034'
+    const lines = [
+      line(0, [[40, 'Jan Jansen']]),
+      line(1, [[40, 'Main Street 1']]),
+      line(2, [[40, '1000 Springfield']]),
+      line(3, [[40, `IBAN ${OWN_IBAN}`]]),
+      line(4, [[40, 'Customer number 4455-8899']]),
+      line(5, [[40, 'Phone +32 470 12 34 56']]),
+      line(6, [[40, 'jan.jansen@example.org']]),
+      line(7, [[60, '03/11'], [140, `Shop contact shop@example.com +32 2 123 45 67 ${OTHER}`], [510, '1,00-']]),
+      line(8, [[60, '05/11'], [140, 'Salary'], [510, '2.000,00']])
+    ]
+
+    it('does not send the free text above the first transaction row', () => {
+      expect(tableStart(lines)).toBeNull()
+      const text = previewText(linesToSend(lines))
+      expect(text).not.toMatch(/Jansen|Main Street|Springfield|IBAN|Customer|4455|Phone|jan\.jansen/)
+      expect(linesToSend(lines).map((m) => m.id)).toEqual([7, 8])
+    })
+
+    it('masks e-mail addresses, phone numbers and account numbers in what is sent', () => {
+      const text = previewText(linesToSend(lines))
+      expect(text).not.toMatch(/example\.com|shop@|123 45 67|BE71|0961|23456769/)
+      expect(text).toContain('Shop contact …@… …phone… BE…6769')
+    })
+
+    it('shows the person exactly what the calls send', () => {
+      const many = [lines[0]!, ...Array.from({ length: 400 }, (_, i) => line(i + 1, [[60, '03/11'], [140, `Shop ${i} ${OTHER}`], [510, '1,00-']]))]
+      const masked = linesToSend(many)
+      const parts = splitParts(masked)
+      expect(parts.length).toBeGreaterThan(1)
+      // Every part is sent as its context and own lines; the own lines of all parts are the preview, line for line.
+      const sentOwn = parts.flatMap((p) => partText(p).split('\n').filter((l) => /^L\d+ p/.test(l)))
+      expect(sentOwn.join('\n')).toBe(previewText(masked))
+      expect(previewText(masked)).not.toMatch(/Jansen|BE71|23456769/)
+    })
   })
 
   it('splits into parts of 4 pages and repeats the last 3 lines as context', () => {
@@ -103,6 +148,46 @@ describe('masked lines', () => {
     expect(splitParts(maskedLines(wide, {})).length).toBe(1)
     const wider = Array.from({ length: 80 }, (_, i) => line(i, [[10, 'y'.repeat(900)]]))
     expect(splitParts(maskedLines(wider)).length).toBeGreaterThan(1)
+  })
+})
+
+describe('a statement of three pages with the name and address repeated on every page', () => {
+  const HEADER = [
+    line(0, [[40, 'Ilse Vermeulen']], 1),
+    line(1, [[40, 'Kerkstraat 12, 8000 Gent']], 1),
+    line(2, [[60, 'Date'], [140, 'Description'], [510, 'Amount']], 1),
+    line(3, [[60, '03/11'], [140, 'ALBERT HEIJN'], [510, '45,10-']], 1),
+    line(4, [[140, 'continued on next page']], 1),
+    line(5, [[40, 'Ilse Vermeulen']], 2),
+    line(6, [[40, 'Kerkstraat 12, 8000 Gent']], 2),
+    line(7, [[40, 'Customer 4455667']], 2),
+    line(8, [[60, 'Date'], [140, 'Description'], [510, 'Amount']], 2),
+    line(9, [[60, '05/11'], [140, 'SALARY NOVEMBER'], [510, '2.000,00']], 2),
+    line(10, [[40, 'Ilse Vermeulen']], 3),
+    line(11, [[40, 'Kerkstraat 12, 8000 Gent']], 3),
+    line(12, [[60, '07/11'], [140, 'TRAM TICKET'], [510, '2,40-']], 3),
+    line(13, [[140, 'Thank you for banking with us']], 3)
+  ]
+
+  it('sends only the table rows: nothing above the table on page one, nothing above the first transaction on later pages', () => {
+    const sentLines = linesToSend(HEADER)
+    expect(sentLines.map((m) => m.id)).toEqual([2, 3, 4, 9, 12, 13])
+    const text = previewText(sentLines)
+    expect(text).not.toMatch(/Ilse|Vermeulen|Kerkstraat|Gent|Customer|4455667/)
+    expect(text).toContain('ALBERT HEIJN')
+    expect(text).toContain('SALARY NOVEMBER')
+    expect(text).toContain('TRAM TICKET')
+  })
+
+  it('drops a later page that has no transaction-like line and no table header whole, and keeps one that has only the header', () => {
+    const quiet = [...HEADER.slice(0, 5), line(5, [[40, 'Ilse Vermeulen']], 2), line(6, [[40, 'Kerkstraat 12']], 2), line(7, [[60, 'Date'], [140, 'Description'], [510, 'Amount']], 3), line(8, [[140, 'carried over']], 3)]
+    expect(linesToSend(quiet).map((m) => m.id)).toEqual([2, 3, 4, 7, 8])
+  })
+
+  it('still lets the people see which lines belong to a row, so splitting into parts works over pages', () => {
+    const parts = splitParts(linesToSend(HEADER))
+    expect(parts).toHaveLength(1)
+    expect(parts[0]!.own.map((m) => m.page)).toEqual([1, 1, 1, 2, 3, 3])
   })
 })
 

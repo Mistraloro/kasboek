@@ -162,7 +162,7 @@ export function TrendLine({ data, format, compact, label }: { data: { key: strin
         <path d={area} fill="var(--chart-spending)" opacity={0.1} />
         <path d={line} fill="none" stroke="var(--chart-spending)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {data.map((d, i) =>
-          i % every === 0 || i === data.length - 1 ? (
+          (i % every === 0 && data.length - 1 - i >= every) || i === data.length - 1 ? (
             <text key={d.key} x={x(i)} y={H - 6} textAnchor="middle" className="fill-[var(--text-muted)] text-[11px]">{d.label}</text>
           ) : null
         )}

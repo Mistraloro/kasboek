@@ -9,7 +9,7 @@ import { AppError } from '@core/errors'
 import { RULE_COLUMNS, listRules, ruleMatches, ruleText, type RuleText } from '@core/finance'
 import * as imp from '@core/import'
 import { mappingSchema } from '@shared/import-mapping'
-import { maskNumbers } from '@shared/iban'
+import { maskAccount, maskPrivate } from '@shared/iban'
 import { consentAddress } from '@core/insight-plan'
 import { getSettings, updateSettings } from '@core/settings'
 import type { CheckAssistPreview, ImportPreview, ProposedCategorisation, ProposedRule } from '@shared/types'
@@ -27,7 +27,7 @@ import { broadcast } from '../session'
 const INSTRUCTIONS = `You check a bank CSV export before it is imported into a personal budget app. It can come from any bank or payment app in any country, with headers in any language; the account's currency and the person's language are given. Read dates and amounts as the file writes them (day or month first, decimal comma or point, a separate debit/credit or direction column).
 
 You get the raw cells, the column mapping the app detected, the rows it couldn't read or flagged, groups of similar transactions and the categories. Rows that are exactly the same as transactions already in Kasboek are left out (the stats say how many). Return a plan:
-- mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines. Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
+- mapping: only if the current mapping is wrong or missing, else null. Column numbers are zero-based indexes into the header row. headerRow is the index of the header line among all lines of the file (given as headerRow; the lines above it are not shown to you, and the header row can only be moved down, never above the given headerRow). The index of a row (in firstRows and flaggedRows) counts from the first line after the header: the row with index n is line headerRow + 1 + n of the file, so a corrected headerRow is headerRow + 1 + the index of the row that is really the header. Prefer a single signed amount column; use debit/credit only when the file has them. invertSign only if money out is positive in this file.
 - fixes: only for rows whose correct value is clear from the raw cells. action "fix" with a corrected bookingDate (YYYY-MM-DD), amountCents (integer, negative = money out) or description; "skip" for lines that are not transactions (totals, opening/closing balance, repeated headers, refused payments); "include" for a flagged row that is clearly a separate real transaction. Rows with status possible_duplicate come with the transaction already in Kasboek they resemble (same amount, a few days apart, similar text): answer "skip" if it is the same payment (the bank reworded the text or moved the date) or "include" if it is a different one. Set fields you don't change to null. reason: at most 6 words.
 - groups: the transactions come in groups of similar ones (same counterparty or description, same direction). A group can hold new rows of this file and transactions already in Kasboek that have no category yet. Give one entry per group where you set a categoryId, a name or a description, and leave out the groups where all three would be null; the app applies an entry to every row in the group. Banks write these texts differently, so read them carefully:
   - categoryId: for groups marked "uncategorised", a category id from the list. Most have an obvious category (supermarkets, bakeries, energy, telecom, rent, salary, restaurants, fuel, insurance, …): categorise every group where one fits; null only if you really can't tell. Transfers between the person's own accounts (savings, own accounts) go in a transfer category, not spending. Use only the category ids given. null for groups that already have a category.
@@ -101,17 +101,20 @@ function flaggedRows(preview: ImportPreview): ImportPreview['rows'] {
   return spread(preview.rows.filter((r) => r.status !== 'ready' && r.status !== 'duplicate'), MAX_FLAGGED)
 }
 
+/** Longer texts are cut before masking, so a huge cell can't make the masking slow. */
+const MAX_TEXT = 2000
+
 /**
  * The text of one request of a check: what the assistant gets to see, with every free text (names,
- * descriptions, cells, the file name, rules, remembered notes) run through maskNumbers so that account
- * and card numbers never leave the computer. This is the only place the text is made: the preview in
+ * descriptions, cells, the file name, rules, remembered notes) run through maskPrivate so that account
+ * and card numbers, addresses and phone numbers never leave the computer. This is the only place the text is made: the preview in
  * the consent dialog shows these same strings, and the requests send them.
  */
 export function checkPayload(db: Db, preview: ImportPreview, batch: Batch, language: string): string {
   const groups = batch.groups
-  const mask = maskNumbers
+  const mask = (text: string): string => maskPrivate(text, MAX_TEXT)
   const raw = imp.rawWindow(preview.sessionId, 0, 25)
-  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows[0]?.cells.map(mask)
+  const cells = (index: number): string[] | undefined => imp.rawWindow(preview.sessionId, index, 1).rows.find((r) => r.index === index)?.cells.map(mask)
   const own = new Set(batch.flagged)
   const flagged = flaggedRows(preview).filter((r) => own.has(r.index)).map((r) => ({
     index: r.index,
@@ -147,13 +150,14 @@ export function checkPayload(db: Db, preview: ImportPreview, batch: Batch, langu
       delimiter: preview.mapping?.delimiter,
       currentMapping: preview.mapping,
       stats: preview.stats,
-      linesAboveHeader: raw.preamble.map((r) => r.map(mask)),
+      // Only the number of the header line: the free text above it (a holder's name and address) is never sent.
+      headerRow: raw.headerRow,
       header: raw.header.map((h, i) => `${i}: ${mask(h)}`),
       firstRows: (batch.first ? raw.rows : raw.rows.slice(0, 5)).map((r) => ({ index: r.index, cells: r.cells.map(mask) })),
       flaggedRows: flagged,
       groups: { format: 'group | new rows | already in Kasboek | in/out | example amountCents | total amountCents | category now | counterparty | bank text', groups: lines },
       categories,
-      rules: listRules(db).map((r) => `${r.field} ${r.match} "${mask(r.pattern)}" → ${r.categoryId}`),
+      rules: listRules(db).map((r) => `${r.field} ${r.match} "${r.field === 'iban' ? maskAccount(r.pattern) : mask(r.pattern)}" → ${r.categoryId}`),
       ...(memory.length ? { personNotes: memory } : {})
     },
     null,
@@ -389,7 +393,7 @@ const MIN_UNITS = 5
  * Raise this whenever the list of what a check sends changes (see checkPayload): everyone is asked
  * again before the next request.
  */
-export const CHECK_CONSENT_VERSION = 1
+export const CHECK_CONSENT_VERSION = 2
 
 /** The model that reads the file: Claude's own setting, else the provider's model for reading files. */
 const checkModel = (db: Db, p: ActiveProvider): string => (p.preset.id === 'anthropic' ? getSettings(db).csvModel : p.csvModel)

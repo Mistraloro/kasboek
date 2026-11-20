@@ -74,7 +74,8 @@
         "edited_one": "{{count}} linha que você editou será substituída.",
         "edited_many": "{{count}} linhas que você editou serão substituídas.",
         "edited_other": "{{count}} linhas que você editou serão substituídas."
-      }
+      },
+      "askBank": "Peça ao seu banco um CSV deste extrato, ou um PDF com uma tabela de lançamentos."
     },
     "consent": {
       "title": "Verificar este arquivo com {{ai}}",
@@ -87,7 +88,8 @@
       "show": "Mostrar exatamente o que é enviado",
       "send": "Enviar para {{aiCompany}}",
       "sendLocal": "Enviar para {{ai}}"
-    }
+    },
+    "anyBankLocal": "Funciona com arquivos CSV de qualquer banco: o Kasboek lê os nomes das colunas (neerlandês, francês, inglês ou alemão) e lembra cada formato após a primeira importação. Os extratos em PDF com uma tabela de lançamentos são lidos neste computador; nada é enviado para lugar nenhum. Os extratos XML (CAMT.053, oferecidos por muitos bancos europeus) também são lidos neste computador."
   },
   "assistant": {
     "example3": "Coloque meus movimentos sem categoria na categoria certa.",
@@ -131,6 +133,10 @@
     "autoLockHint": "Também bloqueia quando a tela bloqueia ou o computador entra em suspensão.",
     "keepInTray": "Manter o Kasboek na bandeja ao fechar a janela",
     "keepInTrayHint": "Desativado: fechar a janela fecha o Kasboek. Ativado: o Kasboek continua na bandeja (a barra de menus no Mac) para o Claude poder continuar usando. Abra de novo pelo ícone ou pelo atalho.",
+    "hideNumbers": "Ocultar os números de conta na tela",
+    "hideNumbersHint": "Mostrar apenas o país e os últimos 4 caracteres de um número de conta (BE…1234), caso alguém esteja olhando. Mantenha pressionado o olho ao lado de um número para vê-lo enquanto pressiona. As exportações e os backups não mudam.",
+    "holdToShowNumber": "Mantenha pressionado para mostrar o número",
+    "holdToShowNumberOf": "Mantenha pressionado para mostrar o número da conta de {{name}}",
     "encryptionHint": "Os dados do seu orçamento estão criptografados no disco.",
     "keyStorageOsHint": "Os dados estão vinculados a este computador e a esta conta de usuário.",
     "rememberedHint": "Lembrado neste computador até {{date}}. Outros computadores, importações e exportações continuam pedindo o código.",
@@ -205,7 +211,7 @@
     "csvHint": "Revisa e corrige arquivos do banco antes da importação."
   },
   "mcp": {
-    "hint": "Deixe os aplicativos Claude deste computador ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado.",
+    "hint": "Deixe os aplicativos Claude deste computador ler o seu orçamento e propor alterações enquanto o Kasboek está aberto e desbloqueado. Os números de conta e de cartão ficam ocultos para elas.",
     "note": "Só funciona enquanto o Kasboek está aberto e desbloqueado. Cada alteração aparece aqui para a aprovar. O que o Claude lê é enviado para a Anthropic por esse aplicativo.",
     "requestBody": "Um aplicativo Claude conectado via MCP quer fazer esta alteração:",
     "addBody": "O Kasboek só adiciona (ou atualiza) a sua própria entrada neste arquivo. Os outros servidores e definições ficam como estão.",
@@ -408,7 +414,8 @@
       "goals": "Economize para algo: um valor até uma data, com o que deve reservar por mês.",
       "year": "O ano inteiro por mês e categoria, com exportação CSV e PDF para os impostos ou o contador.",
       "import": "Traga um arquivo CSV ou um extrato em PDF do seu banco. Deixe o assistente verificá-lo antes de salvar.",
-      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo."
+      "lock": "Bloqueie o Kasboek quando se ausentar. Também bloqueia sozinho depois de um tempo.",
+      "importLocal": "Traga um arquivo CSV ou um extrato em PDF do seu banco. Nada é salvo até você aprovar."
     }
   },
   "webdav": {

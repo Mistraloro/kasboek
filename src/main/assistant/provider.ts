@@ -2,7 +2,7 @@
 import type { Db } from '@core/database'
 import { AppError } from '@core/errors'
 import { getSecret } from '@core/secrets'
-import { getSettings } from '@core/settings'
+import { getSettings, requireAssistant } from '@core/settings'
 import { checkBaseUrl, type ProviderId } from '@shared/ai-providers'
 import { providerGap, resolveProvider, type ResolvedProvider } from '@shared/ai-provider-store'
 import { API_KEY } from './claude'
@@ -17,7 +17,9 @@ export interface ActiveProvider extends ResolvedProvider {
   key: string | null
 }
 
+/** Every request to a provider starts here, so none can be made while the assistant is off. */
 export function activeProvider(db: Db): ActiveProvider {
+  requireAssistant(db)
   const p = resolveProvider(getSettings(db))
   return { ...p, key: getSecret(db, keyName(p.preset.id)) }
 }

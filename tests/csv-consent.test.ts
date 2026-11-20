@@ -38,19 +38,22 @@ async function mockFetch(): Promise<void> {
   })
 }
 
-function setup(): { db: Db; sessionId: string } {
+const HOLDER = ['Ilse Vermeulen', 'Kerkstraat 12', '8000 Gent', 'Klantnummer 4455667', IBAN]
+
+function setup(preamble: string[] = []): { db: Db; sessionId: string } {
   const db = openDatabase(join(mkdtempSync(join(tmpdir(), 'kb-consent-')), 'k.db'), randomBytes(32).toString('hex'))
   const accountId = Number(db.prepare("INSERT INTO accounts (name, iban) VALUES ('Main', ?)").run(OWN).lastInsertRowid)
   setSecret(db, 'aiKey.mistral', 'test-key')
   updateSettings(db, { aiProvider: 'mistral', aiChatModel: 'm', aiCsvModel: 'file-m' })
   const csv = [
+    ...preamble,
     'Date;Payee;Memo;Amount',
     `2026-10-01;REF${IBAN};Card 5412 7512 3412 3456 Shop;-4,00`,
     `2026-10-02;Bakery Roos;Transfer to ${IBAN} ref 12345678901234;-5,00`,
     '2026-10-03;Cafe Noord;card;-6,00'
   ].join('\n')
   const p = analyze(db, { fileName: 'export 20261001123456789.csv', bytes: new TextEncoder().encode(csv), accountId })
-  remap(db, p.sessionId, MAPPING)
+  remap(db, p.sessionId, { ...MAPPING, headerRow: preamble.length })
   // A note from before notes were checked for numbers, and a rule with a long number in it.
   db.prepare("INSERT INTO memories (text, source) VALUES (?, 'person')").run(`Rent is paid to ${IBAN}, mandate 9876543210987654`)
   const category = (db.prepare("SELECT id FROM categories WHERE name = 'Groceries'").get() as { id: number }).id
@@ -91,6 +94,37 @@ describe('what a check sends', () => {
     // The payee is still readable; only the number is shortened.
     expect(body).toContain('NL…4300')
     expect(body).toContain('Bakery Roos')
+  })
+
+  it('also hides e-mail, phone numbers, spaced IBANs with 00 groups and the account number of a rule', async () => {
+    const { assistImport } = await import('../src/main/assistant/csv')
+    const { db, sessionId } = setup()
+    db.prepare("INSERT INTO memories (text, source) VALUES (?, 'person')").run('Mail ilse@example.test or call +32 475 12 34 56, rent to DE89 3704 0044 0532 0130 00')
+    createRule(db, { field: 'iban', pattern: IBAN, categoryId: (db.prepare("SELECT id FROM categories WHERE name = 'Groceries'").get() as { id: number }).id, applyToExisting: false })
+    await mockFetch()
+    await assistImport(db, sessionId, { consent: true })
+    const body = userText(requests[0]!)
+    for (const secret of ['ilse@', 'example.test', '475 12', 'DE89', '3704', '0532', 'ABNA', '0417']) expect(body).not.toContain(secret)
+    expect(body).toContain('DE…3000')
+    expect(JSON.parse(body).rules).toContain('iban contains "NL…4300" → ' + (db.prepare("SELECT category_id FROM rules WHERE field = 'iban'").get() as { category_id: number }).category_id)
+  })
+
+  it('leaves out the lines above the header, in the request and in the preview', async () => {
+    const { checkPreview, assistImport } = await import('../src/main/assistant/csv')
+    const { db, sessionId } = setup(HOLDER.map((l) => `${l};;;`))
+    await mockFetch()
+    const info = checkPreview(db, sessionId)
+    await assistImport(db, sessionId, { consent: true })
+    const sent = userText(requests[0]!)
+    expect(sent).toBe(info.text)
+    for (const text of [sent, info.text, JSON.stringify(requests[0])]) {
+      for (const secret of ['Ilse Vermeulen', 'Kerkstraat', 'Gent', '4455667', 'NL91', IBAN]) expect(text).not.toContain(secret)
+    }
+    const body = JSON.parse(sent) as Record<string, unknown>
+    expect(body).not.toHaveProperty('linesAboveHeader')
+    // The model still learns where the header is, and still gets the header and the rows.
+    expect(body).toMatchObject({ headerRow: HOLDER.length, header: ['0: Date', '1: Payee', '2: Memo', '3: Amount'] })
+    expect(JSON.stringify(body.firstRows)).toContain('Bakery Roos')
   })
 
   it('also shows the address in full for a server the person pointed somewhere', async () => {
