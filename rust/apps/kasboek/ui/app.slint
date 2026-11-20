@@ -16,6 +16,8 @@ export component App inherits Window {
     in-out property <string> screen: "lock";
     in property <bool> dark: false;
     in property <string> window-title: "Kasboek";
+    // Window and taskbar icon (assets/icons, tools/make-app-icon.py); one size for all uses, the 64 px one is the weight-800 K.
+    icon: @image-url("../assets/icons/icon-64.png");
     in property <[ToastItem]> toasts;
     callback dismiss-toast(int);
 

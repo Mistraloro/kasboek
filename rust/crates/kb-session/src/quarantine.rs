@@ -20,8 +20,13 @@ fn quarantine_dir(l: &Paths) -> PathBuf {
 }
 
 /// The files that belong to one copy: their name inside an entry, and where they live.
-fn parts(l: &Paths) -> [(&'static str, &Path); 3] {
-    [("account.json", &l.account_file), ("kasboek.db", &l.db_file), ("keystore.json", &l.legacy_keystore_file)]
+fn parts(l: &Paths) -> [(&'static str, &Path); 4] {
+    [
+        ("account.json", &l.account_file),
+        ("account.electron.json", &l.electron_backup_file),
+        ("kasboek.db", &l.db_file),
+        ("keystore.json", &l.legacy_keystore_file),
+    ]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,6 +170,9 @@ pub fn restore_erased(l: &Paths, name: &str, now_ms: i64) -> SessionResult<()> {
     }
     if l.legacy_keystore_file.exists() && dir.join("keystore.json").exists() {
         aside(&l.legacy_keystore_file).map_err(io_failed)?;
+    }
+    if l.electron_backup_file.exists() && dir.join("account.electron.json").exists() {
+        aside(&l.electron_backup_file).map_err(io_failed)?;
     }
     // The account comes back last: an account without its database would start an empty one.
     for (item, live) in parts(l).into_iter().rev() {

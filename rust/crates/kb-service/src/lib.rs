@@ -22,6 +22,13 @@ pub use fixture::{FixtureConfig, FixtureService, DEMO_PASSWORD};
 pub use kb_core::AppError;
 pub use paths::resolve_data_dir;
 
+/// Whether the operating system can seal the account file of `data_dir` (Windows DPAPI, macOS Keychain, a Secret Service
+/// on Linux). Asking never prompts. The Electron data folder is only opened by default when this is true.
+pub fn os_seal_available(data_dir: &std::path::Path) -> bool {
+    kb_oseal::select_os_seal_for(data_dir).available()
+}
+pub use prefs_store::update_prefs_key;
+
 pub type OpFuture<'a> = Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>>;
 
 /// The steps of the loading screen (section 5 of the plan); each has a fixed share of the bar.

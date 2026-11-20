@@ -6,7 +6,7 @@
 //! the logic is tested on any OS; [`SystemDpapi`] is the real one (Windows only).
 use crate::error::OsealError;
 use kb_session::oscrypt::{Dpapi, SealError};
-use kb_session::seal::OsSeal;
+use kb_session::seal::{OsSeal, SEAL_OS_NATIVE};
 use zeroize::Zeroizing;
 
 pub const DPAPI_MAGIC: &[u8; 4] = b"KBD1";
@@ -30,6 +30,10 @@ impl<D: DpapiApi> DpapiSeal<D> {
 impl<D: DpapiApi> OsSeal for DpapiSeal<D> {
     fn available(&self) -> bool {
         true
+    }
+
+    fn seal_value(&self) -> &'static str {
+        SEAL_OS_NATIVE
     }
 
     fn seal(&self, plain: &[u8]) -> Result<Vec<u8>, SealError> {
@@ -157,6 +161,7 @@ mod tests {
         assert_eq!(&blob[..4], DPAPI_MAGIC);
         assert_eq!(seal.unseal(&blob).unwrap().as_slice(), b"invented account");
         assert_eq!(seal.protection(), KeyProtection::Os);
+        assert_eq!(seal.seal_value(), "os-native");
         // The entropy is part of the contract: a blob made without it is refused.
         let mut plain_made = DPAPI_MAGIC.to_vec();
         plain_made.extend(ReverseDpapi.protect(b"x", None).unwrap());

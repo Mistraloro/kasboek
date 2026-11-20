@@ -63,7 +63,7 @@ fn analysis_has_the_import_input() {
     assert_eq!(same(&serde_json::to_value(&a.grid).unwrap()), same(&case["statement"]["grid"]));
     assert_eq!(a.pdf.pages, 3);
     assert_eq!(a.pdf.read_by, ReadBy::Kasboek);
-    assert_eq!(same(&serde_json::to_value(&a.pdf.balances).unwrap()), same(&case["statement"]["balances"]));
+    assert_eq!(same(&serde_json::to_value(a.pdf.balances).unwrap()), same(&case["statement"]["balances"]));
     assert!(a.pdf.notes.is_empty());
     // no table: counts only, as open.ts writes them
     let letter = fixtures().into_iter().find(|c| c["name"] == "free_text_no_table").unwrap();

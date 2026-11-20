@@ -2,14 +2,19 @@
 //!
 //!   kasboek [--service core|fixture|core-temp] [--state locked|setup|unlocked] [--mode password|device] [--device windows-hello|touch-id]
 //!           [--theme light|dark|system] [--lang en|nl|...] [--scale N] [--today YYYY-MM-DD] [--data-dir DIR] [--log FILE]
-//!           [--fake-device] [--slow-steps MS] [--exit-after-ms N] [--exit-after-first-frame] [--renderer software|femtovg|skia]
+//!           [--slow-steps MS] [--exit-after-ms N] [--exit-after-first-frame] [--renderer software|femtovg|skia]
 //!   kasboek shot <screen> <light|dark> <out.png> [--scale 2] [--width 1440] [--height 900] [--tab N] [--keys K,K] [--numbers] [--inset 148]
 //!           screens: lock-password, lock-device, lock-error, lock-busy, setup, setup-password, setup-recovery, loading, overview
 //!
-//! The real service (`core`: kb-session + kb-core on the data folder of the Electron app, or `--data-dir`) runs when a data
-//! folder is given (`--data-dir`, `KASBOEK_DATA_DIR`) or exists. Otherwise, and with any of the fixture flags (`--state`,
-//! `--mode`, `--device`, `--slow-steps`), the fixture service answers (the invented household; the password is
-//! `correct horse battery 12`). `core-temp` is the real core on a seeded temporary database (screens and tests).
+//! The real service (`core`: kb-session + kb-core on a data folder, sealed by the operating system) runs when a data folder
+//! is given (`--data-dir`, `KASBOEK_DATA_DIR`) or when the data folder of the Electron app exists and the operating system
+//! can seal the account file (an Electron-sealed `account.json` is then moved to the native seal, the original kept as
+//! `account.electron.json`). If that folder exists but the key store is not available, the app says so and stops. Otherwise,
+//! and with any of the fixture flags (`--state`, `--mode`, `--device`, `--slow-steps`), the fixture service answers (the
+//! invented household; the password is `correct horse battery 12`). `core-temp` is the real core on a seeded temporary
+//! database (screens and tests).
+//! A build with the cargo feature `dev-start` also knows `--fake-device` (the device prompt answers "verified") and
+//! `--demo-setup` (create or unlock the account with `KASBOEK_DEMO_PASSWORD`, no screens); release builds do not.
 // A double-clicked Windows binary must not open a console window; its output is startup.log.
 #![cfg_attr(windows, windows_subsystem = "windows")]
 mod accounts;
@@ -28,6 +33,7 @@ mod view;
 slint::include_modules!();
 
 use kb_service::{AppService, CoreOptions, CoreService, FixtureConfig, FixtureService};
+#[cfg(feature = "dev-start")]
 use kb_session::device::{DeviceKind, FakeDevice};
 use slint::ComponentHandle;
 use std::cell::RefCell;
@@ -58,15 +64,17 @@ pub enum Kind {
 /// The fixture-only flags: whoever gives one wants the fixtures.
 const FIXTURE_FLAGS: [&str; 4] = ["--state", "--mode", "--device", "--slow-steps"];
 
-/// `--service` says; else the real service when a data folder is given or exists, else the fixtures.
-pub fn pick_service(args: &[String], env_dir: bool, default_dir_exists: bool) -> Result<Kind, String> {
+/// `--service` says; else the real service when a data folder is given (`--data-dir`, or the variable: `env_dir`) or the
+/// folder of the Electron app can be opened (`default_dir_ready`: it exists and the system can seal its account file), else
+/// the fixtures.
+pub fn pick_service(args: &[String], env_dir: bool, default_dir_ready: bool) -> Result<Kind, String> {
     match arg(args, "--service").as_deref() {
         Some("core") => Ok(Kind::Core),
         Some("core-temp") => Ok(Kind::CoreTemp),
         Some("fixture") => Ok(Kind::Fixture),
         Some(other) => Err(format!("unknown service {other:?}")),
         None if FIXTURE_FLAGS.iter().any(|f| flag(args, f)) => Ok(Kind::Fixture),
-        None if arg(args, "--data-dir").is_some() || env_dir || default_dir_exists => Ok(Kind::Core),
+        None if arg(args, "--data-dir").is_some() || env_dir || default_dir_ready => Ok(Kind::Core),
         None => Ok(Kind::Fixture),
     }
 }
@@ -81,12 +89,12 @@ pub fn service_from(
     let ms = |name: &str| arg(args, name).and_then(|v| v.parse::<u64>().ok()).map(Duration::from_millis);
     match kind {
         Kind::Core => {
-            let mut options = CoreOptions::new(data_dir.to_path_buf());
+            let mut options = CoreOptions::native(data_dir.to_path_buf());
+            options.device = Box::new(device::SessionDevice::new(window));
+            #[cfg(feature = "dev-start")]
             if flag(args, "--fake-device") {
                 let kind = if cfg!(target_os = "macos") { DeviceKind::TouchId } else { DeviceKind::WindowsHello };
                 options.device = Box::new(FakeDevice::new(Some(kind), true));
-            } else {
-                options.device = Box::new(device::SessionDevice::new(window));
             }
             Ok(Arc::new(CoreService::open(options).map_err(|e| e.to_string())?))
         }
@@ -129,23 +137,47 @@ fn main() {
     run(&args);
 }
 
+const NO_KEY_STORE: &str = "Kasboek found the data folder of the Electron app, but the key store of the operating system is not available (on Linux: no Secret Service such as GNOME Keyring or KWallet running), so the data was not opened and nothing was changed. Start the key store, or give another folder with --data-dir.";
+
+/// A start that can't go on: said on stderr and in the log (a Windows build has no console), exit code 2.
+fn fail(message: &str) -> ! {
+    log::mark(&format!("cannot start: {message}"));
+    log::flush();
+    eprintln!("{message}");
+    std::process::exit(2)
+}
+
 fn run(args: &[String]) {
     let t0 = Instant::now();
     let gap = log::ms_since_process_creation();
-    let kind = pick_service(args, std::env::var_os("KASBOEK_DATA_DIR").is_some(), kb_service::resolve_data_dir(None).is_dir())
-        .unwrap_or_else(|e| {
-            eprintln!("{e}");
-            std::process::exit(2)
-        });
-    // The fixtures keep their own folder: they must never write into the data of the Electron app.
-    let data_dir = match kind {
-        Kind::Fixture | Kind::CoreTemp => prefs::dev_data_dir(arg(args, "--data-dir")),
-        Kind::Core => kb_service::resolve_data_dir(arg(args, "--data-dir").as_deref()),
-    };
     // startup.log next to the binary, the previous run kept as startup.prev.log. `--log FILE` writes just that file.
     match arg(args, "--log") {
         Some(path) => log::init(t0, gap, Some(path.into()), false),
         None => log::init(t0, gap, log::default_path(), true),
+    }
+    #[cfg(not(feature = "dev-start"))]
+    if let Some(f) = ["--fake-device", "--demo-setup"].into_iter().find(|f| flag(args, f)) {
+        fail(&format!("{f} is only in builds with the cargo feature dev-start"));
+    }
+    let env_dir = std::env::var_os("KASBOEK_DATA_DIR").is_some_and(|v| !v.is_empty());
+    let named = arg(args, "--data-dir").is_some() || env_dir;
+    // The folder of the Electron app, when no folder was named and it exists: opened only if the system can seal its
+    // account file (no keyring on Linux: the app says so instead of showing the fixtures in place of the person's data).
+    let electron_dir = if named { None } else { kb_service::resolve_data_dir(None).ok().filter(|d| d.is_dir()) };
+    let electron_ready = electron_dir.as_deref().is_some_and(kb_service::os_seal_available);
+    let kind = pick_service(args, env_dir, electron_ready).unwrap_or_else(|e| fail(&e));
+    if electron_dir.is_some() && !electron_ready && arg(args, "--service").is_none() && !FIXTURE_FLAGS.iter().any(|f| flag(args, f)) {
+        fail(NO_KEY_STORE);
+    }
+    // The fixtures keep their own folder: they must never write into the data of the Electron app.
+    let data_dir = match kind {
+        Kind::Fixture | Kind::CoreTemp => prefs::dev_data_dir(arg(args, "--data-dir")),
+        Kind::Core => kb_service::resolve_data_dir(arg(args, "--data-dir").as_deref()),
+    }
+    .unwrap_or_else(|e| fail(&e));
+    // `--service core` without a named folder is the Electron folder too: same condition.
+    if kind == Kind::Core && !named && !kb_service::os_seal_available(&data_dir) {
+        fail(NO_KEY_STORE);
     }
     std::panic::set_hook(Box::new(|info| {
         log::mark(&format!("PANIC: {info}"));
@@ -183,32 +215,32 @@ fn run(args: &[String]) {
     log::mark(&format!("backend selected (renderer {renderer})"));
 
     log::mark(&format!("service: {kind:?}"));
-    // The hidden development start: create the account (or unlock it) with a password from the environment, no screens. The
-    // variable is removed at once so that it does not reach child processes.
+    // The hidden development start (feature `dev-start`): create the account (or unlock it) with a password from the
+    // environment, no screens. The variable is removed at once so that it does not reach child processes; the password is
+    // moved into a wiped-on-drop holder and handed to the controller, not kept in the configuration.
+    #[cfg(feature = "dev-start")]
     let demo_password = flag(args, "--demo-setup").then(|| {
-        let password = std::env::var("KASBOEK_DEMO_PASSWORD").unwrap_or_else(|_| {
-            eprintln!("--demo-setup needs KASBOEK_DEMO_PASSWORD");
-            std::process::exit(2)
-        });
+        let password = std::env::var("KASBOEK_DEMO_PASSWORD").unwrap_or_else(|_| fail("--demo-setup needs KASBOEK_DEMO_PASSWORD"));
         std::env::remove_var("KASBOEK_DEMO_PASSWORD");
-        password
+        zeroize::Zeroizing::new(password)
     });
     let window = Arc::new(Mutex::new(None));
-    let service = service_from(args, kind, &data_dir, window.clone()).unwrap_or_else(|e| {
-        eprintln!("{e}");
-        std::process::exit(2)
-    });
+    let service = service_from(args, kind, &data_dir, window.clone()).unwrap_or_else(|e| fail(&e));
     let ui = App::new().expect("ui");
     let cfg = app::Config {
         data_dir: data_dir.clone(),
         today: today_from(args),
+        #[cfg(feature = "dev-start")]
         fake_device: flag(args, "--fake-device"),
         caption_inset: arg(args, "--inset").and_then(|v| v.parse().ok()).unwrap_or(12.0),
         device_in_service: kind != Kind::Fixture,
-        demo_password,
     };
     kb_ui::wire_rules!(&ui);
     let ctl = app::Ctl::attach(&ui, service.clone(), cfg, &prefs);
+    #[cfg(feature = "dev-start")]
+    if let Some(password) = demo_password {
+        ctl.set_demo_password(password);
+    }
     log::mark("window created");
 
     let first = Rc::new(RefCell::new(false));
@@ -242,7 +274,7 @@ fn run(args: &[String]) {
             let Some(now_dark) = titlebar::system_dark() else { return };
             let last = serde_json::json!(if now_dark { "dark" } else { "light" });
             if !service.cache_pref("lastTheme", last.clone()) {
-                prefs::update(&path, &[("lastTheme", last)]);
+                kb_service::update_prefs_key(&path, "lastTheme", Some(last));
             }
             let _ = weak.upgrade_in_event_loop(move |ui| {
                 if let Some(c) = ctl_get() {
@@ -284,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn the_real_service_runs_when_a_data_folder_is_given_or_exists() {
+    fn the_real_service_runs_when_a_data_folder_is_given_or_the_electron_folder_is_ready() {
         assert_eq!(pick_service(&args(&[]), false, false), Ok(Kind::Fixture));
         assert_eq!(pick_service(&args(&["--data-dir", "/x"]), false, false), Ok(Kind::Core));
         assert_eq!(pick_service(&args(&[]), true, false), Ok(Kind::Core));

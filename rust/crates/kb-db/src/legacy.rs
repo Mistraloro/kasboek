@@ -1,15 +1,7 @@
 //! The two helpers migration 8 needs from the TypeScript core: `fingerprint` (src/core/fingerprint.ts) and
 //! `realReference` (src/core/csv/normalize.ts). Migrations may not change once shipped, so these stay as they were.
+use kb_rules::is_js_space;
 use sha2::{Digest, Sha256};
-
-/// The characters of JavaScript's `\s`.
-fn is_js_space(c: char) -> bool {
-    matches!(
-        c,
-        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
-            ..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'
-    )
-}
 
 /// Lower-case, runs of whitespace to one space, trimmed.
 fn norm(text: Option<&str>) -> String {

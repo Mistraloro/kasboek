@@ -171,7 +171,7 @@ pub fn split_parts(masked: &[MaskedLine]) -> Vec<PdfPart> {
     let mut pages = std::collections::HashSet::new();
     let mut chars = 0;
     for m in masked {
-        let size = js::len16(&m.text) + 1;
+        let size = kb_rules::utf16_len(&m.text) + 1;
         if !current.is_empty()
             && (chars + size > MAX_PART_CHARS
                 || current.len() >= MAX_PART_LINES
@@ -321,7 +321,7 @@ pub fn preview_text_of(masked: &[MaskedLine]) -> String {
 pub fn preview_text(lines: &[PdfLine]) -> Result<PdfAssistPreview, PlanError> {
     let masked = prepare(lines)?;
     let text = preview_text_of(&masked);
-    let chars = js::len16(&text);
+    let chars = kb_rules::utf16_len(&text);
     Ok(PdfAssistPreview {
         pages: pages_of(&masked),
         parts: split_parts(&masked).len(),

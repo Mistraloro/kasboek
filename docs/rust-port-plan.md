@@ -63,7 +63,8 @@ Schemas are generated from zod (`src/main/assistant/tools.ts:27`).
 | Primitives | `ui.tsx` 409, `charts.tsx` 186, Toast 39, DateInput 50, Update 108 | Button, Card, PageHeader, Field, Input, PasswordInput, native `<select>`, Segmented, Switch, Badge, EmptyState, Modal, MonthNav; CategoryBars, MonthBars, Meter, TrendLine with hover tips |
 
 **Design tokens**: `src/renderer/src/styles.css:6-73`: light/dark colour sets, Inter Variable + Source Serif 4
-Variable, 14 px/1.5 base, `font-feature-settings: 'cv11','ss01'`, `.num` = tabular-nums, focus ring 2 px, custom
+Variable (the native app uses Kasboek Sans = Lato and Kasboek Display = Playfair Display instead, see
+`rust/crates/kb-ui/tools/fonts.json`), 14 px/1.5 base, `font-feature-settings: 'cv11','ss01'`, `.num` = tabular-nums, focus ring 2 px, custom
 scrollbars, reduced-motion.
 
 **Main-process / platform features**: single instance + `--background` (MCP launch, tray only)
@@ -799,7 +800,10 @@ Done (`rust/crates/kb-pdf`): the spike C reader and the TypeScript PDF logic as 
   block layouts, IBAN column, other-account note, balances; `reconcile`, `runningMismatches`, the flip hint `reconciliationBanner`), `plan.rs` (the text sent to the
   assistant: `firstLineSent`, `maskedLines` with kb-rules `mask_numbers` / `mask_iban`, `splitParts`, `splitPart`, `partText`, `lines_to_send`, `preview_text`),
   `session.rs` (`analyze_pdf`: the grid and the `PdfSessionData` that kb-import's `analyzeGrid` takes). The CSV pieces `statement.ts` uses (parseDate, parseAmount,
-  detectDecimal, headerField) are private copies in `csvrules.rs`, because kb-pdf must not depend on kb-import; they are compared with the TypeScript in tests.
+  detectDecimal, headerField, `reconcile` with its f64 sums) now come from `kb-import` (kb-pdf depends on it; the private copies `csvrules.rs` / `synonyms.rs` are gone);
+  `kb-pdf/tests/csvrules.rs` compares them with the TypeScript (`csvrules.json`). `is_js_space`, `utf16_len`, `js_round` and the `\s` class live once in `kb-rules`.
+  `read_guarded` exists only for tests and the `parity` driver; the reader process shows its own message per error code, and a reader that cannot be started is
+  `import.pdf_reader_unavailable`, not a damaged PDF (kb-service must word that code).
   Not ported: `parsePdfPlan` and `applyRowsPlan` (reading and checking the assistant's answer), they belong to the assistant crate.
 - Tests: 35 in Rust (reader, errors, limits, rotation, protocol checks, 21 TypeScript fixtures for lines / statements / assistant text, CSV rules, plan, process
   tests against the real binary with `--features parity`, 30,000 seeded mutants), parity spec `rust/parity/pdf.spec.ts` (needs `cargo build -p kb-pdf --features parity`, `KB_PDF_BIN`).
@@ -864,7 +868,7 @@ and `erase`.
 **M3 progress (design system `rust/crates/kb-ui`; Linux x64 only, `.github/workflows/rust-ui.yml` has not run)**
 
 Done:
-- Tokens (light/dark, runtime switch), fonts from one config (`tools/fonts.json` -> `make-fonts.py`, Inter, Inter Num, Source Serif 4, OFL texts), 74 lucide icons from the renderer's imports (`make-icons.mjs`), `Icon`.
+- Tokens (light/dark, runtime switch), fonts from one config (`tools/fonts.json` -> `make-fonts.py`, Kasboek Sans = Lato 2.015, Kasboek Display = Playfair Display, OFL texts), 74 lucide icons from the renderer's imports (`make-icons.mjs`), `Icon`.
 - Components: Button, IconButton, Card, CardHeader, PageHeader, Field, Input, PasswordInput (hold to show), CodeInput, Select (popup, keyboard, type-ahead),
   Segmented, Switch, Checkbox, RadioGroup, Badge, EmptyState, Modal and ConfirmDialog (focus trap, Escape asks, backdrop does not close), Popover, Tip/HoverTip,
   ToastHost, MonthNav (+ picker), DateInput, Tabs, virtualised ListView, Scrollbar, Table rows, Meter, ProgressBar, Spinner; charts CategoryBars, MonthBars,
@@ -913,7 +917,7 @@ The window is not created hidden: Slint 1.19 has no first-paint hook for the sof
   `OsEvents` (stub `NoOsEvents`: no platform code yet). `lastAuth` is written to `prefs.json` after every `auth.*` call (the lock screen of the next start; also feeds
   the `Hint`, so a passwordless account stays sealed until the device check). Data folder = Electron `userData` (`--data-dir`, `KASBOEK_DATA_DIR`).
   Throttle seconds travel in the error `details`. No change to kb-core was needed (the `auth.*` ops are dispatched by the service).
-- App: `--service core` is the default when a data folder is given or exists (fixture flags and `--service fixture` keep the fixtures; `core-temp` = seeded
+- App: `--service core` is the default when a data folder is given (`--data-dir`, `KASBOEK_DATA_DIR`) or the Electron folder exists and `kb_oseal` says the OS can seal it (else a message and exit 2) (fixture flags and `--service fixture` keep the fixtures; `core-temp` = seeded
   temporary database). Setup: password with meter and repeat, passwordless, recovery key with the "saved" box and 4-character confirmation
   (`setup_rules.rs` = `recoveryKeyConfirmed`), 2FA step with QR (`qrcode` 0.15, MIT/Apache-2.0; SVG in `qrSvg`, drawn in Slint from runs of modules) and
   6-digit code, import option disabled with "not available yet". Lock: password, recovery key, 2FA code, remember 30 days, throttle countdown, Hello / Touch ID through
@@ -929,6 +933,14 @@ The window is not created hidden: Slint 1.19 has no first-paint hook for the sof
   key; "recovered, choose a new password" screen (Security works without the current password after a recovery unlock); window input does not count as activity (only service calls
   and navigation), so the idle timer needs the OS idle time on Windows and macOS; the migration progress above.
 - Needs Windows or macOS: Hello / Touch ID inside `auth.unlock`, OS idle and lock/suspend events, the real seal.
+- Review follow-ups done in `kb-service` and the app: OS-random `Rng` for the real core; `--fake-device` / `--demo-setup` only with the cargo feature `dev-start`
+  (CI build and `startup-test-core.sh`; the demo password is moved into a `Zeroizing` holder, not kept in `Config`); no temp-folder fallback for the data folder, folder 0700,
+  prefs temp files `create_new` 0600; one prefs writer (`kb_service::update_prefs_key`: corrupt file moved to `prefs.json.bad`, writes only on change); erase/restore close the
+  core's database handle first; wrong tries kept in `lastAuth.attempts` for the pre-unseal throttle.
+- TODO (needs `kb-session`, not done): real `OsEvents` per OS (lock on screen lock/suspend, OS idle time, plus a boot-time/monotonic backstop in the idle tick instead of `Instant`
+  alone); `OpHandler` taking `&Value` so secrets in the `serde_json::Value` of an op can be wiped after the call.
+- Done since: the OS seal is wired: `CoreOptions::native` = `select_os_seal_for` + `plan_migration`/`apply` in the worker before the session reads account.json; the
+  Electron folder is the default again when the seal is available; tests `kb-service/tests/os_seal.rs` with fake seals, no real keyring.
 
 New texts for the release branch's locale files (the app keeps them in `crates/kb-i18n/locales/extra.<lang>.json`; add them to the 8 files of
 `src/renderer/src/i18n/locales` if the Electron app should share them): `loading.opening`, `loading.migrating`, `loading.transactions`,
@@ -954,7 +966,9 @@ New texts for the release branch's locale files (the app keeps them in `crates/k
 - Needs the real OS (not confirmed): DPAPI calls and entropy on a real profile, Keychain access-control prompts and locked-keychain codes,
   `oo7` against GNOME Keyring / KeePassXC (and collection unlock prompts), the exact attributes Electron 45 gives its Linux item
   (`application=Kasboek`, label `Kasboek Safe Storage` assumed), KWallet (not supported), and that Electron's async values keep the OSCrypt layouts.
-- Open for kb-session: its store only knows `seal:'os'|'none'`; it must read and write `os-native` before the migration result is usable.
+- Seal values (done in kb-session): `none` plain, `os` Electron `safeStorage` (and the test `FileSeal`), `os-native` written by the native seals (`OsSeal::seal_value`). The store opens `os` and `os-native` through the configured seal; `plan_migration` treats a native `os` file (`KBD1`/`KBK1`) as migrated. The app calls `kb_oseal::select_os_seal_for(data_dir)` for `Config::new`, then `plan_migration` + `apply` at start.
+- `account.electron.json` is deleted after the first native unlock that saved, and on every credential change; erase/restore carry it.
+- Wrap key: created only when absent (Keychain `SecItemAdd`; Secret Service oldest-item-wins), deleted and recreated when the data folder has no native account (nor an erased one) yet; `usable()` neither prompts nor remembers a "no". macOS and Linux keyring behaviour is untested on real machines.
 
 ## Appendix: not verified offline (each is a spike or M1 task)
 

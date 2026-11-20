@@ -85,19 +85,39 @@ mod macos {
     fn keychain_wrap_key_seal_roundtrips() {
         let service = format!("Kasboek Wrap Key test {}", std::process::id());
         let keychain = MacKeychain::with_wrap_service(&service);
-        if let Err(e) = keychain.put(Item::WrapKey, &[5u8; 32]) {
+        if let Err(e) = keychain.create_wrap_key(&[5u8; 32]) {
             if skip(&e) {
                 return;
             }
             panic!("keychain write failed: {e}");
         }
         assert_eq!(keychain.get(Item::WrapKey).unwrap().unwrap().as_slice(), &[5u8; 32]);
-        keychain.remove_wrap_key().unwrap();
+        // Create-if-absent: a second creation keeps the first key.
+        keychain.create_wrap_key(&[6u8; 32]).unwrap();
+        assert_eq!(keychain.get(Item::WrapKey).unwrap().unwrap().as_slice(), &[5u8; 32]);
+        keychain.delete_wrap_key().unwrap();
         assert!(keychain.get(Item::WrapKey).unwrap().is_none());
+        keychain.delete_wrap_key().unwrap();
 
         let seal = WrapKeySeal::new(MacKeychain::with_wrap_service(&service));
         roundtrip(&seal);
-        MacKeychain::with_wrap_service(&service).remove_wrap_key().unwrap();
+        MacKeychain::with_wrap_service(&service).delete_wrap_key().unwrap();
+    }
+
+    #[test]
+    fn a_stale_wrap_key_is_replaced_when_no_native_account_exists() {
+        let service = format!("Kasboek Wrap Key stale test {}", std::process::id());
+        let keychain = MacKeychain::with_wrap_service(&service);
+        if let Err(e) = keychain.create_wrap_key(&[5u8; 32]) {
+            if skip(&e) {
+                return;
+            }
+            panic!("keychain write failed: {e}");
+        }
+        let seal = WrapKeySeal::replacing_stale_key(MacKeychain::with_wrap_service(&service));
+        roundtrip(&seal);
+        assert_ne!(keychain.get(Item::WrapKey).unwrap().unwrap().as_slice(), &[5u8; 32]);
+        keychain.delete_wrap_key().unwrap();
     }
 
     #[test]
@@ -108,7 +128,6 @@ mod macos {
             Ok(_) => {}
             Err(e) => assert!(skip(&e), "unexpected error {e}"),
         }
-        assert_eq!(keychain.put(Item::ElectronPassword, b"x").unwrap_err(), OsealError::Unsupported);
     }
 }
 
@@ -117,10 +136,12 @@ mod linux {
     use super::*;
     use kb_crypto::encoding::base64_encode;
     use kb_oseal::legacy::open_electron_account_json;
+    use kb_oseal::secret_service::SecretService;
+    use kb_oseal::wrap::{Item, SecretStore, WrapKeySeal};
 
-    /// Without a Secret Service (GitHub's ubuntu runner) the selection falls back to `Unsupported`; with one it seals.
+    /// Without a Secret Service (GitHub's ubuntu runner) the seal says it is unavailable; with one it seals.
     #[test]
-    fn selection_falls_back_without_a_keyring_and_seals_with_one() {
+    fn selection_is_unavailable_without_a_keyring_and_seals_with_one() {
         let seal = kb_oseal::select_os_seal();
         if seal.available() {
             eprintln!("a Secret Service is running: testing the real wrap-key seal instead of the fallback");
@@ -130,6 +151,53 @@ mod linux {
             assert_eq!(seal.seal(b"x").unwrap_err(), SealError::Unavailable);
             assert_eq!(seal.unseal(b"KBK1 whatever whatever whatever whatever").unwrap_err(), SealError::Unavailable);
         }
+    }
+
+    /// The Secret Service tests use their own item (`account` attribute), never the real wrap key, and skip cleanly on a
+    /// machine without a (reachable, unlockable) keyring.
+    fn own_store(tag: &str) -> Option<SecretService> {
+        let store = SecretService::with_wrap_account(&format!("wrap-key-test-{tag}-{}", std::process::id()));
+        if !store.usable() {
+            eprintln!("SKIPPED: no Secret Service on this machine");
+            return None;
+        }
+        match store.get(Item::WrapKey) {
+            Ok(_) => Some(store),
+            Err(e) => {
+                eprintln!("SKIPPED: the Secret Service cannot be used here ({e})");
+                None
+            }
+        }
+    }
+
+    #[test]
+    fn wrap_key_is_created_once_and_never_replaced() {
+        let Some(store) = own_store("create") else { return };
+        store.create_wrap_key(&[5u8; 32]).unwrap();
+        store.create_wrap_key(&[6u8; 32]).unwrap();
+        assert_eq!(store.get(Item::WrapKey).unwrap().unwrap().as_slice(), &[5u8; 32]);
+        store.delete_wrap_key().unwrap();
+        assert!(store.get(Item::WrapKey).unwrap().is_none());
+        store.delete_wrap_key().unwrap();
+    }
+
+    #[test]
+    fn a_stale_wrap_key_is_replaced_when_no_native_account_exists() {
+        let Some(store) = own_store("stale") else { return };
+        store.create_wrap_key(&[5u8; 32]).unwrap();
+        let tag = format!("wrap-key-test-stale-{}", std::process::id());
+        let seal = WrapKeySeal::replacing_stale_key(SecretService::with_wrap_account(&tag));
+        roundtrip(&seal);
+        assert_ne!(store.get(Item::WrapKey).unwrap().unwrap().as_slice(), &[5u8; 32]);
+        store.delete_wrap_key().unwrap();
+    }
+
+    /// `usable()` must neither prompt nor remember a failure: it is asked at every start-up.
+    #[test]
+    fn usable_is_cheap_and_repeatable() {
+        let store = SecretService::new();
+        let first = store.usable();
+        assert_eq!(store.usable(), first);
     }
 
     /// `v10` ("peanuts", Electron without a keyring) needs no keyring at all, so it opens on a bare runner.

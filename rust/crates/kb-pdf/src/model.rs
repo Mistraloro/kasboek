@@ -131,11 +131,6 @@ impl From<False> for bool {
     }
 }
 
-/// UTF-16 length, as JavaScript counts the characters of a string.
-pub fn utf16_len(s: &str) -> usize {
-    s.encode_utf16().count()
-}
-
 /// The checks of `isPdfText` in protocol.ts: counts first, then every field; the answer of a separate process is not trusted.
 pub fn is_valid_pdf_text(t: &PdfText) -> bool {
     if !(1..=MAX_PAGES).contains(&t.page_count) || t.pages.len() > MAX_PAGES {
@@ -154,7 +149,7 @@ pub fn is_valid_pdf_text(t: &PdfText) -> bool {
             if !ok(i.x, -1e7, 1e7) || !ok(i.y, -1e7, 1e7) || !ok(i.w, -1e7, 1e7) || !ok(i.h, -1e7, 1e7) {
                 return false;
             }
-            chars += utf16_len(&i.str);
+            chars += kb_rules::utf16_len(&i.str);
         }
         if chars > MAX_CHARS {
             return false;

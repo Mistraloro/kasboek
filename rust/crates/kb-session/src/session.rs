@@ -464,20 +464,32 @@ impl<S: Store> Session<S> {
     }
 
     /// Saves first and only then replaces the copy in memory, so a failed write never leaves memory ahead of the file.
+    /// A saved change is a credential change (password, recovery key, 2FA, mode) or an import: the Electron copy that
+    /// `kb-oseal`'s migration kept would still open with the old credentials, so it goes.
     fn persist(&mut self, next: AccountData) -> SessionResult<()> {
         self.store.save(&next)?;
         self.account = AccountState::Loaded(next);
+        self.drop_electron_backup();
         Ok(())
+    }
+
+    /// Removes `account.electron.json`; a failure is logged, never raised (the account itself is fine).
+    fn drop_electron_backup(&mut self) {
+        if self.store.remove_electron_backup().is_err() {
+            self.log("[auth] could not remove account.electron.json");
+        }
     }
 
     /// For the failed-attempt counter (and the reset after a correct login): memory is updated first, so guesses are
     /// counted even when the file can't be written; a failed write is logged, not raised.
-    fn persist_counter(&mut self, next: AccountData) {
-        let saved = self.store.save(&next);
+    /// Returns whether the file was written.
+    fn persist_counter(&mut self, next: AccountData) -> bool {
+        let saved = self.store.save(&next).is_ok();
         self.account = AccountState::Loaded(next);
-        if saved.is_err() {
+        if !saved {
             self.log("[auth] could not save the login attempts");
         }
+        saved
     }
 
     /// Passwordless mode keeps the key in the account file: only safe when the operating system seals that file.
@@ -574,10 +586,15 @@ impl<S: Store> Session<S> {
                 Err(failed("auth.failed", if two_factor { "The password or code is incorrect." } else { "The password is incorrect." }))
             }
             Outcome::Ok { unlocked, account } => {
-                self.persist_counter(account);
+                let saved = self.persist_counter(account);
                 self.recovered = false;
                 self.weak_password = view.mode == AuthMode::Password && !check_password(password.unwrap_or("")).ok;
-                self.open_with(unlocked.master, unlocked.vault)
+                self.open_with(unlocked.master, unlocked.vault)?;
+                // The first native unlock that also wrote the file back: the Electron copy has done its job.
+                if saved {
+                    self.drop_electron_backup();
+                }
+                Ok(())
             }
         }
     }
@@ -615,9 +632,13 @@ impl<S: Store> Session<S> {
                 Err(failed("auth.failed", "That recovery key is not correct."))
             }
             Outcome::Ok { unlocked, account } => {
-                self.persist_counter(account);
+                let saved = self.persist_counter(account);
                 self.recovered = true;
-                self.open_with(unlocked.master, unlocked.vault)
+                self.open_with(unlocked.master, unlocked.vault)?;
+                if saved {
+                    self.drop_electron_backup();
+                }
+                Ok(())
             }
         }
     }

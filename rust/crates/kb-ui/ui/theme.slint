@@ -69,10 +69,10 @@ export global Theme {
     out property <length> lh-title: 37.5px;
     out property <length> fs-tip: 12px;
 
-    // Slint's `line-height-factor` multiplies the font's natural line box (1.21 em for Inter); this turns a CSS line
+    // Slint's `line-height-factor` multiplies the font's natural line box (1.2 em for Lato); this turns a CSS line
     // height (`lh`, for font size `fs`) into that factor.
     pure public function lhf(fs: length, lh: length) -> float {
-        return (lh / fs) / 1.21;
+        return (lh / fs) / 1.2;
     }
 
     // ---- elevation: the Tailwind shadows as one blur, one offset and one colour (Slint has no spread) ----

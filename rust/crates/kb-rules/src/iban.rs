@@ -2,6 +2,8 @@
 //! original do, so indexes agree. `mask_account` and `shown_account` are new: the renderer has no such function (it
 //! shows the account number as typed), they serve the hide-account-numbers display of the native app.
 
+use crate::jsstr::is_js_space;
+use std::collections::HashSet;
 use unicode_normalization::UnicodeNormalization;
 
 // Length of an IBAN per country (the IBAN registry).
@@ -111,15 +113,6 @@ pub fn valid_iban(iban: &str) -> bool {
 /// The characters that may separate the groups of an account or card number.
 pub(crate) fn is_sep(u: u16) -> bool {
     matches!(u, 0x20 | 0x2e | 0x2d | 0x2f)
-}
-
-/// JavaScript's `\s`: not the same set as `char::is_whitespace` (U+0085 is not in it, U+FEFF is).
-pub(crate) fn is_js_space(c: char) -> bool {
-    matches!(
-        c,
-        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
-            ..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'
-    )
 }
 
 /// Compatibility forms (full-width digits, ...) as plain ones; all white space as one space; zero-width characters gone; every
@@ -280,13 +273,14 @@ pub fn mask_iban(text: &str) -> String {
 /// The valid IBANs in a text, without spaces and in order of appearance, each once.
 pub fn find_ibans(text: &str) -> Vec<String> {
     let folded: Vec<u16> = fold(text).encode_utf16().collect();
-    let mut seen: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut found = Vec::new();
     for h in scan(&folded) {
-        if !seen.contains(&h.iban) {
-            seen.push(h.iban);
+        if seen.insert(h.iban.clone()) {
+            found.push(h.iban);
         }
     }
-    seen
+    found
 }
 
 pub use crate::mask::mask_numbers;

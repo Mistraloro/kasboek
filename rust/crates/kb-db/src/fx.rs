@@ -3,6 +3,7 @@
 //! Rates are stored per euro; any two currencies convert through the euro. The rate of a date is the last known one
 //! on or before it, or the first one after it when there is nothing earlier. A currency with no rate at all gives NULL.
 //! All rates are loaded up front because SQLite does not allow queries from inside a user-defined function.
+use kb_rules::js_round;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use rusqlite::Connection;
@@ -63,18 +64,6 @@ impl FxRates {
         }
         let (a, b) = (self.rate_per_eur(from, date)?, self.rate_per_eur(to, date)?);
         Some(js_round((cents / a) * b))
-    }
-}
-
-/// `Math.round`: ties go towards positive infinity (Rust's `round` goes away from zero), and a negative value that
-/// rounds to zero gives -0.
-fn js_round(x: f64) -> f64 {
-    let floor = x.floor();
-    let rounded = if x - floor >= 0.5 { floor + 1.0 } else { floor };
-    if rounded == 0.0 && x.is_sign_negative() {
-        -0.0
-    } else {
-        rounded
     }
 }
 

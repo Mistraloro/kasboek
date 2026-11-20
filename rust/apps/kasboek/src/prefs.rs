@@ -1,5 +1,5 @@
 //! `prefs.json` as far as the first frame needs it: theme, language and the cached `lastAuth` (plan, section 5). Other keys
-//! are kept as they are when the file is written back.
+//! are not touched here: this file only reads. The service writes prefs.json (`kb_service::update_prefs_key`).
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
 
@@ -76,32 +76,18 @@ impl Prefs {
     }
 }
 
-/// Sets keys in prefs.json and leaves the rest alone. Never fails the app: the cache is a convenience.
-pub fn update(path: &Path, changes: &[(&str, Value)]) {
-    let mut m = read_object(path);
-    for (k, v) in changes {
-        m.insert((*k).to_string(), v.clone());
-    }
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    let tmp = path.with_extension("json.tmp");
-    if std::fs::write(&tmp, serde_json::to_string_pretty(&Value::Object(m)).unwrap_or_default()).is_ok() {
-        let _ = std::fs::rename(&tmp, path);
-    }
-}
-
 /// The folder of the fixtures' own files: `--data-dir`, else a folder of its own (never the data of the Electron app).
-pub fn dev_data_dir(arg: Option<String>) -> PathBuf {
+/// An error when the system does not say where the user's config folder is (no fall back to the temporary folder).
+pub fn dev_data_dir(arg: Option<String>) -> Result<PathBuf, String> {
     if let Some(d) = arg {
-        return d.into();
+        return Ok(d.into());
     }
     let base = std::env::var_os("APPDATA")
         .or_else(|| std::env::var_os("XDG_CONFIG_HOME"))
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
-        .unwrap_or_else(std::env::temp_dir);
-    base.join("kasboek-native-dev")
+        .ok_or_else(|| "Kasboek could not find a config folder for its development files. Give --data-dir.".to_owned())?;
+    Ok(base.join("kasboek-native-dev"))
 }
 
 #[cfg(test)]
@@ -114,7 +100,7 @@ mod tests {
         let file = dir.path().join("prefs.json");
         std::fs::write(&file, r#"{"theme":"dark","language":"nl","other":{"a":1}}"#).unwrap();
         let auth = LastAuth { mode: "device".into(), device: Some("touch-id".into()), two_factor: true, remembered_until: None };
-        update(&file, &[("lastAuth", auth.to_json())]);
+        kb_service::update_prefs_key(&file, "lastAuth", Some(auth.to_json()));
         let prefs = Prefs::read(&file);
         assert_eq!(prefs.last_auth, Some(auth));
         assert_eq!(prefs.language, "nl");

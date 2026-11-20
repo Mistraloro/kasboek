@@ -30,7 +30,7 @@ const CELL_GAP: f64 = 0.3;
 const LINE_TOLERANCE: f64 = 0.5;
 
 /// The upper middle value of the sorted list, 0 when empty (`sorted[floor(len / 2)]`).
-fn median(mut values: Vec<f64>) -> f64 {
+fn upper_median(mut values: Vec<f64>) -> f64 {
     values.sort_by(f64::total_cmp);
     values.get(values.len() / 2).copied().unwrap_or(0.0)
 }
@@ -46,7 +46,7 @@ pub fn to_lines(t: &PdfText) -> Vec<PdfLine> {
             continue;
         }
         items.sort_by(|a, b| b.y.partial_cmp(&a.y).unwrap_or(Equal).then(a.x.partial_cmp(&b.x).unwrap_or(Equal)));
-        let m = median(items.iter().map(|i| i.h).filter(|h| *h > 0.0).collect());
+        let m = upper_median(items.iter().map(|i| i.h).filter(|h| *h > 0.0).collect());
         let tolerance = (if m == 0.0 { 10.0 } else { m }) * LINE_TOLERANCE;
         let mut groups: Vec<(f64, Vec<&Item>)> = Vec::new();
         for item in items {
@@ -75,8 +75,8 @@ fn to_cells(items: &[&Item]) -> Vec<PdfCell> {
             (Some(cell), Some(l)) if gap < CELL_GAP * item.h => {
                 // Pieces of one word touch; words are a space apart.
                 let space = gap > 0.08 * item.h
-                    && !l.str.chars().next_back().is_some_and(js::is_ws)
-                    && !item.str.chars().next().is_some_and(js::is_ws);
+                    && !l.str.chars().next_back().is_some_and(kb_rules::is_js_space)
+                    && !item.str.chars().next().is_some_and(kb_rules::is_js_space);
                 if space {
                     cell.text.push(' ');
                 }

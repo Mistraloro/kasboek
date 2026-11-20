@@ -278,7 +278,13 @@ impl kb_session::device::DeviceAuth for SessionDevice {
         match rx.recv_timeout(std::time::Duration::from_secs(300)) {
             Ok(Outcome::Verified) => Ok(true),
             Ok(Outcome::Cancelled) => Ok(false),
-            Ok(Outcome::Unavailable) => Err(SessionError::new("auth.device_unavailable", "Windows Hello could not be started.")),
+            Ok(Outcome::Unavailable) => {
+                let name = match system_kind() {
+                    Some(kb_session::device::DeviceKind::TouchId) => "Touch ID",
+                    _ => "Windows Hello",
+                };
+                Err(SessionError::new("auth.device_unavailable", format!("{name} could not be started.")))
+            }
             Ok(Outcome::Failed) | Err(_) => Err(SessionError::new("auth.device_failed", "Verification was cancelled or failed.")),
         }
     }

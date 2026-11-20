@@ -9,22 +9,27 @@
 //! | macOS | Keychain password, service `Kasboek Safe Storage`, account `Kasboek` |
 //! | Linux | Secret Service item `Kasboek Safe Storage` for `v11`; `v10` needs nothing (fixed `peanuts`) |
 //!
+//! Seal values in account.json (`kb_session::seal`): `os` is Electron's `safeStorage` (a `v10`/`v11` value, opened here
+//! only to migrate), `os-native` is what [`MigrationPlan::apply`] and the native seals write (`KBD1`/`KBK1` blobs),
+//! `none` is plain. A native seal that wrote `os` is also understood (the blob magic decides), so it is never
+//! mistaken for an Electron file.
+//!
 //! Migration: the new file is `{"format":"kasboek-account","version":2,"seal":"os-native","data":"<base64>"}` and the
-//! untouched original is kept as `account.electron.json` (created once, never overwritten). `kb-session`'s store must
-//! learn `seal:'os-native'` before it can read the result.
-use crate::dpapi::{ChromiumDpapi, DpapiApi};
+//! untouched original is kept as `account.electron.json` (created once, never overwritten). `kb-session` reads the
+//! result and deletes that backup after the first native unlock that saved, or at the next credential change.
+use crate::dpapi::{ChromiumDpapi, DpapiApi, DPAPI_MAGIC};
 use crate::error::OsealError;
-use crate::wrap::{Item, SecretStore};
+use crate::wrap::{Item, SecretStore, WRAP_MAGIC};
 use kb_crypto::encoding::{base64_decode, base64_encode};
 use kb_session::oscrypt::{decode, windows_key_from_local_state, OsKeyProvider, Platform, SealError};
-use kb_session::seal::{KeyProtection, OsSeal};
+use kb_session::seal::{KeyProtection, OsSeal, SEAL_NONE, SEAL_OS, SEAL_OS_NATIVE};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, Zeroizing};
 
 pub const ACCOUNT_FILE: &str = "account.json";
 pub const BACKUP_FILE: &str = "account.electron.json";
-pub const NATIVE_SEAL: &str = "os-native";
+pub const NATIVE_SEAL: &str = SEAL_OS_NATIVE;
 const LOCAL_STATE_FILE: &str = "Local State";
 const FILE_CAP: u64 = 1 << 20;
 const LOCAL_STATE_CAP: u64 = 4 << 20;
@@ -132,7 +137,7 @@ pub fn open_electron_account_json_with(
     provider: &dyn OsKeyProvider,
 ) -> Result<Zeroizing<Vec<u8>>, OsealError> {
     let file = read_account_file(&data_dir.join(ACCOUNT_FILE))?;
-    if file.seal != "os" {
+    if file.seal != SEAL_OS {
         return Err(OsealError::Unsupported);
     }
     Ok(decode(platform, &file.data, provider)?)
@@ -167,6 +172,32 @@ fn parse_account_file(bytes: &[u8]) -> Result<AccountFile, OsealError> {
     Ok(AccountFile { seal, data })
 }
 
+fn is_native_blob(data: &[u8]) -> bool {
+    data.starts_with(WRAP_MAGIC) || data.starts_with(DPAPI_MAGIC)
+}
+
+/// Whether this data folder (or an erased copy of it that could be restored) may hold an account that only the native
+/// wrap key opens. Errs on the side of `true`: an unreadable, damaged or unknown account.json must never lead to
+/// the wrap key being thrown away. `false` for: no account yet, a plain (`none`) one, or an Electron one.
+pub fn holds_native_account(data_dir: &Path) -> bool {
+    let mut files = vec![data_dir.join(ACCOUNT_FILE)];
+    if let Ok(erased) = std::fs::read_dir(data_dir.join("erased")) {
+        files.extend(erased.filter_map(|e| Some(e.ok()?.path().join(ACCOUNT_FILE))));
+    }
+    files.iter().any(|path| match read_capped(path, FILE_CAP) {
+        Err(OsealError::Io(std::io::ErrorKind::NotFound)) => false,
+        Err(_) => true,
+        Ok(bytes) => match parse_account_file(&bytes) {
+            Ok(file) => match file.seal.as_str() {
+                SEAL_NONE => false,
+                SEAL_OS => is_native_blob(&file.data) || !(file.data.starts_with(b"v10") || file.data.starts_with(b"v11")),
+                _ => true,
+            },
+            Err(_) => true,
+        },
+    })
+}
+
 /// A prepared migration; nothing is written until [`MigrationPlan::apply`].
 #[derive(Debug)]
 pub struct MigrationPlan {
@@ -190,8 +221,8 @@ impl MigrationPlan {
     /// 1. Keep the original as `account.electron.json` (kept as is when it already exists: it is the first original).
     /// 2. Write the new file next to account.json (fresh, mode 0600, fsync) and rename it over account.json.
     pub fn apply(&self) -> Result<(), OsealError> {
-        let now = std::fs::read(&self.account)?;
-        if now != self.original {
+        let now = read_capped(&self.account, FILE_CAP)?;
+        if now.as_slice() != self.original.as_slice() {
             return Err(OsealError::Changed);
         }
         match std::fs::OpenOptions::new().write(true).create_new(true).mode_0600().open(&self.backup) {
@@ -247,16 +278,17 @@ pub fn plan_migration_with(
     new_seal: &dyn OsSeal,
 ) -> Result<Option<MigrationPlan>, OsealError> {
     let account = data_dir.join(ACCOUNT_FILE);
-    let original = match std::fs::read(&account) {
-        Ok(bytes) if bytes.len() as u64 <= FILE_CAP => bytes,
-        Ok(_) => return Err(OsealError::Failed),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(e.into()),
+    let original = match read_capped(&account, FILE_CAP) {
+        Ok(bytes) => bytes,
+        Err(OsealError::Io(std::io::ErrorKind::NotFound)) => return Ok(None),
+        Err(e) => return Err(e),
     };
     let file = parse_account_file(&original)?;
     match file.seal.as_str() {
-        "none" | NATIVE_SEAL => return Ok(None),
-        "os" => {}
+        SEAL_NONE | NATIVE_SEAL => return Ok(None),
+        // A native seal that wrote `os` (KBD1 / KBK1) is already migrated, not an unknown format.
+        SEAL_OS if is_native_blob(&file.data) => return Ok(None),
+        SEAL_OS => {}
         _ => return Err(OsealError::Unsupported),
     }
     if !file.data.starts_with(b"v10") && !file.data.starts_with(b"v11") {
@@ -273,7 +305,7 @@ pub fn plan_migration_with(
     let mut encoded = base64_encode(&sealed);
     let new_file = format!(r#"{{"format":"kasboek-account","version":2,"seal":"{NATIVE_SEAL}","data":"{encoded}"}}"#).into_bytes();
     encoded.zeroize();
-    Ok(Some(MigrationPlan { account, backup: data_dir.join(BACKUP_FILE), original, new_file }))
+    Ok(Some(MigrationPlan { account, backup: data_dir.join(BACKUP_FILE), original: original.to_vec(), new_file }))
 }
 
 /// [`plan_migration_with`] with this OS's Electron key material.
@@ -416,11 +448,61 @@ mod tests {
         assert!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap().is_none());
         write_account(dir.path(), "none", b"{}");
         assert!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap().is_none());
-        write_account(dir.path(), "os", b"KBK1 something");
+        // Native-written `os` files (KBD1 / KBK1) are already ours: nothing to migrate, not an error on every start.
+        for magic in ["KBK1", "KBD1"] {
+            write_account(dir.path(), "os", format!("{magic} something").as_bytes());
+            assert!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap().is_none());
+        }
+        write_account(dir.path(), "os", b"garbage");
         assert_eq!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap_err(), OsealError::Unsupported);
         write_account(dir.path(), "weird", b"x");
         assert_eq!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap_err(), OsealError::Unsupported);
         std::fs::write(dir.path().join(ACCOUNT_FILE), b"not json").unwrap();
         assert_eq!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap_err(), OsealError::Failed);
+    }
+
+    #[test]
+    fn oversized_files_are_refused_by_reading_at_most_the_cap() {
+        let dir = tempfile::tempdir().unwrap();
+        let native = WrapKeySeal::new(FakeStore::default());
+        std::fs::write(dir.path().join(ACCOUNT_FILE), vec![b' '; FILE_CAP as usize + 1]).unwrap();
+        assert_eq!(plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap_err(), OsealError::Failed);
+        // apply() reads with the cap too: a file that grew after planning is `Failed`, not read whole.
+        let f = fixtures();
+        write_account(dir.path(), "os", &hex(&f["linuxV10"]["blobHex"]));
+        let plan = plan_migration_with(dir.path(), Platform::Linux, &NoKeys, &native).unwrap().unwrap();
+        std::fs::write(dir.path().join(ACCOUNT_FILE), vec![b' '; FILE_CAP as usize + 1]).unwrap();
+        assert_eq!(plan.apply().unwrap_err(), OsealError::Failed);
+        assert!(!dir.path().join(BACKUP_FILE).exists());
+    }
+
+    #[test]
+    fn the_backup_name_is_the_one_kb_session_deletes_and_quarantines() {
+        let paths = kb_session::Paths::in_dir(Path::new("x"));
+        assert_eq!(paths.electron_backup_file, Path::new("x").join(BACKUP_FILE));
+        assert_eq!(paths.account_file, Path::new("x").join(ACCOUNT_FILE));
+    }
+
+    #[test]
+    fn native_accounts_are_recognised_conservatively() {
+        let f = fixtures();
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!holds_native_account(dir.path()), "no account");
+        write_account(dir.path(), "none", b"{}");
+        assert!(!holds_native_account(dir.path()), "plain");
+        write_account(dir.path(), "os", &hex(&f["linuxV10"]["blobHex"]));
+        assert!(!holds_native_account(dir.path()), "Electron");
+        write_account(dir.path(), NATIVE_SEAL, b"whatever");
+        assert!(holds_native_account(dir.path()));
+        write_account(dir.path(), "os", b"KBK1 whatever");
+        assert!(holds_native_account(dir.path()), "native blob under the os value");
+        std::fs::write(dir.path().join(ACCOUNT_FILE), b"not json").unwrap();
+        assert!(holds_native_account(dir.path()), "damaged: keep the key");
+        // Only an erased copy that could be restored.
+        std::fs::remove_file(dir.path().join(ACCOUNT_FILE)).unwrap();
+        let erased = dir.path().join("erased").join("1790000000000");
+        std::fs::create_dir_all(&erased).unwrap();
+        write_account(&erased, NATIVE_SEAL, b"whatever");
+        assert!(holds_native_account(dir.path()));
     }
 }

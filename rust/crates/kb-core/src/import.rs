@@ -20,7 +20,7 @@ use kb_import::csv::normalize::normalize_rows;
 use kb_import::csv::read::{decode, detect_delimiter, parse_csv};
 use kb_import::fingerprint::fingerprint;
 use kb_import::group::group_key;
-use kb_import::rows::{build_rows, file_balance, Built, Existing, ImportRow, Learned, Ledger, RowOverride, RuleView};
+use kb_import::rows::{build_rows, file_balance, Built, Existing, ImportRow, Learned, Ledger, RowOverride, RowStatus, RuleView};
 use kb_import::statement::{reconcile, Amounts, Reconciliation};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -486,6 +486,8 @@ impl ImportPreview {
             self.headers.clear();
             self.sample.clear();
             self.rows.retain(|r| r.index >= hidden);
+            // The counts, the money and the dates of the hidden rows must not show through the totals either.
+            self.stats = stats_of(&self.rows);
         }
         self
     }
@@ -495,7 +497,7 @@ impl ImportPreview {
 fn reconciliation(xml: &XmlSessionData, built: &[Built]) -> Reconciliation {
     let rows: Vec<Amounts> = built
         .iter()
-        .filter(|b| b.row.status != "skipped")
+        .filter(|b| b.row.status != RowStatus::Skipped)
         .map(|b| Amounts { amount_cents: b.clean.amount_cents, balance_cents: b.raw.balance_cents })
         .collect();
     reconcile(&rows, xml.balances)
@@ -507,33 +509,39 @@ fn sorted(mut dates: Vec<Option<&str>>) -> Vec<Option<&str>> {
     dates
 }
 
-fn preview_session<S: Store>(store: &S, s: &mut Session) -> AppResult<ImportPreview> {
-    let built = build(store, s)?;
-    let ready: Vec<&ImportRow> = built.iter().map(|b| &b.row).filter(|r| r.status == "ready").collect();
+/// The counts, money and dates of the rows of a preview.
+fn stats_of(rows: &[ImportRow]) -> Stats {
+    let ready: Vec<&ImportRow> = rows.iter().filter(|r| r.status == RowStatus::Ready).collect();
     let dates = sorted(ready.iter().map(|r| r.booking_date.as_deref()).collect());
     let file_dates: Vec<&str> =
-        sorted(built.iter().map(|b| b.row.booking_date.as_deref().filter(|d| !d.is_empty())).filter(Option::is_some).collect())
+        sorted(rows.iter().map(|r| r.booking_date.as_deref().filter(|d| !d.is_empty())).filter(Option::is_some).collect())
             .into_iter()
             .flatten()
             .collect();
-    let header_row = s.mapping.as_ref().map_or(0, |m| m.header_row);
-    let account = store.account_get(s.account_id)?.ok_or_else(AppError::failed)?;
-    let count = |status: &str| built.iter().filter(|b| b.row.status == status).count();
-    let stats = Stats {
-        total: built.len(),
+    let count = |status: RowStatus| rows.iter().filter(|r| r.status == status).count();
+    Stats {
+        total: rows.len(),
         ready: ready.len(),
-        duplicates: count("duplicate"),
-        possible_duplicates: count("possible_duplicate"),
-        problems: count("problem"),
-        skipped: count("skipped"),
+        duplicates: count(RowStatus::Duplicate),
+        possible_duplicates: count(RowStatus::PossibleDuplicate),
+        problems: count(RowStatus::Problem),
+        skipped: count(RowStatus::Skipped),
         in_cents: ready.iter().fold(0.0, |t, r| t + (r.amount_cents.unwrap_or(0) as f64).max(0.0)),
         out_cents: ready.iter().fold(0.0, |t, r| t - (r.amount_cents.unwrap_or(0) as f64).min(0.0)),
         from: dates.first().copied().flatten().map(str::to_owned),
         to: dates.last().copied().flatten().map(str::to_owned),
         file_from: file_dates.first().map(|d| (*d).to_owned()),
         file_to: file_dates.last().map(|d| (*d).to_owned()),
-    };
+    }
+}
+
+fn preview_session<S: Store>(store: &S, s: &mut Session) -> AppResult<ImportPreview> {
+    let built = build(store, s)?;
+    let header_row = s.mapping.as_ref().map_or(0, |m| m.header_row);
+    let account = store.account_get(s.account_id)?.ok_or_else(AppError::failed)?;
     let xml = s.xml.as_ref().map(|x| XmlPart { reconciliation: reconciliation(x, &built), notes: x.notes.clone() });
+    let rows: Vec<ImportRow> = built.into_iter().map(|b| b.row).collect();
+    let stats = stats_of(&rows);
     Ok(ImportPreview {
         session_id: s.id.clone(),
         file_name: s.file_name.clone(),
@@ -546,7 +554,7 @@ fn preview_session<S: Store>(store: &S, s: &mut Session) -> AppResult<ImportPrev
         headers: s.rows.get(header_row).cloned().unwrap_or_default(),
         sample: s.rows.iter().skip(header_row + 1).take(5).cloned().collect(),
         mapping: s.mapping.clone(),
-        rows: built.into_iter().map(|b| b.row).collect(),
+        rows,
         stats,
         notes: Vec::new(),
         edited: s.overrides.len(),
@@ -598,6 +606,10 @@ pub struct RowChange {
     pub change: RowOverride,
 }
 
+/// As in `updateRows` of src/core/import.ts: an index past the last row is not refused (it is kept and matches nothing), and a
+/// booking date that is the right shape but no calendar day (month 13) is kept too, and then fails every preview of the
+/// session, because the duplicate search shifts it by days (a `RangeError` there). The TypeScript behaves the same, so the
+/// parity holds; the person corrects the date to get out of it.
 pub fn update_rows<S: Store>(core: &Core<S>, id: &str, changes: Vec<RowChange>) -> AppResult<ImportPreview> {
     let mut state = core.import.borrow_mut();
     let s = state.find(id)?;
@@ -726,7 +738,7 @@ pub fn commit<S: Store>(core: &Core<S>, id: &str, save_profile: bool) -> AppResu
         let header = s.rows.get(mapping.header_row).cloned().unwrap_or_default();
         (mapping, built, s.account_id, s.file_name.clone(), s.layout, s.kind, header)
     };
-    let ready: Vec<&Built> = built.iter().filter(|b| b.row.status == "ready").collect();
+    let ready: Vec<&Built> = built.iter().filter(|b| b.row.status == RowStatus::Ready).collect();
     if ready.is_empty() {
         return Err(AppError::new("import.nothing", "There are no rows ready to import."));
     }
@@ -799,6 +811,9 @@ pub fn commit<S: Store>(core: &Core<S>, id: &str, save_profile: bool) -> AppResu
         }
         Ok(batch_id)
     })?;
+    // As in `commit` of src/core/import.ts, the batch is saved and the session closed before the steps below; one of them failing
+    // (pairing transfers, reading the balance) reports an error although the rows are imported. Only the balance from the file
+    // is best effort.
     let session = {
         let mut state = core.import.borrow_mut();
         let at = state.sessions.iter().position(|s| s.id == id);

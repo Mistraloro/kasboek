@@ -1,9 +1,20 @@
-//! The operating system seal around account.json (`seal: 'os'`). Real DPAPI, Keychain and Secret Service
-//! implementations come later; this crate has the trait, a test implementation and an "unsupported" one.
+//! The operating system seal around account.json. Real DPAPI, Keychain and Secret Service implementations live in
+//! `kb-oseal` (which depends on this crate, not the other way round); this crate has the trait, a test implementation
+//! and an "unsupported" one.
+//!
+//! The `seal` value of account.json names who sealed the file, see [`SEAL_NONE`], [`SEAL_OS`] and [`SEAL_OS_NATIVE`].
 use crate::oscrypt::SealError;
 use kb_crypto::aead::{seal, unseal, Sealed};
 use kb_crypto::encoding::{base64_decode, base64_encode};
 use zeroize::Zeroizing;
+
+/// `seal` value: `data` is the plain account JSON (password accounts only).
+pub const SEAL_NONE: &str = "none";
+/// `seal` value: sealed by Electron's `safeStorage` (and by the test `FileSeal`, which stands in for it). A native
+/// build cannot open a real Electron value except through `kb-oseal`'s migration.
+pub const SEAL_OS: &str = "os";
+/// `seal` value: sealed by the native seal of `kb-oseal` (DPAPI `KBD1`, wrap key `KBK1`).
+pub const SEAL_OS_NATIVE: &str = "os-native";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyProtection {
@@ -26,6 +37,10 @@ pub trait OsSeal: Send + Sync {
     /// True for a backend that gives no real protection (the Linux `basic_text` store).
     fn weak(&self) -> bool {
         false
+    }
+    /// The `seal` value written to account.json for what this seal makes ([`SEAL_OS`] unless it is a native seal).
+    fn seal_value(&self) -> &'static str {
+        SEAL_OS
     }
     fn seal(&self, plain: &[u8]) -> Result<Vec<u8>, SealError>;
     fn unseal(&self, sealed: &[u8]) -> Result<Zeroizing<Vec<u8>>, SealError>;

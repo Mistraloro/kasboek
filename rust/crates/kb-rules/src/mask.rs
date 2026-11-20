@@ -1,7 +1,10 @@
-//! Privacy masking of free text: `maskNumbers`, `maskContacts`, `maskPrivate` and `cutText` of `src/shared/iban.ts`. Text is
+//! Privacy masking of free text: `maskNumbers`, `maskContacts`, `maskPrivate` and `cutText` of `src/shared/iban.ts` as the release
+//! branch has them (the rust-native branch's own copy of that file is older and has no `maskPrivate`; the parity specs take the
+//! reference from `KB_TS_ROOT`). `mask_private` masks the whole text and then cuts it. Text is
 //! scanned as UTF-16 code units, as the regular expressions of the original do, so lengths and cuts agree. Without lookbehind
 //! in the `regex` crate every pattern is matched by hand; each function says which pattern it is.
-use crate::iban::{fold, ibans_hidden, is_js_space, is_sep, masking, scan};
+use crate::iban::{fold, ibans_hidden, is_sep, masking, scan};
+use crate::jsstr::is_js_space;
 
 const MAIL_LOCAL: usize = 100;
 const MAIL_DOMAIN: usize = 255;
@@ -249,18 +252,25 @@ pub fn mask_contacts(text: &str) -> String {
     masking(text, contacts_hidden)
 }
 
+/// What a number, address or phone number cut off at the end of a masked prefix can leave unmasked: well under this many units.
+const EDGE: usize = 400;
+
 /// Everything that must not leave the device or show on a screen that is being watched: account and card numbers first, then
 /// e-mail addresses and phone numbers (the other way round, the phone rule would eat the groups of a spaced IBAN). `max` (in
-/// UTF-16 code units, as `String.length`) cuts the text to that many characters first, and masks a little more than that so an
-/// account number at the cut is hidden whole.
+/// UTF-16 code units, as `String.length`) cuts the text to that many characters, after masking: masks shrink a text, so cutting
+/// first would let unmasked text slide under the cut. A long text is masked as a prefix only; the prefix grows until its masked
+/// form is `EDGE` longer than `max`, so whatever the prefix edge left half-masked lies beyond the cut.
 pub fn mask_private(text: &str, max: Option<usize>) -> String {
     let t = units(text);
-    match max {
-        Some(max) if t.len() > max => {
-            let masked = units(&mask_contacts(&mask_numbers(&String::from_utf16_lossy(&t[..t.len().min(max + 64)]))));
-            format!("{}\u{2026}", String::from_utf16_lossy(&masked[..masked.len().min(max)]))
+    let Some(max) = max.filter(|&m| t.len() > m) else { return mask_contacts(&mask_numbers(text)) };
+    let mut length = max.saturating_mul(4).saturating_add(EDGE);
+    loop {
+        let prefix = String::from_utf16_lossy(&t[..t.len().min(length)]);
+        let masked = units(&mask_contacts(&mask_numbers(&prefix)));
+        if length >= t.len() || masked.len() >= max.saturating_add(EDGE) {
+            return format!("{}\u{2026}", String::from_utf16_lossy(&masked[..masked.len().min(max)]));
         }
-        _ => mask_contacts(&mask_numbers(text)),
+        length = length.saturating_mul(4);
     }
 }
 
@@ -291,6 +301,7 @@ pub fn cut_text(text: &str, max: usize) -> String {
 mod tests {
     use super::*;
     use crate::iban::mask_iban;
+    use crate::jsstr::utf16_len;
 
     // All data here is invented. The IBANs are the published example numbers of the IBAN standard.
     const OTHER: &str = "NL91ABNA0417164300";
@@ -350,5 +361,25 @@ mod tests {
         assert_eq!(cut_text(&text, 20), format!("{} ", "a".repeat(10)));
         assert_eq!(cut_text(&text, 40), text);
         assert_eq!(cut_text(&format!("{} {CARD} x", "a".repeat(10)), 20), format!("{} ", "a".repeat(10)));
+    }
+
+    #[test]
+    fn masks_before_it_cuts() {
+        let spaced = [OTHER_SPACED; 5].join(" ");
+        assert_eq!(mask_private(&format!("{spaced} {CARD} tail"), Some(60)), "NL…4300 NL…4300 NL…4300 NL…4300 NL……3456 tail…");
+        assert_eq!(mask_private(&format!("{} {CARD}", "1".repeat(80)), Some(30)), "…3456…");
+        assert_eq!(mask_private("call +32 475 12 34 56 now", Some(10)), "call …phon…");
+    }
+
+    #[test]
+    fn a_hostile_million_character_text_is_masked_fast() {
+        let started = std::time::Instant::now();
+        for unit in ["ab12", "NL91 ", "1 ", "NL91 ABNA 0417 1643 00 "] {
+            let text = unit.repeat(1_000_000 / unit.len() + 1);
+            let out = mask_private(&text, Some(2000));
+            assert!(utf16_len(&out) <= 2001);
+            assert!(!out.contains("ABNA") && !out.contains("0417"));
+        }
+        assert!(started.elapsed().as_secs() < 20, "too slow: {:?}", started.elapsed());
     }
 }

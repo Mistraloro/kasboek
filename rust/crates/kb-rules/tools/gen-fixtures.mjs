@@ -1,8 +1,14 @@
 // Writes tests/fixtures/rules.json: the answers of the TypeScript rules (src/shared/password.ts, iban.ts) for the inputs
-// below. Run: node --experimental-strip-types rust/crates/kb-rules/tools/gen-fixtures.mjs (Node 22.6+). All data is invented.
+// below, from the release TypeScript. Run: KB_TS_ROOT=/path/to/release/checkout node --experimental-strip-types
+// rust/crates/kb-rules/tools/gen-fixtures.mjs (Node 22.6+). All data is invented.
 import { writeFileSync } from 'node:fs'
-import { checkPassword } from '../../../../src/shared/password.ts'
-import { findIbans, maskIban, maskNumbers, validIban } from '../../../../src/shared/iban.ts'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+const root = process.env.KB_TS_ROOT
+if (!root) throw new Error('set KB_TS_ROOT to the release checkout whose src/shared is the reference')
+const { checkPassword } = await import(pathToFileURL(join(root, 'src/shared/password.ts')).href)
+const { findIbans, maskIban, maskNumbers, validIban } = await import(pathToFileURL(join(root, 'src/shared/iban.ts')).href)
 
 const passwords = [
   '', 'a', 'password', 'Password1!', 'P@ssw0rd123', 'Welkom2026!', 'summersummer', 'correct horse battery 12',

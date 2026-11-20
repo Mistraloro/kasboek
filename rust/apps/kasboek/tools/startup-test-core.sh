@@ -3,6 +3,8 @@
 # fresh temporary folder, reaches the unlocked Overview and logs the time of that first frame; a second start unlocks the same
 # account again; a third start without credentials stays on the Lock screen. The password is made here, goes to the app through
 # the environment and is never printed. On Linux it needs a display (xvfb-run).
+# The binary must be built with the cargo feature dev-start (`cargo build --release -p kasboek --features dev-start`): only
+# that build knows --demo-setup.
 # Usage: tools/startup-test-core.sh <binary>
 set -euo pipefail
 bin=$(realpath "${1:?binary}")

@@ -2,11 +2,15 @@
 //!
 //! - Electron's item: service `Kasboek Safe Storage`, account `Kasboek` (what Chromium writes for an app named Kasboek).
 //!   Read only, to open the old account.json. The first read from a new signature shows the Keychain "allow" prompt.
-//! - Ours: service `Kasboek Wrap Key`, account `Kasboek`, 32 raw bytes, used by [`crate::wrap::WrapKeySeal`].
+//! - Ours: service `Kasboek Wrap Key`, account `Kasboek`, 32 raw bytes, used by [`crate::wrap::WrapKeySeal`]. Created with
+//!   `SecItemAdd` only (`set_generic_password` would update an existing item), so a second creator gets "duplicate" and
+//!   reads the first one's key.
 use crate::error::OsealError;
 use crate::wrap::{Item, SecretStore};
+use core_foundation::data::CFData;
 use security_framework::base::Error as SecError;
-use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
+use security_framework::item::{ItemAddOptions, ItemAddValue, ItemClass};
+use security_framework::passwords::{delete_generic_password, get_generic_password};
 use zeroize::Zeroizing;
 
 pub const ELECTRON_SERVICE: &str = "Kasboek Safe Storage";
@@ -14,6 +18,7 @@ pub const WRAP_SERVICE: &str = "Kasboek Wrap Key";
 pub const ACCOUNT: &str = "Kasboek";
 
 const ERR_SEC_ITEM_NOT_FOUND: i32 = -25300;
+const ERR_SEC_DUPLICATE_ITEM: i32 = -25299;
 const ERR_SEC_AUTH_FAILED: i32 = -25293;
 const ERR_SEC_INTERACTION_NOT_ALLOWED: i32 = -25308;
 const ERR_SEC_USER_CANCELED: i32 = -128;
@@ -35,11 +40,6 @@ impl MacKeychain {
     pub fn with_wrap_service(service: &str) -> Self {
         Self { wrap_service: service.to_owned() }
     }
-
-    /// Removes the wrap key. Everything sealed with it can no longer be opened.
-    pub fn remove_wrap_key(&self) -> Result<(), OsealError> {
-        delete_generic_password(&self.wrap_service, ACCOUNT).map_err(map)
-    }
 }
 
 fn map(e: SecError) -> OsealError {
@@ -52,6 +52,8 @@ fn map(e: SecError) -> OsealError {
 }
 
 impl SecretStore for MacKeychain {
+    /// Always true: asking would touch the Keychain, and a locked one is only discovered (and unlocked by the user)
+    /// when a secret is read or written.
     fn usable(&self) -> bool {
         true
     }
@@ -70,10 +72,19 @@ impl SecretStore for MacKeychain {
         }
     }
 
-    fn put(&self, item: Item, secret: &[u8]) -> Result<(), OsealError> {
-        match item {
-            Item::WrapKey => set_generic_password(&self.wrap_service, ACCOUNT, secret).map_err(map),
-            Item::ElectronPassword => Err(OsealError::Unsupported),
+    fn create_wrap_key(&self, secret: &[u8]) -> Result<(), OsealError> {
+        let mut add = ItemAddOptions::new(ItemAddValue::Data { class: ItemClass::generic_password(), data: CFData::from_buffer(secret) });
+        add.set_service(&self.wrap_service).set_account_name(ACCOUNT).set_label(&self.wrap_service);
+        match add.add() {
+            Err(e) if e.code() == ERR_SEC_DUPLICATE_ITEM => Ok(()),
+            other => other.map_err(map),
+        }
+    }
+
+    fn delete_wrap_key(&self) -> Result<(), OsealError> {
+        match delete_generic_password(&self.wrap_service, ACCOUNT).map_err(map) {
+            Err(OsealError::NotFound) => Ok(()),
+            other => other,
         }
     }
 }

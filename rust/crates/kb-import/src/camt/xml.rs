@@ -23,6 +23,10 @@ pub struct XmlError {
 const MAX_DEPTH: usize = 64;
 /// More elements than this (about a 20 MB file) is refused before memory runs out.
 const MAX_ELEMENTS: usize = 2_000_000;
+/// More attributes than this in the whole file is refused too: a file within the size limit can hold a few million tiny ones in
+/// one element, which cost far more memory than the text. A real statement has a currency attribute on its amounts, a few per
+/// entry. (The TypeScript reader has no such limit; it only differs on a file that no bank writes.)
+const MAX_ATTRIBUTES: usize = 1_000_000;
 
 fn fail<T>(message: &'static str) -> Result<T, XmlError> {
     Err(XmlError { failure: XmlFailure::Broken, message })
@@ -207,6 +211,7 @@ pub fn parse_xml(source: &str) -> Result<XmlDoc, XmlError> {
     let mut stack: Vec<usize> = Vec::new();
     let mut texts: Vec<String> = Vec::new();
     let mut have_root = false;
+    let mut attributes = 0_usize;
     let mut pos = 0;
 
     while pos < src.len() {
@@ -279,6 +284,10 @@ pub fn parse_xml(source: &str) -> Result<XmlDoc, XmlError> {
                 let value = &src[pos + 1..pos + 1 + close];
                 if value.contains('<') {
                     return fail("Bad attribute value");
+                }
+                attributes += 1;
+                if attributes > MAX_ATTRIBUTES {
+                    return Err(XmlError { failure: XmlFailure::TooLarge, message: "Too many attributes" });
                 }
                 let value = decode(value)?;
                 // Assigning to `__proto__` of an object literal with a string does nothing.
@@ -387,6 +396,16 @@ mod tests {
     #[test]
     fn refuses_absurd_nesting() {
         assert_eq!(err(&"<a>".repeat(100_000)), XmlFailure::TooLarge);
+    }
+
+    #[test]
+    fn refuses_too_many_attributes_in_all() {
+        let few = format!("<a {}/>", "b=\"\" ".repeat(1000));
+        assert!(parse_xml(&few).is_ok());
+        let many = format!("<a {}/>", "b=\"\" ".repeat(MAX_ATTRIBUTES + 1));
+        assert_eq!(err(&many), XmlFailure::TooLarge);
+        let spread = format!("<a>{}</a>", "<b c=\"1\" d=\"2\"/>".repeat(MAX_ATTRIBUTES / 2 + 1));
+        assert_eq!(err(&spread), XmlFailure::TooLarge);
     }
 
     #[test]

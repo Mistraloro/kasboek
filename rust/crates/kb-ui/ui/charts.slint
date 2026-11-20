@@ -245,9 +245,9 @@ export component MonthBars inherits Rectangle {
                 tint: Theme.chart-spending;
             }
             Text {
-                // SVG puts the text baseline at y = H - 6 = 174; Inter's ascent is 0.969 em.
+                // SVG puts the text baseline at y = H - 6 = 174; Lato's ascent is 0.987 em.
                 x: (parent.cx - 40) * root.k;
-                y: (174 - 0.969 * 11) * root.k;
+                y: (174 - 0.987 * 11) * root.k;
                 width: 80 * root.k;
                 text: d.label;
                 font-family: Theme.sans;
@@ -395,7 +395,7 @@ export component TrendLine inherits Rectangle {
         }
         Text {
             x: (56 - 8 - 56) * root.k;
-            y: (root.py(t) + 4 - 0.969 * 11) * root.k;
+            y: (root.py(t) + 4 - 0.987 * 11) * root.k;
             width: 56 * root.k;
             text: root.tick-texts[i];
             font-family: Theme.num;
@@ -430,7 +430,7 @@ export component TrendLine inherits Rectangle {
         }
         if mod(i, root.every) == 0 || i == root.n - 1: Text {
             x: (root.px(i) - 40) * root.k;
-            y: (194 - 0.969 * 11) * root.k;
+            y: (194 - 0.987 * 11) * root.k;
             width: 80 * root.k;
             text: d.label;
             font-family: Theme.sans;

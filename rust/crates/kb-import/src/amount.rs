@@ -22,7 +22,7 @@ static CURRENCY_TEXT: LazyLock<Regex> = LazyLock::new(|| {
     ))
     .expect("currency regex")
 });
-static SYMBOLS: LazyLock<Regex> = LazyLock::new(|| Regex::new(&format!(r"[€$£¥₹₩₺₽₴₫฿₪{JS_SPACE}\u00A0\u202F]")).expect("symbols regex"));
+static SYMBOLS: LazyLock<Regex> = LazyLock::new(|| Regex::new(&format!(r"[€$£¥₹₩₺₽₴₫฿₪{JS_SPACE}]")).expect("symbols regex"));
 
 /// Parses a money amount: "12,50", "-1.234,56", "1 234,56", "+12.00", "12,50-", "€ 3,20", "(4,00)", "USD 12.50", "12.50 DR".
 /// Returns cents or `None`. `decimal` forces the decimal separator; `Auto` guesses from the last separator, and `prefer`

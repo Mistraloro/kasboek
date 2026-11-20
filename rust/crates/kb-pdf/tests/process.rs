@@ -142,3 +142,9 @@ fn work_that_never_ends_is_stopped_at_the_deadline() {
     assert!(lines.last().unwrap().contains("\"code\":\"import.pdf_too_large\""), "{lines:?}");
     assert!(took < Duration::from_secs(10), "{took:?}");
 }
+
+#[test]
+fn a_reader_that_cannot_be_started_is_not_a_damaged_pdf() {
+    let e = read_pdf_in_child(std::path::Path::new("/nonexistent/kb-reader"), b"%PDF-1.4", ChildOptions::default()).unwrap_err();
+    assert_eq!(e.code, "import.pdf_reader_unavailable");
+}

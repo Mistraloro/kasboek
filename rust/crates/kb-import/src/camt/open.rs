@@ -135,7 +135,7 @@ pub fn plan_xml(
 
     // Statements of one account in date order: the first one's opening and the last one's closing balance count.
     let key = |st: &CamtStatement| st.from.clone().or_else(|| st.rows.first().map(|r| r.booking_date.clone())).unwrap_or_default();
-    chosen.sort_by_key(key);
+    chosen.sort_by_cached_key(key);
     let not_booked: usize = chosen.iter().map(|st| st.not_booked).sum();
     if not_booked > 0 {
         notes.push(XmlNote::NotBooked { count: not_booked });

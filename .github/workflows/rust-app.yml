@@ -87,10 +87,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb libfontconfig1-dev libxkbcommon-x11-0 libxcb-xkb1 libx11-xcb1
 
-      - name: Build (release)
+      # `dev-start` adds the hidden development flags (--demo-setup) the real-service start-up test needs; a release build for
+      # users is made without it.
+      - name: Build (release, with dev-start for the start-up test)
         shell: bash
         working-directory: rust
-        run: cargo build --release --locked -p kasboek
+        run: cargo build --release --locked -p kasboek --features dev-start
 
       # Staged right after the build, so that the artifact exists (with the binary, the test script and a README) even when
       # a later test step fails. A failing build step fails the job before this step runs.
@@ -113,12 +115,14 @@ jobs:
       - name: Test
         shell: bash
         working-directory: rust
-        run: cargo test --locked -p kasboek -p kb-service -p kb-session -p kb-i18n -p kb-rules -p kb-ui
+        run: cargo test --locked -p kasboek --features dev-start -p kb-service -p kb-session -p kb-i18n -p kb-rules -p kb-ui
 
       - name: Clippy
         shell: bash
         working-directory: rust
-        run: cargo clippy --locked -p kasboek -p kb-service -p kb-i18n -p kb-rules --all-targets -- -D warnings
+        run: |
+          cargo clippy --locked -p kasboek -p kb-service -p kb-i18n -p kb-rules --all-targets -- -D warnings
+          cargo clippy --locked -p kasboek --features dev-start --all-targets -- -D warnings
 
       - name: Start-up tests (fixtures, then the real service)
         shell: bash

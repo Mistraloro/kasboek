@@ -121,8 +121,8 @@ fn main() {
             }
             let input: Input = serde_json::from_str(&stdin_text()).expect("input json");
             let rows: Vec<_> =
-                input.rows.iter().map(|r| kb_pdf::statement::Amounts { amount_cents: r.amount, balance_cents: r.balance }).collect();
-            let r = kb_pdf::reconcile(&rows, &input.balances);
+                input.rows.iter().map(|r| kb_import::statement::Amounts { amount_cents: r.amount, balance_cents: r.balance }).collect();
+            let r = kb_import::statement::reconcile(&rows, input.balances);
             let banner = kb_pdf::reconciliation_banner(Some(&r));
             println!("{}", json!({ "reconciliation": r, "banner": banner }));
         }

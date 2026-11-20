@@ -2,14 +2,16 @@
 //! Secret Service) and AES-256-GCM. The store is behind [`SecretStore`] so the logic is tested with a fake.
 //!
 //! Blob: `"KBK1" || iv(12) || ciphertext || tag(16)`, AAD `kasboek:oseal:wrap:v1` (the `kb_crypto::aead` layout, as the
-//! test `FileSeal` uses). The wrap key is created on the first `seal`; a lost key means `auth.other_device`, like a
-//! copied data folder.
+//! test `FileSeal` uses). The wrap key is created on the first `seal`, only when none exists (never replaced); a lost
+//! key means `auth.other_device`, like a copied data folder. A key that is in the store when no native account exists
+//! yet (see [`WrapKeySeal::replacing_stale_key`]) was not made for this data and is deleted and made again, not adopted.
 use crate::error::OsealError;
 use kb_crypto::aead::{seal, unseal, Sealed};
 use kb_crypto::encoding::{base64_decode, base64_encode};
 use kb_crypto::random_bytes;
 use kb_session::oscrypt::SealError;
-use kb_session::seal::OsSeal;
+use kb_session::seal::{OsSeal, SEAL_OS_NATIVE};
+use std::sync::atomic::{AtomicBool, Ordering};
 use zeroize::Zeroizing;
 
 pub const WRAP_MAGIC: &[u8; 4] = b"KBK1";
@@ -25,20 +27,33 @@ pub enum Item {
 }
 
 pub trait SecretStore: Send + Sync {
-    /// Whether the store can be reached at all (asked by `OsSeal::available`).
+    /// Whether the store can be reached at all (asked by `OsSeal::available`, also at start-up). It must not show a
+    /// prompt or unlock anything, and a "no" must not be remembered: the store may come up later.
     fn usable(&self) -> bool;
     fn get(&self, item: Item) -> Result<Option<Zeroizing<Vec<u8>>>, OsealError>;
-    /// Only `Item::WrapKey` can be written; the Electron password gives `Unsupported`.
-    fn put(&self, item: Item, secret: &[u8]) -> Result<(), OsealError>;
+    /// Stores the wrap key only when there is none: an existing one is never replaced, and `Ok(())` is returned also
+    /// when another process created it first (the caller reads the key back with `get`).
+    fn create_wrap_key(&self, secret: &[u8]) -> Result<(), OsealError>;
+    /// Deletes the wrap key; no key is not an error.
+    fn delete_wrap_key(&self) -> Result<(), OsealError>;
 }
 
 pub struct WrapKeySeal<S: SecretStore> {
     store: S,
+    /// Set until the first `seal` has discarded a wrap key that predates this data.
+    replace_stale: AtomicBool,
 }
 
 impl<S: SecretStore> WrapKeySeal<S> {
+    /// Uses the wrap key that is in the store, or makes one.
     pub fn new(store: S) -> Self {
-        Self { store }
+        Self { store, replace_stale: AtomicBool::new(false) }
+    }
+
+    /// For a data folder with no native-sealed account yet: whatever wrap key is in the store was not made for this
+    /// data (a leftover, or planted), so the first `seal` deletes it and makes a fresh one instead of adopting it.
+    pub fn replacing_stale_key(store: S) -> Self {
+        Self { store, replace_stale: AtomicBool::new(true) }
     }
 
     fn key(&self, item: Option<Zeroizing<Vec<u8>>>) -> Result<Zeroizing<[u8; 32]>, OsealError> {
@@ -47,13 +62,14 @@ impl<S: SecretStore> WrapKeySeal<S> {
         Ok(Zeroizing::new(key))
     }
 
-    /// The wrap key; with `create`, a missing one is made and read back (so two racing starts agree on the stored one).
+    /// The wrap key; with `create`, a missing one is made. Creating never replaces, and the key is read back: when two
+    /// starts race, the store keeps one key and both use that one, not their own random bytes.
     fn wrap_key(&self, create: bool) -> Result<Zeroizing<[u8; 32]>, OsealError> {
         match self.store.get(Item::WrapKey)? {
             Some(found) => self.key(Some(found)),
             None if create => {
                 let fresh = Zeroizing::new(random_bytes::<32>());
-                self.store.put(Item::WrapKey, &*fresh)?;
+                self.store.create_wrap_key(&*fresh)?;
                 self.key(self.store.get(Item::WrapKey)?)
             }
             None => Err(OsealError::NotFound),
@@ -66,7 +82,15 @@ impl<S: SecretStore> OsSeal for WrapKeySeal<S> {
         self.store.usable()
     }
 
+    fn seal_value(&self) -> &'static str {
+        SEAL_OS_NATIVE
+    }
+
     fn seal(&self, plain: &[u8]) -> Result<Vec<u8>, SealError> {
+        if self.replace_stale.load(Ordering::Acquire) {
+            self.store.delete_wrap_key()?;
+            self.replace_stale.store(false, Ordering::Release);
+        }
         let key = self.wrap_key(true)?;
         let s = seal(&key, plain, WRAP_LABEL);
         let mut out = WRAP_MAGIC.to_vec();
@@ -124,14 +148,18 @@ pub(crate) mod fake {
             }
             Ok(self.items.lock().unwrap().get(name(item)).cloned().map(Zeroizing::new))
         }
-        fn put(&self, item: Item, secret: &[u8]) -> Result<(), OsealError> {
-            if item == Item::ElectronPassword {
-                return Err(OsealError::Unsupported);
-            }
+        fn create_wrap_key(&self, secret: &[u8]) -> Result<(), OsealError> {
             if self.locked {
                 return Err(OsealError::Locked);
             }
-            self.items.lock().unwrap().insert(name(item), secret.to_vec());
+            self.items.lock().unwrap().entry("wrap").or_insert_with(|| secret.to_vec());
+            Ok(())
+        }
+        fn delete_wrap_key(&self) -> Result<(), OsealError> {
+            if self.locked {
+                return Err(OsealError::Locked);
+            }
+            self.items.lock().unwrap().remove("wrap");
             Ok(())
         }
     }
@@ -142,6 +170,7 @@ mod tests {
     use super::fake::FakeStore;
     use super::*;
     use kb_session::seal::KeyProtection;
+    use std::sync::Arc;
 
     #[test]
     fn roundtrips_and_creates_the_wrap_key_once() {
@@ -192,5 +221,65 @@ mod tests {
         let down = WrapKeySeal::new(FakeStore { down: true, ..FakeStore::default() });
         assert!(!down.available());
         assert_eq!(down.protection(), KeyProtection::Weak);
+    }
+
+    /// A store that has no key at first and lets another "process" create one between our `get` and `create`.
+    struct Racing {
+        inner: Arc<FakeStore>,
+        rival: Vec<u8>,
+    }
+
+    impl SecretStore for Racing {
+        fn usable(&self) -> bool {
+            true
+        }
+        fn get(&self, item: Item) -> Result<Option<Zeroizing<Vec<u8>>>, OsealError> {
+            self.inner.get(item)
+        }
+        fn create_wrap_key(&self, secret: &[u8]) -> Result<(), OsealError> {
+            // The rival got there first; ours must not replace it.
+            self.inner.create_wrap_key(&self.rival)?;
+            self.inner.create_wrap_key(secret)
+        }
+        fn delete_wrap_key(&self) -> Result<(), OsealError> {
+            self.inner.delete_wrap_key()
+        }
+    }
+
+    #[test]
+    fn a_racing_creator_keeps_the_first_key_and_both_open_each_others_blobs() {
+        let inner = Arc::new(FakeStore::default());
+        let ours = WrapKeySeal::new(Racing { inner: inner.clone(), rival: vec![9; 32] });
+        let blob = ours.seal(b"invented").unwrap();
+        assert_eq!(inner.items.lock().unwrap().get("wrap").unwrap(), &vec![9u8; 32]);
+        assert_eq!(ours.unseal(&blob).unwrap().as_slice(), b"invented");
+    }
+
+    #[test]
+    fn an_existing_key_is_adopted_by_default_but_replaced_when_no_native_account_exists() {
+        let adopt = WrapKeySeal::new(FakeStore::default());
+        adopt.store.items.lock().unwrap().insert("wrap", vec![4; 32]);
+        adopt.seal(b"x").unwrap();
+        assert_eq!(adopt.store.items.lock().unwrap().get("wrap").unwrap(), &vec![4u8; 32]);
+
+        let fresh = WrapKeySeal::replacing_stale_key(FakeStore::default());
+        fresh.store.items.lock().unwrap().insert("wrap", vec![4; 32]);
+        let first = fresh.seal(b"x").unwrap();
+        let key = fresh.store.items.lock().unwrap().get("wrap").cloned().unwrap();
+        assert_ne!(key, vec![4u8; 32]);
+        // Only the first seal discards: the next ones reuse the key they made.
+        fresh.seal(b"y").unwrap();
+        assert_eq!(fresh.store.items.lock().unwrap().get("wrap").cloned().unwrap(), key);
+        assert_eq!(fresh.unseal(&first).unwrap().as_slice(), b"x");
+        // No stale key at all is fine too, and a locked store keeps the flag for the next try.
+        WrapKeySeal::replacing_stale_key(FakeStore::default()).seal(b"x").unwrap();
+        let locked = WrapKeySeal::replacing_stale_key(FakeStore { locked: true, ..FakeStore::default() });
+        assert_eq!(locked.seal(b"x").unwrap_err(), SealError::Unavailable);
+        assert!(locked.replace_stale.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn the_seal_reports_the_native_file_value() {
+        assert_eq!(WrapKeySeal::new(FakeStore::default()).seal_value(), "os-native");
     }
 }

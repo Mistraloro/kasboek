@@ -8,19 +8,26 @@ of `kb-service` so that they run on fixtures now and on `kb-core` / `kb-session`
 
 ```sh
 cargo run --release -p kasboek -- --data-dir DIR     # the real service: Setup on an empty folder, Lock when an account exists
-cargo run --release -p kasboek                       # the real service when the Electron data folder exists, else the fixtures
+cargo run --release -p kasboek                       # the real service when the Electron data folder exists and the OS can seal it (else a message), else the fixtures
 cargo run --release -p kasboek -- --service fixture  # fixture service, Lock screen; password: correct horse battery 12
 cargo run --release -p kasboek -- --state unlocked   # straight to the Overview
 cargo run --release -p kasboek -- --state setup      # the Setup screen
-cargo run --release -p kasboek -- --mode device --fake-device   # the "Unlock with Windows Hello" button (answers "verified" without the OS)
+cargo run --release -p kasboek --features dev-start -- --mode device --fake-device   # the "Unlock with Windows Hello" button (answers "verified" without the OS)
 cargo run --release -p kasboek -- --service core-temp --state unlocked   # kb-core on a seeded temporary database
 ```
 
 Options: `--theme light|dark|system`, `--lang en|nl|fr|de|es|es-419|pt-PT|pt-BR`, `--scale N`, `--today YYYY-MM-DD`,
 `--slow-steps MS` (pause between the simulated loading steps, to see the loading view), `--data-dir DIR` (real service: the data
-folder, default the Electron `userData` folder: `%APPDATA%\Kasboek`, `~/Library/Application Support/Kasboek`, `$XDG_CONFIG_HOME/Kasboek`;
-`KASBOEK_DATA_DIR` overrides the default; fixtures: prefs only, default `<config>/kasboek-native-dev`, never the Electron app's folder), `--log FILE`, `--exit-after-ms N`, `--exit-after-first-frame`,
+folder, or `KASBOEK_DATA_DIR`; default the Electron `userData` folder (`%APPDATA%\Kasboek`, `~/Library/Application Support/Kasboek`,
+`$XDG_CONFIG_HOME/Kasboek`), opened by default only when it exists and the OS key store can seal its account file, else the app says so and stops; the folder is created private (0700 on Unix); with no
+home/config folder known the app says so and stops, it never falls back to a temporary folder; fixtures: prefs only, default `<config>/kasboek-native-dev`), `--log FILE`, `--exit-after-ms N`, `--exit-after-first-frame`,
 `--inset PX` (room for window controls drawn into the top bar; 12 by default, Electron uses 148).
+Development flags, only in a build with the cargo feature `dev-start` (off by default, so not in release builds, which exit 2 with a message when given one (`tests/dev_flags.rs`); the CI build and
+`tools/startup-test-core.sh` use it): `--fake-device`, and `--demo-setup` (creates or unlocks the account with the password of
+`KASBOEK_DEMO_PASSWORD`, which is removed from the environment at once and held in a wiped-on-drop value).
+`prefs.json` is written by the service only (`kb_service::update_prefs_key`; the app reads it for the first frame): a file that
+can't be read is moved to `prefs.json.bad`, not overwritten; writes go through a new 0600 temporary file and only happen when a value changed.
+`lastAuth` also keeps the count of wrong tries, so that the throttle holds before a sealed account file is opened.
 `startup.log` is written next to the binary (previous run: `startup.prev.log`) with the milestones of plan section 5.
 
 ## Screenshots and checks
@@ -59,8 +66,13 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
   erase), the database opens on unlock and closes on lock, auto-lock (idle minutes of the preferences) and the Overview on real ops. Setup: password with
   meter, passwordless, recovery key with the typed confirmation, 2FA step with QR, import option disabled ("not available yet"). Settings -> Security is
   minimal (password, passwordless, new recovery key, 2FA). The Accounts page is a **developer preview** to add an account and a transaction.
-- Stubbed: the OS seal (`Unsupported`: `account.json` is `seal: 'none'`, passwordless is refused, Electron `seal: 'os'` files do not open until
-  `kb-oseal` is wired), lock on system lock/suspend and the OS idle time (`OsEvents` stub; the timer counts service calls and navigation), default categories
+- OS seal: the real service uses `kb_oseal::select_os_seal_for` (DPAPI, Keychain wrap key, Secret Service). At start, before the account file is read, an
+  Electron-sealed `account.json` is moved to `seal: 'os-native'` (`kb_oseal::plan_migration`); the original stays as `account.electron.json` until the first
+  native unlock that saved the file. A failure shows on the Lock screen ("Kasboek could not take over the data of the Electron app: ...") and changes nothing.
+  Without a key store (Linux, no Secret Service) `account.json` is `seal: 'none'` and passwordless is refused. Tests use fake `OsSeal` / `DeviceAuth`; the
+  real OS calls are not run by the app tests (`kb-oseal/tests/real_os.rs` does that where a keyring exists).
+- Stubbed: lock on system lock/suspend and the OS idle time (`OsEvents` stub, TODO:
+  real implementations per OS; the timer counts service calls and navigation), default categories
   are not localised after setup, no clipboard copy of the recovery key, no "choose a new password" screen after a recovery unlock, migrations are reported as one step.
 - The fixture service (`--service fixture`, screenshots) still simulates login. Pages other than Overview, Accounts and Settings are placeholder cards; buttons
   whose operations do not exist (Review, Get tips, Not useful / Hide) show a toast naming the operation.

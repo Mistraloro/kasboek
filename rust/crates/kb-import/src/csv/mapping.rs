@@ -89,8 +89,9 @@ pub struct Mapping {
     pub columns: Columns,
 }
 
+/// What a column can hold; the keys of `Columns` and `Ignore`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Field {
+pub enum Field {
     Ignore,
     BookingDate,
     ValueDate,
@@ -134,8 +135,23 @@ pub fn direction_of(text: &str) -> Option<i64> {
 static ALL_SYNONYMS: LazyLock<HashSet<&'static str>> =
     LazyLock::new(|| SYNONYMS.iter().flat_map(|(_, names)| names.iter().copied()).collect());
 
-fn score_header_row(cells: &[String]) -> usize {
-    cells.iter().filter(|c| ALL_SYNONYMS.contains(norm_header(c).as_str())).count()
+/// How many of the cells are header names the synonym lists know.
+pub fn score_header_row<S: AsRef<str>>(cells: &[S]) -> usize {
+    cells.iter().filter(|c| ALL_SYNONYMS.contains(norm_header(c.as_ref()).as_str())).count()
+}
+
+/// The field a header name stands for on its own (exact name first, then a partial match for the longer names), or `None`.
+/// The first field that lists a name wins. The statement reader maps each header cell this way; `auto_map` claims columns
+/// field by field instead.
+pub fn header_field(text: &str) -> Option<Field> {
+    let h = norm_header(text);
+    SYNONYMS
+        .iter()
+        .find(|(_, names)| names.contains(&h.as_str()))
+        .or_else(|| {
+            SYNONYMS.iter().find(|(f, names)| *f != Field::Ignore && names.iter().any(|syn| syn.chars().count() >= 5 && h.contains(syn)))
+        })
+        .map(|(f, _)| *f)
 }
 
 /// First row that looks like a header (bank exports may start with a few info lines).

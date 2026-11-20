@@ -3,7 +3,7 @@
 use crate::device::{self, Event, Outcome, Report};
 use crate::format::Formats;
 use crate::loading::{self, Gate, Progress};
-use crate::prefs::{self, LastAuth, Prefs};
+use crate::prefs::{LastAuth, Prefs};
 use crate::setup_rules::{recovery_key_confirmed, recovery_key_tail, TotpBegin};
 use crate::view::{self, OverviewData, Res};
 use crate::{log, titlebar, App, Loading, Lock, Ov, QrRun, Recovery, RuleRow, SetupState, ShellState, Totp, Tx};
@@ -22,14 +22,13 @@ pub struct Config {
     /// Today as (year, month, day): the system clock, or `--today`.
     pub today: (i32, u32, u32),
     /// Answer the device prompt with "verified" without asking the OS (fixtures on Linux, tests).
+    #[cfg(feature = "dev-start")]
     pub fake_device: bool,
     /// The space the window controls take at the right of the top bar (Electron draws them into the page: 148 px).
     pub caption_inset: f32,
     /// The service asks the person itself (Windows Hello / Touch ID inside `auth.unlock`): the button only starts the call.
     /// Off for the fixtures, where this app shows the prompt first.
     pub device_in_service: bool,
-    /// The development start `--demo-setup`: create the account (or unlock it) with this password without the screens.
-    pub demo_password: Option<String>,
 }
 
 #[derive(Default)]
@@ -58,7 +57,10 @@ pub struct Ctl {
     toasts: Rc<VecModel<crate::ToastItem>>,
     /// The last group of the recovery key on screen, to check what the person types back. Nothing else of the key is kept.
     recovery_tail: RefCell<String>,
-    demo_password: RefCell<Option<String>>,
+    /// The development start `--demo-setup`: create the account (or unlock it) with this password without the screens.
+    /// Moved in by `set_demo_password`, taken (and wiped) at the first status; never part of `Config`.
+    #[cfg(feature = "dev-start")]
+    demo_password: RefCell<Option<zeroize::Zeroizing<String>>>,
     gate_timer: Timer,
     throttle_timer: Timer,
     device_started: Cell<Option<Instant>>,
@@ -94,7 +96,8 @@ impl Ctl {
             cat,
             prefs_path: cfg.data_dir.join("prefs.json"),
             fmt: RefCell::new(Formats::from_json(&prefs.formats)),
-            demo_password: RefCell::new(cfg.demo_password.clone()),
+            #[cfg(feature = "dev-start")]
+            demo_password: RefCell::new(None),
             cfg,
             state: RefCell::new(State { month: today, ..State::default() }),
             status: RefCell::new(Value::Null),
@@ -250,14 +253,25 @@ impl Ctl {
 
     fn apply_status(self: &Rc<Self>, ui: &App, st: &Value) {
         *self.status.borrow_mut() = st.clone();
-        let demo = self.demo_password.borrow_mut().take();
-        match (st["state"].as_str().unwrap_or("locked"), demo) {
-            ("setup", Some(password)) => self.demo_login("auth.setup", json!({ "mode": "password", "password": password })),
-            ("locked", Some(password)) => self.demo_login("auth.unlock", json!({ "password": password })),
-            ("setup", None) => self.show_setup(ui, st),
-            ("unlocked", _) => self.begin_load(ui),
+        #[cfg(feature = "dev-start")]
+        if let Some(password) = self.demo_password.borrow_mut().take() {
+            match st["state"].as_str().unwrap_or("locked") {
+                "setup" => return self.demo_login("auth.setup", json!({ "mode": "password", "password": password.as_str() })),
+                "locked" => return self.demo_login("auth.unlock", json!({ "password": password.as_str() })),
+                _ => {}
+            }
+        }
+        match st["state"].as_str().unwrap_or("locked") {
+            "setup" => self.show_setup(ui, st),
+            "unlocked" => self.begin_load(ui),
             _ => self.show_lock(ui, st),
         }
+    }
+
+    /// The development start `--demo-setup`: the password is moved in and wiped after use.
+    #[cfg(feature = "dev-start")]
+    pub fn set_demo_password(&self, password: zeroize::Zeroizing<String>) {
+        *self.demo_password.borrow_mut() = Some(password);
     }
 
     pub(crate) fn device_name(&self, kind: &str) -> String {
@@ -504,6 +518,7 @@ impl Ctl {
     }
 
     /// `--demo-setup`: the same calls the screens make, without the screens (a development start; see main.rs).
+    #[cfg(feature = "dev-start")]
     fn demo_login(self: &Rc<Self>, op: &'static str, input: Value) {
         log::mark(&format!("demo: {op}"));
         self.run(op, input, |c, ui, res| match res {
@@ -549,8 +564,11 @@ impl Ctl {
             match res {
                 Ok(st) => {
                     log::mark(&format!("kdf done ({:.0} ms)", started.elapsed().as_secs_f64() * 1000.0));
-                    if let Some(auth) = LastAuth::from_status(&st) {
-                        c.cache_pref("lastAuth", auth.to_json());
+                    // The service keeps `lastAuth` (with the wrong tries) itself; the fixtures' app writes it here.
+                    if !c.cfg.device_in_service {
+                        if let Some(auth) = LastAuth::from_status(&st) {
+                            c.cache_pref("lastAuth", auth.to_json());
+                        }
                     }
                     c.apply_status(ui, &st);
                 }
@@ -610,6 +628,7 @@ impl Ctl {
                 }
             }
         });
+        #[cfg(feature = "dev-start")]
         if self.cfg.fake_device {
             report(Event::Shown("fake device".into()));
             report(Event::Answered(Outcome::Verified, "--fake-device".into()));
@@ -650,7 +669,7 @@ impl Ctl {
     /// Writes a key that is not a preference of the contract into prefs.json (the service owns the file when it can).
     pub(crate) fn cache_pref(&self, key: &str, value: Value) {
         if !self.service.cache_pref(key, value.clone()) {
-            prefs::update(&self.prefs_path, &[(key, value)]);
+            kb_service::update_prefs_key(&self.prefs_path, key, Some(value));
         }
     }
 

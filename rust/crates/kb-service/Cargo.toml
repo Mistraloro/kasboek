@@ -11,8 +11,12 @@ publish.workspace = true
 kb-core.workspace = true
 kb-crypto.workspace = true
 kb-db.workspace = true
+kb-oseal = { path = "../kb-oseal" }
 kb-session.workspace = true
 qrcode = { version = "0.15", default-features = false, features = ["svg"] }
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
+
+[dev-dependencies]
+zeroize.workspace = true

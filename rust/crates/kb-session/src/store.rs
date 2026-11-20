@@ -1,17 +1,19 @@
 //! Reads and writes account.json, sealed by the operating system. The seal binds the data to this computer and user:
 //! a copied file can't be opened elsewhere, even with the password. Port of src/main/security/account-store.ts.
 //!
-//! File: `{"format":"kasboek-account","version":2,"seal":"os"|"none","data":"<base64>"}`; `data` is the OS-sealed (or,
-//! for `none`, plain) JSON of the account.
+//! File: `{"format":"kasboek-account","version":2,"seal":"os"|"os-native"|"none","data":"<base64>"}`; `data` is the
+//! OS-sealed (or, for `none`, plain) JSON of the account. `os` and `os-native` are both opened with the configured
+//! [`OsSeal`], which refuses a blob it did not make (an Electron `v10`/`v11` value is `auth.other_device` here; the
+//! migration in `kb-oseal` turns it into `os-native`). A seal writes the value it reports in [`OsSeal::seal_value`].
 use crate::account::AccountData;
 use crate::error::{SessionError, SessionResult};
 use crate::paths::Paths;
-use crate::seal::{KeyProtection, OsSeal};
+use crate::seal::{KeyProtection, OsSeal, SEAL_NONE, SEAL_OS, SEAL_OS_NATIVE};
 use kb_crypto::encoding::{base64_decode, base64_encode};
 use serde_json::Value;
 use std::fs;
 use std::io::{Read, Write};
-use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 use zeroize::Zeroizing;
 
 /// Larger files are refused before they are read (a real account is a few KiB).
@@ -29,8 +31,9 @@ pub struct RawAccountFile {
 pub struct AccountStore {
     pub paths: Paths,
     pub seal: Box<dyn OsSeal>,
-    /// `seal.available()`, asked once (account-store.ts does the same): the answer must not change between two saves.
-    available: OnceLock<bool>,
+    /// Set once `seal.available()` has said yes: that answer must not change between two saves (a key that was written
+    /// sealed must not be written readable later). A "no" is asked again, so a keyring that appears later is used.
+    available: AtomicBool,
 }
 
 fn other_device() -> SessionError {
@@ -67,11 +70,16 @@ fn sync_dir(path: &std::path::Path) -> std::io::Result<()> {
 
 impl AccountStore {
     pub fn new(paths: Paths, seal: Box<dyn OsSeal>) -> Self {
-        Self { paths, seal, available: OnceLock::new() }
+        Self { paths, seal, available: AtomicBool::new(false) }
     }
 
     fn seal_available(&self) -> bool {
-        *self.available.get_or_init(|| self.seal.available())
+        if self.available.load(Ordering::Relaxed) {
+            return true;
+        }
+        let yes = self.seal.available();
+        self.available.store(yes, Ordering::Relaxed);
+        yes
     }
 
     pub fn key_protection(&self) -> KeyProtection {
@@ -103,7 +111,8 @@ impl AccountStore {
             _ => Zeroizing::new(String::new()),
         };
         let data = Zeroizing::new(base64_decode(&text).unwrap_or_default());
-        Ok(Some(RawAccountFile { seal_os: file.get("seal").and_then(Value::as_str) == Some("os"), data }))
+        let seal = file.get("seal").and_then(Value::as_str);
+        Ok(Some(RawAccountFile { seal_os: matches!(seal, Some(SEAL_OS | SEAL_OS_NATIVE)), data }))
     }
 
     /// Opens a raw file: with the OS seal for `os`, as plain text for `none`.
@@ -145,7 +154,7 @@ impl AccountStore {
         // Base64 needs no escaping, so the text is built directly: no parsed copy of a plain account is left behind.
         let file = Zeroizing::new(format!(
             r#"{{"format":"kasboek-account","version":2,"seal":"{}","data":"{}"}}"#,
-            if os { "os" } else { "none" },
+            if os { self.seal.seal_value() } else { SEAL_NONE },
             *data
         ));
         let mut tmp = self.paths.account_file.as_os_str().to_owned();
@@ -190,6 +199,15 @@ impl AccountStore {
             Zeroizing::new(base64_decode(v.strip_prefix("plain:")?)?)
         };
         std::str::from_utf8(&plain).ok().map(|t| Zeroizing::new(t.to_owned()))
+    }
+
+    /// Removes `account.electron.json` (what the migration kept). Called once the native seal has been used for a
+    /// successful unlock and save, and after every credential change. A missing file is fine.
+    pub fn remove_electron_backup(&self) -> std::io::Result<()> {
+        match fs::remove_file(&self.paths.electron_backup_file) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e),
+            _ => Ok(()),
+        }
     }
 
     pub fn remove_legacy_keystore(&self) {
@@ -265,6 +283,58 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             assert_eq!(fs::metadata(&store.paths.account_file).unwrap().permissions().mode() & 0o777, 0o600);
         }
+    }
+
+    /// A seal that reports itself as a native one.
+    struct Native(FileSeal);
+
+    impl OsSeal for Native {
+        fn available(&self) -> bool {
+            true
+        }
+        fn seal_value(&self) -> &'static str {
+            SEAL_OS_NATIVE
+        }
+        fn seal(&self, plain: &[u8]) -> Result<Vec<u8>, crate::oscrypt::SealError> {
+            self.0.seal(plain)
+        }
+        fn unseal(&self, sealed: &[u8]) -> Result<Zeroizing<Vec<u8>>, crate::oscrypt::SealError> {
+            self.0.unseal(sealed)
+        }
+    }
+
+    #[test]
+    fn a_native_seal_writes_os_native_and_both_os_values_open_through_the_seal() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = AccountStore::new(Paths::in_dir(dir.path()), Box::new(Native(FileSeal::new([1; 32]))));
+        store.save(&account(AuthMode::Device)).unwrap();
+        let text = std::fs::read_to_string(dir.path().join("account.json")).unwrap();
+        assert!(text.contains(r#""seal":"os-native""#));
+        assert!(store.read_raw().unwrap().unwrap().seal_os);
+        assert!(store.load().unwrap().is_some());
+        // The test seal (value `os`) writes what the TypeScript app writes.
+        let plain_os = AccountStore::new(Paths::in_dir(dir.path()), Box::new(FileSeal::new([1; 32])));
+        plain_os.save(&account(AuthMode::Device)).unwrap();
+        assert!(std::fs::read_to_string(dir.path().join("account.json")).unwrap().contains(r#""seal":"os","#));
+        assert!(store.load().unwrap().is_some());
+    }
+
+    #[test]
+    fn without_a_seal_an_os_native_file_is_another_device_not_a_crash() {
+        let dir = tempfile::tempdir().unwrap();
+        AccountStore::new(Paths::in_dir(dir.path()), Box::new(Native(FileSeal::new([1; 32])))).save(&account(AuthMode::Device)).unwrap();
+        let none = AccountStore::new(Paths::in_dir(dir.path()), Box::new(Unsupported));
+        assert_eq!(none.load().err().unwrap().code, "auth.other_device");
+    }
+
+    #[test]
+    fn an_unavailable_answer_is_asked_again_so_a_keyring_that_appears_later_is_used() {
+        let dir = tempfile::tempdir().unwrap();
+        let flag = Arc::new(AtomicBool::new(false));
+        let store = AccountStore::new(Paths::in_dir(dir.path()), Box::new(Flaky(flag.clone(), FileSeal::new([1; 32]))));
+        assert_eq!(store.key_protection(), KeyProtection::Weak);
+        flag.store(true, Ordering::SeqCst);
+        assert_eq!(store.key_protection(), KeyProtection::Os);
     }
 
     #[test]

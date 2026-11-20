@@ -12,7 +12,7 @@
 //! the system lock the session from the same worker.
 use crate::prefs_store::PrefsStore;
 use crate::{AppError, AppEvent, AppService, Listener, Listeners, LoadStep, OpFuture, DEMO_PASSWORD};
-use kb_core::{locked_refusal, Actor, Core, CoreConfig, SeededRng};
+use kb_core::{locked_refusal, Actor, Core, CoreConfig, Rng, SeededRng};
 use kb_crypto::slot::Argon2Cost;
 use kb_db::{DbKey, OpenOptions, SqliteStore, Store, SCHEMA_VERSION};
 use kb_session::account::{Attempts, AuthMode};
@@ -20,7 +20,7 @@ use kb_session::device::{DeviceAuth, NoDevice};
 use kb_session::ops::{register_ops, OpHandler};
 use kb_session::seal::{FileSeal, OsSeal, Unsupported};
 use kb_session::session::{Event, Hint, LockReason};
-use kb_session::time::{Clock as SessionClock, ManualClock, OsRng, SystemClock as SessionSystemClock};
+use kb_session::time::{iso, Clock as SessionClock, ManualClock, OsRng, SystemClock as SessionSystemClock};
 use kb_session::{Config, Paths, Session};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -63,6 +63,15 @@ impl OsEvents for NoOsEvents {
     fn on_system_lock(&self, _on_lock: Box<dyn Fn() + Send + Sync>) {}
 }
 
+/// Random numbers of the core (transfer pair keys, import session ids) from the operating system.
+struct OsRandom;
+
+impl Rng for OsRandom {
+    fn next_u64(&self) -> u64 {
+        u64::from_le_bytes(kb_crypto::random_bytes::<8>())
+    }
+}
+
 /// Lets the core read the same (injectable) time as the session.
 pub struct ClockAdapter {
     pub clock: Arc<dyn SessionClock>,
@@ -83,6 +92,10 @@ pub struct CoreOptions {
     pub data_dir: PathBuf,
     /// The seal around account.json. `Unsupported` writes `seal: 'none'` and cannot open `seal: 'os'` files.
     pub seal: Box<dyn OsSeal>,
+    /// Before the account file is read: move an Electron-sealed `account.json` to the native seal (`kb_oseal::plan_migration`).
+    /// The Electron original stays as `account.electron.json` (kb-session removes it after the first native unlock that
+    /// saved the file). A failure is shown on the Lock screen and leaves `account.json` as it was.
+    pub migrate_electron: bool,
     pub device: Box<dyn DeviceAuth>,
     pub os_events: Arc<dyn OsEvents>,
     /// Time of the session and the core (tests move it by hand). The system clock when `None`.
@@ -96,10 +109,19 @@ pub struct CoreOptions {
 }
 
 impl CoreOptions {
+    /// The real thing for `data_dir`: the operating system's seal, and the migration of an Electron account file.
+    pub fn native(data_dir: PathBuf) -> Self {
+        let mut options = Self::new(data_dir);
+        options.seal = kb_oseal::select_os_seal_for(&options.data_dir);
+        options.migrate_electron = true;
+        options
+    }
+
     pub fn new(data_dir: PathBuf) -> Self {
         Self {
             data_dir,
             seal: Box::new(Unsupported),
+            migrate_electron: false,
             device: Box::new(NoDevice),
             os_events: Arc::new(NoOsEvents),
             clock: None,
@@ -144,21 +166,25 @@ fn hint_from(prefs: &PrefsStore) -> Option<Hint> {
         mode,
         two_factor: last["twoFactor"].as_bool().unwrap_or(false),
         remembered_until: last["rememberedUntil"].as_str().map(str::to_owned),
-        attempts: Attempts { failed: 0, last_failed_at: None },
+        attempts: Attempts {
+            failed: last["attempts"]["failed"].as_u64().unwrap_or(0),
+            last_failed_at: last["attempts"]["lastFailedAt"].as_str().map(str::to_owned),
+        },
     })
 }
 
 impl CoreService {
     pub fn open(options: CoreOptions) -> Result<Self, AppError> {
-        Self::start(options, None)
+        Self::start(options, Box::new(OsRandom), None)
     }
 
-    fn start(options: CoreOptions, temp: Option<tempfile::TempDir>) -> Result<Self, AppError> {
-        let CoreOptions { data_dir, seal, device, os_events, clock, cost, tick, utc_offset_minutes } = options;
-        std::fs::create_dir_all(&data_dir).map_err(|_| AppError::failed())?;
+    fn start(options: CoreOptions, rng: Box<dyn Rng>, temp: Option<tempfile::TempDir>) -> Result<Self, AppError> {
+        let CoreOptions { data_dir, seal, migrate_electron, device, os_events, clock, cost, tick, utc_offset_minutes } = options;
+        crate::paths::create_private_dir(&data_dir).map_err(|_| AppError::failed())?;
         let listeners = Arc::new(Listeners::default());
         let prefs = Arc::new(PrefsStore::new(data_dir.join("prefs.json"), system_languages(), utc_offset_minutes));
         let hint = hint_from(&prefs);
+        let attempts = hint.as_ref().map(|h| h.attempts.clone()).unwrap_or(Attempts { failed: 0, last_failed_at: None });
         let session_clock: Arc<dyn SessionClock> = clock.unwrap_or_else(|| Arc::new(SessionSystemClock));
         let mut config = Config::new(Paths::in_dir(&data_dir), Box::new(session_clock.clone()), Box::new(OsRng), seal, device);
         if let Some(cost) = cost {
@@ -170,9 +196,12 @@ impl CoreService {
         let worker = {
             let (listeners, prefs, data_dir) = (listeners.clone(), prefs.clone(), data_dir.clone());
             let (activity, os_events) = (activity.clone(), os_events.clone());
+            let clock = session_clock.clone();
             std::thread::Builder::new()
                 .name("kb-service".into())
                 .spawn(move || {
+                    // Once, before the session reads account.json; the requests wait in the queue meanwhile.
+                    let migration_error = if migrate_electron { migrate(&data_dir, &*config.seal) } else { None };
                     let mut session = Session::<SqliteStore>::new(config);
                     let sink = listeners.clone();
                     session.set_event_sink(move |event| {
@@ -186,7 +215,7 @@ impl CoreService {
                     let core = Core::new(
                         None,
                         Box::new(ClockAdapter { clock: session_clock, utc_offset_minutes }),
-                        Box::new(SeededRng::new(1)),
+                        rng,
                         CoreConfig { prefs_file: Some(data_dir.join("prefs.json")), system_languages: system_languages() },
                     );
                     let auth = register_ops::<SqliteStore>()
@@ -194,7 +223,7 @@ impl CoreService {
                         .filter(|o| o.in_contract)
                         .map(|o| (o.name, (o.mutates, o.handler)))
                         .collect();
-                    Worker { session, core, auth, listeners, prefs, activity, os_events }.run(rx);
+                    Worker { session, core, auth, listeners, prefs, activity, os_events, clock, attempts, migration_error }.run(rx);
                 })
                 .map_err(|_| AppError::failed())?
         };
@@ -239,7 +268,7 @@ impl CoreService {
         options.seal = Box::new(FileSeal::new([7; 32]));
         options.clock = Some(Arc::new(ManualClock::new(NOW_MS)));
         options.cost = Some(Argon2Cost { m: 64, t: 1, p: 1 });
-        let service = Self::start(options, Some(dir))?;
+        let service = Self::start(options, Box::new(SeededRng::new(1)), Some(dir))?;
         let call = |op: &str, input: Value| crate::block_on(service.invoke(op, input));
         call("auth.setup", json!({ "mode": "password", "password": DEMO_PASSWORD }))?;
         call(
@@ -331,6 +360,12 @@ struct Worker {
     /// When the person last did something in the app.
     activity: Arc<Mutex<Instant>>,
     os_events: Arc<dyn OsEvents>,
+    clock: Arc<dyn SessionClock>,
+    /// The wrong tries of the login, kept in `lastAuth` so that the next start can throttle before a sealed account file
+    /// is opened (the session does not tell its counter).
+    attempts: Attempts,
+    /// Why the Electron account file could not be moved to the native seal, in words for the Lock screen.
+    migration_error: Option<String>,
 }
 
 impl Worker {
@@ -364,6 +399,16 @@ impl Worker {
         if result.is_ok() && mutates && !op.starts_with("auth.") {
             self.listeners.emit(AppEvent::DataChanged { actor: "user".into() });
         }
+        self.explain_migration(result)
+    }
+
+    /// A status that says the account file can't be opened gets the reason the migration gave, which is the real one.
+    fn explain_migration(&self, mut result: Result<Value, AppError>) -> Result<Value, AppError> {
+        if let (Some(message), Ok(status)) = (&self.migration_error, &mut result) {
+            if status["error"].is_object() {
+                status["error"] = json!({ "code": "auth.migration_failed", "message": message });
+            }
+        }
         result
     }
 
@@ -380,7 +425,12 @@ impl Worker {
             self.progress(LoadStep::Opening, 0, 1);
             self.progress(LoadStep::Migrating, 0, total);
         }
+        // The core's own handle to the database goes first: erasing moves the file, and restoring brings one back.
+        if matches!(op, "auth.erase" | "auth.restoreErased") {
+            self.close_core();
+        }
         let result = handler(&mut self.session, input);
+        self.count_attempt(op, &result);
         let synced = self.sync_core();
         let result = match (result, synced) {
             (Ok(value), Ok(())) => Ok(value),
@@ -411,15 +461,32 @@ impl Worker {
         result
     }
 
+    fn close_core(&mut self) {
+        if self.core.is_unlocked() {
+            self.core.set_store(None);
+            self.core.set_unlocked(false);
+        }
+    }
+
+    /// Counts the wrong tries of the login the way the session does (a wrong password, code or recovery key), and
+    /// forgets them after a correct one or an erase.
+    fn count_attempt<T>(&mut self, op: &str, result: &Result<T, kb_session::SessionError>) {
+        let clean = Attempts { failed: 0, last_failed_at: None };
+        match (op, result) {
+            ("auth.unlock" | "auth.unlockRecovery", Err(e)) if e.code == "auth.failed" => {
+                self.attempts = Attempts { failed: self.attempts.failed + 1, last_failed_at: Some(iso(self.clock.now_ms())) };
+            }
+            ("auth.unlock" | "auth.unlockRecovery" | "auth.setup" | "auth.erase", Ok(_)) => self.attempts = clean,
+            _ => {}
+        }
+    }
+
     /// Keeps the core's database handle in step with the session: opened with the vault's key after an unlock or
     /// setup, dropped when the session is locked.
     fn sync_core(&mut self) -> Result<(), AppError> {
         let open = self.session.is_unlocked();
         if !open {
-            if self.core.is_unlocked() {
-                self.core.set_store(None);
-                self.core.set_unlocked(false);
-            }
+            self.close_core();
             return Ok(());
         }
         if self.core.is_unlocked() {
@@ -438,7 +505,13 @@ impl Worker {
     fn remember_auth(&mut self) {
         let status = self.session.status();
         let value = (status.state != "setup").then(|| {
-            json!({ "mode": status.mode, "device": status.device, "twoFactor": status.two_factor, "rememberedUntil": status.remembered_until })
+            json!({
+                "mode": status.mode,
+                "device": status.device,
+                "twoFactor": status.two_factor,
+                "rememberedUntil": status.remembered_until,
+                "attempts": { "failed": self.attempts.failed, "lastFailedAt": self.attempts.last_failed_at },
+            })
         });
         self.prefs.set_key("lastAuth", value);
     }
@@ -458,6 +531,32 @@ impl Worker {
         self.session.on_system_lock();
         let _ = self.sync_core();
     }
+}
+
+/// Moves an Electron-sealed account.json to the native seal. `None` when there was nothing to do or it worked, else what to
+/// tell the person. The Electron file is never touched on a failure (and kept as `account.electron.json` on success).
+fn migrate(data_dir: &std::path::Path, seal: &dyn OsSeal) -> Option<String> {
+    use kb_oseal::OsealError;
+    let plan = match kb_oseal::plan_migration(data_dir, seal) {
+        Ok(None) => return None,
+        Ok(Some(plan)) => plan,
+        Err(e) => return Some(migration_message(&e)),
+    };
+    plan.apply().err().map(|e: OsealError| migration_message(&e))
+}
+
+fn migration_message(error: &kb_oseal::OsealError) -> String {
+    use kb_oseal::OsealError;
+    let why = match error {
+        OsealError::Unavailable | OsealError::NotFound => {
+            "the key store of the operating system is not available, or does not hold the key of the Electron app"
+        }
+        OsealError::Locked => "the key store of the operating system is locked or the prompt was dismissed",
+        OsealError::Unsupported => "its account file is in a format this version does not read",
+        OsealError::Changed => "the account file changed while it was being opened",
+        OsealError::Failed | OsealError::Io(_) => "the account file could not be opened with the key of the operating system",
+    };
+    format!("Kasboek could not take over the data of the Electron app: {why}. Nothing was changed; the Electron file is kept as it was.")
 }
 
 /// The QR code of `auth.totpBegin` as an SVG document, from the `otpauth://` URI.

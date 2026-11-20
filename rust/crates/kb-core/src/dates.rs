@@ -1,18 +1,9 @@
 //! Calendar helpers with the behaviour of the JavaScript `Date` calls of the TypeScript core (UTC): `Date.parse` of a
 //! `YYYY-MM-DD` text (a day up to 31 rolls over into the next month), `Math.round`, `addMonths`, last day of a month.
 use crate::clock::civil_from_days;
+pub use kb_import::jsstr::js_round;
 
 const DAY_MS: i64 = 86_400_000;
-
-/// `Math.round`: ties go towards positive infinity (Rust's `round` goes away from zero).
-pub fn js_round(x: f64) -> f64 {
-    let floor = x.floor();
-    if x - floor >= 0.5 {
-        floor + 1.0
-    } else {
-        floor
-    }
-}
 
 /// Days since 1970-01-01 of a civil date (Howard Hinnant); `d` may exceed the month's length.
 fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {

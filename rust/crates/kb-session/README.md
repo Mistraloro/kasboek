@@ -8,8 +8,8 @@ sections 4, 5 and 10.
 |---|---|
 | `account` | AccountData v2 (`password` / `device` mode, slots, vault, attempts, remember-2FA), create, unlock with password / device / recovery, throttle (5 free tries, then 30 * 2^(n-5) s, max 15 min), password change, passwordless switch, new recovery key, 2FA on/off |
 | `session` | state machine `setup` / `locked` / `unlocked`, `status()` (same shape and key order as `AuthStatus`), `lock()` (drops and zeroizes master key, vault, DB handle, pending 2FA secret), auto-lock hooks, erase / restore, reauth, adopt |
-| `store` | `account.json` `{format:'kasboek-account', version:2, seal:'os'\|'none', data}`, atomic write (tmp created fresh with mode 0600, fsync of file and folder, rename), size caps read with `take(cap+1)`, refuses to write a device slot without the OS seal (availability is asked once), legacy `keystore.json` (`os:` / `plain:`) |
-| `seal` | `OsSeal` trait; `FileSeal` (test seal: AES-256-GCM, `iv \|\| ct \|\| tag`); `Unsupported` (writes `seal:'none'`) |
+| `store` | `account.json` `{format:'kasboek-account', version:2, seal:'os'\|'os-native'\|'none', data}` (table below), atomic write (tmp created fresh with mode 0600, fsync of file and folder, rename), size caps read with `take(cap+1)`, refuses to write a device slot without the OS seal (availability is asked once), legacy `keystore.json` (`os:` / `plain:`) |
+| `seal` | `OsSeal` trait (`seal_value()` = the `seal` value it writes); `FileSeal` (test seal: AES-256-GCM, `iv \|\| ct \|\| tag`); `Unsupported` (writes `seal:'none'`) |
 | `oscrypt` | read-only decoder of Electron `safeStorage` values (Chromium OSCrypt), see below |
 | `quarantine` | `erased/<time>/` move, rollback, restore, 30-day purge |
 | `device` | `DeviceAuth` trait (Windows Hello / Touch ID), `NoDevice`, `FakeDevice` |
@@ -56,6 +56,22 @@ The TypeScript has no `auth.device*` ops: the device check runs inside `auth.set
 - `needsRecoveryAck` does not exist in the TypeScript main process; `setupFlowActive` is renderer state there. Here
   `Session::setup_flow_active()` is set by `setup` and cleared by `end_setup_flow()` and `lock()`.
 
+## account.json on disk
+
+| `seal` | Written by | `data` (base64) | Opened by |
+|---|---|---|---|
+| `none` | any build without a usable seal (password accounts only) | the plain account JSON | nobody needed |
+| `os` | Electron `safeStorage` (Chromium OSCrypt: `v10`/`v11`/Windows `v10`); also the test `FileSeal` (`iv \|\| ct \|\| tag`), which is what the parity spec cross-opens | Electron: see the table below | the configured `OsSeal`. A real native seal refuses an Electron value (`auth.other_device`); `kb-oseal`'s migration is the only way in. |
+| `os-native` | the native seals of `kb-oseal` (`OsSeal::seal_value()`), and the migration | `KBD1 \|\| DPAPI blob` (Windows) or `KBK1 \|\| iv \|\| ct \|\| tag` (macOS, Linux) | the configured `OsSeal` |
+
+`os` and `os-native` are read the same way (through the seal); the blob magic, not the value, decides what a seal accepts, so a
+native `os` file with `KBD1`/`KBK1` is never mistaken for Electron's. `OsSeal::seal_value()` defaults to `os`; native seals return
+`os-native`. `account.electron.json` (the untouched Electron original kept by the migration) is removed after the first
+native unlock that also saved the file, and by every saved change (password, recovery key, 2FA, mode, import); erase moves
+it into `erased/<time>/` with the rest and restore brings it back (a live file is kept as `.orphaned-<time>`). The store
+asks the seal for `available()` until it says yes and then keeps that answer, so a keyring that starts late is used but a
+device key is never written readable after it was written sealed.
+
 ## Electron `safeStorage` seal (spike G6, offline part)
 
 `seal:'os'` files were written by Electron's `safeStorage.encryptStringAsync`, i.e. Chromium OSCrypt. `oscrypt.rs`
@@ -72,7 +88,7 @@ Tested with fixtures made by Node's crypto (`rust/parity/fixtures-session/gen-os
 layouts, a stand-in DPAPI, wrong key, flipped bit, truncation, unknown prefix. **Not verified offline:** that Electron 45's
 *async* API keeps exactly these prefixes and layouts, the real DPAPI / Keychain / Secret Service calls, and the exact
 Keychain / keyring item names. The first real file from each OS decides. Re-sealing as `seal:'os-native'` and keeping
-`account.electron.json` (plan section 4) is not done here.
+`account.electron.json` (plan section 4) is done by `kb-oseal`'s migration; this crate reads the result.
 
 ## Tests
 

@@ -3,9 +3,12 @@
 //! duplicates). Amounts are never computed here: the grid only holds text that is in the PDF (a missing year is the one
 //! thing filled in, from the statement period). Port of src/core/pdf/statement.ts, with `reconcile` and the banner of
 //! src/shared/pdf-import.ts.
-use crate::csvrules::{detect_decimal, header_field, parse_amount, parse_date, score_header_row, DateOrder};
 use crate::js::{self, lower_plain, re, rei};
 use crate::lines::{PdfCell, PdfLine};
+use kb_import::amount::{parse_amount, Decimal};
+use kb_import::csv::mapping::{detect_decimal, header_field, score_header_row, DateOrder, Field};
+use kb_import::csv::normalize::parse_date;
+use kb_import::statement::Reconciliation;
 use kb_rules::iban::{find_ibans, mask_iban};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -18,11 +21,8 @@ pub struct StatementPeriod {
     pub to: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-pub struct StatementBalances {
-    pub opening: Option<i64>,
-    pub closing: Option<i64>,
-}
+/// The balances a statement prints; the type of `kb-import`, which reconciles them with the rows.
+pub use kb_import::statement::Balances as StatementBalances;
 
 /// Remarks about the statement, as codes the screen words in the person's language.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -50,10 +50,6 @@ pub struct StatementRead {
 fn fold(s: &str) -> String {
     static OTHER: LazyLock<Regex> = LazyLock::new(|| re(r"[^a-z0-9]+"));
     OTHER.replace_all(&lower_plain(s), " ").trim_matches(' ').to_string()
-}
-
-fn lower(s: &str) -> String {
-    lower_plain(s)
 }
 
 // ---------------------------------------------------------------------------------------- dates
@@ -293,7 +289,17 @@ fn keyword_line(line: &PdfLine) -> Option<KeywordLine> {
 // --------------------------------------------------------------------------------------- columns
 
 /// Columns that hold dates, amounts and the like: a continuation of a description has nothing in them.
-const STRUCTURED: &[&str] = &["bookingDate", "valueDate", "amount", "debit", "credit", "direction", "balance", "currency", "status"];
+const STRUCTURED: &[Field] = &[
+    Field::BookingDate,
+    Field::ValueDate,
+    Field::Amount,
+    Field::Debit,
+    Field::Credit,
+    Field::Direction,
+    Field::Balance,
+    Field::Currency,
+    Field::Status,
+];
 
 /// The column a cell belongs to: the one whose header it overlaps most, else the nearest.
 fn column_of(cell: &PdfCell, columns: &[PdfCell]) -> usize {
@@ -317,7 +323,7 @@ pub fn is_header_line(line: &PdfLine) -> bool {
     if texts.len() < 2 || score_header_row(&texts) < 2 {
         return false;
     }
-    texts.iter().any(|t| matches!(header_field(t), Some("bookingDate" | "valueDate")))
+    texts.iter().any(|t| matches!(header_field(t), Some(Field::BookingDate | Field::ValueDate)))
 }
 
 fn same_header(a: &PdfLine, b: &PdfLine) -> bool {
@@ -325,7 +331,7 @@ fn same_header(a: &PdfLine, b: &PdfLine) -> bool {
 }
 
 /// The middle value, the lower one of the two for an even count (the usual step between lines, not a gap before a footer).
-fn median(mut values: Vec<f64>) -> f64 {
+fn lower_median(mut values: Vec<f64>) -> f64 {
     values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     if values.is_empty() {
         0.0
@@ -337,16 +343,6 @@ fn median(mut values: Vec<f64>) -> f64 {
 /// The steps between lines that follow each other on a page, top down.
 fn steps(lines: &[&PdfLine]) -> Vec<f64> {
     lines.windows(2).filter(|w| w[0].page == w[1].page && w[0].y > w[1].y).map(|w| w[0].y - w[1].y).collect()
-}
-
-/// `Math.round`: halves go up.
-fn js_round(x: f64) -> f64 {
-    let f = x.floor();
-    if x - f >= 0.5 {
-        f + 1.0
-    } else {
-        f
-    }
 }
 
 // ------------------------------------------------------------------------- page headers and footers
@@ -367,7 +363,7 @@ fn margin_lines(lines: &[PdfLine]) -> HashSet<usize> {
             continue;
         }
         let texts: Vec<String> = line.cells.iter().map(|c| NUMBERS.replace_all(&c.text, "0").to_string()).collect();
-        let key = format!("{}|{}", js_round(line.y) as i64, texts.join("|"));
+        let key = format!("{}|{}", kb_rules::js_round(line.y) as i64, texts.join("|"));
         let entry = seen.entry(key).or_default();
         entry.0.insert(line.page);
         entry.1.push(line.id);
@@ -496,7 +492,7 @@ fn read_blocks(
     own_iban: Option<&str>,
 ) -> Option<StatementRead> {
     static FULL_DATE: LazyLock<Regex> = LazyLock::new(|| re(r"^(\d{1,2}[./-]\d{1,2}[./-]\d{4})"));
-    let step = median(steps(lines));
+    let step = lower_median(steps(lines));
     let mut rank: HashMap<usize, usize> = HashMap::new();
     for (i, l) in lines.iter().enumerate() {
         let r = if i > 0 && lines[i - 1].page == l.page { rank[&lines[i - 1].id] + 1 } else { 0 };
@@ -577,10 +573,10 @@ fn read_blocks(
             row
         })
         .collect();
-    let fields: Vec<Option<&str>> = if balance {
-        vec![Some("bookingDate"), Some("description"), Some("amount"), Some("balance")]
+    let fields: Vec<Option<Field>> = if balance {
+        vec![Some(Field::BookingDate), Some(Field::Description), Some(Field::Amount), Some(Field::Balance)]
     } else {
-        vec![Some("bookingDate"), Some("description"), Some("amount")]
+        vec![Some(Field::BookingDate), Some(Field::Description), Some(Field::Amount)]
     };
     let header: Vec<String> =
         if balance { vec!["Date", "Description", "Amount", "Balance"] } else { vec!["Date", "Description", "Amount"] }
@@ -625,7 +621,7 @@ pub fn read_statement(all_lines: &[PdfLine], own_iban: Option<&str>) -> Statemen
     // The statement period, from the first line that prints one.
     let mut period = StatementPeriod::default();
     for line in all_lines {
-        if let Some(found) = period_of(&lower(&cell_texts(line).join(" "))) {
+        if let Some(found) = period_of(&lower_plain(&cell_texts(line).join(" "))) {
             period = found;
             break;
         }
@@ -653,7 +649,7 @@ pub fn read_statement(all_lines: &[PdfLine], own_iban: Option<&str>) -> Statemen
 
     // Another account's statement: the account's own number is not printed above the table, another is.
     if let Some(own_iban) = own_iban.filter(|s| !s.is_empty()) {
-        let own = own_iban.chars().filter(|c| !js::is_ws(*c)).collect::<String>().to_uppercase();
+        let own = own_iban.chars().filter(|c| !kb_rules::is_js_space(*c)).collect::<String>().to_uppercase();
         let printed = find_ibans(&before_text);
         if !printed.is_empty() && !printed.contains(&own) {
             notes.push(StatementNote::OtherAccount { iban: mask_iban(&printed[0]) });
@@ -690,10 +686,10 @@ pub fn read_statement(all_lines: &[PdfLine], own_iban: Option<&str>) -> Statemen
     };
 
     let header = lines[header_index];
-    let fields: Vec<Option<&str>> = header.cells.iter().map(|c| header_field(&c.text)).collect();
-    let find = |name: &str| fields.iter().position(|f| *f == Some(name));
-    let date_column = [find("bookingDate"), find("valueDate")].into_iter().flatten().next().unwrap_or(0);
-    let step = median(steps(&lines[header_index..]));
+    let fields: Vec<Option<Field>> = header.cells.iter().map(|c| header_field(&c.text)).collect();
+    let find = |field: Field| fields.iter().position(|f| *f == Some(field));
+    let date_column = [find(Field::BookingDate), find(Field::ValueDate)].into_iter().flatten().next().unwrap_or(0);
+    let step = lower_median(steps(&lines[header_index..]));
 
     let mut columns: &[PdfCell] = &header.cells;
     let mut header_texts: Vec<String> = header.cells.iter().map(|c| c.text.clone()).collect();
@@ -737,7 +733,7 @@ pub fn read_statement(all_lines: &[PdfLine], own_iban: Option<&str>) -> Statemen
         }
         if let Some(date) = date_of(&placed[date_column], &year_period) {
             placed[date_column] = date;
-            if let Some(value_column) = find("valueDate").filter(|v| *v != date_column) {
+            if let Some(value_column) = find(Field::ValueDate).filter(|v| *v != date_column) {
                 placed[value_column] = date_of(&placed[value_column], &year_period).unwrap_or_else(|| placed[value_column].clone());
             }
             rows.push(placed);
@@ -766,7 +762,7 @@ pub fn read_statement(all_lines: &[PdfLine], own_iban: Option<&str>) -> Statemen
         let in_structured = placed
             .iter()
             .enumerate()
-            .any(|(col, text)| !text.is_empty() && STRUCTURED.contains(&fields.get(col).copied().flatten().unwrap_or("")));
+            .any(|(col, text)| !text.is_empty() && fields.get(col).copied().flatten().is_some_and(|f| STRUCTURED.contains(&f)));
         if let Some(cur) = current.as_mut() {
             if cur.page == line.page && !in_structured && (step == 0.0 || cur.y - line.y <= step * 1.6) {
                 for (col, text) in placed.iter().enumerate() {
@@ -801,8 +797,12 @@ pub fn read_statement(all_lines: &[PdfLine], own_iban: Option<&str>) -> Statemen
         notes: notes.clone(),
         dropped_lines: dropped,
     };
-    let amount_columns: Vec<usize> =
-        fields.iter().enumerate().filter(|(_, f)| matches!(f, Some("amount" | "debit" | "credit" | "balance"))).map(|(i, _)| i).collect();
+    let amount_columns: Vec<usize> = fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| matches!(f, Some(Field::Amount | Field::Debit | Field::Credit | Field::Balance)))
+        .map(|(i, _)| i)
+        .collect();
     let numbers: Vec<String> = rows.iter().flat_map(|r| amount_columns.iter().map(|&i| r[i].clone()).filter(|t| !t.is_empty())).collect();
     result(with_balances(read, &keywords, numbers), &notes)
 }
@@ -813,8 +813,12 @@ fn with_balances(read: StatementRead, keywords: &[Option<KeywordLine>], mut numb
     numbers.extend(found.iter().filter_map(|f| f.1.clone()));
     let decimal = detect_decimal(&numbers);
     let amount = |kind: Kind| -> Option<i64> {
-        let values: Vec<Option<i64>> =
-            found.iter().filter(|f| f.0 == kind).filter_map(|f| f.1.as_ref()).map(|t| parse_amount(t, Some(decimal))).collect();
+        let values: Vec<Option<i64>> = found
+            .iter()
+            .filter(|f| f.0 == kind)
+            .filter_map(|f| f.1.as_ref())
+            .map(|t| parse_amount(t, if decimal == '.' { Decimal::Dot } else { Decimal::Comma }, ','))
+            .collect();
         // The first opening balance and the last closing balance are the statement's.
         if kind == Kind::Opening {
             values.iter().copied().flatten().next()
@@ -826,11 +830,11 @@ fn with_balances(read: StatementRead, keywords: &[Option<KeywordLine>], mut numb
 }
 
 /// An IBAN other than the account's own in a row's text gets a column of its own, unless the table has one.
-fn with_ibans(grid: Vec<Vec<String>>, fields: &[Option<&str>], own_iban: Option<&str>) -> Vec<Vec<String>> {
-    if fields.contains(&Some("counterpartyIban")) {
+fn with_ibans(grid: Vec<Vec<String>>, fields: &[Option<Field>], own_iban: Option<&str>) -> Vec<Vec<String>> {
+    if fields.contains(&Some(Field::CounterpartyIban)) {
         return grid;
     }
-    let own: Option<String> = own_iban.map(|s| s.chars().filter(|c| !js::is_ws(*c)).collect::<String>().to_uppercase());
+    let own: Option<String> = own_iban.map(|s| s.chars().filter(|c| !kb_rules::is_js_space(*c)).collect::<String>().to_uppercase());
     let found: Vec<String> = grid[1..]
         .iter()
         .map(|row| find_ibans(&row.join(" ")).into_iter().find(|iban| Some(iban) != own.as_ref()).unwrap_or_default())
@@ -849,78 +853,6 @@ fn with_ibans(grid: Vec<Vec<String>>, fields: &[Option<&str>], own_iban: Option<
 
 // ------------------------------------------------------------------------------- reconciliation
 
-/// The amounts of one row, for the reconciliation; `None` where the grid has none.
-#[derive(Clone, Copy, Debug)]
-pub struct Amounts {
-    pub amount_cents: Option<i64>,
-    pub balance_cents: Option<i64>,
-}
-
-/// Rows (in file order) whose running balance doesn't follow from the one before; either direction of the file counts.
-pub fn running_mismatches(rows: &[Amounts], opening: Option<i64>) -> Vec<bool> {
-    let run = |list: &[Amounts]| -> Vec<bool> {
-        let mut expected = opening;
-        list.iter()
-            .map(|r| {
-                let Some(amount) = r.amount_cents else { return false };
-                if let Some(e) = expected.as_mut() {
-                    *e += amount;
-                }
-                let Some(balance) = r.balance_cents else { return false };
-                let wrong = expected.is_some_and(|e| e != balance);
-                expected = Some(balance);
-                wrong
-            })
-            .collect()
-    };
-    let forward = run(rows);
-    // Newest first: the same walk from the other end.
-    let reversed: Vec<Amounts> = rows.iter().rev().copied().collect();
-    let mut backward = run(&reversed);
-    backward.reverse();
-    let count = |f: &[bool]| f.iter().filter(|b| **b).count();
-    if count(&backward) < count(&forward) {
-        backward
-    } else {
-        forward
-    }
-}
-
-/// Whether the rows add up (`Reconciliation` of src/shared/types.ts).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Reconciliation {
-    #[serde(rename = "openingCents")]
-    pub opening_cents: Option<i64>,
-    #[serde(rename = "closingCents")]
-    pub closing_cents: Option<i64>,
-    /// Sum of the rows' amounts (rows the person skipped are left out).
-    #[serde(rename = "sumCents")]
-    pub sum_cents: i64,
-    /// Closing minus (opening plus sum); 0 when the rows add up. None when a balance is missing.
-    #[serde(rename = "differenceCents")]
-    pub difference_cents: Option<i64>,
-    #[serde(rename = "rowsChecked")]
-    pub rows_checked: usize,
-    /// Rows whose running balance doesn't follow from the one before.
-    #[serde(rename = "runningMismatches")]
-    pub running_mismatches: usize,
-}
-
-/// Whether opening balance plus the rows makes the closing balance, and each running balance follows.
-pub fn reconcile(rows: &[Amounts], balances: &StatementBalances) -> Reconciliation {
-    let counted: Vec<Amounts> = rows.iter().filter(|r| r.amount_cents.is_some()).copied().collect();
-    let sum: i64 = counted.iter().filter_map(|r| r.amount_cents).sum();
-    let (opening, closing) = (balances.opening, balances.closing);
-    Reconciliation {
-        opening_cents: opening,
-        closing_cents: closing,
-        sum_cents: sum,
-        difference_cents: opening.zip(closing).map(|(o, c)| c - (o + sum)),
-        rows_checked: counted.len(),
-        running_mismatches: running_mismatches(&counted, opening).into_iter().filter(|b| *b).count(),
-    }
-}
-
 /// What to tell about the printed balances against the rows (`ReconciliationBanner` in src/shared/pdf-import.ts).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -929,12 +861,12 @@ pub enum ReconciliationBanner {
     Ok,
     Mismatch {
         #[serde(rename = "differenceCents")]
-        difference_cents: i64,
+        difference_cents: f64,
     },
     /// Does not add up, and the rows move the balance the wrong way round: probably a credit card statement.
     MaybeFlip {
         #[serde(rename = "differenceCents")]
-        difference_cents: i64,
+        difference_cents: f64,
     },
 }
 
@@ -943,11 +875,11 @@ pub enum ReconciliationBanner {
 pub fn reconciliation_banner(r: Option<&Reconciliation>) -> ReconciliationBanner {
     let Some(r) = r else { return ReconciliationBanner::None };
     let Some(difference) = r.difference_cents else { return ReconciliationBanner::None };
-    if difference == 0 {
+    if difference == 0.0 {
         return ReconciliationBanner::Ok;
     }
     let implied = difference + r.sum_cents;
-    let opposite = r.sum_cents != 0 && implied != 0 && r.sum_cents.signum() != implied.signum();
+    let opposite = r.sum_cents != 0.0 && implied != 0.0 && r.sum_cents.signum() != implied.signum();
     if opposite {
         ReconciliationBanner::MaybeFlip { difference_cents: difference }
     } else {
@@ -984,19 +916,6 @@ mod tests {
     }
 
     #[test]
-    fn running_balances_are_checked_in_both_directions() {
-        let rows = |v: &[(i64, i64)]| -> Vec<Amounts> {
-            v.iter().map(|&(a, b)| Amounts { amount_cents: Some(a), balance_cents: Some(b) }).collect()
-        };
-        // oldest first, all fine
-        assert_eq!(running_mismatches(&rows(&[(-100, 900), (-200, 700), (500, 1200)]), Some(1000)), vec![false, false, false]);
-        // newest first: the same walk from the other end
-        assert_eq!(running_mismatches(&rows(&[(500, 1200), (-200, 700), (-100, 900)]), Some(1000)), vec![false, false, false]);
-        // one balance that does not follow
-        assert_eq!(running_mismatches(&rows(&[(-100, 900), (-200, 650), (500, 1150)]), Some(1000)), vec![false, true, false]);
-    }
-
-    #[test]
     fn the_banner_tells_ok_mismatch_and_flip() {
         let r = |sum, diff| Reconciliation {
             opening_cents: Some(0),
@@ -1007,16 +926,11 @@ mod tests {
             running_mismatches: 0,
         };
         assert_eq!(reconciliation_banner(None), ReconciliationBanner::None);
-        assert_eq!(reconciliation_banner(Some(&r(100, None))), ReconciliationBanner::None);
-        assert_eq!(reconciliation_banner(Some(&r(100, Some(0)))), ReconciliationBanner::Ok);
+        assert_eq!(reconciliation_banner(Some(&r(100.0, None))), ReconciliationBanner::None);
+        assert_eq!(reconciliation_banner(Some(&r(100.0, Some(0.0)))), ReconciliationBanner::Ok);
         // sum +7500 where the balances imply -7500: the exact mirror image
-        assert_eq!(reconciliation_banner(Some(&r(7500, Some(-15000)))), ReconciliationBanner::MaybeFlip { difference_cents: -15000 });
-        assert_eq!(reconciliation_banner(Some(&r(7500, Some(100)))), ReconciliationBanner::Mismatch { difference_cents: 100 });
-        assert_eq!(reconciliation_banner(Some(&r(0, Some(100)))), ReconciliationBanner::Mismatch { difference_cents: 100 });
-        let total = reconcile(
-            &[Amounts { amount_cents: Some(5000), balance_cents: None }, Amounts { amount_cents: Some(2500), balance_cents: None }],
-            &StatementBalances { opening: Some(50000), closing: Some(42500) },
-        );
-        assert_eq!((total.sum_cents, total.difference_cents, total.rows_checked), (7500, Some(-15000), 2));
+        assert_eq!(reconciliation_banner(Some(&r(7500.0, Some(-15000.0)))), ReconciliationBanner::MaybeFlip { difference_cents: -15000.0 });
+        assert_eq!(reconciliation_banner(Some(&r(7500.0, Some(100.0)))), ReconciliationBanner::Mismatch { difference_cents: 100.0 });
+        assert_eq!(reconciliation_banner(Some(&r(0.0, Some(100.0)))), ReconciliationBanner::Mismatch { difference_cents: 100.0 });
     }
 }

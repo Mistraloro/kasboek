@@ -218,3 +218,52 @@ fn a_second_start_reads_the_account_and_the_cached_lock_facts() {
     block_on(again.invoke("auth.unlock", json!({ "password": PASSWORD }))).unwrap();
     assert_eq!(block_on(again.invoke("accounts.list", json!({}))).unwrap()[0]["name"], "Everyday");
 }
+
+/// The id of the import session a fresh start opens for a small CSV (random, from the core's generator).
+fn import_session_id_of_a_fresh_start() -> String {
+    let r = rig();
+    r.call("auth.setup", json!({ "mode": "password", "password": PASSWORD })).unwrap();
+    let id =
+        r.call("accounts.create", json!({ "name": "Everyday", "kind": "current", "currency": "EUR" })).unwrap()["id"].as_i64().unwrap();
+    let file = "RGF0ZSxBbW91bnQsRGVzY3JpcHRpb24KMjAyNi0xMS0wMSwtNS4wMCxDb2ZmZWUKMjAyNi0xMS0wMiwtNy41MCxCcmVhZAo=";
+    let preview = r.call("import.analyze", json!({ "fileName": "a.csv", "contentBase64": file, "accountId": id })).unwrap();
+    let session = preview["sessionId"].as_str().expect("the preview names its session").to_owned();
+    assert_eq!(session.len(), 36);
+    session
+}
+
+#[test]
+fn two_starts_make_different_import_session_ids() {
+    assert_ne!(import_session_id_of_a_fresh_start(), import_session_id_of_a_fresh_start());
+}
+
+#[test]
+fn wrong_tries_are_kept_in_last_auth_and_forgotten_after_a_correct_one() {
+    let r = rig();
+    r.call("auth.setup", json!({ "mode": "password", "password": PASSWORD })).unwrap();
+    r.call("auth.lock", json!({})).unwrap();
+    for _ in 0..3 {
+        assert_eq!(r.call("auth.unlock", json!({ "password": "Wrong-Password-12345" })).unwrap_err().code, "auth.failed");
+    }
+    let last = |r: &Rig| {
+        serde_json::from_str::<Value>(&std::fs::read_to_string(r.dir.path().join("prefs.json")).unwrap()).unwrap()["lastAuth"].clone()
+    };
+    assert_eq!(last(&r)["attempts"]["failed"], 3);
+    assert!(last(&r)["attempts"]["lastFailedAt"].is_string());
+    r.call("auth.unlock", json!({ "password": PASSWORD })).unwrap();
+    assert_eq!(last(&r)["attempts"]["failed"], 0);
+}
+
+#[test]
+fn erase_while_unlocked_closes_the_cores_handle_first() {
+    let r = rig();
+    r.call("auth.setup", json!({ "mode": "password", "password": PASSWORD })).unwrap();
+    r.call("accounts.create", json!({ "name": "Everyday", "kind": "current", "currency": "EUR" })).unwrap();
+    let status = r.call("auth.erase", json!({ "confirm": "ERASE" })).unwrap();
+    assert_eq!(status["state"], "setup");
+    assert_eq!(r.call("accounts.list", json!({})).unwrap_err().code, "auth.locked");
+    let name = status["erased"][0]["name"].as_str().unwrap().to_owned();
+    assert_eq!(r.call("auth.restoreErased", json!({ "name": name })).unwrap()["state"], "locked");
+    r.call("auth.unlock", json!({ "password": PASSWORD })).unwrap();
+    assert_eq!(r.call("accounts.list", json!({})).unwrap()[0]["name"], "Everyday");
+}

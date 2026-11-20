@@ -583,3 +583,66 @@ impl Fixture {
         self.clock.now_ms()
     }
 }
+
+fn plant_electron_backup(f: &Fixture) -> std::path::PathBuf {
+    let path = f.dir.path().join("account.electron.json");
+    std::fs::write(&path, b"{\"invented\":\"electron original\"}").unwrap();
+    path
+}
+
+#[test]
+fn the_electron_backup_goes_after_the_first_native_unlock_that_saved() {
+    let f = Fixture::new();
+    let (mut s, key) = setup_password(&f);
+    s.lock(LockReason::User, false);
+    let backup = plant_electron_backup(&f);
+    // Starting, looking at the lock screen and a wrong password keep it.
+    let mut s = f.session();
+    assert_eq!(s.status().state, "locked");
+    assert_eq!(s.unlock(&pw_input("nope nope nope")).unwrap_err().code, "auth.failed");
+    assert!(backup.exists());
+    s.unlock(&pw_input(PW)).unwrap();
+    assert!(!backup.exists());
+    // The recovery key counts as an unlock too.
+    s.lock(LockReason::User, false);
+    let backup = plant_electron_backup(&f);
+    s.unlock_recovery(&key).unwrap();
+    assert!(!backup.exists());
+}
+
+#[test]
+fn credential_changes_remove_the_electron_backup() {
+    let f = Fixture::new();
+    let (mut s, _) = setup_password(&f);
+    let backup = plant_electron_backup(&f);
+    s.change_password(Some(PW), PW2).unwrap();
+    assert!(!backup.exists(), "password change");
+    let backup = plant_electron_backup(&f);
+    s.new_recovery_key(Some(PW2)).unwrap();
+    assert!(!backup.exists(), "recovery key rotation");
+    let (secret, _, _) = s.totp_begin().unwrap();
+    let backup = plant_electron_backup(&f);
+    s.totp_enable(&code_of(&secret, T0)).unwrap();
+    assert!(!backup.exists(), "2FA on");
+    let backup = plant_electron_backup(&f);
+    f.clock.advance(30_000);
+    s.totp_disable(&code_of(&secret, T0 + 30_000)).unwrap();
+    assert!(!backup.exists(), "2FA off");
+}
+
+#[test]
+fn erase_and_restore_carry_the_electron_backup_and_never_overwrite_a_live_one() {
+    let f = Fixture::new();
+    let (mut s, _) = setup_password(&f);
+    let backup = plant_electron_backup(&f);
+    s.erase().unwrap();
+    assert!(!backup.exists());
+    let name = s.status().erased[0].name.clone();
+    assert!(f.dir.path().join("erased").join(&name).join("account.electron.json").exists());
+    // A stray live copy (no account here) is kept aside, not overwritten.
+    std::fs::write(&backup, b"stray").unwrap();
+    s.restore_erased_data(&name).unwrap();
+    assert!(std::fs::read(&backup).unwrap().starts_with(b"{\"invented\""));
+    let orphan = f.dir.path().join(format!("account.electron.json.orphaned-{T0}"));
+    assert_eq!(std::fs::read(orphan).unwrap(), b"stray");
+}

@@ -1,8 +1,8 @@
 {
-  "_comment": "The ONE place that names the fonts. make-fonts.py reads this, writes assets/fonts/*.ttf and ui/fonts.slint (the Fonts global the whole design system uses). To change a font: change `package` (an @fontsource-variable package) and `family`, then run the script. serif = titles, headings, card titles, the logo and button labels (Playfair Display under the name Kasboek Display, see make-fonts.py); sans and num = everything else.",
+  "_comment": "The ONE place that names the fonts. make-fonts.py reads this, writes assets/fonts/*.ttf and ui/fonts.slint (the Fonts global the whole design system uses). To change a font: change `package` (and `weights`, or `files` for static fonts) and `family`, then run the script. serif = titles, headings, card titles, the logo and button labels (Playfair Display as Kasboek Display); sans = data and running text (Lato 2.015 as Kasboek Sans); num = amounts and table numbers (Lato's default figures are tabular, so the same family). The OFL reserves the names Lato and Playfair Display, hence the new family names (see make-fonts.py).",
   "families": [
-    { "role": "sans", "family": "Inter", "package": "inter", "weights": [400, 500, 600] },
-    { "role": "num", "family": "Inter Num", "package": "inter", "weights": [400, 500, 600], "freeze": "tnum" },
+    { "role": "sans", "family": "Kasboek Sans", "package": "lato-font", "files": { "400": "fonts/lato-normal/lato-normal.woff2", "500": "fonts/lato-medium/lato-medium.woff2", "600": "fonts/lato-semibold/lato-semibold.woff2" }, "licence": "Lato-OFL.txt" },
+    { "role": "num", "same_as": "sans" },
     { "role": "serif", "family": "Kasboek Display", "package": "playfair-display", "weights": [500, 600], "licence": "PlayfairDisplay-OFL.txt" }
   ]
 }

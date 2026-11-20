@@ -1,6 +1,5 @@
 //! PDF statements.
 pub mod cap;
-mod csvrules;
 mod js;
 pub mod lines;
 pub mod model;
@@ -10,7 +9,6 @@ pub mod reader;
 mod recover;
 pub mod session;
 pub mod statement;
-mod synonyms;
 
 pub use lines::{to_lines, PdfCell, PdfLine};
 pub use model::*;
@@ -19,6 +17,8 @@ pub use plan::{
     MaskedLine, PdfAssistPreview, PdfPart, PlanError,
 };
 pub use process::{read_pdf_in_child, run_reader_process, ChildOptions, PdfError};
-pub use reader::{read_guarded, ReadStats};
+#[cfg(any(test, feature = "parity"))]
+pub use reader::read_guarded;
+pub use reader::ReadStats;
 pub use session::{analyze_pdf, is_pdf, PdfAnalysis, PdfNote, PdfSessionData, ReadBy};
-pub use statement::{complete_year, read_statement, reconcile, reconciliation_banner, Reconciliation, ReconciliationBanner, StatementRead};
+pub use statement::{complete_year, read_statement, reconciliation_banner, ReconciliationBanner, StatementRead};

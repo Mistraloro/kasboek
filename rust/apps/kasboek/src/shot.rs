@@ -73,10 +73,10 @@ pub fn run(args: &[String]) -> i32 {
     let cfg = app::Config {
         data_dir: std::env::temp_dir().join("kasboek-shot"),
         today,
+        #[cfg(feature = "dev-start")]
         fake_device: false,
         caption_inset: num("--inset", 148.0),
         device_in_service: false,
-        demo_password: None,
     };
     let ctl = app::Ctl::attach(&ui, service.clone(), cfg, &prefs);
     ctl.set_theme(&ui, theme.as_str() == "dark");

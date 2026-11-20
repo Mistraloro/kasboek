@@ -123,11 +123,22 @@ pub struct ImportRow {
     pub category_id: Option<i64>,
     pub category_source: Option<CategorySource>,
     pub issues: Vec<&'static str>,
-    pub status: &'static str,
+    pub status: RowStatus,
     pub decided: Option<Decision>,
     pub note: Option<String>,
     #[serde(rename = "match")]
     pub matched: Option<RowMatch>,
+}
+
+/// Where a row stands: the `status` of `ImportRow` in src/shared/types.ts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RowStatus {
+    Ready,
+    Duplicate,
+    PossibleDuplicate,
+    Problem,
+    Skipped,
 }
 
 /// A row as it will be imported (`clean`, with the changes made to it), as the file had it (`raw`), and as the preview shows it.
@@ -231,13 +242,12 @@ pub fn build_rows<L: Ledger>(
 ) -> Result<Vec<Built>, L::Error> {
     // A bank reference identifies one transaction only if it is unique in this file (some banks repeat a statement number on
     // every line).
-    let mut ref_count: HashMap<&str, usize> = HashMap::new();
+    let mut ref_count: HashMap<String, usize> = HashMap::new();
     for c in &clean {
         if let Some(r) = c.bank_reference.as_deref().map(js_trim).filter(|r| !r.is_empty()) {
-            *ref_count.entry(r).or_insert(0) += 1;
+            *ref_count.entry(r.to_owned()).or_insert(0) += 1;
         }
     }
-    let ref_count: HashMap<String, usize> = ref_count.into_iter().map(|(k, v)| (k.to_owned(), v)).collect();
     let mut seen: HashMap<String, usize> = HashMap::new();
     // Transactions already matched by an earlier row: each one is matched at most once.
     let mut claimed: HashSet<i64> = HashSet::new();
@@ -280,9 +290,9 @@ pub fn build_rows<L: Ledger>(
                     && !(matches!(i, RowIssue::AmountInvalid | RowIssue::AmountZero) && o.amount_cents.is_some_and(|a| a != 0))
             })
             .collect();
-        let mut status = "ready";
+        let mut status = RowStatus::Ready;
         if issues.iter().any(|i| *i != RowIssue::CurrencyOther) {
-            status = if issues.contains(&RowIssue::StatusRefused) { "skipped" } else { "problem" };
+            status = if issues.contains(&RowIssue::StatusRefused) { RowStatus::Skipped } else { RowStatus::Problem };
         } else if let (Some(date), Some(amount)) = (merged.booking_date.as_deref().filter(|d| !d.is_empty()), merged.amount_cents) {
             let key =
                 fingerprint(account_id, date, amount, c.counterparty_name.as_deref(), Some(&c.description), c.bank_reference.as_deref());
@@ -313,7 +323,7 @@ pub fn build_rows<L: Ledger>(
                     .find(|e| !claimed.contains(&e.id) && e.bank_reference.as_deref().is_none_or(str::is_empty));
             }
             if matched.is_some() {
-                status = "duplicate";
+                status = RowStatus::Duplicate;
             } else {
                 // 3. Possibly the same: same amount a few days apart with similar text (the bank reworded it, or moved the
                 // date). The person (or Check) decides.
@@ -336,7 +346,7 @@ pub fn build_rows<L: Ledger>(
                         ) >= POSSIBLE_SIMILARITY
                 });
                 if matched.is_some() {
-                    status = "possible_duplicate";
+                    status = RowStatus::PossibleDuplicate;
                 }
             }
             if let Some(m) = &matched {
@@ -345,15 +355,15 @@ pub fn build_rows<L: Ledger>(
             fp = Some(key);
         }
         if o.decided == Some(Some(Decision::Skip)) {
-            status = "skipped";
+            status = RowStatus::Skipped;
         }
-        if o.decided == Some(Some(Decision::Include)) && status != "problem" {
-            status = "ready";
+        if o.decided == Some(Some(Decision::Include)) && status != RowStatus::Problem {
+            status = RowStatus::Ready;
         }
         // Rules match the cleaned-up text or the bank's own.
         let rule_id = if o.category_id.is_none() { rule(&rule_view(&merged)).or_else(|| rule(&rule_view(&c))) } else { None };
         let mut row_issues: Vec<&'static str> = issues.iter().map(|i| i.as_str()).collect();
-        if status == "possible_duplicate" {
+        if status == RowStatus::PossibleDuplicate {
             row_issues.push("possible_duplicate");
         }
         let row = ImportRow {

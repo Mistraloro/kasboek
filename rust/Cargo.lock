@@ -2784,6 +2784,7 @@ dependencies = [
  "tempfile",
  "windows",
  "windows-future",
+ "zeroize",
 ]
 
 [[package]]
@@ -2840,6 +2841,7 @@ name = "kb-db"
 version = "0.0.0"
 dependencies = [
  "hex",
+ "kb-rules",
  "rusqlite",
  "serde_json",
  "sha2 0.10.9",
@@ -2875,6 +2877,7 @@ version = "0.0.0"
 dependencies = [
  "aes-gcm",
  "base64 0.22.1",
+ "core-foundation 0.10.1",
  "futures-lite",
  "hex",
  "kb-crypto",
@@ -2895,6 +2898,7 @@ dependencies = [
  "flate2",
  "hayro-interpret",
  "hayro-syntax",
+ "kb-import",
  "kb-rules",
  "kurbo",
  "regex",
@@ -2919,11 +2923,13 @@ dependencies = [
  "kb-core",
  "kb-crypto",
  "kb-db",
+ "kb-oseal",
  "kb-session",
  "qrcode",
  "serde",
  "serde_json",
  "tempfile",
+ "zeroize",
 ]
 
 [[package]]

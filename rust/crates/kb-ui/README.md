@@ -50,12 +50,14 @@ Real windows take the OS scale factor (`SLINT_SCALE_FACTOR=1.5` overrides); `--s
 
 **Tokens.** Colours, radii, type sizes and shadows come from `Theme`; font family names from `Fonts` (through `Theme.sans/num/serif`).
 No hex colour, font name or radius literal in a component, except sizes that are Tailwind arbitrary values of the renderer (then
-copy the value and say which class it is). Numbers use `Theme.num` (Inter with `tnum` frozen), data and running text `Theme.sans` (Inter); titles, headings, card titles, dialog titles, the logo and button labels use `Theme.serif` (Playfair Display, shipped as "Kasboek Display" because the OFL reserves its name for modified versions; see `tools/make-fonts.py`). The font has no `ij` ligature glyph (Dutch "ij" is two letters).
+copy the value and say which class it is). Numbers use `Theme.num` and data and running text `Theme.sans` (both Lato 2.015, shipped as "Kasboek Sans"; its default figures are tabular, so no frozen copy); titles, headings, card titles, dialog titles, the logo and button labels use `Theme.serif` (Playfair Display, shipped as "Kasboek Display"). The OFL reserves both original names for modified versions, hence the renamed families; see `tools/make-fonts.py`. Playfair Display has no `ij` ligature glyph (Dutch "ij" is two letters).
 Text height: set a CSS line box with `Label { lh: ... }`; Slint's own line height differs.
 
-**Fonts.** One place names them: `tools/fonts.json` (family, @fontsource-variable package, weights, frozen features). Edit it and run
-`python tools/make-fonts.py` (needs `pip install fonttools brotli opentype-feature-freezer`, `npm ci` at the repo root for the
-packages). It rewrites `assets/fonts/*.ttf`, the OFL licence texts and `ui/fonts.slint`. Slint cannot use variable fonts, hence static instances.
+**Fonts.** One place names them: `tools/fonts.json` (family, package, weights or static files, licence file). Edit it and run
+`python tools/make-fonts.py` (needs `pip install fonttools brotli`; `npm ci` at the repo root for Inter-style fontsource packages, and
+`KB_FONTSOURCE` pointing at the unpacked `npm pack` folders of `lato-font@3.0.0` and `@fontsource-variable/playfair-display@5.3.0`, see
+the script). It rewrites `assets/fonts/*.ttf`, the OFL licence texts and `ui/fonts.slint`. Slint cannot use variable fonts, hence
+static instances; the Lato files are subset to Latin (with Latin Extended-A).
 
 **Icons.** `node tools/make-icons.mjs` scans `src/renderer/src` for `lucide-react` imports and rewrites `assets/icons/*.svg` and `ui/icons.slint`.
 Use `Icon { source: Icons.eye; size: 16px; tint: Theme.muted; }`. An icon is decorative: it is not in the accessibility tree.

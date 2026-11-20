@@ -45,7 +45,8 @@ kb-session = { path = "crates/kb-session" }
 [patch.crates-io]
 libsqlite3-sys = { path = "crates/kb-sqlite3mc-sys" }
 
-# Nothing catches panics, so aborting is safe and makes the binaries smaller.
+# A panic aborts the process and makes the binaries smaller. The one place that must answer a panic is the PDF reader
+# process, which does it from a panic hook (kb-pdf `run_reader_process`) that runs before the abort; tests unwind.
 [profile.release]
 opt-level = 3
 lto = true

@@ -19,6 +19,7 @@ zeroize.workspace = true
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
 security-framework = "3"
 
 # Pure Rust Secret Service client. The async-io runtime (not tokio) keeps the crate free of a second runtime; calls are

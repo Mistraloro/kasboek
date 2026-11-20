@@ -1,9 +1,9 @@
 //! The balances a statement prints against its rows (`reconcile` and `runningMismatches` of src/core/pdf/statement.ts, the
 //! part an XML statement and a balance column of a CSV file use too).
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// The balances a statement states.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Balances {
     pub opening: Option<i64>,
     pub closing: Option<i64>,

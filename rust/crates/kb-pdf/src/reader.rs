@@ -51,7 +51,7 @@ struct TextDevice {
 impl TextDevice {
     fn flush(&mut self) {
         if let Some(r) = self.cur.take() {
-            self.chars += utf16_len(&r.s);
+            self.chars += kb_rules::utf16_len(&r.s);
             if self.out.len() >= MAX_ITEMS || self.chars > MAX_CHARS {
                 self.over_limit = true;
                 return;
@@ -66,11 +66,12 @@ impl TextDevice {
         }
         let [a, b, c, d, e, f] = t.as_coeffs();
         // Glyph space has 1000 units to the em.
-        let (adx, ady) = (a.hypot(b) * 1000.0, c.hypot(d) * 1000.0);
+        let x_scale = a.hypot(b);
+        let (adx, ady) = (x_scale * 1000.0, c.hypot(d) * 1000.0);
         if !(adx.is_finite() && ady.is_finite() && e.is_finite() && f.is_finite()) || adx == 0.0 || ady == 0.0 {
             return;
         }
-        let (dx, dy) = (a / a.hypot(b), b / a.hypot(b));
+        let (dx, dy) = (a / x_scale, b / x_scale);
         let fs = ady;
         // Glyphs outside the page are not text of the page (pdf.js drops them too).
         if e + fs < 0.0 || e - fs > self.width || f + fs < 0.0 || f - fs > self.height {
@@ -249,8 +250,9 @@ pub fn read(bytes: Vec<u8>, deadline: Instant, on_page: &mut dyn FnMut(usize, us
 }
 
 /// `read` on a thread of its own (a deep page tree needs a bigger stack than a default thread has), with panics caught
-/// and a deadline: a panic is `Broken`, a deadline hit `TooLarge`. Needs `panic = "unwind"` (tests, the dev CLI); the
-/// reader process of the app uses `process::run_reader_process`, which also works with `panic = "abort"`.
+/// and a deadline: a panic is `Broken`, a deadline hit `TooLarge`. Only for tests and the dev CLI (`parity`), which run with
+/// `panic = "unwind"`; the reader process of the app uses `process::run_reader_process`, which also works with `panic = "abort"`.
+#[cfg(any(test, feature = "parity"))]
 pub fn read_guarded(bytes: Vec<u8>, timeout: std::time::Duration) -> Result<(PdfText, ReadStats), ReadError> {
     let deadline = Instant::now() + timeout;
     let (tx, rx) = std::sync::mpsc::channel();

@@ -1,11 +1,10 @@
 //! JavaScript and zod string rules the TypeScript core relies on (`trim`, `\s`, `Number(text)`, the length zod checks), which
-//! differ from Rust's. `kb-core` re-exports this module.
+//! differ from Rust's. `kb-core` re-exports this module. `is_js_space`, `JS_SPACE`, `utf16_len` and `js_round` are the single
+//! copies of `kb-rules`, re-exported here.
+use regex::Regex;
+use std::sync::LazyLock;
 
-/// JavaScript's `WhiteSpace` and `LineTerminator`: Unicode space separators, tab, VT, FF, the byte order mark and the
-/// line terminators. Rust's `char::is_whitespace` also counts U+0085 and misses U+FEFF.
-pub fn is_js_space(c: char) -> bool {
-    (c.is_whitespace() && c != '\u{85}') || c == '\u{FEFF}'
-}
+pub use kb_rules::{is_js_space, js_round, utf16_len, JS_SPACE};
 
 /// `String.prototype.trim`.
 pub fn js_trim(s: &str) -> &str {
@@ -36,13 +35,10 @@ pub fn collapse_spaces(s: &str) -> String {
     out
 }
 
-/// `\p{L}`: Rust's alphabetic property without the marks, letter numbers and circled letters that it adds to the letters.
+/// `\p{L}`, by the `regex` crate's own Unicode table (Rust's `char::is_alphabetic` is a wider set).
 pub fn is_letter(c: char) -> bool {
-    let cp = c as u32;
-    let nl = matches!(cp, 0x16EE..=0x16F0 | 0x2160..=0x2182 | 0x2185..=0x2188 | 0x3007 | 0x3021..=0x3029 | 0x3038..=0x303A | 0xA6E6..=0xA6EF
-        | 0x10140..=0x10174 | 0x10341 | 0x1034A | 0x103D1..=0x103D5 | 0x12400..=0x1246E);
-    let circled = matches!(cp, 0x24B6..=0x24E9 | 0x1F130..=0x1F149 | 0x1F150..=0x1F169 | 0x1F170..=0x1F189);
-    c.is_alphabetic() && !nl && !circled && !unicode_normalization::char::is_combining_mark(c)
+    static LETTER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\p{L}$").expect("letter regex"));
+    LETTER.is_match(c.encode_utf8(&mut [0; 4]))
 }
 
 /// `s.slice(0, n)` for `n` UTF-16 units. A surrogate pair that the cut would split is left out whole (JavaScript would keep
@@ -57,9 +53,6 @@ pub fn slice_units(s: &str, n: usize) -> &str {
     }
     s
 }
-
-/// `\s` of a JavaScript regular expression as a character class for the `regex` crate (inside `[...]`).
-pub const JS_SPACE: &str = r"\t\n\x0B\x0C\r \u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF";
 
 /// `Number(text)`: the whole text is a number (JavaScript's `StringToNumber`), else NaN. Empty or blank text is 0, `0x`, `0o`
 /// and `0b` read integers, `Infinity` is infinite, and Rust's `inf` and `nan` words are not numbers.

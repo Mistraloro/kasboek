@@ -98,11 +98,11 @@ pub fn current<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
 struct RawIn {
     #[serde(default)]
     from: IntIn<0, 9_007_199_254_740_991>,
-    #[serde(default = "forty")]
+    #[serde(default = "default_count")]
     count: IntIn<1, 200>,
 }
 
-fn forty() -> IntIn<1, 200> {
+fn default_count() -> IntIn<1, 200> {
     IntIn(40)
 }
 
@@ -196,7 +196,7 @@ pub fn update_rows_op<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     })
 }
 
-fn yes() -> bool {
+fn default_true() -> bool {
     true
 }
 
@@ -205,7 +205,7 @@ fn yes() -> bool {
 struct CommitIn {
     #[serde(default, deserialize_with = "optional", skip_serializing_if = "is_none")]
     session_id: Option<Uuid>,
-    #[serde(default = "yes")]
+    #[serde(default = "default_true")]
     save_profile: bool,
 }
 
@@ -241,8 +241,9 @@ enum Part {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct CheckUndoIn {
     session_id: Uuid,
-    #[allow(dead_code)]
-    part: Part,
+    /// Checked (it must be one of the four) but not used: there is no assistant check to undo in parts yet.
+    #[serde(rename = "part")]
+    _part: Part,
 }
 
 pub fn check_undo<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {

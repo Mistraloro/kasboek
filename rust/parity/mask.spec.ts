@@ -111,7 +111,10 @@ const texts: string[] = [
   '+1.234.567 2026-10-01',
   '+12.345,678',
   '€ 1.234,56 – 2026-10-01 – NL91 ABNA 0417 1643 00',
-  'x…y…'
+  'x…y…',
+  `${`${SPACED} `.repeat(5)}${CARD} tail`,
+  `${'1'.repeat(80)} ${CARD}`,
+  'call +32 475 12 34 56 now'
 ]
 
 interface Out {
@@ -122,7 +125,7 @@ interface Out {
   cut: string | null
 }
 // Each text with no max, and with a few that cut it (shorter than the text, longer, and at the length of an IBAN).
-const MAXES = [null, 5, 20, 31, 60, 400]
+const MAXES = [null, 5, 10, 20, 30, 31, 60, 400]
 const cases = texts.flatMap((text) => MAXES.map((max) => ({ text, max })))
 
 describe('privacy masking', () => {
@@ -139,6 +142,13 @@ describe('privacy masking', () => {
       }
       expect(rust[i], JSON.stringify({ text, max })).toEqual(want)
     })
+  })
+
+  it('hides a number that the shrinking masks moved under the cut', () => {
+    const text = `${`${SPACED} `.repeat(4)}${SPACED} ${CARD} tail`
+    expect(maskPrivate(text, 60)).toBe('NL…4300 NL…4300 NL…4300 NL…4300 NL……3456 tail…')
+    expect(maskPrivate(`${'1'.repeat(80)} ${CARD}`, 30)).toBe('…3456…')
+    expect(maskPrivate('call +32 475 12 34 56 now', 10)).toBe('call …phon…')
   })
 
   it('hides the secrets and keeps the rest', () => {

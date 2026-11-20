@@ -21,10 +21,16 @@ required-features = ["parity"]
 name = "process"
 required-features = ["parity"]
 
+# `read_guarded` exists only for tests and the dev driver.
+[[test]]
+name = "reader"
+required-features = ["parity"]
+
 [dependencies]
 # Pinned: the Device trait changed between 0.7 and 0.9. No embedded CJK CMaps (pdf.js, as extract.ts calls it, has no cMapUrl either).
 hayro-interpret = { version = "=0.9.0", default-features = false, features = ["embed-fonts"] }
 hayro-syntax = "=0.9.0"
+kb-import.workspace = true
 kb-rules = { path = "../kb-rules" }
 kurbo = "0.13"
 regex = "1"

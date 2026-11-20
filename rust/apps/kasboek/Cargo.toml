@@ -16,6 +16,7 @@ kb-session.workspace = true
 kb-ui = { path = "../../crates/kb-ui" }
 qrcode = { version = "0.15", default-features = false }
 serde_json.workspace = true
+zeroize = { workspace = true, optional = true }
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "accessibility", "raw-window-handle-06"] }
 
 # Windows: title bar colours (DWM), the Hello prompt and the process creation time. Not built elsewhere.
@@ -33,6 +34,11 @@ objc2-local-authentication = "0.3"
 
 [build-dependencies]
 slint-build = "1.19"
+
+# `dev-start`: the hidden development start flags (`--fake-device`, `--demo-setup`). Off in release builds; the start-up
+# test (tools/startup-test-core.sh, CI) builds with it.
+[features]
+dev-start = ["dep:zeroize"]
 
 [dev-dependencies]
 tempfile.workspace = true

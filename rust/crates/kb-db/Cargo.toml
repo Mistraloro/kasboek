@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 hex.workspace = true
+kb-rules = { path = "../kb-rules" }
 rusqlite.workspace = true
 sha2.workspace = true
 thiserror.workspace = true

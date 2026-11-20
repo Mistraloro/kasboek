@@ -17,6 +17,8 @@ use std::time::{Duration, Instant};
 
 /// The argument that starts the app as the reader process.
 pub const READER_ARG: &str = "--pdf-reader";
+/// The most the parent reads from the child's output: the largest legal text (`MAX_ITEMS`, `MAX_CHARS`) in JSON is well under it.
+const STDOUT_CAP: u64 = 64 * 1024 * 1024;
 /// A deep page tree or content stream needs more stack than a default thread has.
 pub const STACK_BYTES: usize = 64 * 1024 * 1024;
 
@@ -131,6 +133,8 @@ pub fn read_pdf_in_child(exe: &Path, bytes: &[u8], mut opts: ChildOptions<'_>) -
             "The PDF could not be read: the reader stopped unexpectedly. The file may be damaged or too large.",
         )
     };
+    let unavailable =
+        || PdfError::new("import.pdf_reader_unavailable", "The PDF reader could not be started. This is not a problem with the file.");
     let mut child = Command::new(exe)
         .arg(READER_ARG)
         .env_clear()
@@ -138,7 +142,7 @@ pub fn read_pdf_in_child(exe: &Path, bytes: &[u8], mut opts: ChildOptions<'_>) -
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(|_| crashed())?;
+        .map_err(|_| unavailable())?;
     let result = std::thread::scope(|scope| {
         let mut stdin = child.stdin.take().expect("piped");
         let stdout = child.stdout.take().expect("piped");
@@ -148,7 +152,7 @@ pub fn read_pdf_in_child(exe: &Path, bytes: &[u8], mut opts: ChildOptions<'_>) -
         });
         let (tx, rx) = mpsc::channel::<Option<String>>();
         scope.spawn(move || {
-            let mut lines = BufReader::new(stdout.take(MAX_BYTES as u64 * 2));
+            let mut lines = BufReader::new(stdout.take(STDOUT_CAP));
             loop {
                 let mut line = String::new();
                 match lines.read_line(&mut line) {
@@ -192,8 +196,9 @@ pub fn read_pdf_in_child(exe: &Path, bytes: &[u8], mut opts: ChildOptions<'_>) -
                     Ok(ReaderMessage::Ok { .. }) => {
                         break Err(PdfError::new("import.pdf_broken", "The PDF could not be read: the reader gave an unusable answer."))
                     }
+                    // The code is the child's, the words are ours: a message from the child is never shown.
                     Ok(ReaderMessage::Failed { code, message, .. }) => match ReadError::from_code(&code) {
-                        Some(_) if message.chars().count() <= 500 => break Err(PdfError { code, message }),
+                        Some(known) if message.chars().count() <= 500 => break Err(PdfError::new(known.code(), known.message())),
                         _ => {
                             break Err(PdfError::new("import.pdf_broken", "The PDF could not be read: the reader gave an unusable answer."))
                         }
