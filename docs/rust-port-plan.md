@@ -1083,6 +1083,12 @@ has merged. After P0, a page batch touches only its own files.
   - **FormDialog**.
   - Toast with an action (Undo).
   - Gallery and React-twin cases for each.
+  - **Status (Nov 2026): done in `kb-ui`, uncommitted.** Exports in `ui/lib.slint` first, then DataTable (`ui/table.slint`), PagedModel,
+    ContextMenu, TextArea, AmountInput (`src/amount.rs`; the app should now call `kb_ui::amount::parse_cents` and delete its copy in
+    `pages/settings/accounts.rs`), FormDialog, toast action (`ToastHost.action-toasts`); usage in `rust/crates/kb-ui/README.md`
+    ("Big tables and forms"). 500k scroll, release build: p95 1.5 / 2.3 / 2.5 ms (1 row, 3 rows, random jump per frame), 0.28 ms p95 for
+    a 200-row page. Not done: React-twin parity cases (no React counterpart exists for these; gallery-only cases `*-de` cover German).
+    `Popover` was unusable from outside (root was a PopupWindow) and is now a wrapper; the app must set `Rules.amount-decimal/-group`.
 - **U2** (12–16 h): chat message list with the minimal markdown of `AssistantPanel.tsx:33`, streaming append, tool-confirmation card,
   composer; Tour spotlight; Update dialog with progress.
 - **No date picker needed**: `DateInput` exists, and Electron's `DateInput.tsx` is a text field too. The three existing charts cover the

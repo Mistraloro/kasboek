@@ -27,12 +27,24 @@ export component Modal inherits Rectangle {
     in property <bool> force-asking: false;
     // `w-full max-w-md`: 448px, less on a narrow window (p-6 on each side).
     in property <length> dialog-width: min(448px, root.width - 48px);
+    // A form around the content wants Enter (Ctrl/Cmd+Enter) before the focused control sees it: the focused control
+    // is not asked, so the owner turns this off while a button or a multi-line field has the focus. The close
+    // button and the discard question keep Enter.
+    in property <bool> capture-enter: false;
+    in property <bool> capture-ctrl-enter: false;
     callback close-requested();
+    callback enter-pressed();
+    // The dialog is open and has taken the focus (it starts on the close button): a form puts it on its first field here.
+    callback opened();
 
     property <bool> asking: false;
     property <bool> wrapped-from-start: false;
     out property <bool> showing-question: root.asking || root.force-asking;
 
+    // What Escape or the close button does: close, or ask first when `dirty`. For a Cancel button.
+    public function request-close() {
+        root.request("button");
+    }
     function request(source: string) {
         if (!root.dismissible) {
             return;
@@ -53,6 +65,7 @@ export component Modal inherits Rectangle {
             } else {
                 first.focus();
             }
+            root.opened();
         }
     }
     init => {
@@ -80,6 +93,14 @@ export component Modal inherits Rectangle {
         }
         scope := FocusScope {
             enabled: root.open;
+            capture-key-pressed(e) => {
+                if (e.text == Key.Return && !root.showing-question && !close-btn.has-focus
+                    && (root.capture-enter || (root.capture-ctrl-enter && (e.modifiers.control || e.modifiers.meta)))) {
+                    root.enter-pressed();
+                    return accept;
+                }
+                return reject;
+            }
             key-pressed(e) => {
                 if (e.text == Key.Escape) {
                     if (root.asking) {
@@ -260,11 +281,149 @@ export component ConfirmDialog inherits Modal {
     }
 }
 
+// A form in a dialog: the fields as children (`Field` around `Input`, `Select`, `AmountInput`, `TextArea`), an error line
+// and the two buttons. Enter in a field submits (not on a button, where it presses that button, and not while
+// `enter-submits` is off, which a multi-line field needs); Ctrl/Cmd+Enter always submits; Escape and Cancel close, or ask
+// first when `dirty`. `submitted` does nothing while `primary-enabled` is off or `busy`. Put the focus in the first
+// field with `opened => { field.focus(); }` (a Modal starts on its close button).
+export component FormDialog inherits Modal {
+    in property <string> primary-text;
+    in property <string> secondary-text;
+    // The reason the last submit failed, under the fields (read out as it appears).
+    in property <string> error;
+    in property <bool> busy: false;
+    in property <string> busy-label;
+    in property <bool> primary-enabled: true;
+    in property <bool> destructive: false;
+    in property <bool> enter-submits: true;
+    callback submitted();
+
+    capture-enter: root.enter-submits && !primary.has-focus && !secondary.has-focus;
+    capture-ctrl-enter: true;
+    enter-pressed => {
+        if (root.primary-enabled && !root.busy) {
+            root.submitted();
+        }
+    }
+
+    VerticalLayout {
+        spacing: 16px;
+        VerticalLayout {
+            spacing: 16px;
+            @children
+        }
+        if root.error != "": Label {
+            text: root.error;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.negative;
+            wrap: word-wrap;
+            accessible-role: text;
+            accessible-live-region: assertive;
+        }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            secondary := Button {
+                text: root.secondary-text;
+                clicked => {
+                    root.request-close();
+                }
+            }
+            primary := Button {
+                text: root.primary-text;
+                variant: root.destructive ? "danger" : "primary";
+                busy: root.busy;
+                busy-label: root.busy-label;
+                enabled: root.primary-enabled;
+                clicked => {
+                    root.submitted();
+                }
+            }
+        }
+    }
+}
+
 export struct ToastItem {
     id: int,
     // "success" | "error"
     tone: string,
     message: string,
+}
+
+// A toast with a button ("Deleted 3 transactions" + Undo). It stays 8 s, long enough to reach the button.
+export struct ToastActionItem {
+    id: int,
+    tone: string,
+    message: string,
+    // The button's text.
+    action: string,
+}
+
+// One toast card: `max-w-sm rounded-lg border bg-surface px-4 py-3 text-[13px] shadow-lg` with a 16px status icon, and
+// the button after the text when `action` is set. The messages are a polite live region, so a screen reader announces a
+// new toast without moving focus.
+component ToastCard inherits Elevated {
+    in property <string> tone;
+    in property <string> message;
+    in property <string> action;
+    in property <duration> lifetime: 3.5s;
+    callback expired();
+    callback acted();
+
+    level: 3;
+    height: row.preferred-height + 2px;
+    width: min(384px, row.preferred-width + 2px);
+    border-radius: Theme.r-lg;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    Timer {
+        interval: root.lifetime;
+        running: true;
+        triggered => {
+            self.running = false;
+            root.expired();
+        }
+    }
+    row := HorizontalLayout {
+        padding-left: 17px;
+        padding-right: root.action != "" ? 9px : 17px;
+        padding-top: root.action != "" ? 7px : 13px;
+        padding-bottom: root.action != "" ? 7px : 13px;
+        spacing: 10px;
+        VerticalLayout {
+            alignment: root.action != "" ? center : start;
+            padding-top: root.action != "" ? 0px : 2px;
+            Icon {
+                source: root.tone == "error" ? Icons.alert-circle : Icons.check-circle-2;
+                size: 16px;
+                tint: root.tone == "error" ? Theme.negative : Theme.accent;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Label {
+                text: root.message;
+                font-size: Theme.fs-ui;
+                lh: Theme.lh-ui;
+                wrap: word-wrap;
+                accessible-role: text;
+                accessible-live-region: polite;
+            }
+        }
+        if root.action != "": VerticalLayout {
+            alignment: center;
+            Button {
+                text: root.action;
+                small: true;
+                clicked => {
+                    root.acted();
+                }
+            }
+        }
+    }
 }
 
 // Toast of Toast.tsx: `fixed right-5 bottom-5 flex flex-col gap-2`, each `max-w-sm rounded-lg border bg-surface px-4
@@ -273,7 +432,10 @@ export struct ToastItem {
 // The messages are a polite live region, so a screen reader announces a new toast without moving focus.
 export component ToastHost inherits Rectangle {
     in property <[ToastItem]> toasts;
+    // Toasts with a button; the owner removes one on `dismissed` and on `action-invoked` (and does what the button says).
+    in property <[ToastActionItem]> action-toasts;
     callback dismissed(int);
+    callback action-invoked(int);
 
     VerticalLayout {
         alignment: end;
@@ -281,46 +443,27 @@ export component ToastHost inherits Rectangle {
         spacing: 8px;
         for toast in root.toasts: HorizontalLayout {
             alignment: end;
-            Elevated {
-                level: 3;
-                height: row.preferred-height + 2px;
-                width: min(384px, row.preferred-width + 2px);
-                border-radius: Theme.r-lg;
-                background: Theme.surface;
-                border-width: 1px;
-                border-color: Theme.border;
-
-                Timer {
-                    interval: toast.tone == "error" ? 7s : 3.5s;
-                    running: true;
-                    triggered => {
-                        self.running = false;
-                        root.dismissed(toast.id);
-                    }
+            ToastCard {
+                tone: toast.tone;
+                message: toast.message;
+                lifetime: toast.tone == "error" ? 7s : 3.5s;
+                expired => {
+                    root.dismissed(toast.id);
                 }
-                row := HorizontalLayout {
-                    padding-left: 17px;
-                    padding-right: 17px;
-                    padding-top: 13px;
-                    padding-bottom: 13px;
-                    spacing: 10px;
-                    VerticalLayout {
-                        alignment: start;
-                        padding-top: 2px;
-                        Icon {
-                            source: toast.tone == "error" ? Icons.alert-circle : Icons.check-circle-2;
-                            size: 16px;
-                            tint: toast.tone == "error" ? Theme.negative : Theme.accent;
-                        }
-                    }
-                    Label {
-                        text: toast.message;
-                        font-size: Theme.fs-ui;
-                        lh: Theme.lh-ui;
-                        wrap: word-wrap;
-                        accessible-role: text;
-                        accessible-live-region: polite;
-                    }
+            }
+        }
+        for toast in root.action-toasts: HorizontalLayout {
+            alignment: end;
+            ToastCard {
+                tone: toast.tone;
+                message: toast.message;
+                action: toast.action;
+                lifetime: 8s;
+                expired => {
+                    root.dismissed(toast.id);
+                }
+                acted => {
+                    root.action-invoked(toast.id);
                 }
             }
         }

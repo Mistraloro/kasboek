@@ -15,6 +15,11 @@ export global Rules {
     pure callback check-date(text: string, max: string, pattern: string) -> DateCheck;
     // formatDate of src/shared/format.ts for an ISO date.
     pure callback format-date(iso: string, pattern: string) -> string;
+    // The separators of the Formats setting, for AmountInput: the decimal mark and the group separator ("" = none).
+    in-out property <string> amount-decimal: ".";
+    in-out property <string> amount-group: ",";
+    // `normalize` of src/amount.rs: the typed amount written in the format above; "" when the text is empty or no amount.
+    pure callback normalize-amount(text: string, decimal: string, group: string) -> string;
     // Index of the first item at or after `from` (wrapping) that starts with `prefix`, case-insensitive; -1 if none.
     pure callback find-prefix(items: [string], prefix: string, from: int) -> int;
 }

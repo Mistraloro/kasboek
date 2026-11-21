@@ -4,6 +4,8 @@ import { Theme } from "theme.slint";
 import { FocusRing, Icon, Label, PressTarget, Pressable, SwitchTarget, CheckboxTarget, RadioTarget, Session } from "base.slint";
 import { Icons } from "icons.slint";
 import { Elevated } from "theme.slint";
+import { Scrollbar } from "data.slint";
+import { Rules } from "rules.slint";
 
 // `flex flex-col gap-1.5`: label 13px medium, the control (children), an optional error and the hint (text-xs muted).
 export component Field inherits Rectangle {
@@ -577,5 +579,176 @@ export component Segmented inherits Rectangle {
                 }
             }
         }
+    }
+}
+
+// `textarea.control` of ui.tsx: the Input look with `rows` lines (py-2), wrapping words, scrolling inside when the text is
+// longer. Enter makes a new line (a FormDialog around it should not submit on Enter: see `enter-submits` there), Tab
+// leaves the field. Known gap: Slint's text input has no line-height setting, so a line is the font's 1.2 em (rounded up to 17px)
+// where the renderer has 21px.
+export component TextArea inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <string> label;
+    in property <string> description;
+    in property <bool> enabled: true;
+    in property <bool> invalid: false;
+    in property <bool> read-only: false;
+    in property <int> rows: 4;
+    // Gallery and parity shots: "focus" draws the focused look.
+    in property <string> simulate;
+    out property <bool> has-focus: ti.has-focus;
+    property <bool> focused: ti.has-focus || root.simulate == "focus";
+    property <length> line: ceil(Theme.fs-body / 1px * 1.2) * 1px;
+    callback edited(string);
+    forward-focus: ti;
+
+    height: root.rows * root.line + 16px + 2px;
+    border-radius: root.focused ? Theme.r-md : Theme.r-lg;
+    border-width: 1px;
+    border-color: root.focused ? Theme.accent : root.invalid ? Theme.negative : Theme.border;
+    background: Theme.surface;
+    opacity: root.enabled ? 1 : 0.6;
+
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: MouseCursor.text;
+        clicked => {
+            ti.focus();
+        }
+    }
+    if root.text == "" && root.placeholder != "": Text {
+        x: 13px;
+        y: 9px;
+        width: parent.width - 26px;
+        text: root.placeholder;
+        font-family: Theme.sans;
+        font-size: Theme.fs-body;
+        color: Theme.muted.with-alpha(0.7);
+        wrap: word-wrap;
+        accessible-role: none;
+    }
+    fl := Flickable {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        interactive: false;
+        content-height: max(ti.height + 16px, self.height);
+        ti := TextInput {
+            x: 12px;
+            y: 8px;
+            width: parent.width - 24px - 10px;
+            height: max(self.preferred-height, root.line);
+            text <=> root.text;
+            enabled: root.enabled;
+            read-only: root.read-only;
+            single-line: false;
+            wrap: word-wrap;
+            font-family: Theme.sans;
+            font-size: Theme.fs-body;
+            color: Theme.text;
+            selection-background-color: Theme.accent.with-alpha(0.3);
+            selection-foreground-color: Theme.text;
+            accessible-role: text-input;
+            accessible-label: root.label;
+            accessible-description: root.description;
+            accessible-placeholder-text: root.placeholder;
+            accessible-enabled: root.enabled;
+            edited => {
+                root.edited(self.text);
+            }
+            // Keeps the caret in view while typing.
+            cursor-position-changed(p) => {
+                if (p.y + fl.content-y < 0px) {
+                    fl.content-y = -p.y;
+                } else if (p.y + root.line + 16px + fl.content-y > fl.height) {
+                    fl.content-y = fl.height - p.y - root.line - 16px;
+                }
+            }
+        }
+    }
+    Scrollbar {
+        x: parent.width - self.width - 1px;
+        y: 1px;
+        height: parent.height - 2px;
+        content-height: fl.content-height;
+        visible-height: fl.height;
+        content-y <=> fl.content-y;
+    }
+    if root.focused && root.enabled: FocusRing {
+        radius: 8px;
+        gap: 1px;
+    }
+}
+
+// An amount the person types: right-aligned in the tabular figures, optionally with a unit (currency) after it. When the
+// field loses focus or Enter is pressed, what was typed is written in the Formats setting (`Rules.amount-decimal` and
+// `-group`): "1234,5" becomes "1.234,50". Text that is no amount keeps what was typed and sets `invalid`; the owner
+// reads the amount in cents with `kb_ui::amount::parse_amount`. Empty is valid (the owner decides if it is required).
+export component AmountInput inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <string> label;
+    in property <string> description;
+    // "EUR" or "€": shown muted after the number.
+    in property <string> unit;
+    in property <bool> enabled: true;
+    // The owner can mark it invalid too (a required amount that is empty).
+    in property <bool> invalid: false;
+    in property <string> simulate;
+    out property <bool> valid: root.text == "" || Rules.normalize-amount(root.text, Rules.amount-decimal, Rules.amount-group) != "";
+    out property <bool> has-focus: input.has-focus;
+    // The text after it was written in the format.
+    callback committed(string);
+    callback edited(string);
+    forward-focus: input;
+
+    height: Theme.h-control;
+
+    function commit() {
+        if (root.text == "") {
+            return;
+        }
+        let shown = Rules.normalize-amount(root.text, Rules.amount-decimal, Rules.amount-group);
+        if (shown != "") {
+            root.text = shown;
+            root.committed(shown);
+        }
+    }
+
+    input := Input {
+        text <=> root.text;
+        placeholder: root.placeholder;
+        label: root.label;
+        description: root.description;
+        enabled: root.enabled;
+        invalid: root.invalid || !root.valid;
+        simulate: root.simulate;
+        numeric: true;
+        text-align: right;
+        right-inset: root.unit == "" ? 0px : unit-text.preferred-width + 8px;
+        edited(t) => {
+            root.edited(t);
+        }
+        accepted(t) => {
+            root.commit();
+        }
+        changed has-focus => {
+            if (!self.has-focus) {
+                root.commit();
+            }
+        }
+    }
+    unit-text := Text {
+        x: parent.width - 13px - self.preferred-width;
+        y: 1px;
+        height: parent.height - 1px;
+        text: root.unit;
+        font-family: Theme.num;
+        font-size: Theme.fs-body;
+        color: Theme.muted;
+        vertical-alignment: center;
+        accessible-role: none;
     }
 }

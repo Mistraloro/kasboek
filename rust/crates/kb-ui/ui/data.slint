@@ -213,6 +213,6 @@ export component TableCell inherits Rectangle {
         font-weight: root.header ? 500 : 400;
         color: (root.header || root.muted) ? Theme.muted : Theme.text;
         horizontal-alignment: root.align;
-        overflow: clip;
+        overflow: elide;
     }
 }

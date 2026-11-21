@@ -1,0 +1,190 @@
+// ContextMenu (row actions): a popup list of commands that opens at a point (right click, the menu key, Shift+F10).
+import { Theme } from "theme.slint";
+import { Label } from "base.slint";
+import { PanelFrame } from "overlay.slint";
+
+// One command. `divider` draws a line above it, `danger` is for destructive ones (delete), `disabled` greys it out.
+export struct MenuItemData {
+    text: string,
+    danger: bool,
+    disabled: bool,
+    divider: bool,
+}
+
+component MenuRow inherits Rectangle {
+    in property <MenuItemData> item;
+    in property <bool> highlighted;
+    in property <int> index;
+    in property <int> count;
+    callback clicked();
+    callback hover();
+
+    height: (root.item.divider ? 9px : 0px) + 32px;
+    opacity: !root.item.disabled ? 1 : 0.5;
+
+    if root.item.divider: Rectangle {
+        height: 1px;
+        y: 4px;
+        background: Theme.border;
+    }
+    Rectangle {
+        y: root.item.divider ? 9px : 0px;
+        height: 32px;
+        border-radius: Theme.r-md;
+        background: root.highlighted && !root.item.disabled ? (root.item.danger ? Theme.negative-soft : Theme.surface-2) : transparent;
+        Label {
+            x: 8px;
+            width: parent.width - 16px;
+            text: root.item.text;
+            color: root.item.danger ? Theme.negative : Theme.text;
+            overflow: elide;
+            accessible-role: none;
+        }
+        ta := TouchArea {
+            enabled: !root.item.disabled;
+            accessible-role: list-item;
+            accessible-label: root.item.text;
+            accessible-enabled: !root.item.disabled;
+            accessible-item-index: root.index;
+            accessible-item-count: root.count;
+            accessible-action-default => {
+                root.clicked();
+            }
+            clicked => {
+                root.clicked();
+            }
+            changed has-hover => {
+                if (self.has-hover) {
+                    root.hover();
+                }
+            }
+        }
+    }
+}
+
+// The list itself (also drawn on its own in the gallery, where a popup cannot be shown in a still).
+export component MenuList inherits PanelFrame {
+    in property <[MenuItemData]> items;
+    in property <int> hl: -1;
+    callback hover(int);
+    callback clicked(int);
+    radius: Theme.r-lg;
+    preferred-height: col.preferred-height + 12px;
+    col := VerticalLayout {
+        padding: 5px;
+        for item[i] in root.items: MenuRow {
+            item: item;
+            index: i;
+            count: root.items.length;
+            highlighted: i == root.hl;
+            hover => {
+                root.hover(i);
+            }
+            clicked => {
+                root.clicked(i);
+            }
+        }
+    }
+}
+
+// The popup. Keys: Up/Down/Home/End move over the commands that are not disabled, Enter or Space runs one, Escape
+// closes; so does a click outside. Focus returns to where it was. The element has no size of its own: `open-at(x, y)`
+// shows the list with its top left corner at (x, y) of the parent. Slint has no menu role: the popup is a labelled
+// group of list items.
+export component ContextMenu inherits Rectangle {
+    in property <[MenuItemData]> items;
+    in property <string> label;
+    in property <length> menu-width: 224px;
+    // The command that was run.
+    callback chosen(int);
+
+    property <int> hl: -1;
+    property <length> at-x;
+    property <length> at-y;
+
+    pure function usable(i: int) -> bool {
+        return i >= 0 && i < root.items.length && !root.items[i].disabled;
+    }
+    // The next command in direction `step` that can be run (skips up to two disabled ones in a row), or `from`.
+    function next(from: int, step: int) -> int {
+        if (root.usable(from + step)) {
+            return from + step;
+        }
+        if (root.usable(from + 2 * step)) {
+            return from + 2 * step;
+        }
+        if (root.usable(from + 3 * step)) {
+            return from + 3 * step;
+        }
+        return from;
+    }
+    public function open-at(x: length, y: length) {
+        root.at-x = x;
+        root.at-y = y;
+        root.hl = root.next(-1, 1);
+        popup.show();
+    }
+    function run() {
+        if (root.usable(root.hl)) {
+            root.chosen(root.hl);
+            popup.close();
+        }
+    }
+
+    width: 0px;
+    height: 0px;
+
+    popup := PopupWindow {
+        x: root.at-x;
+        y: root.at-y;
+        width: root.menu-width;
+        height: list.preferred-height;
+        close-policy: close-on-click-outside;
+
+        scope := FocusScope {
+            init => {
+                self.focus();
+            }
+            accessible-role: groupbox;
+            accessible-label: root.label;
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    popup.close();
+                    return accept;
+                }
+                if (e.text == Key.DownArrow) {
+                    root.hl = root.next(root.hl, 1);
+                    return accept;
+                }
+                if (e.text == Key.UpArrow) {
+                    root.hl = root.next(root.hl, -1);
+                    return accept;
+                }
+                if (e.text == Key.Home) {
+                    root.hl = root.next(-1, 1);
+                    return accept;
+                }
+                if (e.text == Key.End) {
+                    root.hl = root.next(root.items.length, -1);
+                    return accept;
+                }
+                if (e.text == Key.Return || e.text == " ") {
+                    root.run();
+                    return accept;
+                }
+                return reject;
+            }
+            list := MenuList {
+                items: root.items;
+                hl: root.hl;
+                hover(i) => {
+                    root.hl = i;
+                }
+                clicked(i) => {
+                    root.hl = i;
+                    root.run();
+                }
+            }
+        }
+    }
+}

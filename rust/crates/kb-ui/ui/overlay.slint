@@ -17,30 +17,42 @@ export component PanelFrame inherits Elevated {
     border-color: Theme.border;
 }
 
-// A popup window that closes on a click outside or Escape. Position it with x/y relative to its parent and call
-// `open()`. Slint gives the popup the keyboard focus while it is shown and hands it back on close.
-export component Popover inherits PopupWindow {
+// A popup that closes on a click outside or Escape. The Popover element itself is the place and size of the popup
+// (give it x, y, width and height relative to its parent; it draws nothing until `open()` is called, and its children
+// are the content). Slint gives the popup the keyboard focus while it is shown and hands it back on close.
+// (A component whose root is a PopupWindow cannot have its functions called from outside, hence the wrapper.)
+export component Popover inherits Rectangle {
     in property <string> label;
     public function open() {
-        self.show();
+        popup.show();
     }
-    close-policy: close-on-click-outside;
+    public function close() {
+        popup.close();
+    }
 
-    scope := FocusScope {
-        init => {
-            self.focus();
-        }
-        accessible-role: groupbox;
-        accessible-label: root.label;
-        key-pressed(e) => {
-            if (e.text == Key.Escape) {
-                root.close();
-                return accept;
+    popup := PopupWindow {
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+        close-policy: close-on-click-outside;
+
+        scope := FocusScope {
+            init => {
+                self.focus();
             }
-            return reject;
-        }
-        PanelFrame {
-            @children
+            accessible-role: groupbox;
+            accessible-label: root.label;
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    popup.close();
+                    return accept;
+                }
+                return reject;
+            }
+            PanelFrame {
+                @children
+            }
         }
     }
 }

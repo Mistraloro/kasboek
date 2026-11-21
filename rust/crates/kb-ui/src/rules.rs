@@ -232,6 +232,9 @@ macro_rules! wire_rules {
             DateCheck { iso: iso.into(), problem: problem.into() }
         });
         rules.on_format_date(|iso, pattern| $crate::rules::format_date(&iso, &pattern, &$crate::rules::EN).into());
+        rules.on_normalize_amount(|text, decimal, group| {
+            $crate::amount::normalize(&text, &$crate::amount::AmountFormat::from_strs(&decimal, &group)).into()
+        });
         rules.on_find_prefix(|items, prefix, from| {
             let items: ::std::vec::Vec<::slint::SharedString> = items.iter().collect();
             $crate::rules::find_prefix(&items, &prefix, from)

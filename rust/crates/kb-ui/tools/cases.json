@@ -22,5 +22,18 @@
   { "name": "progress", "width": 480, "height": 120 },
   { "name": "categorybars", "width": 640, "height": 300 },
   { "name": "monthbars", "width": 640, "height": 320 },
-  { "name": "trendline", "width": 640, "height": 320 }
+  { "name": "trendline", "width": 640, "height": 320 },
+  { "name": "datatable", "width": 760, "height": 360 },
+  { "name": "datatable-de", "width": 760, "height": 360 },
+  { "name": "datatable-live", "width": 760, "height": 420 },
+  { "name": "menu", "width": 640, "height": 280 },
+  { "name": "menu-de", "width": 640, "height": 280 },
+  { "name": "textarea", "width": 480, "height": 420 },
+  { "name": "textarea-de", "width": 480, "height": 400 },
+  { "name": "amount", "width": 480, "height": 300 },
+  { "name": "amount-de", "width": 480, "height": 220 },
+  { "name": "formdialog", "width": 640, "height": 520 },
+  { "name": "formdialog-de", "width": 640, "height": 520 },
+  { "name": "toast-action", "width": 640, "height": 240 },
+  { "name": "toast-action-de", "width": 640, "height": 240 }
 ]

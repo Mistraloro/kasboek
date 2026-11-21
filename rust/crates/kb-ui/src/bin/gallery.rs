@@ -10,7 +10,7 @@
 //! pointer, `--hold` presses the pointer button and keeps it down.
 // A double-clicked Windows binary must not open a console window.
 #![cfg_attr(windows, windows_subsystem = "windows")]
-use kb_ui::{shot, DateCheck, Gallery, Rules, ToastItem};
+use kb_ui::{shot, DateCheck, Gallery, Rules, ToastActionItem, ToastItem};
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -41,9 +41,31 @@ fn point(text: &str) -> (f32, f32) {
     (x.trim().parse().unwrap_or(0.0), y.trim().parse().unwrap_or(0.0))
 }
 
-/// Connects the gallery's toast buttons to a model, as an app does.
-fn wire(ui: &Gallery) -> Rc<VecModel<ToastItem>> {
+/// The fake transactions of the live table case.
+const DEMO_ROWS: usize = 500_000;
+
+/// Connects the gallery's toast buttons to a model, as an app does, and the live table to its fake ledger.
+fn wire(ui: &Gallery) -> (Rc<VecModel<ToastItem>>, kb_ui::demo::Demo) {
     kb_ui::wire_rules!(ui);
+    let demo = kb_ui::demo::wire(ui, DEMO_ROWS);
+    let actions = Rc::new(VecModel::<ToastActionItem>::default());
+    ui.set_action_toasts(ModelRc::from(actions.clone()));
+    let (model, next) = (actions.clone(), std::cell::Cell::new(100));
+    ui.on_push_action_toast(move || {
+        let id = next.get();
+        next.set(id + 1);
+        model.push(ToastActionItem { id, tone: "success".into(), message: "3 transactions deleted.".into(), action: "Undo".into() });
+    });
+    let model = actions.clone();
+    let weak = ui.as_weak();
+    ui.on_invoke_toast_action(move |id| {
+        if let Some(i) = model.iter().position(|t| t.id == id) {
+            model.remove(i);
+        }
+        if let Some(ui) = weak.upgrade() {
+            ui.set_last_event("undo".into());
+        }
+    });
     let toasts = Rc::new(VecModel::<ToastItem>::default());
     ui.set_toasts(ModelRc::from(toasts.clone()));
     let next = std::cell::Cell::new(1);
@@ -55,13 +77,16 @@ fn wire(ui: &Gallery) -> Rc<VecModel<ToastItem>> {
             if id % 2 == 0 { ("error", "The backup could not be written.") } else { ("success", "Copied to the clipboard.") };
         model.push(ToastItem { id, tone: tone.into(), message: message.into() });
     });
-    let model = toasts.clone();
+    let (model, actions) = (toasts.clone(), actions.clone());
     ui.on_dismiss_toast(move |id| {
         if let Some(i) = model.iter().position(|t| t.id == id) {
             model.remove(i);
         }
+        if let Some(i) = actions.iter().position(|t| t.id == id) {
+            actions.remove(i);
+        }
     });
-    toasts
+    (toasts, demo)
 }
 
 fn shot_mode(args: &[String]) {
@@ -74,7 +99,7 @@ fn shot_mode(args: &[String]) {
     let (w, h) = case_size(case);
     let window = shot::install();
     let ui = Gallery::new().expect("ui");
-    let _toasts = wire(&ui);
+    let _wired = wire(&ui);
     ui.set_dark(theme == "dark");
     ui.set_case(case.into());
     shot::open(&window, &ui, w, h, scale);
@@ -109,7 +134,7 @@ fn main() {
         return;
     }
     let ui = Gallery::new().expect("ui");
-    let _toasts = wire(&ui);
+    let _wired = wire(&ui);
     ui.set_dark(opt(&args, "--theme") == Some("dark"));
     let case = opt(&args, "--case").unwrap_or("all");
     ui.set_case(case.into());

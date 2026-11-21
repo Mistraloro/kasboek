@@ -1,0 +1,343 @@
+// DataTable: a header and a virtualised list of rows for the big tables (transactions, import preview). The rows come
+// from any model (a `PagedModel` for the 500,000-row case), the column widths from Rust (`kb_ui::table::columns_model`),
+// the selection from Rust (`kb_ui::table::Selection`); the table only draws and turns mouse and keys into callbacks.
+//
+// Mouse: click selects, Ctrl/Cmd-click flips a row, Shift-click selects a range, double-click activates, right-click opens
+// the row actions. Keys (the table is one tab stop; the cursor row has the 2px ring): Up/Down move and select, with Shift
+// they extend the selection, with Ctrl they only move; Home/End/PageUp/PageDown; Space flips the row; Enter activates;
+// Ctrl+A selects all, Escape clears the selection; the menu key or Shift+F10 opens the row actions.
+// Screen readers get a table of list items that carry the row label, their number, and whether they are selected.
+import { Theme } from "theme.slint";
+import { Icons } from "icons.slint";
+import { Icon, Label, FocusRing } from "base.slint";
+import { Checkbox } from "form.slint";
+import { ListView, Scrollbar, TableCell } from "data.slint";
+import { ContextMenu, MenuItemData } from "menu.slint";
+import { UiText } from "texts.slint";
+
+export struct TableColumn {
+    title: string,
+    // Logical pixels, computed in Rust for the table's width.
+    width: length,
+    // Numbers: right-aligned in the tabular figures.
+    numeric: bool,
+}
+
+export struct TableRowData {
+    cells: [string],
+    // What a screen reader says for the row ("05/03/2026, Supermarket, minus 42.10"): the cells in a sentence.
+    label: string,
+}
+
+// The box of a row's selection column: looks like a Checkbox, but is no tab stop (the table owns the keyboard).
+component BoxMark inherits Rectangle {
+    in property <bool> on;
+    width: 16px;
+    height: 16px;
+    border-radius: Theme.r-sm;
+    border-width: 1px;
+    border-color: root.on ? Theme.accent : Theme.border-strong;
+    background: root.on ? Theme.accent : Theme.surface;
+    if root.on: Icon {
+        source: Icons.check-3;
+        size: 12px;
+        tint: Theme.accent-fg;
+    }
+}
+
+component DataRow inherits Rectangle {
+    in property <TableRowData> data;
+    in property <[TableColumn]> columns;
+    in property <int> index;
+    in property <int> count;
+    in property <bool> selected;
+    in property <bool> selectable;
+    in property <bool> is-cursor;
+    in property <length> check-width;
+    // Mouse: (shift, toggle) of a click (a click in the box column toggles), double click, and the right button with the
+    // pointer's place in the row.
+    callback picked(bool, bool);
+    callback activated();
+    callback context(length, length);
+
+    height: 41px;
+    background: root.selected ? Theme.row-selected : ta.has-hover ? Theme.row-hover : transparent;
+    accessible-role: list-item;
+    accessible-label: root.data.label;
+    accessible-item-selectable: root.selectable;
+    accessible-item-selected: root.selected;
+    accessible-item-index: root.index;
+    accessible-item-count: root.count;
+    accessible-action-default => {
+        root.activated();
+    }
+
+    ta := TouchArea {
+        pointer-event(e) => {
+            if (e.kind != PointerEventKind.up) {
+                return;
+            }
+            if (e.button == PointerEventButton.left) {
+                root.picked(e.modifiers.shift, e.modifiers.control || e.modifiers.meta || (root.selectable && self.mouse-x < root.check-width));
+            } else if (e.button == PointerEventButton.right) {
+                root.context(self.mouse-x, self.mouse-y);
+            }
+        }
+        double-clicked => {
+            root.activated();
+        }
+    }
+    HorizontalLayout {
+        padding-bottom: 1px;
+        if root.selectable: Rectangle {
+            width: root.check-width;
+            BoxMark {
+                on: root.selected;
+            }
+        }
+        for cell[c] in root.data.cells: TableCell {
+            text: cell;
+            cell-width: root.columns[c].width;
+            numeric: root.columns[c].numeric;
+            align: root.columns[c].numeric ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+        }
+    }
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+    if root.is-cursor: Rectangle {
+        border-radius: Theme.r-md;
+        border-width: 2px;
+        border-color: Theme.focus;
+    }
+}
+
+export component DataTable inherits Rectangle {
+    in property <[TableColumn]> columns;
+    in property <[TableRowData]> rows;
+    // The name of the table for screen readers.
+    in property <string> label;
+    in property <bool> selectable: true;
+    in property <int> selected-count;
+    // Bumped by the owner whenever the selection changed: it makes the rows ask `is-selected` again.
+    in property <int> selection-rev;
+    in property <[MenuItemData]> row-actions;
+    in property <string> empty-text;
+    // Words of the table itself (the owner sets them from the locale).
+    in property <string> select-all-label: UiText.table-select-all;
+    in property <string> actions-label: UiText.table-row-actions;
+    // "focus": draw the cursor row's ring as if the table had the keyboard focus (gallery).
+    in property <string> simulate;
+    in-out property <int> cursor: -1;
+    in-out property <length> scroll-y <=> lv.content-y;
+    out property <int> visible-rows: floor(lv.visible-height / 41px);
+    // (row, shift, toggle): a click or key wants this selection change; the owner applies `Selection::apply`.
+    callback select(int, bool, bool);
+    callback select-all(bool);
+    callback activated(int);
+    // The row actions: (row, index in `row-actions`).
+    callback row-action(int, int);
+    // The width the data columns can use changed (and once at the start): answer with `columns`.
+    callback layout-requested(length);
+    pure callback is-selected(int) -> bool;
+
+    // `px-3` around a 16px box.
+    property <length> check-width: root.selectable ? 40px : 0px;
+    property <int> menu-row: -1;
+    property <bool> focused: scope.has-focus || root.simulate == "focus";
+
+    function reveal(row: int) {
+        if (row * 41px < -lv.content-y) {
+            lv.content-y = -row * 41px;
+        } else if ((row + 1) * 41px > -lv.content-y + lv.visible-height) {
+            lv.content-y = -((row + 1) * 41px - lv.visible-height);
+        }
+    }
+    function go(row: int, shift: bool, ctrl: bool) {
+        let target = clamp(row, 0, root.rows.length - 1);
+        root.cursor = target;
+        root.reveal(target);
+        if (!ctrl) {
+            root.select(target, shift, false);
+        }
+    }
+    function open-menu(row: int, x: length, y: length) {
+        if (root.row-actions.length == 0 || row < 0 || row >= root.rows.length) {
+            return;
+        }
+        root.menu-row = row;
+        menu.open-at(x, y);
+    }
+    // Where a row's menu opens from the keyboard: under the row's first cell.
+    function row-menu-y(row: int) -> length {
+        return clamp(41px + (row + 1) * 41px + lv.content-y, 41px, root.height - 8px);
+    }
+    init => {
+        root.layout-requested(root.width - root.check-width - 10px);
+    }
+    changed width => {
+        root.layout-requested(root.width - root.check-width - 10px);
+    }
+    changed selectable => {
+        root.layout-requested(root.width - root.check-width - 10px);
+    }
+
+    background: Theme.surface;
+    accessible-role: table;
+    accessible-label: root.label;
+    accessible-item-count: root.rows.length;
+
+    // Header: `text-xs font-medium text-muted`, 41px with its border.
+    header := Rectangle {
+        y: 0px;
+        width: parent.width;
+        height: 41px;
+        HorizontalLayout {
+            padding-bottom: 1px;
+            if root.selectable: Rectangle {
+                width: root.check-width;
+                Checkbox {
+                    x: 12px;
+                    y: (parent.height - 1px - self.height) / 2;
+                    label: root.select-all-label;
+                    checked: root.selected-count > 0 && root.selected-count == root.rows.length;
+                    indeterminate: root.selected-count > 0 && root.selected-count < root.rows.length;
+                    toggled(c) => {
+                        root.select-all(root.selected-count != root.rows.length);
+                    }
+                }
+            }
+            for column in root.columns: TableCell {
+                header: true;
+                text: column.title;
+                cell-width: column.width;
+                numeric: column.numeric;
+                align: column.numeric ? TextHorizontalAlignment.right : TextHorizontalAlignment.left;
+            }
+        }
+        Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: Theme.border;
+        }
+    }
+
+    body := Rectangle {
+        y: 41px;
+        height: parent.height - 41px;
+        clip: true;
+
+        scope := FocusScope {
+            accessible-role: none;
+            key-pressed(e) => {
+                let shift = e.modifiers.shift;
+                let ctrl = e.modifiers.control || e.modifiers.meta;
+                if (root.rows.length == 0) {
+                    return reject;
+                }
+                if (e.text == Key.DownArrow) {
+                    root.go(root.cursor + 1, shift, ctrl);
+                    return accept;
+                }
+                if (e.text == Key.UpArrow) {
+                    root.go(max(root.cursor, 1) - 1, shift, ctrl);
+                    return accept;
+                }
+                if (e.text == Key.PageDown) {
+                    root.go(root.cursor + max(root.visible-rows - 1, 1), shift, ctrl);
+                    return accept;
+                }
+                if (e.text == Key.PageUp) {
+                    root.go(root.cursor - max(root.visible-rows - 1, 1), shift, ctrl);
+                    return accept;
+                }
+                if (e.text == Key.Home) {
+                    root.go(0, shift, ctrl);
+                    return accept;
+                }
+                if (e.text == Key.End) {
+                    root.go(root.rows.length - 1, shift, ctrl);
+                    return accept;
+                }
+                if (e.text == " " && root.cursor >= 0 && root.selectable) {
+                    root.select(root.cursor, false, true);
+                    return accept;
+                }
+                if (e.text == Key.Return && root.cursor >= 0) {
+                    root.activated(root.cursor);
+                    return accept;
+                }
+                if (ctrl && e.text == "a" && root.selectable) {
+                    root.select-all(true);
+                    return accept;
+                }
+                if (e.text == Key.Escape && root.selected-count > 0) {
+                    root.select-all(false);
+                    return accept;
+                }
+                if ((e.text == Key.Menu || (shift && e.text == Key.F10)) && root.cursor >= 0) {
+                    root.open-menu(root.cursor, 24px, root.row-menu-y(root.cursor));
+                    return accept;
+                }
+                return reject;
+            }
+
+            lv := ListView {
+                width: parent.width;
+                height: parent.height;
+                for row[i] in root.rows: DataRow {
+                    data: row;
+                    columns: root.columns;
+                    index: i;
+                    count: root.rows.length;
+                    selectable: root.selectable;
+                    // Reading `selection-rev` makes the row ask again when the owner bumps it (`is-selected` is a callback, which Slint
+                    // does not track).
+                    selected: root.selection-rev >= 0 && root.is-selected(i);
+                    is-cursor: root.focused && i == root.cursor;
+                    check-width: root.check-width;
+                    picked(shift, toggle) => {
+                        scope.focus();
+                        root.cursor = i;
+                        root.select(i, shift, toggle);
+                    }
+                    activated => {
+                        root.activated(i);
+                    }
+                    context(x, y) => {
+                        scope.focus();
+                        root.cursor = i;
+                        if (!root.is-selected(i)) {
+                            root.select(i, false, false);
+                        }
+                        root.open-menu(i, self.absolute-position.x - root.absolute-position.x + x, self.absolute-position.y - root.absolute-position.y + y);
+                    }
+                }
+            }
+            Scrollbar {
+                x: parent.width - self.width;
+                height: parent.height;
+                content-height: root.rows.length * 41px;
+                visible-height: lv.visible-height;
+                content-y <=> lv.content-y;
+            }
+        }
+    }
+    if root.rows.length == 0 && root.empty-text != "": Label {
+        y: 41px;
+        height: 80px;
+        text: root.empty-text;
+        color: Theme.muted;
+        horizontal-alignment: center;
+        accessible-role: text;
+    }
+    menu := ContextMenu {
+        label: root.actions-label;
+        items: root.row-actions;
+        chosen(a) => {
+            root.row-action(root.menu-row, a);
+        }
+    }
+}

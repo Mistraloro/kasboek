@@ -1,5 +1,5 @@
 //! Offscreen rendering with Slint's software renderer, no windowing system needed, plus synthetic keyboard and mouse
-//! input. Used by the gallery (`--shot`, `--tab N`) and by the behaviour tests.
+//! input ("Shift" and "Control" with `key_down`/`key_up` hold a modifier). Used by the gallery (`--shot`, `--tab N`) and by the behaviour tests.
 use slint::platform::software_renderer::{MinimalSoftwareWindow, RepaintBufferType};
 use slint::platform::{Key, Platform, PointerEventButton, WindowAdapter, WindowEvent};
 use slint::{ComponentHandle, LogicalPosition, PhysicalSize, Rgb8Pixel, SharedString};
@@ -45,6 +45,12 @@ fn key_text(name: &str) -> SharedString {
         "End" => Key::End,
         "Space" => return " ".into(),
         "Backspace" => Key::Backspace,
+        "PageUp" => Key::PageUp,
+        "PageDown" => Key::PageDown,
+        "Menu" => Key::Menu,
+        "F10" => Key::F10,
+        "Shift" => Key::Shift,
+        "Control" => Key::Control,
         other => return other.into(),
     };
     key.into()
@@ -97,6 +103,15 @@ pub fn mouse_up(window: &MinimalSoftwareWindow, x: f32, y: f32) {
 pub fn click(window: &MinimalSoftwareWindow, x: f32, y: f32) {
     mouse_down(window, x, y);
     mouse_up(window, x, y);
+}
+
+/// A click with the right button (opens the row actions of a table).
+pub fn right_click(window: &MinimalSoftwareWindow, x: f32, y: f32) {
+    let position = LogicalPosition::new(x, y);
+    window.dispatch_event(WindowEvent::PointerMoved { position });
+    window.dispatch_event(WindowEvent::PointerPressed { position, button: PointerEventButton::Right });
+    window.dispatch_event(WindowEvent::PointerReleased { position, button: PointerEventButton::Right });
+    slint::platform::update_timers_and_animations();
 }
 
 /// Renders the current frame to RGB pixels (physical size of the window).

@@ -4,15 +4,18 @@ import { Theme } from "theme.slint";
 import { Icons } from "icons.slint";
 import { Label } from "base.slint";
 import { Button } from "button.slint";
-import { Switch, Segmented, Input } from "form.slint";
-import { ToastHost, ToastItem, Modal } from "dialog.slint";
+import { Switch, Segmented, Input, Field, TextArea, AmountInput } from "form.slint";
+import { ToastHost, ToastItem, ToastActionItem, Modal, FormDialog } from "dialog.slint";
+import { TableColumn, TableRowData } from "table.slint";
+import { MenuItemData } from "menu.slint";
 import { MonthNav } from "month.slint";
 import { Select } from "overlay.slint";
 import { Rules, DateCheck } from "rules.slint";
 import { UiText } from "texts.slint";
 import { Session } from "base.slint";
 import { CaseButton, CaseInput, CasePassword, CaseSelect, CaseSelectOpen, CaseSegmented, CaseSwitch, CaseChoice, CaseBadge, CaseCard, CasePageHeader, CaseEmptyState, CaseModal, CaseModalAsk, CaseMonthNav, CaseToast, CaseTabs, CaseTable, CaseMeter, CaseProgress, CaseCategoryBars, CaseMonthBars, CaseTrendLine, CaseDate } from "cases.slint";
-export { Theme, Rules, DateCheck, UiText, Session, ToastItem }
+import { TableDemo, CaseDataTable, CaseDataTableDe, CaseDataTableLive, CaseMenu, CaseMenuDe, CaseTextArea, CaseTextAreaDe, CaseAmount, CaseAmountDe, CaseFormDialog, CaseFormDialogDe, CaseToastAction, CaseToastActionDe } from "cases-data.slint";
+export { Theme, Rules, DateCheck, UiText, Session, ToastItem, ToastActionItem, TableDemo, TableColumn, TableRowData, MenuItemData }
 
 component Section inherits Rectangle {
     in property <string> title;
@@ -44,15 +47,22 @@ export component Gallery inherits Window {
     // What the live parts did last (tests and the curious read it).
     in-out property <string> last-event;
     in property <[ToastItem]> toasts;
+    in property <[ToastActionItem]> action-toasts;
     in-out property <bool> modal-open: false;
     in-out property <bool> modal-dirty: false;
     in-out property <string> field-text;
+    in-out property <bool> form-open: false;
+    in-out property <string> form-name;
+    in-out property <string> form-amount;
+    in-out property <string> form-note;
     in-out property <int> select-index: 0;
     in-out property <int> segment-index: 0;
     in-out property <string> year-month: "2026-03";
     // The model is owned by Rust (a VecModel): pushing and removing toasts is the app's job, as in Toast.tsx.
     callback push-toast();
     callback dismiss-toast(int);
+    callback push-action-toast();
+    callback invoke-toast-action(int);
 
     title: "Kasboek design system";
     preferred-width: 760px;
@@ -88,6 +98,20 @@ export component Gallery inherits Window {
                     clicked => {
                         root.push-toast();
                         root.last-event = "toast";
+                    }
+                }
+                Button {
+                    text: "Toast with Undo";
+                    clicked => {
+                        root.push-action-toast();
+                        root.last-event = "action-toast";
+                    }
+                }
+                Button {
+                    text: "Open form";
+                    clicked => {
+                        root.form-open = true;
+                        root.last-event = "form-open";
                     }
                 }
                 Button {
@@ -222,6 +246,71 @@ export component Gallery inherits Window {
                     hover: 2;
                 }
             }
+            Section {
+                title: "DataTable";
+                content-height: 360px;
+                CaseDataTable { }
+            }
+            Section {
+                title: "DataTable (German)";
+                content-height: 360px;
+                CaseDataTableDe { }
+            }
+            Section {
+                title: "DataTable (500,000 rows, paged)";
+                content-height: 420px;
+                CaseDataTableLive { }
+            }
+            Section {
+                title: "ContextMenu";
+                content-height: 280px;
+                CaseMenu { }
+            }
+            Section {
+                title: "ContextMenu (German)";
+                content-height: 280px;
+                CaseMenuDe { }
+            }
+            Section {
+                title: "TextArea";
+                content-height: 420px;
+                CaseTextArea { }
+            }
+            Section {
+                title: "TextArea (German)";
+                content-height: 400px;
+                CaseTextAreaDe { }
+            }
+            Section {
+                title: "AmountInput";
+                content-height: 300px;
+                CaseAmount { }
+            }
+            Section {
+                title: "AmountInput (German)";
+                content-height: 220px;
+                CaseAmountDe { }
+            }
+            Section {
+                title: "FormDialog";
+                content-height: 520px;
+                CaseFormDialog { }
+            }
+            Section {
+                title: "FormDialog (German, busy)";
+                content-height: 520px;
+                CaseFormDialogDe { }
+            }
+            Section {
+                title: "Toast with an action";
+                content-height: 240px;
+                CaseToastAction { }
+            }
+            Section {
+                title: "Toast with an action (German)";
+                content-height: 240px;
+                CaseToastActionDe { }
+            }
         }
     }
     if root.case == "button": CaseButton { }
@@ -253,11 +342,30 @@ export component Gallery inherits Window {
         hover: 2;
     }
 
+    if root.case == "datatable": CaseDataTable { }
+    if root.case == "datatable-de": CaseDataTableDe { }
+    if root.case == "datatable-live": CaseDataTableLive { }
+    if root.case == "menu": CaseMenu { }
+    if root.case == "menu-de": CaseMenuDe { }
+    if root.case == "textarea": CaseTextArea { }
+    if root.case == "textarea-de": CaseTextAreaDe { }
+    if root.case == "amount": CaseAmount { }
+    if root.case == "amount-de": CaseAmountDe { }
+    if root.case == "formdialog": CaseFormDialog { }
+    if root.case == "formdialog-de": CaseFormDialogDe { }
+    if root.case == "toast-action": CaseToastAction { }
+    if root.case == "toast-action-de": CaseToastActionDe { }
+
     // Live parts (all view): toasts and a modal that behave as in the app.
     ToastHost {
         width: root.width;
         height: root.height;
         toasts: root.toasts;
+        action-toasts: root.action-toasts;
+        action-invoked(id) => {
+            root.invoke-toast-action(id);
+            root.last-event = "toast-action";
+        }
         dismissed(id) => {
             root.dismiss-toast(id);
             root.last-event = "toast-dismissed";
@@ -276,6 +384,48 @@ export component Gallery inherits Window {
             text <=> root.field-text;
             edited(t) => {
                 root.modal-dirty = t != "";
+            }
+        }
+    }
+    if root.form-open: FormDialog {
+        open: true;
+        title: "Add a transaction";
+        primary-text: "Save";
+        secondary-text: "Cancel";
+        dirty: root.form-name != "" || root.form-note != "";
+        enter-submits: !note.has-focus;
+        opened => {
+            name.focus();
+        }
+        error: root.form-amount == "" ? "Enter an amount." : "";
+        submitted => {
+            root.last-event = "form-submitted";
+        }
+        close-requested => {
+            root.form-open = false;
+            root.last-event = "form-closed";
+        }
+        Field {
+            label: "Description";
+            name := Input {
+                label: "Description";
+                text <=> root.form-name;
+            }
+        }
+        Field {
+            label: "Amount";
+            AmountInput {
+                label: "Amount";
+                text <=> root.form-amount;
+                unit: "EUR";
+            }
+        }
+        Field {
+            label: "Note";
+            note := TextArea {
+                label: "Note";
+                rows: 3;
+                text <=> root.form-note;
             }
         }
     }

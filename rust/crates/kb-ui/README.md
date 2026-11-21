@@ -13,17 +13,23 @@ real renderer. Slint 1.19, software renderer. Plan: `docs/rust-port-plan.md` sec
 | `ui/base.slint` | `FocusRing`, `Pressable` and its roles (`PressTarget`, `SwitchTarget`, `CheckboxTarget`, `RadioTarget`, `TabTarget`), `Icon`, `Label`, `Session` |
 | `ui/button.slint` | `Button` (primary/secondary/ghost/danger, icon, busy, small), `IconButton` |
 | `ui/surface.slint` | `Card`, `CardHeader`, `PageHeader`, `Badge`, `EmptyState` |
-| `ui/form.slint` | `Field`, `Input`, `PasswordInput` (hold to show), `CodeInput`, `Switch`, `Checkbox`, `RadioGroup`, `Segmented` |
+| `ui/form.slint` | `Field`, `Input`, `PasswordInput` (hold to show), `CodeInput`, `TextArea`, `AmountInput`, `Switch`, `Checkbox`, `RadioGroup`, `Segmented` |
 | `ui/overlay.slint` | `Select` (popup list, keyboard, type-ahead), `Popover`, `Tip`, `HoverTip` |
 | `ui/month.slint` | `MonthNav` (+ picker), `DateInput` (follows the date format) |
-| `ui/dialog.slint` | `Modal`, `ConfirmDialog`, `ToastHost` |
+| `ui/dialog.slint` | `Modal`, `ConfirmDialog`, `FormDialog`, `ToastHost` (plain toasts and toasts with an action) |
 | `ui/data.slint` | `ListView` (virtualised), `Scrollbar`, `Tabs`, `TableRow`, `TableCell` |
+| `ui/table.slint` | `DataTable` (header, selection column, virtualised rows, keyboard, row actions), `TableColumn`, `TableRowData` |
+| `ui/menu.slint` | `ContextMenu` (popup list of commands), `MenuList`, `MenuItemData` |
 | `ui/progress.slint` | `Meter`, `ProgressBar`, `Spinner` |
 | `ui/charts.slint` | `CategoryBars`, `MonthBars`, `TrendLine` |
 | `ui/rules.slint`, `src/rules.rs` | what Slint cannot do (date parse/format, type-ahead search): callbacks implemented in Rust |
 | `ui/texts.slint` | `UiText`: the few words the components speak themselves (English defaults, the app sets them) |
-| `ui/cases.slint`, `ui/gallery.slint`, `src/bin/gallery.rs` | the gallery and its cases |
+| `ui/cases.slint`, `ui/cases-data.slint`, `ui/gallery.slint`, `src/bin/gallery.rs` | the gallery and its cases (`cases-data.slint`: table, menu, text area, amount, form dialog, toast action; each with a `-de` case of long German labels) |
 | `src/charts.rs` | scale numbers for the charts (`month_top`, `TrendAxis`, `category_rows`) and their text alternatives |
+| `src/paged.rs` | `PagedModel`: a Slint `Model` over a `PageSource` (200-row pages, 10 kept, `invalidate()` on data changes) |
+| `src/table.rs` | `column_widths`, `columns_model`, `Selection` + `Gesture` for `DataTable` |
+| `src/amount.rs` | `parse_cents`, `parse_amount`, `format_amount`, `normalize` for `AmountInput` (`AmountFormat` = the Formats separators) |
+| `src/demo.rs` | the fake 500,000-row ledger behind the live table case and `tests/scroll.rs` |
 | `src/shot.rs` | offscreen rendering and synthetic keyboard/mouse input (used by `--shot` and the tests) |
 | `tools/` | `make-fonts.py` + `fonts.json`, `make-icons.mjs`, `cases.json`, `parity.sh` + `parity.py` + `reference/`, `a11y-dump.sh` + `.py`, `uia-dump.ps1` |
 
@@ -45,6 +51,55 @@ kb-ui-gallery --list-cases
 
 Real windows take the OS scale factor (`SLINT_SCALE_FACTOR=1.5` overrides); `--shot --scale N` renders at N. The theme is
 `Theme.dark`, set at any time; `Theme.reduced-motion` stops the spinner and indeterminate bar.
+
+## Big tables and forms (batch U1)
+
+**DataTable + PagedModel.** The page owns four things and the table draws them:
+
+```slint
+DataTable {
+    label: "Transactions";                       // read by screen readers
+    rows: Tx.rows;                               // [TableRowData]: `cells` and a `label` sentence for the row
+    columns: Tx.columns;                         // [TableColumn]: widths computed in Rust (below)
+    selected-count: Tx.selected-count;
+    selection-rev: Tx.selection-rev;             // bump it whenever the selection changed
+    row-actions: Tx.actions;                     // [MenuItemData]: right click, menu key, Shift+F10
+    is-selected(i) => { Tx.is-selected(i) }      // pure callback, answered by Rust
+    select(i, shift, toggle) => { Tx.select(i, shift, toggle); }
+    select-all(on) => { Tx.select-all(on); }
+    activated(i) => { ... }  row-action(i, a) => { ... }
+    layout-requested(w) => { Tx.layout-requested(w); }   // once at the start and when the width changes
+}
+```
+
+Rust side (see `src/demo.rs` for the whole wiring): `PagedModel::new(source)` with `impl PageSource<TableRowData>` (`row_count`, `fetch(start, count)`)
+and `ui.set_rows(model.to_model_rc())`; call `model.invalidate()` from the page's `on_data_changed`. `Selection::apply(row, Gesture::from_modifiers(shift,
+toggle))` does click, Ctrl-click, Shift-range and the keys, `select_all(len)`, `clear()`; map the row numbers to ids yourself. `columns_model(&specs, width)`
+turns `ColumnWidth::Fixed(px)` / `Flex { weight, min }` into the `columns` for the width the table asks for. Numeric columns are right-aligned in
+the tabular figures. The table is one tab stop: the cursor row has the 2px green ring, and the rows are list items with their label, number, and selected state.
+
+**Performance (500,000 rows, software renderer, 760 x 420, one frame = row creation + layout + paint; `tests/scroll.rs`).** Release build, this container (software rendering, no GPU), 500,000-row `PagedModel`, one frame measured from setting the scroll position to the painted buffer:
+
+| scroll | frames | p50 | p95 | max |
+|---|---|---|---|---|
+| 1 row per frame | 300 | 1.08 ms | 1.54 ms | 2.31 ms |
+| 3 rows per frame | 500 | 1.29 ms | 2.26 ms | 3.13 ms |
+| jump to a random place (a new page read almost every frame) | 200 | 2.16 ms | 2.51 ms | 3.79 ms |
+| reading and building one 200-row page | 50 | 0.21 ms | 0.28 ms | 0.52 ms |
+
+First frame 4.4 ms. The budget of the test is 16 ms at p95 in a release build and 250 ms in a debug build (debug measured p95 46-80 ms: Slint's painter is unoptimised there).
+The fetch of a real page adds the query: keep it under about 4 ms to stay inside a frame. Run it with `cargo test --release -p kb-ui --test scroll -- --nocapture`.
+
+**FormDialog.** Fields as children, `primary-text`, `secondary-text`, `error` (read out when it appears), `busy`, `primary-enabled`, `destructive`. Enter in
+a field and Ctrl/Cmd+Enter call `submitted`; Enter on a button presses that button; bind `enter-submits: !area.has-focus` when a `TextArea` is inside; Escape
+and Cancel go through `request-close` (asks first when `dirty`). The modal starts on its close button: `opened => { first-field.focus(); }`.
+
+**Toast with an action.** `ToastHost.action-toasts` is a second model (`ToastActionItem { id, tone, message, action }`, shown 8 s); `action-invoked(id)` is
+the button, `dismissed(id)` the timeout. The owner removes the item in both. (`ToastItem` itself did not change, so existing code still builds.)
+
+**AmountInput.** Text in the person's format: `Rules.amount-decimal` and `Rules.amount-group` (the app sets them from the Formats setting; `wire_rules!` also wires
+`normalize-amount`). On blur or Enter the text is rewritten ("1234,5" -> "1.234,50"); text that is no amount stays and turns the field red (`valid` is false).
+Read the cents in Rust with `kb_ui::amount::parse_amount(text, &AmountFormat::from_strs(decimal, group))`.
 
 ## Rules
 
@@ -105,5 +160,9 @@ reference, Slint and the diff. Cases without a React component (`choice`, `progr
   points), no `substring`/search on strings or reduce over models (hence `Rules` and `charts.rs`), no height-for-width guarantee for
   wrapped text in every layout (check wrapped texts per language), no shadow spread (shadows are approximated), no dialog role,
   password mask is Slint's fixed `●` (larger than Chromium's bullet), `CodeInput` refuses an over-long paste instead of cutting it.
+- `DataTable` rows sit at `index * 41px` in an f32: beyond about 400,000 rows (16.7 million px) rows are rounded to 1-2 px (a hairline overlap near the very end of a 500,000-row list).
+  `TextArea` has no line-height setting (a line is 17px, the renderer has 21px). No sort headers, no per-row action lists (`row-actions` is the same for every row),
+  no menu role (the menu is a labelled group of list items), popups do not flip at the window edge.
+- `Popover` used to be a component whose root is a `PopupWindow`, whose functions could not be called from outside; it now wraps one (the element is the place and size of the popup).
 - Window blur does not hide a revealed password by itself: the app bumps `Session.hide-secrets` (winit event hook in the app crate).
 - Month names of `DateInput` are English until the i18n crate exists.

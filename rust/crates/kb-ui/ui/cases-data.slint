@@ -1,0 +1,447 @@
+// Gallery cases of batch U1: DataTable, Menu, TextArea, AmountInput, FormDialog, toast with an action. Each has an
+// English case and a German one with the long labels (`-de`); light and dark come from `Theme.dark`.
+import { Theme } from "theme.slint";
+import { Label } from "base.slint";
+import { Button } from "button.slint";
+import { Card } from "surface.slint";
+import { Field, Input, TextArea, AmountInput } from "form.slint";
+import { Select } from "overlay.slint";
+import { FormDialog, ToastHost } from "dialog.slint";
+import { DataTable, TableColumn, TableRowData } from "table.slint";
+import { ContextMenu, MenuList, MenuItemData } from "menu.slint";
+
+component CaseFrame inherits Rectangle {
+    background: Theme.bg;
+}
+
+// What the live table case reads and calls: Rust (`kb_ui::demo::wire`) owns the rows (a `PagedModel` over 500,000
+// fake transactions), the selection and the column widths.
+export global TableDemo {
+    in property <[TableRowData]> rows;
+    in property <[TableColumn]> columns;
+    in property <int> selected-count;
+    in property <int> selection-rev;
+    in-out property <int> cursor: -1;
+    in-out property <length> scroll-y;
+    // What the table did last ("select 5 shift", "activate 3", "action 3 1").
+    in-out property <string> last-event;
+    pure callback is-selected(int) -> bool;
+    callback select(int, bool, bool);
+    callback select-all(bool);
+    callback layout-requested(length);
+}
+
+export component CaseDataTable inherits CaseFrame {
+    width: 760px;
+    height: 360px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 712px;
+        height: 312px;
+        DataTable {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            label: "Transactions";
+            simulate: "focus";
+            cursor: 2;
+            selected-count: 2;
+            columns: [{ title: "Date", width: 110px }, { title: "Description", width: 290px }, { title: "Category", width: 140px }, { title: "Amount", width: 120px, numeric: true }];
+            rows: [
+                { cells: ["05/03/2026", "Supermarket", "Groceries", "-42.10"], label: "05/03/2026, Supermarket, Groceries, minus 42.10" },
+                { cells: ["04/03/2026", "Salary March", "Income", "2,450.00"], label: "04/03/2026, Salary March, Income, 2,450.00" },
+                { cells: ["03/03/2026", "Landlord", "Rent", "-1,150.00"], label: "03/03/2026, Landlord, Rent, minus 1,150.00" },
+                { cells: ["02/03/2026", "Water bill", "Utilities", "-18.40"], label: "02/03/2026, Water bill, Utilities, minus 18.40" },
+                { cells: ["01/03/2026", "Bakery on the corner of the market square", "Groceries", "-6.80"], label: "01/03/2026, Bakery, Groceries, minus 6.80" },
+                { cells: ["28/02/2026", "Train ticket", "Transport", "-23.50"], label: "28/02/2026, Train ticket, Transport, minus 23.50" },
+                { cells: ["27/02/2026", "Gym", "Health", "-29.00"], label: "27/02/2026, Gym, Health, minus 29.00" },
+            ];
+            is-selected(i) => {
+                i == 1 || i == 2
+            }
+        }
+    }
+}
+
+export component CaseDataTableDe inherits CaseFrame {
+    width: 760px;
+    height: 360px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 712px;
+        height: 312px;
+        DataTable {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            label: "Buchungen";
+            select-all-label: "Alle Zeilen auswählen";
+            selected-count: 1;
+            columns: [{ title: "Datum", width: 110px }, { title: "Beschreibung", width: 290px }, { title: "Kategorie", width: 140px }, { title: "Betrag", width: 120px, numeric: true }];
+            rows: [
+                { cells: ["05.03.2026", "Supermarkt Hauptstraße", "Lebensmittel", "-42,10"], label: "05.03.2026, Supermarkt Hauptstraße, Lebensmittel, minus 42,10" },
+                { cells: ["04.03.2026", "Gehalt März", "Einkommen", "2.450,00"], label: "04.03.2026, Gehalt März, Einkommen, 2.450,00" },
+                { cells: ["03.03.2026", "Hausverwaltung Müller & Söhne GmbH, Kaltmiete", "Miete und Nebenkosten", "-1.150,00"], label: "03.03.2026, Hausverwaltung, Miete und Nebenkosten, minus 1.150,00" },
+                { cells: ["02.03.2026", "Stadtwerke Wasserrechnung", "Versorgung", "-18,40"], label: "02.03.2026, Stadtwerke Wasserrechnung, Versorgung, minus 18,40" },
+                { cells: ["01.03.2026", "Bäckerei Schröder", "Lebensmittel", "-6,80"], label: "01.03.2026, Bäckerei Schröder, Lebensmittel, minus 6,80" },
+                { cells: ["28.02.2026", "Deutsche Bahn Fahrkarte", "Verkehr", "-23.500,50"], label: "28.02.2026, Deutsche Bahn Fahrkarte, Verkehr, minus 23.500,50" },
+            ];
+            is-selected(i) => {
+                i == 2
+            }
+        }
+    }
+}
+
+// 500,000 rows from a `PagedModel`: scroll with the wheel, click, Shift-click, the keys; the numbers are in the README.
+export component CaseDataTableLive inherits CaseFrame {
+    width: 760px;
+    height: 420px;
+    Card {
+        x: 24px;
+        y: 24px;
+        width: 712px;
+        height: 372px;
+        DataTable {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            label: "Transactions";
+            rows: TableDemo.rows;
+            columns: TableDemo.columns;
+            selected-count: TableDemo.selected-count;
+            selection-rev: TableDemo.selection-rev;
+            cursor <=> TableDemo.cursor;
+            scroll-y <=> TableDemo.scroll-y;
+            row-actions: [{ text: "Edit" }, { text: "Duplicate" }, { text: "Delete", danger: true, divider: true }];
+            is-selected(i) => {
+                TableDemo.is-selected(i)
+            }
+            select(i, shift, toggle) => {
+                TableDemo.select(i, shift, toggle);
+            }
+            select-all(on) => {
+                TableDemo.select-all(on);
+            }
+            activated(i) => {
+                TableDemo.last-event = "activate " + i;
+            }
+            row-action(i, a) => {
+                TableDemo.last-event = "action " + i + " " + a;
+            }
+            layout-requested(w) => {
+                TableDemo.layout-requested(w);
+            }
+        }
+    }
+}
+
+component MenuCase inherits CaseFrame {
+    in property <[MenuItemData]> items;
+    in property <string> button-text;
+    in property <length> menu-width: 224px;
+    width: 640px;
+    height: 280px;
+    // The popup of a real click on the button; the list beside it is the same thing drawn in place.
+    Button {
+        x: 24px;
+        y: 24px;
+        text: root.button-text;
+        clicked => {
+            menu.open-at(self.x, self.y + self.height + 4px);
+        }
+    }
+    menu := ContextMenu {
+        label: root.button-text;
+        items: root.items;
+        menu-width: root.menu-width;
+    }
+    MenuList {
+        x: 344px;
+        y: 24px;
+        width: root.menu-width;
+        height: self.preferred-height;
+        items: root.items;
+        hl: 1;
+    }
+}
+
+export component CaseMenu inherits MenuCase {
+    button-text: "Row actions";
+    items: [{ text: "Edit" }, { text: "Split" }, { text: "Make recurring" }, { text: "Create rule from this row", disabled: true }, { text: "Delete", danger: true, divider: true }];
+}
+
+export component CaseMenuDe inherits MenuCase {
+    button-text: "Zeilenaktionen";
+    menu-width: 256px;
+    items: [{ text: "Bearbeiten" }, { text: "Buchung aufteilen" }, { text: "Als wiederkehrende Zahlung speichern" }, { text: "Regel aus dieser Zeile erstellen", disabled: true }, { text: "Endgültig löschen", danger: true, divider: true }];
+}
+
+export component CaseTextArea inherits CaseFrame {
+    width: 480px;
+    height: 420px;
+    Field {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        label: "Note";
+        hint: "Only you can see it.";
+        TextArea {
+            label: "Note";
+            rows: 3;
+            text: "Rent for March, paid late because the bank was closed on Monday. The landlord agreed to waive the fee, see the e-mail of the fourth.";
+        }
+    }
+    Field {
+        x: 24px;
+        y: 160px;
+        width: 432px;
+        label: "Description";
+        error: "Write at least a few words.";
+        TextArea {
+            label: "Description";
+            rows: 3;
+            placeholder: "What was this for?";
+            invalid: true;
+        }
+    }
+    TextArea {
+        x: 24px;
+        y: 304px;
+        width: 208px;
+        rows: 2;
+        label: "Focused";
+        text: "Focused";
+        simulate: "focus";
+    }
+    TextArea {
+        x: 248px;
+        y: 304px;
+        width: 208px;
+        rows: 2;
+        label: "Disabled";
+        text: "Disabled";
+        enabled: false;
+    }
+}
+
+export component CaseTextAreaDe inherits CaseFrame {
+    width: 480px;
+    height: 400px;
+    Field {
+        x: 24px;
+        y: 24px;
+        width: 432px;
+        label: "Anmerkung zur Buchung";
+        hint: "Nur Sie können diese Anmerkung sehen.";
+        TextArea {
+            label: "Anmerkung zur Buchung";
+            rows: 3;
+            text: "Miete für März, verspätet überwiesen, weil die Bank am Montag geschlossen hatte. Der Vermieter verzichtet auf die Mahngebühr, siehe E-Mail vom Vierten.";
+        }
+    }
+    Field {
+        x: 24px;
+        y: 160px;
+        width: 432px;
+        label: "Beschreibung";
+        error: "Bitte schreiben Sie mindestens ein paar Worte.";
+        TextArea {
+            label: "Beschreibung";
+            rows: 3;
+            placeholder: "Wofür war diese Zahlung?";
+            invalid: true;
+        }
+    }
+}
+
+export component CaseAmount inherits CaseFrame {
+    width: 480px;
+    height: 300px;
+    Field {
+        x: 24px;
+        y: 24px;
+        width: 208px;
+        label: "Amount";
+        AmountInput {
+            label: "Amount";
+            placeholder: "0.00";
+            unit: "EUR";
+        }
+    }
+    Field {
+        x: 248px;
+        y: 24px;
+        width: 208px;
+        label: "Balance";
+        AmountInput {
+            label: "Balance";
+            text: "1,234.50";
+            unit: "EUR";
+        }
+    }
+    Field {
+        x: 24px;
+        y: 110px;
+        width: 208px;
+        label: "Limit";
+        AmountInput {
+            label: "Limit";
+            text: "-12.5";
+            unit: "$";
+            simulate: "focus";
+        }
+    }
+    Field {
+        x: 248px;
+        y: 110px;
+        width: 208px;
+        label: "Opening balance";
+        error: "Enter an amount such as 12.50.";
+        AmountInput {
+            label: "Opening balance";
+            text: "twelve";
+            invalid: true;
+        }
+    }
+    Field {
+        x: 24px;
+        y: 214px;
+        width: 208px;
+        label: "Disabled";
+        AmountInput {
+            label: "Disabled";
+            text: "99.00";
+            enabled: false;
+        }
+    }
+}
+
+export component CaseAmountDe inherits CaseFrame {
+    width: 480px;
+    height: 220px;
+    Field {
+        x: 24px;
+        y: 24px;
+        width: 208px;
+        label: "Betrag";
+        AmountInput {
+            label: "Betrag";
+            text: "1.234.567,50";
+            unit: "EUR";
+        }
+    }
+    Field {
+        x: 248px;
+        y: 24px;
+        width: 208px;
+        label: "Anfangssaldo des Girokontos";
+        error: "Geben Sie einen Betrag wie 12,50 ein.";
+        AmountInput {
+            label: "Anfangssaldo des Girokontos";
+            text: "zwölf";
+            invalid: true;
+        }
+    }
+}
+
+component FormCase inherits CaseFrame {
+    in property <string> title;
+    in property <string> note-label;
+    in property <string> amount-label;
+    in property <string> category-label;
+    in property <string> primary;
+    in property <string> secondary;
+    in property <string> error;
+    in property <bool> busy;
+    in property <[string]> categories;
+    width: 640px;
+    height: 520px;
+    Label {
+        x: 40px;
+        y: 40px;
+        text: "Page behind the dialog";
+        color: Theme.muted;
+    }
+    FormDialog {
+        open: true;
+        demo: true;
+        title: root.title;
+        primary-text: root.primary;
+        secondary-text: root.secondary;
+        error: root.error;
+        busy: root.busy;
+        Field {
+            label: root.note-label;
+            Input {
+                label: root.note-label;
+                text: "Rent for March";
+            }
+        }
+        Field {
+            label: root.amount-label;
+            AmountInput {
+                label: root.amount-label;
+                text: "1,150.00";
+                unit: "EUR";
+            }
+        }
+        Field {
+            label: root.category-label;
+            Select {
+                label: root.category-label;
+                model: root.categories;
+                current-index: 0;
+            }
+        }
+    }
+}
+
+export component CaseFormDialog inherits FormCase {
+    title: "Add a transaction";
+    note-label: "Description";
+    amount-label: "Amount";
+    category-label: "Category";
+    primary: "Save";
+    secondary: "Cancel";
+    error: "The amount can't be zero.";
+    categories: ["Rent", "Groceries"];
+}
+
+export component CaseFormDialogDe inherits FormCase {
+    title: "Buchung zu einem anderen Konto verschieben";
+    note-label: "Beschreibung der Buchung";
+    amount-label: "Betrag in der Währung des Kontos";
+    category-label: "Kategorie";
+    primary: "Änderungen speichern";
+    secondary: "Abbrechen";
+    error: "Der Betrag darf nicht null sein und muss zum Konto passen.";
+    busy: true;
+    categories: ["Miete und Nebenkosten", "Lebensmittel"];
+}
+
+export component CaseToastAction inherits CaseFrame {
+    width: 640px;
+    height: 240px;
+    ToastHost {
+        width: parent.width;
+        height: parent.height;
+        toasts: [{ id: 1, tone: "success", message: "Copied to the clipboard." }];
+        action-toasts: [{ id: 2, tone: "success", message: "3 transactions deleted.", action: "Undo" }];
+    }
+}
+
+export component CaseToastActionDe inherits CaseFrame {
+    width: 640px;
+    height: 240px;
+    ToastHost {
+        width: parent.width;
+        height: parent.height;
+        action-toasts: [{ id: 2, tone: "success", message: "3 Buchungen wurden gelöscht, die Kategorien bleiben erhalten.", action: "Rückgängig machen" }, { id: 3, tone: "error", message: "Die Sicherung konnte nicht geschrieben werden.", action: "Erneut versuchen" }];
+    }
+}
