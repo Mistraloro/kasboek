@@ -1,26 +1,15 @@
 Kasboek — a private, local-first budget app with an AI assistant built in. Your data stays on your computer, encrypted and locked to your computer and login.
 
-## What’s new in 0.22.1
+## What’s new in 0.22.2
 
-(0.22.1 includes everything of 0.22; the 0.22.0 build was never published.)
-
-**New**
-- **A switch to turn the assistant off completely** (Settings → Assistant → Use the assistant). Off hides every assistant button, dialog and tour step, refuses all assistant operations in the app itself, stops anything running, and never sends text to an AI provider. Kasboek then works fully on its own: local CSV, PDF and XML import and the local tips stay. Importing or restoring data never switches it back on. Claude apps connected over MCP are separate and keep their own switch.
+Everything in 0.22.1 is included.
 
 **Privacy**
-- **Account numbers are hidden on screen by default.** An IBAN shows as `BE…1234` (country and last four characters) everywhere: accounts, transactions, import preview, rules and the assistant panel. Hold the small eye next to it to show the full number for a moment; the eye no longer opens the edit window. You can switch this off in Settings → Appearance. Importing a file never switches it off, and it is switched back on after restoring a backup or export or joining sync.
-- **The assistant and connected apps (MCP) no longer see account or card numbers, e-mail addresses or international phone numbers (starting with + or 00).** This holds for chat, CSV checks, PDF reading, tips, memory notes and what you type. Your own account number shows as `BE…1234`. Amounts, dates and category names stay readable so the assistant can still answer questions. Hiding also holds for numbers written with dots, slashes or line breaks.
-- **Statement headers are never sent.** “Check with your assistant” on a CSV no longer sends the lines above the header row (they can hold your name and address), and the assistant can't move the header up past the one Kasboek found, so you are asked for your agreement again once. For a PDF, only the rows of the transaction table are sent: everything above the table and the top of every later page is left out.
-- The privacy rules are summarised at the top of the README.
+- When text is cut to a maximum length before it is sent to the assistant or to connected apps, a long account or card number sitting at the cut could be left partly visible. Text is now masked first and cut afterwards (also for very long inputs, which stay fast).
 
-**Fixes**
-- If upgrading the database fails (for example a database from a newer Kasboek), Kasboek now closes the file properly instead of leaving it open.
-- The assistant can preview a rule for an account number (IBAN) from a transaction.
-- Fixed costs, and rules created from them, work with account numbers in their names.
+Nothing else changed from 0.22.1.
 
-If you installed 0.20.0 or 0.21.0 and the “Update” button doesn’t find this version, download the installer once from this page. From 0.21.1 on, updating works normally.
-
-Everything that came before is listed on the 0.21.1, 0.21.0 and 0.20.0 releases.
+If you have 0.22.1, you get this version through the Update button. Updating from 0.21.1 and later works normally.
 
 ## Download
 
