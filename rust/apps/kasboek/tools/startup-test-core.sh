@@ -7,16 +7,26 @@
 # that build knows --demo-setup.
 # Usage: tools/startup-test-core.sh <binary>
 set -euo pipefail
-bin=$(realpath "${1:?binary}")
+[[ -n "${CI:-}" ]] && set -x
+# No realpath (not on every system); the folder of the binary is made absolute with cd and pwd.
+arg=${1:?binary}
+bin="$(cd "$(dirname "$arg")" && pwd)/$(basename "$arg")"
+[[ -f "$bin" ]] || { echo "binary not found: $bin"; exit 1; }
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
-password="Kb-$(head -c 24 /dev/urandom | base64 | tr -d '/+=\n')-9z"
+# A native Windows program gets Windows paths (C:/...), not the /tmp/... of Git Bash; grep below still reads $dir.
+native() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
+password="Kb-$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32 || true)-9z"
 
 start() { # name, extra args...
   local name=$1
   shift
-  local run=("$bin" --data-dir "$dir/data" --log "$dir/$name.log" --exit-after-ms 6000 "$@")
-  if [[ "$(uname -s)" == Linux && -z "${DISPLAY:-}" ]]; then xvfb-run -a "${run[@]}"; else "${run[@]}"; fi
+  local run=("$(native "$bin")" --data-dir "$(native "$dir")/data" --log "$(native "$dir")/$name.log" --exit-after-ms 6000 "$@")
+  if [[ "$(uname -s)" == Linux && -z "${DISPLAY:-}" ]]; then run=(xvfb-run -a "${run[@]}"); fi
+  local rc=0
+  "${run[@]}" || rc=$?
+  echo "app exit status ($name): $rc"
+  if [[ $rc -ne 0 ]]; then echo "app failed"; cat "$dir/$name.log" 2>/dev/null || echo "no log written"; exit "$rc"; fi
 }
 expect() { # log, text
   grep -q "$2" "$dir/$1.log" || { echo "missing in $1.log: $2"; cat "$dir/$1.log"; exit 1; }
