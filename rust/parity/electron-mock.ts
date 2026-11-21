@@ -15,6 +15,8 @@ export interface MockState {
   http?: HttpEntry[]
   /** The requests `net.fetch` saw; the scenario runner prints them. */
   requests?: { method: string; url: string; body: string | null }[]
+  /** What `session.secrets()` hands out (invented account, master key and vault); set by the scenario runner. */
+  secrets?: unknown
 }
 export interface HttpEntry {
   url: string
@@ -38,7 +40,7 @@ async function fakeFetch(state: MockState, url: unknown, init?: { method?: strin
 
 export const electronMock = (state: MockState) => ({
   net: { fetch: vi.fn((url: unknown, init?: { method?: string; body?: unknown }) => fakeFetch(state, url, init)) },
-  app: { getPath: () => state.userData, getName: () => 'Kasboek', isPackaged: false, getPreferredSystemLanguages: () => state.languages },
+  app: { getPath: () => state.userData, getName: () => 'Kasboek', getVersion: () => '0.0.0', isPackaged: false, getPreferredSystemLanguages: () => state.languages },
   BrowserWindow: { getAllWindows: () => [], getFocusedWindow: () => undefined },
   dialog: {
     // `showOpenDialog(win, opts)` or `showOpenDialog(opts)`; the folder picker is an open dialog too.
@@ -63,5 +65,6 @@ export const sessionMock = (state: MockState) => ({
   whenSessionReady: () => Promise.resolve(),
   broadcast: vi.fn(),
   onLock: vi.fn(),
-  status: vi.fn()
+  status: vi.fn(async () => ({ state: state.unlocked ? 'unlocked' : 'locked' })),
+  secrets: () => state.secrets
 })

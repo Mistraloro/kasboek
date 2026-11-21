@@ -1,0 +1,32 @@
+{
+  "name": "insights.feedback and preview input: trim, length, verdicts, strict objects, locked refusal",
+  "steps": [
+    {"op": "insights.feedback", "input": {"key": "  spaced key  ", "verdict": "dismissed"}},
+    {"op": "insights.feedback", "input": {"key": "", "verdict": "dismissed"}},
+    {"op": "insights.feedback", "input": {"key": "   ", "verdict": "dismissed"}},
+    {"op": "insights.feedback", "input": {"key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", "verdict": "useful"}},
+    {"op": "insights.feedback", "input": {"key": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", "verdict": "useful"}},
+    {"op": "insights.feedback", "input": {"key": "üüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüüü", "verdict": "not_useful"}},
+    {"op": "insights.feedback", "input": {"key": "x", "verdict": "liked"}},
+    {"op": "insights.feedback", "input": {"key": "x"}},
+    {"op": "insights.feedback", "input": {"verdict": "useful"}},
+    {"op": "insights.feedback", "input": {"key": "x", "verdict": "useful", "extra": 1}},
+    {"op": "insights.feedback", "input": {"key": 5, "verdict": "useful"}},
+    {"op": "insights.get", "input": {"month": "2026-13"}},
+    {"op": "insights.get", "input": {"month": "2026-1"}},
+    {"op": "insights.get", "input": {}},
+    {"op": "insights.get", "input": {"month": "2026-11", "x": 1}},
+    {"op": "insights.get"},
+    {"op": "insights.restoreDismissed", "input": {"x": 1}},
+    {"op": "insights.restoreDismissed"},
+    {"op": "insights.preview", "input": {"month": "nope"}},
+    {"op": "insights.preview"},
+    {"op": "@lock"},
+    {"op": "insights.get", "input": {"month": "2026-11"}},
+    {"op": "insights.feedback", "input": {"key": "x", "verdict": "useful"}},
+    {"op": "insights.restoreDismissed"},
+    {"op": "insights.preview", "input": {"month": "2026-11"}},
+    {"op": "@unlock"},
+    {"op": "insights.restoreDismissed"}
+  ]
+}

@@ -9,7 +9,10 @@
 //!
 //! Masked in the output, because they are random or depend on the wall clock: `uid` values (32 hex digits), every column
 //! named `at` or ending in `_at`, and the keys `createdAt` / `updatedAt` / `committedAt` and `sessionId` of results. A string
-//! `"$session"` in the input of a step stands for the `sessionId` the latest result had (the id of the open import). The random `transfer_pair` keys are
+//! `"$session"` in the input of a step stands for the `sessionId` the latest result had (the id of the open import), `"$token"`
+//! for the `token` of the latest result that had one (a picked file), and `"$totp"` for the 6-digit code, at the scenario's
+//! clock, of the `secret` the latest result had (`auth.totpBegin`; Rust side only). A `token` of a result is printed as
+//! `<token>`. The step `@clock {"at": "2026-11-14T10:00:00Z"}` moves the clock of a service scenario. The random `transfer_pair` keys are
 //! numbered in order of first appearance (`<pair 1>`), so which rows share a pair is still compared.
 //!
 //! Desktop and network (plan section 11, O0), served identically by the TypeScript runner: `"service": true` runs the steps
@@ -24,6 +27,7 @@ use crate::commands::CliError;
 use kb_core::{Actor, Core, CoreConfig, FixedClock, SeededRng};
 use kb_db::{Cell, DbKey, OpenOptions, SqliteStore, Store};
 use kb_service::{block_on, AppService, CoreService, FakeDesktop, FakeHttp, Recorded, DEMO_PASSWORD};
+use kb_session::time::ManualClock;
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -105,6 +109,8 @@ fn mask_result(value: &mut Value) {
                     *v = json!("<time>");
                 } else if key == "sessionId" && v.is_string() {
                     *v = json!("<session>");
+                } else if key == "token" && v.is_string() {
+                    *v = json!("<token>");
                 } else {
                     mask_result(v);
                 }
@@ -115,12 +121,39 @@ fn mask_result(value: &mut Value) {
     }
 }
 
-/// Replaces the string `"$session"` anywhere in an input by the id of the import that is open.
-fn with_session(value: &mut Value, id: &Option<String>) {
+/// What a later step can name of an earlier result: the open import (`"$session"`), the file a transfer pick or backup pick
+/// handed back (`"$token"`) and the 6-digit code of the latest 2FA secret at the scenario's clock (`"$totp"`).
+#[derive(Default)]
+struct Vars {
+    session: Option<String>,
+    token: Option<String>,
+    totp_secret: Option<String>,
+    now_ms: i64,
+}
+
+impl Vars {
+    /// Takes what the result of a step offers.
+    fn learn(&mut self, data: &Value) {
+        let text = |key: &str| data.get(key).and_then(Value::as_str).map(str::to_owned);
+        self.session = text("sessionId").or(self.session.take());
+        self.token = text("token").or(self.token.take());
+        self.totp_secret = text("secret").map(|s| s.replace(' ', "")).or(self.totp_secret.take());
+    }
+
+    fn totp(&self) -> Option<String> {
+        kb_crypto::totp::totp_at(self.totp_secret.as_deref()?, self.now_ms.div_euclid(1000), 6).ok()
+    }
+}
+
+/// Replaces the strings `"$session"`, `"$token"` and `"$totp"` anywhere in an input.
+fn with_vars(value: &mut Value, vars: &Vars) {
+    let text = |v: &Option<String>| v.as_ref().map_or(Value::Null, |t| json!(t));
     match value {
-        Value::String(s) if s == "$session" => *value = id.as_ref().map_or(Value::Null, |i| json!(i)),
-        Value::Array(items) => items.iter_mut().for_each(|v| with_session(v, id)),
-        Value::Object(map) => map.values_mut().for_each(|v| with_session(v, id)),
+        Value::String(s) if s == "$session" => *value = text(&vars.session),
+        Value::String(s) if s == "$token" => *value = text(&vars.token),
+        Value::String(s) if s == "$totp" => *value = text(&vars.totp()),
+        Value::Array(items) => items.iter_mut().for_each(|v| with_vars(v, vars)),
+        Value::Object(map) => map.values_mut().for_each(|v| with_vars(v, vars)),
         _ => {}
     }
 }
@@ -207,7 +240,7 @@ fn mask_tmp(value: &mut Value, dir: &str) {
 /// What the steps run against: a bare `Core`, or the service with the fake desktop and network of the scenario.
 enum Backend {
     Core(Box<Core<SqliteStore>>),
-    Service { service: Box<CoreService>, http: Arc<FakeHttp> },
+    Service { service: Box<CoreService>, http: Arc<FakeHttp>, clock: Arc<ManualClock> },
 }
 
 impl Backend {
@@ -257,8 +290,10 @@ fn run_in(dir: &Path, original: &Value, clock_ms: i64, languages: Vec<String>) -
         scenario.get("http").and_then(Value::as_array).map(|a| a.iter().filter_map(Recorded::from_json).collect()).unwrap_or_default();
     let fake_http = Arc::new(FakeHttp::new(recorded));
     let mut backend = if scenario.get("service").and_then(Value::as_bool).unwrap_or(false) {
-        let service = CoreService::scenario(dir.to_owned(), clock_ms, Arc::new(FakeDesktop::new(dialogs)), fake_http.clone())?;
-        Backend::Service { service: Box::new(service), http: fake_http }
+        let clock = Arc::new(ManualClock::new(clock_ms));
+        let service =
+            CoreService::scenario_with_clock(dir.to_owned(), clock.clone(), Arc::new(FakeDesktop::new(dialogs)), fake_http.clone())?;
+        Backend::Service { service: Box::new(service), http: fake_http, clock }
     } else {
         let store = SqliteStore::open(&dir.join("kasboek.db"), &DbKey::from_hex(KEY_HEX)?, OpenOptions::default())?;
         Backend::Core(Box::new(Core::new(
@@ -272,14 +307,14 @@ fn run_in(dir: &Path, original: &Value, clock_ms: i64, languages: Vec<String>) -
     let steps =
         scenario.get("steps").and_then(Value::as_array).ok_or_else(|| CliError { code: "scenario".into(), message: "no steps".into() })?;
     let mut results = Vec::with_capacity(steps.len());
-    let mut session: Option<String> = None;
+    let mut vars = Vars { now_ms: clock_ms, ..Vars::default() };
     for step in steps {
         let op = step
             .get("op")
             .and_then(Value::as_str)
             .ok_or_else(|| CliError { code: "scenario".into(), message: "step without op".into() })?;
         let mut input = step.get("input").cloned().unwrap_or(Value::Null);
-        with_session(&mut input, &session);
+        with_vars(&mut input, &vars);
         let result = match op {
             "@lock" => match &mut backend {
                 Backend::Core(core) => {
@@ -297,6 +332,14 @@ fn run_in(dir: &Path, original: &Value, clock_ms: i64, languages: Vec<String>) -
                     block_on(service.invoke("auth.unlock", json!({ "password": DEMO_PASSWORD }))).map(|_| Value::Null)
                 }
             },
+            "@clock" => match (&backend, input.get("at").and_then(Value::as_str).and_then(parse_clock)) {
+                (Backend::Service { clock, .. }, Some(ms)) => {
+                    clock.set(ms);
+                    vars.now_ms = ms;
+                    Ok(Value::Null)
+                }
+                _ => Err(kb_core::AppError::new("scenario", "@clock needs a service scenario and an `at` like 2026-11-14T10:00:00Z")),
+            },
             "@sql" => {
                 let sql = input.get("sql").and_then(Value::as_str).unwrap_or_default().to_owned();
                 backend.with_db(move |db| Ok(db.execute_script(&sql)?)).map(|()| Value::Null)
@@ -309,16 +352,17 @@ fn run_in(dir: &Path, original: &Value, clock_ms: i64, languages: Vec<String>) -
             }
             _ => backend.dispatch(op, input, actor(step.get("actor").and_then(Value::as_str))?),
         };
-        if let Some(id) = result.as_ref().ok().and_then(|d| d.get("sessionId")).and_then(Value::as_str) {
-            session = Some(id.to_owned());
+        if let Ok(data) = &result {
+            vars.learn(data);
         }
         let mut result = result_json(result);
         mask_tmp(&mut result, &dir_text);
         results.push(result);
     }
-    let tables = backend
+    let mut tables = backend
         .with_db(|db| dump(db).map_err(|e| kb_core::AppError::new(&e.code, e.message)))
         .map_err(|e| CliError { code: e.code, message: e.message })?;
+    mask_tmp(&mut tables, &dir_text);
     let mut prefs_text = std::fs::read_to_string(&prefs_file).ok();
     if matches!(backend, Backend::Service { .. }) {
         prefs_text = prefs_text.and_then(without_last_auth);

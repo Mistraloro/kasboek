@@ -1,0 +1,98 @@
+{
+  "name": "backup.configureAuto: the input is checked like the schema (enabled is a boolean, keep a whole number from 1 to 100, no other key)",
+  "service": true,
+  "steps": [
+    {
+      "op": "backup.configureAuto",
+      "input": {}
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": "yes"
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": true,
+        "keep": 0
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": 101
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": 1.5
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": "3"
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "other": 1
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": 1
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": 100
+      }
+    },
+    {
+      "op": "backup.status",
+      "input": {
+        "x": 1
+      }
+    },
+    {
+      "op": "backup.status"
+    },
+    {
+      "op": "backup.chooseFolder",
+      "input": {
+        "x": 1
+      }
+    },
+    {
+      "op": "backup.list",
+      "input": {
+        "x": 1
+      }
+    },
+    {
+      "op": "backup.runNow",
+      "input": {
+        "x": 1
+      }
+    },
+    {
+      "op": "backup.revealFolder",
+      "input": {
+        "x": 1
+      }
+    }
+  ]
+}

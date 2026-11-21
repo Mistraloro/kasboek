@@ -8,6 +8,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 kb-core.workspace = true
 kb-crypto.workspace = true
 kb-db.workspace = true
@@ -19,6 +20,4 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 ureq.workspace = true
-
-[dev-dependencies]
 zeroize.workspace = true

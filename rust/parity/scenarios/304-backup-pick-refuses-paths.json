@@ -1,0 +1,110 @@
+{
+  "name": "backup.pick takes a name, never a path: anything that is not a name Kasboek gave a backup, or is not there, is backup.not_found",
+  "service": true,
+  "dialogs": [
+    "$tmp"
+  ],
+  "steps": [
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "../kasboek-backup-2026-11-14_100000.kasboek"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "..\\kasboek-backup-2026-11-14_100000.kasboek"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "/etc/passwd"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-2026-11-14_100000.kasboek/.."
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-.kasboek"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-export-2026-11-14_100000.kasboek"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-2026-11-14_100000.kasboek.partial"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-2026-11-14_100000.kasboek\n"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-1.kasboek"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek.db"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "account.json"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "KASBOEK-BACKUP-2026-11-14_100000.KASBOEK"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": ""
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "op": "backup.pick",
+      "input": {}
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "a",
+        "path": "/x"
+      }
+    }
+  ]
+}

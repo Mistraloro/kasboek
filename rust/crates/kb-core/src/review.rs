@@ -93,6 +93,11 @@ fn category_trend(now: &MonthSummary, before: &[MonthSummary]) -> Vec<CategoryTr
     out
 }
 
+/// `categoryTrend(db, month)` of src/core/review.ts: the trend of one month without the rest of the review.
+pub fn category_trend_of<S: Store>(store: &S, month: &str) -> AppResult<Vec<CategoryTrend>> {
+    Ok(category_trend(&month_summary(store, month)?, &months_before(store, month)?))
+}
+
 pub fn month_review<S: Store>(store: &S, month: &str) -> AppResult<MonthReview> {
     let main = main_currency(store)?;
     let now = month_summary(store, month)?;

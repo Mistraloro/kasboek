@@ -1,0 +1,51 @@
+{
+  "name": "backup status and folder: defaults, a cancelled folder dialog, a chosen folder, the switch and the number to keep; each change is in the audit log without details",
+  "service": true,
+  "dialogs": [
+    null,
+    "$tmp"
+  ],
+  "steps": [
+    {
+      "op": "backup.status"
+    },
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "backup.status"
+    },
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "backup.status"
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": 5
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false,
+        "keep": 100
+      }
+    },
+    {
+      "op": "backup.revealFolder"
+    },
+    {
+      "op": "settings.get"
+    }
+  ]
+}

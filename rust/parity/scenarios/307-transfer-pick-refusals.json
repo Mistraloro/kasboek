@@ -1,0 +1,16 @@
+{
+  "name": "transfer.pick of a file that is not there and of a file that is not an export",
+  "service": true,
+  "dialogs": [
+    "$tmp/missing.kasboek",
+    "$tmp/kasboek.db"
+  ],
+  "steps": [
+    {
+      "op": "transfer.pick"
+    },
+    {
+      "op": "transfer.pick"
+    }
+  ]
+}

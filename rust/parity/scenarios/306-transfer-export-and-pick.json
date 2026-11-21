@@ -1,0 +1,36 @@
+{
+  "name": "transfer.export: a cancelled dialog, then a file; transfer.pick: a cancelled dialog, then the header of that file",
+  "service": true,
+  "dialogs": [
+    null,
+    "$tmp/export.kasboek",
+    null,
+    "$tmp/export.kasboek"
+  ],
+  "steps": [
+    {
+      "op": "transfer.export"
+    },
+    {
+      "op": "transfer.export"
+    },
+    {
+      "op": "transfer.pick"
+    },
+    {
+      "op": "transfer.pick"
+    },
+    {
+      "op": "transfer.export",
+      "input": {
+        "x": 1
+      }
+    },
+    {
+      "op": "transfer.pick",
+      "input": {
+        "x": 1
+      }
+    }
+  ]
+}

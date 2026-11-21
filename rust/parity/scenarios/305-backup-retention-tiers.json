@@ -1,0 +1,126 @@
+{
+  "name": "retention on a moving clock: everything of the last day, the newest per day for 30 days, the newest per month for a year; older ones are deleted at each run",
+  "service": true,
+  "dialogs": [
+    "$tmp"
+  ],
+  "steps": [
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2025-09-20T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2025-12-02T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2025-12-20T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-02-10T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-10-05T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-10-20T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-10-20T20:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-11-12T08:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-11-12T10:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-11-13T12:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-11-14T05:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "@clock",
+      "input": {
+        "at": "2026-11-14T10:00:00Z"
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "backup.list"
+    },
+    {
+      "op": "backup.status"
+    }
+  ]
+}

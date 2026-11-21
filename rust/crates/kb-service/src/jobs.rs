@@ -3,6 +3,7 @@
 //! a [`JobCtx`]; the context hands closures to the worker when the operation needs the database ([`JobCtx::with_core`]),
 //! carries the [`Cancel`] flag that the lock sets (`cancelRunningJobs` in the TypeScript app), and the desktop and the
 //! network of the app.
+use crate::backup_scheduler::BackupScheduler;
 use crate::core_service::Worker;
 use crate::desktop::Desktop;
 use crate::http::Http;
@@ -27,6 +28,11 @@ impl Cancel {
 
     pub fn is_cancelled(&self) -> bool {
         self.0.load(Ordering::SeqCst)
+    }
+
+    /// Whether both are the same flag (a clone of each other).
+    pub(crate) fn is_same(&self, other: &Cancel) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
     }
 
     /// `Err(job.cancelled)` once cancelled, for `?` between the steps of a job.
@@ -94,6 +100,15 @@ impl Jobs {
             cancel.cancel();
         }
     }
+
+    /// Cancels every job but `keep` (the one that replaces the database and must go on).
+    pub(crate) fn cancel_all_except(&self, keep: &Cancel) {
+        for (_, cancel) in self.running.lock().unwrap_or_else(|e| e.into_inner()).iter() {
+            if !cancel.is_same(keep) {
+                cancel.cancel();
+            }
+        }
+    }
 }
 
 pub(crate) struct JobGuard {
@@ -115,6 +130,7 @@ pub struct JobCtx {
     listeners: Arc<Listeners>,
     /// Queues work on the database worker; `false` when the worker has ended.
     submit: Arc<dyn Fn(CoreJob) -> bool + Send + Sync>,
+    backups: BackupScheduler,
 }
 
 impl JobCtx {
@@ -124,8 +140,9 @@ impl JobCtx {
         http: Arc<dyn Http>,
         listeners: Arc<Listeners>,
         submit: Arc<dyn Fn(CoreJob) -> bool + Send + Sync>,
+        backups: BackupScheduler,
     ) -> Self {
-        Self { cancel, desktop, http, listeners, submit }
+        Self { cancel, desktop, http, listeners, submit, backups }
     }
 
     /// Runs `f` on the database worker (which owns the session and the core) and waits for its answer. Keep `f` short: the
@@ -160,5 +177,10 @@ impl JobCtx {
 
     pub fn http(&self) -> &dyn Http {
         &*self.http
+    }
+
+    /// The automatic backups (the scheduler of `backup_scheduler.rs`).
+    pub(crate) fn backups(&self) -> &BackupScheduler {
+        &self.backups
     }
 }

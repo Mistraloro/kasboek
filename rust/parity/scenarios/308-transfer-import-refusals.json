@@ -1,0 +1,78 @@
+{
+  "name": "transfer.import: a token that was never handed out, and inputs that break the schema",
+  "service": true,
+  "steps": [
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "nope"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "nope",
+        "password": "x"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "nope",
+        "recoveryKey": "ABCD"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {}
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": ""
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t",
+        "other": 1
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t",
+        "password": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t",
+        "code": "1234567890123"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t",
+        "recoveryKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t",
+        "newPassword": "short"
+      }
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t",
+        "password": 1
+      }
+    }
+  ]
+}

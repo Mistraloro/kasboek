@@ -1,0 +1,18 @@
+{
+  "name": "insights.preview: accounts are numbered in the text, balances and lowest are never sent",
+  "steps": [
+    {"op": "accounts.create", "input": {"name": "Main", "currency": "EUR"}},
+    {"op": "accounts.create", "input": {"name": "Dollar", "currency": "USD"}},
+    {"op": "accounts.create", "input": {"name": "Tight", "currency": "EUR", "openingBalanceCents": 80000}},
+    {"op": "accounts.create", "input": {"name": "Pound", "currency": "GBP"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('USD','2025-10-01',1.10,'ecb'),('USD','2026-06-01',1.20,'ecb'),('USD','2026-06-01',1.25,'manual')"}},
+    {"op": "@fxReload"},
+    {"op": "@sql", "input": {"sql": "UPDATE accounts SET opening_balance_cents = 1000 WHERE id = 4"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO fx_rates (currency, date, per_eur, source) VALUES ('GBP','2025-10-01',0.85,'ecb')"}},
+    {"op": "@fxReload"},
+    {"op": "@sql", "input": {"sql": "INSERT INTO transactions (account_id, booking_date, amount_cents, currency, description, counterparty_name, category_id, fingerprint) VALUES (3,'2025-10-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp1'),(3,'2025-11-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp2'),(3,'2025-12-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp3'),(3,'2026-01-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp4'),(3,'2026-02-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp5'),(3,'2026-03-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp6'),(3,'2026-04-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp7'),(3,'2026-05-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp8'),(3,'2026-06-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp9'),(3,'2026-07-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp10'),(3,'2026-08-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp11'),(3,'2026-09-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp12'),(3,'2026-10-15',-6000,'EUR','Phone Plan','Phone Plan',11,'fp13'),(4,'2025-10-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp14'),(4,'2025-11-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp15'),(4,'2025-12-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp16'),(4,'2026-01-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp17'),(4,'2026-02-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp18'),(4,'2026-03-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp19'),(4,'2026-04-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp20'),(4,'2026-05-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp21'),(4,'2026-06-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp22'),(4,'2026-07-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp23'),(4,'2026-08-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp24'),(4,'2026-09-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp25'),(4,'2026-10-16',-5000,'GBP','Pound Plan','Pound Plan',11,'fp26')"}},
+    {"op": "@sql", "input": {"sql": "INSERT INTO secrets (key, value) VALUES ('anthropicApiKey','sk-ant-invented')"}},
+    {"op": "insights.preview", "input": {"month": "2026-11"}},
+    {"op": "insights.get", "input": {"month": "2026-11"}}
+  ]
+}

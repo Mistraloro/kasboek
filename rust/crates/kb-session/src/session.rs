@@ -881,6 +881,71 @@ impl<S: Store> Session<S> {
         Resealing(self).adopt_inner(next, master, vault, was_recovery)
     }
 
+    /// The Argon2id cost new password slots get (the import makes one when a passwordless export meets a computer without
+    /// a device check).
+    pub fn argon_cost(&self) -> Argon2Cost {
+        self.cost
+    }
+
+    /// Whether Windows Hello or Touch ID may stand in for the password on this computer: a device check to unlock with, and
+    /// an operating-system-sealed key (`canUseDeviceMode`).
+    pub fn can_use_device_mode(&self) -> bool {
+        self.device.kind().is_some() && self.store.key_protection() == KeyProtection::Os
+    }
+
+    /// Used by import: puts the staged database (already checked, encrypted with `vault`'s key) in place of the current one,
+    /// then adopts the account. The session is closed first (the caller has closed every other handle on the file). The old
+    /// file is only deleted once the new account is saved: when that fails, the old database is back and the session stays
+    /// locked, so a failed import never leaves a database next to an account that cannot open it.
+    pub fn replace_with_import(
+        &mut self,
+        staged: &std::path::Path,
+        next: AccountData,
+        master: Master,
+        vault: Vault,
+        was_recovery: bool,
+    ) -> SessionResult<()> {
+        if self.open.is_some() {
+            self.close_for_replace();
+        }
+        let db_file = self.store.paths.db_file.clone();
+        let old = db_file.with_extension("db.replaced");
+        let io = |_: std::io::Error| failed("op.failed", "Something went wrong. Details are in the log.");
+        let had_old = db_file.exists();
+        if had_old {
+            // A stale rollback journal of the old file must never be applied to the new one.
+            for suffix in ["-journal", "-wal", "-shm"] {
+                let mut side = db_file.clone().into_os_string();
+                side.push(suffix);
+                let _ = std::fs::remove_file(side);
+            }
+            std::fs::rename(&db_file, &old).map_err(io)?;
+        }
+        let restore_old = || {
+            if had_old {
+                let _ = std::fs::rename(&old, &db_file);
+            }
+        };
+        if let Err(e) = std::fs::rename(staged, &db_file) {
+            restore_old();
+            return Err(io(e));
+        }
+        let stored = store_vault(&next, &master, &vault);
+        let mode = stored.mode;
+        if let Err(e) = self.persist(stored) {
+            let _ = std::fs::remove_file(&db_file);
+            restore_old();
+            return Err(e);
+        }
+        if had_old {
+            let _ = std::fs::remove_file(&old);
+        }
+        let result = Resealing(self).open_with(master, vault);
+        self.load_error = None;
+        self.recovered = result.is_ok() && was_recovery && mode == AuthMode::Password;
+        result
+    }
+
     fn adopt_inner(&mut self, next: AccountData, master: Master, vault: Vault, was_recovery: bool) -> SessionResult<()> {
         if self.open.is_some() {
             self.close_for_replace();

@@ -1,0 +1,57 @@
+{
+  "name": "locked: export, import, backups answer auth.locked; picking says to unlock first",
+  "service": true,
+  "dialogs": [
+    "$tmp"
+  ],
+  "steps": [
+    {
+      "op": "@lock"
+    },
+    {
+      "op": "transfer.export"
+    },
+    {
+      "op": "transfer.pick"
+    },
+    {
+      "op": "transfer.import",
+      "input": {
+        "token": "t"
+      }
+    },
+    {
+      "op": "backup.status"
+    },
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": false
+      }
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "backup.list"
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "x"
+      }
+    },
+    {
+      "op": "backup.revealFolder"
+    },
+    {
+      "op": "@unlock"
+    },
+    {
+      "op": "backup.status"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "name": "backups without a folder, and with a folder that is not there: refused or empty, the folder is never created",
+  "service": true,
+  "dialogs": [
+    "$tmp/unplugged"
+  ],
+  "steps": [
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "backup.list"
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-2026-11-14_100000.kasboek"
+      }
+    },
+    {
+      "op": "backup.revealFolder"
+    },
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "backup.list"
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-2026-11-14_100000.kasboek"
+      }
+    },
+    {
+      "op": "backup.configureAuto",
+      "input": {
+        "enabled": true
+      }
+    },
+    {
+      "op": "backup.revealFolder"
+    },
+    {
+      "op": "backup.status"
+    }
+  ]
+}

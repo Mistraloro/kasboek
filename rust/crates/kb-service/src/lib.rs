@@ -12,6 +12,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+mod backup_scheduler;
 mod core_service;
 mod desktop;
 mod exec;
@@ -22,6 +23,7 @@ mod ops;
 mod paths;
 mod prefs_store;
 
+pub use backup_scheduler::BackupTiming;
 pub use core_service::{ClockAdapter, CoreOptions, CoreService, NoOsEvents, OsEvents, Worker};
 pub use desktop::{Desktop, DesktopCall, FakeDesktop, Filter, NoDesktop};
 pub use exec::block_on;
@@ -29,7 +31,7 @@ pub use fixture::{FixtureConfig, FixtureService, DEMO_PASSWORD};
 pub use http::{FakeHttp, Http, HttpError, HttpRequest, HttpResponse, NoHttp, Recorded, UreqHttp, DEFAULT_MAX_BODY};
 pub use jobs::{Cancel, JobCtx, ServiceHandler, ServiceTable};
 pub use kb_core::AppError;
-pub use ops::{table as service_table, SERVICE_OPS};
+pub use ops::{table as service_table, OsZone, SERVICE_OPS};
 pub use paths::resolve_data_dir;
 
 /// Whether the operating system can seal the account file of `data_dir` (Windows DPAPI, macOS Keychain, a Secret Service

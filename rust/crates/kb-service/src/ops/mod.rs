@@ -18,6 +18,9 @@ mod sync;
 mod transfer;
 mod update;
 
+pub use backup::OsZone;
+pub(crate) use backup::{run_auto_backup_if_due, run_auto_backup_sync};
+
 /// Every service operation of the app.
 pub fn table() -> ServiceTable {
     let mut table = ServiceTable::new();

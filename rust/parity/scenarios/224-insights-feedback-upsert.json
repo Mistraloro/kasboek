@@ -1,0 +1,15 @@
+{
+  "name": "insights.feedback: a second verdict for a key replaces the first; counts of restoreDismissed",
+  "steps": [
+    {"op": "insights.feedback", "input": {"key": "a", "verdict": "dismissed"}},
+    {"op": "insights.feedback", "input": {"key": "a", "verdict": "useful"}},
+    {"op": "insights.feedback", "input": {"key": "b", "verdict": "not_useful"}},
+    {"op": "insights.feedback", "input": {"key": "c", "verdict": "dismissed"}},
+    {"op": "insights.feedback", "input": {"key": "d", "verdict": "useful"}},
+    {"op": "insights.restoreDismissed"},
+    {"op": "insights.restoreDismissed"},
+    {"op": "insights.feedback", "input": {"key": "a", "verdict": "dismissed"}},
+    {"op": "insights.feedback", "input": {"key": "a", "verdict": "dismissed"}},
+    {"op": "insights.restoreDismissed"}
+  ]
+}

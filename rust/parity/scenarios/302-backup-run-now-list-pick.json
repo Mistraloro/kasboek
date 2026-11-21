@@ -1,0 +1,30 @@
+{
+  "name": "a backup now: the file is named after the local time, listed with its tier, noted in the settings, and can be picked for an import",
+  "service": true,
+  "dialogs": [
+    "$tmp"
+  ],
+  "steps": [
+    {
+      "op": "backup.chooseFolder"
+    },
+    {
+      "op": "backup.runNow"
+    },
+    {
+      "op": "backup.list"
+    },
+    {
+      "op": "backup.status"
+    },
+    {
+      "op": "backup.pick",
+      "input": {
+        "name": "kasboek-backup-2026-11-14_100000.kasboek"
+      }
+    },
+    {
+      "op": "settings.get"
+    }
+  ]
+}

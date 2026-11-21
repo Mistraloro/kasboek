@@ -11,7 +11,8 @@
 // dialogs in order (null cancels), `http` answers the requests of `net.fetch` in order (a request for another URL fails) and
 // the requests seen are returned as `requests`, `readFiles` returns those files as `files`. `$tmp` in any string of the
 // scenario is its temporary folder, and that folder in a result string is printed as `$tmp` again. `service` is for the Rust
-// side only (the app's `dispatch` has the desktop operations itself).
+// side only (the app's `dispatch` has the desktop operations itself). The step `@clock {at}` moves the fake clock (Date only), a
+// `token` of a result is masked as `<token>`, and `session.secrets()` hands out an invented account (the export operations).
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -61,6 +62,18 @@ export interface AppModules {
   resetImportedSettings: typeof resetImportedSettings
 }
 
+/** An invented account for `session.secrets()`: only what an export copies into its header and seals in its payload. The slots
+ *  have the shape and length of real ones, so the size of a backup is the same on both sides. */
+const SALT = '/9up7mRzONK2x7K9Maf6fw=='
+const SEALED = { iv: 'XpgRGgrCuZ1IOegA', ct: '6VtuWfWMl4q5R0qh0A89qjuUIhZdjTCeV5C3z4b8pJ+XDZ3z75Xc2SJFDpJPIZvl' }
+const PASSWORD_SLOT = { kdf: { name: 'argon2id', m: 64, t: 1, p: 1, salt: SALT }, sealed: SEALED }
+const RECOVERY_SLOT = { kdf: { name: 'hkdf', salt: SALT }, sealed: SEALED }
+const scenarioSecrets = () => ({
+  account: { version: 2, mode: 'password', createdAt: '2026-11-14T10:00:00.000Z', twoFactor: false, slots: { recovery: RECOVERY_SLOT, password: PASSWORD_SLOT }, vault: { iv: '', ct: '' }, attempts: { failed: 0, lastFailedAt: null } },
+  master: Buffer.alloc(32, 1),
+  vault: { dbKey: SCENARIO_KEY }
+})
+
 const isTimeColumn = (name: string): boolean => name === 'at' || name.endsWith('_at')
 const maskUid = (s: string): string => s.replace(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g, '<uid>')
 
@@ -76,7 +89,7 @@ function maskResult(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(maskResult)
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, (k === 'createdAt' || k === 'updatedAt' || k === 'committedAt') && typeof v === 'string' ? '<time>' : k === 'sessionId' && typeof v === 'string' ? '<session>' : maskResult(v)])
+      Object.entries(value).map(([k, v]) => [k, (k === 'createdAt' || k === 'updatedAt' || k === 'committedAt') && typeof v === 'string' ? '<time>' : k === 'sessionId' && typeof v === 'string' ? '<session>' : k === 'token' && typeof v === 'string' ? '<token>' : maskResult(v)])
     )
   }
   return value
@@ -98,7 +111,7 @@ function withSession(value: unknown, id: string | null): unknown {
   return value
 }
 
-function dump(db: Db): Outcome['dump'] {
+export function dump(db: Db): Outcome['dump'] {
   const names = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map((r) => r.name)
   const out: Outcome['dump'] = {}
   for (const name of names) {
@@ -140,6 +153,7 @@ export async function runScenario(original: Scenario, env: RunnerEnv): Promise<O
   state.userData = dir
   state.languages = scenario.languages ?? ['en']
   state.unlocked = true
+  state.secrets = scenarioSecrets()
   const app = await env.load()
   const { dispatch, fxChanged, resetImportedSettings } = app
   const db = app.openDatabase(join(dir, 'kasboek.db'), SCENARIO_KEY)
@@ -159,6 +173,10 @@ export async function runScenario(original: Scenario, env: RunnerEnv): Promise<O
           break
         case '@unlock':
           state.unlocked = true
+          result = { ok: true, data: null }
+          break
+        case '@clock':
+          vi.setSystemTime(new Date((step.input as { at: string }).at))
           result = { ok: true, data: null }
           break
         case '@sql':
@@ -188,7 +206,7 @@ export async function runScenario(original: Scenario, env: RunnerEnv): Promise<O
     } catch {
       prefsFile = null
     }
-    const outcome: Outcome = { results, dump: dump(db), prefsFile }
+    const outcome: Outcome = { results, dump: unTmp(dump(db)) as Outcome['dump'], prefsFile }
     if (requests.length > 0) outcome.requests = unTmp(requests) as typeof requests
     if (scenario.readFiles) {
       outcome.files = Object.fromEntries(

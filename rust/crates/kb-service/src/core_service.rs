@@ -13,11 +13,13 @@
 //! and both are dropped when the session locks (the session wipes its key material; the core's copy of the key is a
 //! `DbKey`, wiped on drop, and only lives while the handle is opened). The idle timer and the lock/suspend events of
 //! the system lock the session from the same worker.
+use crate::backup_scheduler::{os_zone, BackupScheduler, BackupTiming, Env};
 use crate::desktop::{Desktop, NoDesktop};
 use crate::http::{Http, NoHttp, UreqHttp};
 use crate::jobs::{CoreJob, JobCtx, Jobs, ServiceHandler, ServiceTable};
 use crate::prefs_store::PrefsStore;
 use crate::{AppError, AppEvent, AppService, Listener, Listeners, LoadStep, OpFuture, DEMO_PASSWORD};
+use kb_core::backup_tiers::LocalZone;
 use kb_core::{locked_refusal, Actor, Core, CoreConfig, Rng, SeededRng};
 use kb_crypto::slot::Argon2Cost;
 use kb_db::{DbKey, OpenOptions, SqliteStore, Store, SCHEMA_VERSION};
@@ -120,6 +122,10 @@ pub struct CoreOptions {
     pub http: Arc<dyn Http>,
     /// The service operations (`ops::table()`); a test may add its own.
     pub service_ops: ServiceTable,
+    /// The time zone of the computer, for the names of backup files (the operating system's by default).
+    pub backup_zone: Arc<dyn LocalZone>,
+    /// The waits of the automatic backups (a test shortens them).
+    pub backup_timing: BackupTiming,
 }
 
 impl CoreOptions {
@@ -146,6 +152,8 @@ impl CoreOptions {
             desktop: Arc::new(NoDesktop),
             http: Arc::new(NoHttp),
             service_ops: crate::ops::table(),
+            backup_zone: os_zone(),
+            backup_timing: BackupTiming::default(),
         }
     }
 }
@@ -158,6 +166,7 @@ pub struct CoreService {
     last_activity: Arc<Mutex<Instant>>,
     services: ServiceTable,
     jobs: Arc<Jobs>,
+    backups: BackupScheduler,
     desktop: Arc<dyn Desktop>,
     http: Arc<dyn Http>,
     worker: Mutex<Option<JoinHandle<()>>>,
@@ -214,6 +223,8 @@ impl CoreService {
             desktop,
             http,
             service_ops,
+            backup_zone,
+            backup_timing,
         } = options;
         crate::paths::create_private_dir(&data_dir).map_err(|_| AppError::failed())?;
         let listeners = Arc::new(Listeners::default());
@@ -229,9 +240,22 @@ impl CoreService {
         let (stop_tx, stop_rx) = channel::<()>();
         let activity = Arc::new(Mutex::new(Instant::now()));
         let jobs = Arc::new(Jobs::default());
+        let backups = {
+            let tx = Mutex::new(tx.clone());
+            let submit = move |job: CoreJob| tx.lock().unwrap_or_else(|e| e.into_inner()).send(Msg::Core(job)).is_ok();
+            BackupScheduler::new(Env {
+                jobs: jobs.clone(),
+                desktop: desktop.clone(),
+                http: http.clone(),
+                listeners: listeners.clone(),
+                submit: Arc::new(submit),
+                zone: backup_zone,
+                timing: backup_timing,
+            })
+        };
         let worker = {
             let (listeners, prefs, data_dir) = (listeners.clone(), prefs.clone(), data_dir.clone());
-            let (activity, os_events, jobs) = (activity.clone(), os_events.clone(), jobs.clone());
+            let (activity, os_events, jobs, backups) = (activity.clone(), os_events.clone(), jobs.clone(), backups.clone());
             let clock = session_clock.clone();
             std::thread::Builder::new()
                 .name("kb-service".into())
@@ -259,7 +283,8 @@ impl CoreService {
                         .filter(|o| o.in_contract)
                         .map(|o| (o.name, (o.mutates, o.handler)))
                         .collect();
-                    Worker { session, core, auth, listeners, jobs, prefs, activity, os_events, clock, attempts, migration_error }.run(rx);
+                    Worker { session, core, auth, listeners, jobs, backups, prefs, activity, os_events, clock, attempts, migration_error }
+                        .run(rx);
                 })
                 .map_err(|_| AppError::failed())?
         };
@@ -291,6 +316,7 @@ impl CoreService {
             last_activity: activity,
             services: service_ops,
             jobs,
+            backups,
             desktop,
             http,
             worker: Mutex::new(Some(worker)),
@@ -329,9 +355,19 @@ impl CoreService {
     /// `DEMO_PASSWORD`, no 2FA, a cheap key derivation) and the service is unlocked, on a clock that stands still at `clock_ms`,
     /// with a seeded random source and the given desktop and network.
     pub fn scenario(data_dir: PathBuf, clock_ms: i64, desktop: Arc<dyn Desktop>, http: Arc<dyn Http>) -> Result<Self, AppError> {
+        Self::scenario_with_clock(data_dir, Arc::new(ManualClock::new(clock_ms)), desktop, http)
+    }
+
+    /// `scenario` on a clock the caller moves (the `@clock` step of the harness).
+    pub fn scenario_with_clock(
+        data_dir: PathBuf,
+        clock: Arc<ManualClock>,
+        desktop: Arc<dyn Desktop>,
+        http: Arc<dyn Http>,
+    ) -> Result<Self, AppError> {
         let mut options = CoreOptions::new(data_dir);
         options.seal = Box::new(FileSeal::new([7; 32]));
-        options.clock = Some(Arc::new(ManualClock::new(clock_ms)));
+        options.clock = Some(clock);
         options.cost = Some(Argon2Cost { m: 64, t: 1, p: 1 });
         options.tick = Duration::from_secs(3600);
         options.desktop = desktop;
@@ -363,10 +399,13 @@ impl CoreService {
         let (guard, cancel) = self.jobs.start();
         let tx = Mutex::new(self.tx.lock().unwrap_or_else(|e| e.into_inner()).clone());
         let submit = move |job: CoreJob| tx.lock().unwrap_or_else(|e| e.into_inner()).send(Msg::Core(job)).is_ok();
-        let ctx = JobCtx::new(cancel, self.desktop.clone(), self.http.clone(), self.listeners.clone(), Arc::new(submit));
+        let ctx =
+            JobCtx::new(cancel, self.desktop.clone(), self.http.clone(), self.listeners.clone(), Arc::new(submit), self.backups.clone());
         let (reply, answer) = channel();
         let name = op.to_owned();
         let listeners = self.listeners.clone();
+        let backups = self.backups.clone();
+        let important = BackupScheduler::is_important(op, &input);
         std::thread::Builder::new()
             .name(format!("kb-job {op}"))
             .spawn(move || {
@@ -382,6 +421,7 @@ impl CoreService {
                 };
                 let mutates = kb_core::table::OPS.iter().any(|(n, m, _)| *n == name && *m);
                 if result.is_ok() && mutates {
+                    backups.data_changed(important);
                     listeners.emit(AppEvent::DataChanged { actor: "user".into() });
                 }
                 let _ = reply.send(result);
@@ -484,6 +524,8 @@ pub struct Worker {
     listeners: Arc<Listeners>,
     /// The running service jobs; the lock cancels them.
     jobs: Arc<Jobs>,
+    /// The automatic backups: told about changes, unlocks and locks.
+    backups: BackupScheduler,
     prefs: Arc<PrefsStore>,
     /// When the person last did something in the app.
     activity: Arc<Mutex<Instant>>,
@@ -505,6 +547,40 @@ impl Worker {
         &mut self.session
     }
 
+    /// The time of the session and the core (a test moves it by hand).
+    pub fn now_ms(&self) -> i64 {
+        self.clock.now_ms()
+    }
+
+    /// For an operation that replaces the database file (an import): cancels every other job, closes the core's handle,
+    /// runs `f` with the session (which closes its own handle, moves the file and opens the new one), and opens the core's
+    /// handle on whatever the session holds afterwards. Nothing else touches the database meanwhile: this runs on the worker.
+    /// `own` is the calling job's flag, which stays set.
+    pub fn replace_database<R>(&mut self, own: &crate::Cancel, f: impl FnOnce(&mut Session<SqliteStore>) -> R) -> Result<R, AppError> {
+        self.jobs.cancel_all_except(own);
+        let was_unlocked = self.session.is_unlocked();
+        self.close_core();
+        let result = f(&mut self.session);
+        match self.sync_core() {
+            Ok(()) => {
+                // `f` failed after it closed the database: the screens must learn that the app is locked now.
+                if was_unlocked && !self.session.is_unlocked() {
+                    self.listeners.emit(AppEvent::Locked { reason: "user".into() });
+                }
+                // A new account: no wrong tries yet, and the next start's Lock screen is drawn from this one.
+                self.attempts = Attempts { failed: 0, last_failed_at: None };
+                self.remember_auth();
+                Ok(result)
+            }
+            Err(e) => {
+                // The database could not be opened a second time: do not stay unlocked half way.
+                self.session.lock(LockReason::User, true);
+                let _ = self.sync_core();
+                Err(e)
+            }
+        }
+    }
+
     fn run(mut self, rx: Receiver<Msg>) {
         while let Ok(msg) = rx.recv() {
             match msg {
@@ -519,6 +595,7 @@ impl Worker {
             }
         }
         // The service is gone (or its channel): no key stays in memory, the database is closed.
+        self.backup_before_lock();
         self.session.lock(LockReason::User, true);
         let _ = self.sync_core();
     }
@@ -527,6 +604,7 @@ impl Worker {
         if let Some(refusal) = locked_refusal(op, self.session.is_unlocked()) {
             return Err(refusal);
         }
+        let important = BackupScheduler::is_important(op, &input);
         let result = match self.auth.get(op).copied() {
             Some((mutates, handler)) => self.auth_op(op, mutates, handler, input),
             None => self.core.dispatch(op, input, Actor::User),
@@ -534,6 +612,7 @@ impl Worker {
         // `ipc.ts`: pages refresh after an operation that changed something.
         let mutates = kb_core::table::OPS.iter().any(|(n, m, _)| *n == op && *m);
         if result.is_ok() && mutates && !op.starts_with("auth.") {
+            self.backups.data_changed(important);
             self.listeners.emit(AppEvent::DataChanged { actor: "user".into() });
         }
         self.explain_migration(result)
@@ -566,6 +645,9 @@ impl Worker {
         if matches!(op, "auth.erase" | "auth.restoreErased") {
             self.close_core();
         }
+        if matches!(op, "auth.lock" | "auth.erase") {
+            self.backup_before_lock();
+        }
         let result = handler(&mut self.session, input);
         self.count_attempt(op, &result);
         let synced = self.sync_core();
@@ -587,6 +669,9 @@ impl Worker {
                 Err(error)
             }
         };
+        if result.is_ok() && matches!(op, "auth.unlock" | "auth.unlockRecovery") {
+            self.backups.unlocked();
+        }
         if result.is_ok() && opens {
             self.progress(LoadStep::Opening, 1, 1);
             self.progress(LoadStep::Migrating, total, total);
@@ -624,8 +709,9 @@ impl Worker {
         let open = self.session.is_unlocked();
         if !open {
             self.close_core();
-            // `cancelRunningJobs`: nothing keeps running against a locked app.
+            // `cancelRunningJobs`: nothing keeps running against a locked app, and the backup timer stops.
             self.jobs.cancel_all();
+            self.backups.stop();
             return Ok(());
         }
         if self.core.is_unlocked() {
@@ -662,11 +748,24 @@ impl Worker {
         // The system's idle time when it can tell; else the time since the person last did something in the app.
         let idle =
             self.os_events.idle_seconds().unwrap_or_else(|| self.activity.lock().unwrap_or_else(|e| e.into_inner()).elapsed().as_secs());
-        self.session.auto_lock_tick(idle, self.prefs.auto_lock_minutes());
+        let minutes = self.prefs.auto_lock_minutes();
+        if minutes > 0 && idle >= minutes * 60 {
+            self.backup_before_lock();
+        }
+        self.session.auto_lock_tick(idle, minutes);
         let _ = self.sync_core();
     }
 
+    /// Last chance for a backup of what changed since the last one: the database is still open (`onLock` of the scheduler).
+    fn backup_before_lock(&mut self) {
+        if self.session.is_unlocked() && self.core.is_unlocked() {
+            let backups = self.backups.clone();
+            backups.before_lock(self);
+        }
+    }
+
     fn system_lock(&mut self) {
+        self.backup_before_lock();
         self.session.on_system_lock();
         let _ = self.sync_core();
     }

@@ -1,0 +1,11 @@
+{
+  "name": "insights.get/preview/feedback on a fresh database",
+  "steps": [
+    {"op": "insights.get", "input": {"month": "2026-11"}},
+    {"op": "insights.get", "input": {"month": "2026-10"}},
+    {"op": "insights.restoreDismissed"},
+    {"op": "@sql", "input": {"sql": "INSERT INTO secrets (key, value) VALUES ('anthropicApiKey','sk-ant-invented')"}},
+    {"op": "insights.preview", "input": {"month": "2026-11"}},
+    {"op": "insights.preview", "input": {"month": "2025-01"}}
+  ]
+}
