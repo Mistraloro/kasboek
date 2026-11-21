@@ -214,15 +214,23 @@ export const maskContacts = masking((text) =>
   })
 )
 
+/** What a number, address or phone number cut off at the end of a masked prefix can leave unmasked: well under this many characters. */
+const EDGE = 400
+
 /**
  * Everything that must not leave the device or show on a screen that is being watched: account and
  * card numbers first, then e-mail addresses and phone numbers (the other way round, the phone rule
- * would eat the groups of a spaced IBAN). `max` cuts the text to that many characters first, and
- * masks a little more than that so an account number at the cut is hidden whole.
+ * would eat the groups of a spaced IBAN). `max` cuts the text to that many characters, after masking:
+ * masks shrink a text, so cutting first would let unmasked text slide under the cut. A long text is
+ * masked as a prefix only; the prefix grows until its masked form is EDGE longer than `max`, so
+ * whatever the prefix edge left half-masked lies beyond the cut.
  */
 export function maskPrivate(text: string, max?: number): string {
   if (max === undefined || text.length <= max) return maskContacts(maskNumbers(text))
-  return `${maskContacts(maskNumbers(text.slice(0, max + 64))).slice(0, max)}…`
+  for (let length = max * 4 + EDGE; ; length *= 4) {
+    const masked = maskContacts(maskNumbers(text.slice(0, length)))
+    if (length >= text.length || masked.length >= max + EDGE) return `${masked.slice(0, max)}…`
+  }
 }
 
 /** The first `max` characters of a text, but never through the middle of an account or card number: one that would be cut in two is left out whole, so no part of it is shown. */

@@ -368,3 +368,29 @@ describe('shared masking helper', () => {
     expect(maskContacts(`${MAIL} ${PHONE}`)).toBe('…@… …phone…')
   })
 })
+
+describe('maskPrivate with a cut: earlier masks must not pull unmasked text under the cut', () => {
+  const SPACED = Array.from({ length: 5 }, () => OTHER_SPACED).join(' ')
+
+  it('hides a card number that the shrinking masks moved under the cut', () => {
+    const out = maskPrivate(`${SPACED} ${CARD} tail`, 60)
+    expect(out).not.toMatch(/5412|7512|3412/)
+    expect(out).toBe('NL…4300 NL…4300 NL…4300 NL…4300 NL……3456 tail…')
+  })
+
+  it('hides a number that the window edge cut to fewer than 13 digits', () => {
+    const out = maskPrivate(`${'1'.repeat(80)} ${CARD}`, 30)
+    expect(out).not.toMatch(/5412|541275123/)
+    expect(out).toBe('…3456…')
+  })
+
+  it('shows the same text for a hostile 1,000,000 character text, and is fast', () => {
+    const started = performance.now()
+    for (const unit of ['ab12', 'NL91 ', '1 ', `${OTHER_SPACED} `]) {
+      const out = maskPrivate(unit.repeat(Math.ceil(1_000_000 / unit.length)), 2000)
+      expect(out.length).toBeLessThanOrEqual(2001)
+      expect(out).not.toMatch(/ABNA|0417|1643/)
+    }
+    expect(performance.now() - started).toBeLessThan(process.env.CI ? 3000 : 500)
+  })
+})
