@@ -39,6 +39,7 @@ use slint::ComponentHandle;
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -182,6 +183,11 @@ fn run(args: &[String]) {
     std::panic::set_hook(Box::new(|info| {
         log::mark(&format!("PANIC: {info}"));
         log::flush();
+        // A panic while the app shuts down (the start-up test is over by then) is its own, plain failure: exit code 101 as
+        // for any panic, not whatever the abort of the runtime turns into.
+        if SHUTTING_DOWN.load(Ordering::SeqCst) {
+            std::process::exit(101);
+        }
     }));
     match gap {
         Some(g) => log::mark(&format!("process start (OS creation time; main entered {g:.0} ms later)")),
@@ -270,6 +276,7 @@ fn run(args: &[String]) {
     if prefs.theme == "system" {
         let weak = ui.as_weak();
         let path = data_dir.join("prefs.json");
+        let service = service.clone();
         std::thread::spawn(move || {
             let Some(now_dark) = titlebar::system_dark() else { return };
             let last = serde_json::json!(if now_dark { "dark" } else { "light" });
@@ -290,7 +297,27 @@ fn run(args: &[String]) {
     }
     slint::run_event_loop().expect("event loop");
     log::mark("event loop ended");
+    shutdown(&*service);
     log::flush();
+}
+
+/// How long the service gets to stop its worker.
+const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Set when the event loop is over: a panic from here on exits with code 101.
+static SHUTTING_DOWN: AtomicBool = AtomicBool::new(false);
+
+/// The end of the app, in order, each step in the log: the controller is let go of (its thread-local would otherwise drop the
+/// service in a destructor at process exit), the service stops its worker and closes the database. Nothing is joined later.
+fn shutdown(service: &dyn AppService) {
+    SHUTTING_DOWN.store(true, Ordering::SeqCst);
+    log::mark("shutdown: releasing the controller");
+    app::release();
+    log::mark("shutdown: stopping service");
+    log::flush();
+    let ended = service.shutdown(SHUTDOWN_TIMEOUT);
+    log::mark(if ended { "shutdown: worker joined" } else { "shutdown: worker still busy after the timeout, left alone" });
+    log::mark("shutdown: done");
 }
 
 fn ctl_get() -> Option<Rc<app::Ctl>> {

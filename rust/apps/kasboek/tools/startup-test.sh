@@ -9,6 +9,8 @@ arg=${1:?binary}
 bin="$(cd "$(dirname "$arg")" && pwd)/$(basename "$arg")"
 shift
 [[ -f "$bin" ]] || { echo "binary not found: $bin"; exit 1; }
+# shellcheck source=bounded.sh
+source "$(dirname "${BASH_SOURCE[0]}")/bounded.sh"
 dir=$(mktemp -d)
 log="$dir/startup.log"
 # A native Windows program gets Windows paths (C:/...), not the /tmp/... of Git Bash; grep below still reads $log.
@@ -16,7 +18,7 @@ native() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else pri
 run=("$(native "$bin")" --data-dir "$(native "$dir")" --log "$(native "$log")" --exit-after-ms 1500 "$@")
 if [[ "$(uname -s)" == Linux && -z "${DISPLAY:-}" ]]; then run=(xvfb-run -a "${run[@]}"); fi
 rc=0
-"${run[@]}" || rc=$?
+run_bounded 120 "${run[@]}" || rc=$?
 echo "app exit status: $rc"
 if [[ ! -f "$log" ]]; then echo "no log written: $log"; ls -la "$dir"; exit 1; fi
 [[ $rc -eq 0 ]] || { echo "app failed"; cat "$log"; exit "$rc"; }

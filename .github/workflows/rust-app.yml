@@ -171,6 +171,7 @@ jobs:
           cargo clippy --locked -p kasboek --features dev-start --all-targets -- -D warnings
 
       - name: Start-up tests (fixtures, then the real service)
+        timeout-minutes: 25
         shell: bash
         run: |
           ext=""; [ "$RUNNER_OS" = Windows ] && ext=".exe"

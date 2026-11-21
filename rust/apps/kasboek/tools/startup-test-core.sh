@@ -12,11 +12,14 @@ set -euo pipefail
 arg=${1:?binary}
 bin="$(cd "$(dirname "$arg")" && pwd)/$(basename "$arg")"
 [[ -f "$bin" ]] || { echo "binary not found: $bin"; exit 1; }
+# shellcheck source=bounded.sh
+source "$(dirname "${BASH_SOURCE[0]}")/bounded.sh"
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
 # A native Windows program gets Windows paths (C:/...), not the /tmp/... of Git Bash; grep below still reads $dir.
 native() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
-password="Kb-$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32 || true)-9z"
+# Finite input only: `tr -dc ... </dev/urandom | head -c` never ended on macOS under pipefail (tr kept reading).
+password="Kb-$(head -c 24 /dev/urandom | base64 | tr -d '=+/\n' | head -c 32)-9z"
 
 start() { # name, extra args...
   local name=$1
@@ -24,7 +27,7 @@ start() { # name, extra args...
   local run=("$(native "$bin")" --data-dir "$(native "$dir")/data" --log "$(native "$dir")/$name.log" --exit-after-ms 6000 "$@")
   if [[ "$(uname -s)" == Linux && -z "${DISPLAY:-}" ]]; then run=(xvfb-run -a "${run[@]}"); fi
   local rc=0
-  "${run[@]}" || rc=$?
+  run_bounded 120 "${run[@]}" || rc=$?
   echo "app exit status ($name): $rc"
   if [[ $rc -ne 0 ]]; then echo "app failed"; cat "$dir/$name.log" 2>/dev/null || echo "no log written"; exit "$rc"; fi
 }

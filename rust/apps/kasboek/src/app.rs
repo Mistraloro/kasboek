@@ -70,6 +70,12 @@ thread_local! {
     static CTL: RefCell<Option<Rc<Ctl>>> = const { RefCell::new(None) };
 }
 
+/// Lets go of the controller of this thread, so that no thread-local destructor at process exit drops the last handle of the
+/// service (on Windows that destructor runs after the process' other threads were ended).
+pub(crate) fn release() {
+    let _ = CTL.try_with(|c| c.borrow_mut().take());
+}
+
 /// Runs `f` with the controller (UI thread only).
 pub(crate) fn with(f: impl FnOnce(&Rc<Ctl>)) {
     if let Some(c) = CTL.with(|c| c.borrow().clone()) {

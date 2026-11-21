@@ -9,6 +9,7 @@ use serde_json::Value;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 mod core_service;
 mod exec;
@@ -92,6 +93,12 @@ pub trait AppService: Send + Sync {
     /// `lastTheme`). `true` when this service wrote it; `false` leaves the writing to the caller.
     fn cache_pref(&self, _key: &str, _value: Value) -> bool {
         false
+    }
+    /// Ends the service's own threads (and closes its database) before the process ends, waiting at most `timeout`; `true`
+    /// when everything has ended. Called once by the app after the event loop, so that no destructor has to join a thread
+    /// at process exit (on Windows other threads are already gone then). Nothing to do by default.
+    fn shutdown(&self, _timeout: Duration) -> bool {
+        true
     }
 }
 

@@ -139,8 +139,8 @@ pub struct CoreService {
     data_dir: PathBuf,
     last_activity: Arc<Mutex<Instant>>,
     worker: Mutex<Option<JoinHandle<()>>>,
-    // Dropping this stops the idle timer thread.
-    _ticker: Sender<()>,
+    // Dropping this stops the idle timer thread (`shutdown` drops it too).
+    ticker: Mutex<Option<Sender<()>>>,
     // Keeps the folder of `temporary` alive; it is deleted after the worker has closed the database.
     _temp: Option<tempfile::TempDir>,
 }
@@ -254,7 +254,7 @@ impl CoreService {
             data_dir,
             last_activity: activity,
             worker: Mutex::new(Some(worker)),
-            _ticker: stop_tx,
+            ticker: Mutex::new(Some(stop_tx)),
             _temp: temp,
         })
     }
@@ -296,13 +296,30 @@ impl CoreService {
     }
 }
 
-impl Drop for CoreService {
-    fn drop(&mut self) {
-        // The worker locks the session (wipes the keys) and closes the database before it ends.
+impl CoreService {
+    /// Stops the idle timer, tells the worker to end (it locks the session and closes the database first) and waits for it
+    /// at most `timeout`. A worker that is still busy after that (a long key derivation) is left alone: it is never joined
+    /// later, so a destructor at process exit has nothing to wait for. `true` when the worker has ended. Safe to call twice.
+    fn stop(&self, timeout: Duration) -> bool {
+        self.ticker.lock().unwrap_or_else(|e| e.into_inner()).take();
+        let Some(handle) = self.worker.lock().unwrap_or_else(|e| e.into_inner()).take() else { return true };
         let _ = self.tx.lock().unwrap_or_else(|e| e.into_inner()).send(Msg::Stop);
-        if let Some(handle) = self.worker.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        let deadline = Instant::now() + timeout;
+        while !handle.is_finished() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        // Only a worker that has ended is joined (the join then returns at once); otherwise the handle is dropped (detached).
+        let ended = handle.is_finished();
+        if ended {
             let _ = handle.join();
         }
+        ended
+    }
+}
+
+impl Drop for CoreService {
+    fn drop(&mut self) {
+        self.stop(Duration::from_secs(5));
     }
 }
 
@@ -332,6 +349,10 @@ impl AppService for CoreService {
     fn cache_pref(&self, key: &str, value: Value) -> bool {
         self.prefs.set_key(key, Some(value));
         true
+    }
+
+    fn shutdown(&self, timeout: Duration) -> bool {
+        self.stop(timeout)
     }
 }
 
