@@ -79,3 +79,14 @@ pub fn delete<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         store_searches(db, list)
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["searches.save", "searches.delete"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "searches.save" => save::<S>,
+        "searches.delete" => delete::<S>,
+        _ => return None,
+    })
+}

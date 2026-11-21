@@ -1,0 +1,39 @@
+// The assistant panel at the right of the content (AssistantPanel.tsx): a stub until it is ported (the global is the panel's own).
+import { Theme, Label } from "@kb-ui";
+import { Tx } from "../tx.slint";
+
+export global AssistantPanelState {
+    in property <string> note;
+}
+
+export component AssistantPanel inherits Rectangle {
+    min-width: 320px;
+    max-width: 320px;
+    preferred-width: 320px;
+    background: Theme.surface;
+    Rectangle {
+        x: 0px;
+        width: 1px;
+        background: Theme.border;
+    }
+    VerticalLayout {
+        padding: 20px;
+        alignment: start;
+        Label {
+            text: Tx.tr("nav.assistant");
+            font-family: Theme.serif;
+            font-size: Theme.fs-card-title;
+            font-weight: 600;
+            lh: Theme.lh-card-title;
+            accessible-role: AccessibleRole.text;
+        }
+        Label {
+            text: AssistantPanelState.note;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+    }
+}

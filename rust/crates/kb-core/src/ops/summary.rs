@@ -53,3 +53,17 @@ pub fn networth<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
 pub fn alerts<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |_: Empty| json(&list_alerts(core, &core.today())?))
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["summary.month", "summary.year", "summary.review", "networth.summary", "alerts.list"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "summary.month" => month::<S>,
+        "summary.year" => year::<S>,
+        "summary.review" => review::<S>,
+        "networth.summary" => networth::<S>,
+        "alerts.list" => alerts::<S>,
+        _ => return None,
+    })
+}

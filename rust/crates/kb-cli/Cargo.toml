@@ -12,6 +12,7 @@ hex.workspace = true
 kb-core.workspace = true
 kb-crypto.workspace = true
 kb-db.workspace = true
+kb-service.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 zeroize.workspace = true

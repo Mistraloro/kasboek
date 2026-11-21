@@ -108,3 +108,16 @@ pub fn delete_rate<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         status_value(db)
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["fx.status", "fx.rates", "fx.setRate", "fx.deleteRate"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "fx.status" => status::<S>,
+        "fx.rates" => rates::<S>,
+        "fx.setRate" => set_rate::<S>,
+        "fx.deleteRate" => delete_rate::<S>,
+        _ => return None,
+    })
+}

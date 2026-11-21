@@ -35,4 +35,4 @@ pub mod wealth;
 pub use crate::core::{dispatch, locked_refusal, Actor, Core, CoreConfig, Done};
 pub use clock::{Clock, FixedClock, Rng, SeededRng, SystemClock};
 pub use error::{AppError, AppResult};
-pub use ops::PORTED;
+pub use ops::ported;

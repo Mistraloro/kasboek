@@ -1,0 +1,232 @@
+// Settings -> Security (minimal): password, passwordless, a new recovery key, two-factor. Reads the globals below and those of
+// state.slint (Recovery, Totp, shared with Setup); messages and errors come as toasts. The Settings page scrolls and
+// holds the header and the tabs.
+import { Theme, Label, Button, Field, PasswordInput, CodeInput } from "@kb-ui";
+import { Tx } from "../../tx.slint";
+import { StrengthMeter } from "../../parts.slint";
+import { RecoveryPanel, TotpPanel } from "../../panels.slint";
+import { RuleRow, Recovery, Totp } from "../../state.slint";
+import { Section } from "../../page.slint";
+
+// Settings -> Security. Messages and errors come as toasts.
+export global Sec {
+    // "main" | "recovery" | "totp"
+    in-out property <string> view: "main";
+    in property <string> mode;
+    in property <bool> two-factor;
+    in property <bool> need-current;
+    in property <bool> busy;
+    in property <string> key-storage;
+    in property <string> device-title;
+    in property <string> device-note;
+    in property <bool> device-enabled;
+    in property <int> strength;
+    in property <string> strength-text;
+    in property <[RuleRow]> rules;
+    in-out property <string> current;
+    in-out property <string> next-a;
+    in-out property <string> next-b;
+    in-out property <string> off-code;
+    callback opened();
+    callback password-edited(string);
+    callback change-password(string, string);
+    callback use-passwordless(string);
+    callback new-recovery-key(string);
+    callback totp-begin();
+    callback totp-disable(string);
+    callback back();
+}
+
+export component SecuritySection inherits VerticalLayout {
+    property <string> mismatch: Sec.next-b != "" && Sec.next-a != Sec.next-b ? Tx.tr("auth.passwordMismatch") : "";
+    property <bool> password-ready: Sec.strength >= 4 && Sec.next-a == Sec.next-b && (!Sec.need-current || Sec.current != "") && !Sec.busy;
+    property <bool> confirmed: !Sec.need-current || Sec.current != "";
+    spacing: 16px;
+    init => {
+        Sec.opened();
+    }
+
+    Label {
+        text: Tx.tr("settings.securityHint");
+        font-size: Theme.fs-ui;
+        lh: Theme.lh-ui;
+        color: Theme.muted;
+        wrap: word-wrap;
+        accessible-role: AccessibleRole.text;
+    }
+    if Sec.view == "main": Section {
+        title: Tx.tr("settings.keyStorage");
+        Label {
+            text: Sec.key-storage;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+    }
+    if Sec.view == "main" && Sec.need-current: Section {
+        title: Tx.tr("auth.currentPassword");
+        Field {
+            label: Tx.tr("auth.currentPassword");
+            PasswordInput {
+                text <=> Sec.current;
+                label: Tx.tr("auth.currentPassword");
+                eye-label: Tx.tr("auth.holdToShowPassword");
+                enabled: !Sec.busy;
+            }
+        }
+    }
+    if Sec.view == "main": Section {
+        title: Sec.mode == "device" ? Tx.tr("settings.usePassword") : Tx.tr("settings.changePassword");
+        Field {
+            label: Tx.tr("auth.newPassword");
+            PasswordInput {
+                text <=> Sec.next-a;
+                label: Tx.tr("auth.newPassword");
+                eye-label: Tx.tr("auth.holdToShowPassword");
+                enabled: !Sec.busy;
+                edited(t) => {
+                    Sec.password-edited(t);
+                }
+            }
+        }
+        StrengthMeter {
+            strength: Sec.strength;
+            has-text: Sec.next-a != "";
+            text: Sec.strength-text;
+            rules: Sec.rules;
+        }
+        Field {
+            label: Tx.tr("auth.repeatPassword");
+            error: root.mismatch;
+            PasswordInput {
+                text <=> Sec.next-b;
+                label: Tx.tr("auth.repeatPassword");
+                eye-label: Tx.tr("auth.holdToShowPassword");
+                invalid: root.mismatch != "";
+                enabled: !Sec.busy;
+            }
+        }
+        HorizontalLayout {
+            alignment: start;
+            Button {
+                variant: "primary";
+                text: Sec.mode == "device" ? Tx.tr("settings.usePassword") : Tx.tr("settings.changePassword");
+                enabled: root.password-ready;
+                busy: Sec.busy;
+                clicked => {
+                    Sec.change-password(Sec.current, Sec.next-a);
+                }
+            }
+        }
+    }
+    if Sec.view == "main" && Sec.mode == "password": Section {
+        title: Sec.device-title;
+        hint: Tx.tr("auth.chooseDeviceBody");
+        if Sec.device-note != "": Label {
+            text: Sec.device-note;
+            font-size: Theme.fs-xs;
+            lh: Theme.lh-xs;
+            color: Theme.warning;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: start;
+            Button {
+                text: Sec.device-title;
+                enabled: Sec.device-enabled && root.confirmed && !Sec.busy;
+                clicked => {
+                    Sec.use-passwordless(Sec.current);
+                }
+            }
+        }
+    }
+    if Sec.view == "main" && Sec.mode == "device": Section {
+        title: Sec.device-title;
+        hint: Tx.tr("settings.passwordlessOn");
+    }
+    if Sec.view == "main": Section {
+        title: Tx.tr("auth.recoveryKey");
+        hint: Tx.tr("settings.recoveryHint");
+        HorizontalLayout {
+            alignment: start;
+            Button {
+                text: Tx.tr("settings.newRecoveryKey");
+                enabled: root.confirmed && !Sec.busy;
+                clicked => {
+                    Sec.new-recovery-key(Sec.current);
+                }
+            }
+        }
+    }
+    if Sec.view == "main": Section {
+        title: Tx.tr("settings.twoFactor");
+        hint: Tx.tr("settings.twoFactorHint");
+        if !Sec.two-factor: HorizontalLayout {
+            alignment: start;
+            Button {
+                variant: "primary";
+                text: Tx.tr("auth.totpTurnOn");
+                enabled: !Sec.busy;
+                clicked => {
+                    Sec.totp-begin();
+                }
+            }
+        }
+        if Sec.two-factor: Field {
+            label: Tx.tr("settings.twoFactorOffBody");
+            CodeInput {
+                text <=> Sec.off-code;
+                label: Tx.tr("settings.twoFactorOffBody");
+                enabled: !Sec.busy;
+            }
+        }
+        if Sec.two-factor: HorizontalLayout {
+            alignment: start;
+            Button {
+                variant: "danger";
+                text: Tx.tr("settings.twoFactorOff");
+                enabled: Sec.off-code.character-count == 6 && !Sec.busy;
+                clicked => {
+                    Sec.totp-disable(Sec.off-code);
+                }
+            }
+        }
+    }
+    if Sec.view == "recovery": Section {
+        title: Tx.tr("auth.recoveryTitle");
+        hint: Tx.tr("settings.newRecoveryBody");
+        RecoveryPanel {
+            key-top: Recovery.key-top;
+            key-bottom: Recovery.key-bottom;
+            ok: Recovery.ok;
+            saved <=> Recovery.saved;
+            check <=> Recovery.check;
+            edited(saved, typed) => {
+                Recovery.edited(saved, typed);
+            }
+            done => {
+                Recovery.done();
+            }
+        }
+    }
+    if Sec.view == "totp": Section {
+        title: Tx.tr("auth.totpTitle");
+        hint: Tx.tr("auth.totpBody");
+        TotpPanel {
+            state: Totp.state;
+            secret: Totp.secret;
+            runs: Totp.runs;
+            modules: Totp.modules;
+            error: Totp.error;
+            busy: Totp.busy;
+            code <=> Totp.code;
+            enable(c) => {
+                Totp.enable(c);
+            }
+            skip => {
+                Sec.back();
+            }
+        }
+    }
+}

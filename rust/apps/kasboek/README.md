@@ -39,7 +39,7 @@ python tools/parity.py <shots> <electron-stills>   # pixel diff and landmark off
 tools/a11y-dump.sh target/release/kasboek [--state unlocked]    # AT-SPI tree (PYATSPI_PYTHON=/usr/bin/python3.12 where gi is for 3.12)
 tools/startup-test.sh target/release/kasboek                     # CI: window opens, milestones logged, clean exit
 tools/startup-test-core.sh target/release/kasboek                # CI: real service, account created in a temp folder, unlocked first frame logged
-tools/a11y-flow.sh target/release/kasboek                        # drives Setup, Lock, Security, Accounts through AT-SPI (PYATSPI_PYTHON as above)
+tools/a11y-flow.sh target/release/kasboek                        # drives Setup, Lock, Security and the page stubs through AT-SPI (PYATSPI_PYTHON as above)
 node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json from scripts/screenshots/data.mjs of the release branch
 ```
 
@@ -52,10 +52,11 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
 | `src/view.rs` | what the Overview asks the core for and how it reaches the screen (texts from `kb-i18n`, money from `format.rs`) |
 | `src/loading.rs` | real progress shares per step and the loading gate rules (tested) |
 | `src/prefs.rs` | prefs.json as far as the first frame needs it: theme, language, `lastAuth` cache |
-| `src/security.rs`, `src/accounts.rs`, `src/setup_rules.rs` | Settings -> Security, the Accounts developer preview, the recovery-key and 2FA rules of `setup-rules.ts` |
-| `ui/panels.slint`, `ui/pages.slint` | recovery key and 2FA panels (shared by Setup and Security), the Security and Accounts pages |
+| `src/pages/` | one file per page (`wire`, `show`, `on_data_changed`), settings sections in `pages/settings/` (Security is real, the rest are stubs); `src/setup_rules.rs`: the recovery-key and 2FA rules of `setup-rules.ts` |
+| `ui/panels.slint`, `ui/page.slint`, `ui/pages.slint`, `ui/pages/` | recovery key and 2FA panels (shared by Setup and Security), shared page parts and stubs, the Settings page with its tabs, one file (with its own global) per page and section |
 | `src/log.rs`, `src/device.rs` | startup.log and the Hello / Touch ID prompt, moved here from the UI spike |
 | `src/titlebar.rs` | Windows 11 title bar colour (DWM), system theme detection |
+| `fixtures/pages/<page>.json` | the answers each page reads, written by `tools/gen-fixtures.mjs` next to household.json (not loaded yet) |
 | `fixtures/household.json` | the invented household of the release screenshots (accounts, month summaries, budgets, tips) |
 
 ## Not ported yet / stubbed
@@ -65,7 +66,7 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
 - Real now (`--service core`): accounts and login through `kb-session` (setup, unlock, lock, throttle, 2FA, recovery key, change of password,
   erase), the database opens on unlock and closes on lock, auto-lock (idle minutes of the preferences) and the Overview on real ops. Setup: password with
   meter, passwordless, recovery key with the typed confirmation, 2FA step with QR, import option disabled ("not available yet"). Settings -> Security is
-  minimal (password, passwordless, new recovery key, 2FA). The Accounts page is a **developer preview** to add an account and a transaction.
+  minimal (password, passwordless, new recovery key, 2FA). The developer preview of the Accounts page is gone (Settings -> Accounts is a stub until P2).
 - OS seal: the real service uses `kb_oseal::select_os_seal_for` (DPAPI, Keychain wrap key, Secret Service). At start, before the account file is read, an
   Electron-sealed `account.json` is moved to `seal: 'os-native'` (`kb_oseal::plan_migration`); the original stays as `account.electron.json` until the first
   native unlock that saved the file. A failure shows on the Lock screen ("Kasboek could not take over the data of the Electron app: ...") and changes nothing.
@@ -74,7 +75,7 @@ node tools/gen-fixtures.mjs <data.mjs>             # fixtures/household.json fro
 - Stubbed: lock on system lock/suspend and the OS idle time (`OsEvents` stub, TODO:
   real implementations per OS; the timer counts service calls and navigation), default categories
   are not localised after setup, no clipboard copy of the recovery key, no "choose a new password" screen after a recovery unlock, migrations are reported as one step.
-- The fixture service (`--service fixture`, screenshots) still simulates login. Pages other than Overview, Accounts and Settings are placeholder cards; buttons
+- The fixture service (`--service fixture`, screenshots) still simulates login. Pages other than Overview and Settings -> Security are placeholder cards; buttons
   whose operations do not exist (Review, Get tips, Not useful / Hide) show a toast naming the operation.
 - The window is shown with `show()`: Slint 1.19's software renderer has no first-paint hook, so "first frame" is the first
   timer tick after `show()` (an upper bound), as in the spike. The window is not created hidden.

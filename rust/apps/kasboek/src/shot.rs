@@ -1,6 +1,9 @@
 //! Offscreen screenshots of the screens (software renderer, no windowing system): `kasboek shot <screen> <light|dark> out.png`.
 //! The same controller and data as the real window; the screens are put in place synchronously.
-use crate::{app, arg, flag, pick_service, prefs::Prefs, service_from, today_from, view, App, DateCheck, Kind, Lock, Rules, SetupState};
+use crate::{
+    app, arg, flag, pages, pick_service, prefs::Prefs, service_from, today_from, view, App, DateCheck, Kind, Lock, Rules, SettingsState,
+    SetupState,
+};
 use kb_service::LoadStep;
 use kb_ui::shot;
 use serde_json::json;
@@ -52,7 +55,7 @@ pub fn run(args: &[String]) -> i32 {
         service_args.extend(["--state".into(), "unlocked".into()]);
     }
     // These screens need the answers of the real core (a seeded temporary database).
-    if matches!(screen.as_str(), "setup-twofactor" | "security" | "accounts") {
+    if matches!(screen.as_str(), "setup-twofactor" | "security") {
         service_args.extend(["--service".into(), "core-temp".into(), "--state".into(), "unlocked".into()]);
     }
     if screen.starts_with("lock-device") {
@@ -81,6 +84,12 @@ pub fn run(args: &[String]) -> i32 {
     let ctl = app::Ctl::attach(&ui, service.clone(), cfg, &prefs);
     ctl.set_theme(&ui, theme.as_str() == "dark");
 
+    let open_page = |page: &str, tab: i32| {
+        ui.global::<SettingsState>().set_tab(tab);
+        pages::show(&ctl, &ui, page);
+        ui.global::<crate::ShellState>().set_page(page.into());
+        ui.set_screen("shell".into());
+    };
     let status = |mode: &str, device: Option<&str>| json!({ "state": "locked", "mode": mode, "device": device, "twoFactor": false, "rememberedUntil": null, "throttleSeconds": 0, "keyProtection": "os", "deviceChecking": false, "legacyData": false });
     match screen.as_str() {
         "lock-password" => ctl.show_lock(&ui, &status("password", None)),
@@ -117,12 +126,26 @@ pub fn run(args: &[String]) -> i32 {
             ui.global::<SetupState>().set_step("twofactor".into());
             ctl.show_totp(&ui, kb_service::block_on(service.invoke("auth.totpBegin", json!({}))));
         }
-        "security" | "accounts" => {
+        "security" => {
             let call = |op: &str| kb_service::block_on(service.invoke(op, json!({})));
             ctl.show_security(&ui, &call("auth.status").unwrap_or_default());
-            ctl.show_accounts(&ui, &call("accounts.list"));
-            ui.global::<crate::ShellState>().set_page(screen.as_str().replace("security", "settings").into());
-            ui.set_screen("shell".into());
+            open_page("settings", 2);
+        }
+        // The stubs of the pages not ported yet: the page, a tab of Settings (the order of pages.slint), the assistant panel
+        // (open next to a page) and the welcome screen.
+        "transactions" | "budgets" | "recurring" | "goals" | "year" | "networth" | "import" => open_page(screen.as_str(), 0),
+        "settings-general" => open_page("settings", 0),
+        "settings-accounts" => open_page("settings", 1),
+        "settings-data" => open_page("settings", 3),
+        "settings-assistant" => open_page("settings", 4),
+        "settings-about" => open_page("settings", 5),
+        "assistant" => {
+            open_page("transactions", 0);
+            ui.global::<crate::ShellState>().set_assistant_open(true);
+        }
+        "welcome" => {
+            pages::show(&ctl, &ui, "welcome");
+            ui.set_screen("welcome".into());
         }
         "loading" => {
             ctl.progress(&ui, LoadStep::Opening, 1, 1);

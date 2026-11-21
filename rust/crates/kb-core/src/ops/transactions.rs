@@ -269,3 +269,31 @@ pub fn delete<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         Ok(obj!({ "deleted": delete_transactions(core.db()?, &ids)? }))
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &[
+    "transactions.list",
+    "transactions.create",
+    "transactions.update",
+    "transactions.edit",
+    "transactions.splits",
+    "transactions.split",
+    "transactions.rename",
+    "transactions.categorize",
+    "transactions.delete",
+];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "transactions.list" => list::<S>,
+        "transactions.create" => create::<S>,
+        "transactions.update" => update::<S>,
+        "transactions.edit" => edit::<S>,
+        "transactions.splits" => splits::<S>,
+        "transactions.split" => split::<S>,
+        "transactions.rename" => rename::<S>,
+        "transactions.categorize" => categorize::<S>,
+        "transactions.delete" => delete::<S>,
+        _ => return None,
+    })
+}

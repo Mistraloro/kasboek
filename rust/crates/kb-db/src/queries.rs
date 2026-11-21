@@ -1,8 +1,16 @@
 //! The typed queries of the business operations (`kb-core`). Every statement behind them is in `sqlite_queries.rs`;
 //! `kb-core` never writes SQL. They are plain reads and writes: all decisions (validation, merging, error texts) stay in
 //! `kb-core`, which makes this the surface a second storage engine has to implement.
+//!
+//! The business operations that come later get one file each in `queries/` (a trait and its `impl for SqliteStore`); `Store`
+//! requires them all.
 use crate::error::DbResult;
 use crate::rows::*;
+
+pub mod assistant;
+pub mod insights;
+pub mod memory;
+pub mod sync;
 
 pub trait Queries {
     /* ----- settings, audit ----- */

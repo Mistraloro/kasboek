@@ -271,6 +271,42 @@ pub fn undo<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: UndoIn| Ok(obj!({ "deleted": undo_batch(core.db()?, i.batch_id.0)? })))
 }
 
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &[
+    "import.analyze",
+    "import.analyzeXml",
+    "import.preview",
+    "import.current",
+    "import.raw",
+    "import.remap",
+    "import.updateRows",
+    "import.commit",
+    "import.checkApply",
+    "import.checkUndo",
+    "import.discard",
+    "import.batches",
+    "import.undo",
+];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "import.analyze" => analyze_op::<S>,
+        "import.analyzeXml" => analyze_xml_op::<S>,
+        "import.preview" => preview_op::<S>,
+        "import.current" => current::<S>,
+        "import.raw" => raw::<S>,
+        "import.remap" => remap_op::<S>,
+        "import.updateRows" => update_rows_op::<S>,
+        "import.commit" => commit_op::<S>,
+        "import.checkApply" => check_apply::<S>,
+        "import.checkUndo" => check_undo::<S>,
+        "import.discard" => discard_op::<S>,
+        "import.batches" => batches::<S>,
+        "import.undo" => undo::<S>,
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::decode_base64;

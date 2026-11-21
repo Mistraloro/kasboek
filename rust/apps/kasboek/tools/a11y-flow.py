@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Drives the real app through AT-SPI (as a screen reader or switch user would): Setup (password, recovery key with the
-4-character confirmation, two-factor "Not now"), Lock, a wrong and the right password, Settings -> Security, and the Accounts
-page of the developer preview up to the new account on the Overview. Invented password from argv. Run with the system python
+4-character confirmation, two-factor "Not now"), Lock, a wrong and the right password, Settings -> Security, and the pages that are
+not ported yet (each shows its "not available" card). Invented password from argv. Run with the system python
 (python3-pyatspi) inside a session bus and a display, see a11y-flow.sh."""
 import base64
 import hashlib
@@ -112,16 +112,15 @@ click("push button", "Unlock")
 wait(named("push button", "Lock"), "unlocked again", 20)
 print("UNLOCKED AGAIN")
 
-# Settings: Security page, then the developer-preview Accounts page: add an account and see it.
+# Settings (it opens on the General tab): the Security tab, then the pages that are not ported yet.
 click("push button", "Settings")
+click("push button", "Security")
 wait(named("push button", "New recovery key…"), "security page")
 print("SECURITY PAGE REACHED")
-click("push button", "Accounts")
-type_into("entry", "Account name", "Holiday fund")
-type_into("entry", "Opening balance", "250.50")
-click("push button", "Add account")
-wait(lambda n: n.getRoleName() in ("label", "unknown") and n.name and "Holiday fund" in n.name and "250" in n.name, "new account row")
-print("ACCOUNT ADDED")
+for page in ("Transactions", "Budgets", "Fixed costs", "Goals", "Year", "Net worth", "Import"):
+    click("push button", page)
+    wait(lambda n: n.getRoleName() in ("label", "unknown") and "Not available in this version yet" in (n.name or ""), f"{page} placeholder")
+    print("PLACEHOLDER", page)
 click("push button", "Overview")
-wait(lambda n: n.getRoleName() in ("label", "unknown") and "Holiday fund" in (n.name or ""), "account on the overview")
-print("ACCOUNT ON OVERVIEW")
+wait(named("push button", "Lock"), "shell after the walk")
+print("WALK DONE")

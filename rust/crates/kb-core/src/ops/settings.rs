@@ -33,3 +33,14 @@ pub fn update<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         json(&update_settings(core.db()?, &patch)?)
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["settings.get", "settings.update"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "settings.get" => get::<S>,
+        "settings.update" => update::<S>,
+        _ => return None,
+    })
+}

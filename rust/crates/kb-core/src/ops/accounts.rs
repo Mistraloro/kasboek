@@ -248,3 +248,15 @@ pub fn update<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         json(&Account::from(row))
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["accounts.list", "accounts.create", "accounts.update"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "accounts.list" => list::<S>,
+        "accounts.create" => create::<S>,
+        "accounts.update" => update::<S>,
+        _ => return None,
+    })
+}

@@ -34,3 +34,15 @@ pub fn set<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
 pub fn copy_previous<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: MonthIn| Ok(obj!({ "copied": copy_budgets(core.db()?, &i.month.0)? })))
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["budgets.list", "budgets.set", "budgets.copyPrevious"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "budgets.list" => list::<S>,
+        "budgets.set" => set::<S>,
+        "budgets.copyPrevious" => copy_previous::<S>,
+        _ => return None,
+    })
+}

@@ -33,6 +33,12 @@ tempfile = "3"
 zeroize = { version = "1", features = ["serde"] }
 subtle = "2"
 thiserror = "2"
+# The one blocking HTTP client (ECB rates, assistant providers, updater, WebDAV; plan section 11.2 O0). TLS is rustls with the
+# `ring` provider and the operating system's trust store (`platform-verifier`); no bundled root list (its licence is not on the
+# allow-list of deny.toml), no tokio, no aws-lc. Proxies come from the HTTPS_PROXY / ALL_PROXY variables and, on Windows, the
+# registry (`win-system-proxy`); PAC files are not read.
+ureq = { version = "3", default-features = false, features = ["rustls-no-provider", "platform-verifier", "win-system-proxy"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 kb-crypto = { path = "crates/kb-crypto" }
 kb-db = { path = "crates/kb-db" }
 kb-core = { path = "crates/kb-core" }

@@ -83,3 +83,16 @@ struct IdIn {
 pub fn delete<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: IdIn| json(&delete_goal(core.db()?, i.id.0, &core.today())?))
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["goals.list", "goals.create", "goals.update", "goals.delete"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "goals.list" => list::<S>,
+        "goals.create" => create::<S>,
+        "goals.update" => update::<S>,
+        "goals.delete" => delete::<S>,
+        _ => return None,
+    })
+}

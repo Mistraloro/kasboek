@@ -126,3 +126,14 @@ pub fn update<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         json(&core.prefs.borrow_mut().update(&patch)?)
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["prefs.get", "prefs.update"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "prefs.get" => get::<S>,
+        "prefs.update" => update::<S>,
+        _ => return None,
+    })
+}

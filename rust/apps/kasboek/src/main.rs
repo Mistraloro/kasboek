@@ -17,14 +17,13 @@
 //! `--demo-setup` (create or unlock the account with `KASBOEK_DEMO_PASSWORD`, no screens); release builds do not.
 // A double-clicked Windows binary must not open a console window; its output is startup.log.
 #![cfg_attr(windows, windows_subsystem = "windows")]
-mod accounts;
 mod app;
 mod device;
 mod format;
 mod loading;
 mod log;
+mod pages;
 mod prefs;
-mod security;
 mod setup_rules;
 mod shot;
 mod titlebar;

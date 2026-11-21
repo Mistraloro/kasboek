@@ -64,3 +64,17 @@ struct SetCostIn {
 pub fn set_cost<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: SetCostIn| Ok(obj!({ "costCents": set_transfer_cost(core.db()?, i.id.0, i.cost_cents.0)? })))
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["transfers.find", "transfers.pair", "transfers.unpair", "transfers.cost", "transfers.setCost"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "transfers.find" => find::<S>,
+        "transfers.pair" => pair::<S>,
+        "transfers.unpair" => unpair::<S>,
+        "transfers.cost" => cost::<S>,
+        "transfers.setCost" => set_cost::<S>,
+        _ => return None,
+    })
+}

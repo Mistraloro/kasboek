@@ -1,7 +1,7 @@
 //! The registry against `contract.json`, which the parity suite dumps from the TypeScript sources.
 use kb_core::contract::contract;
 use kb_core::table::{OPS, PUBLIC_OPS};
-use kb_core::{Actor, PORTED};
+use kb_core::Actor;
 use serde_json::{json, Value};
 
 mod common;
@@ -22,19 +22,47 @@ fn the_op_list_and_flags_equal_contract_json() {
     assert_eq!(public, PUBLIC_OPS, "PUBLIC_OPS in the same order");
 }
 
+/// Who answers an operation: kb-core (`ported`), the service (`kb_service::SERVICE_OPS`: `app.*` and the desktop operations)
+/// or the session (`auth.*`). Nothing here is a fixed count: a batch that adds operations edits its own registry only.
+fn served_elsewhere() -> Vec<&'static str> {
+    let auth = kb_session::ops::register_ops::<kb_db::SqliteStore>().into_iter().filter(|o| o.in_contract).map(|o| o.name);
+    kb_service::SERVICE_OPS.iter().copied().chain(auth).collect()
+}
+
+#[test]
+fn every_operation_has_one_owner_that_is_in_the_contract() {
+    let (core, elsewhere) = (kb_core::ported(), served_elsewhere());
+    for name in core.iter().chain(&elsewhere) {
+        assert!(OPS.iter().any(|(n, _, _)| n == name), "{name} is not in the contract");
+    }
+    let mut all: Vec<&str> = core.iter().chain(&elsewhere).copied().collect();
+    let served = all.len();
+    all.sort_unstable();
+    all.dedup();
+    assert_eq!(all.len(), served, "an operation is claimed by two owners (kb-core, kb_service::SERVICE_OPS, auth)");
+}
+
+/// The end state of the port (docs/rust-port-plan.md section 11): all 154 operations answered, none `op.not_ported`. Fails until
+/// the last batch has merged; run it with `--ignored` to see how far the port is.
+#[test]
+#[ignore = "fails until the last op batch has merged"]
+fn all_154_operations_are_served() {
+    let (core, elsewhere) = (kb_core::ported(), served_elsewhere());
+    let missing: Vec<&str> = OPS.iter().map(|(n, _, _)| *n).filter(|n| !core.contains(n) && !elsewhere.contains(n)).collect();
+    assert!(missing.is_empty(), "{} of {} operations are not served: {missing:?}", missing.len(), OPS.len());
+}
+
 #[test]
 fn every_unported_operation_says_so_and_every_ported_one_exists() {
     let f = common::fresh();
-    for name in PORTED {
-        assert!(OPS.iter().any(|(n, _, _)| n == name), "{name} is in the contract");
-    }
-    assert_eq!(PORTED.len(), 68);
+    let ported = kb_core::ported();
+    // The core answers `op.not_ported` for what it does not hold itself, which includes what the service or the session serves.
     for (name, _, _) in OPS {
         let result = f.core.dispatch(name, json!({}), Actor::User);
-        let ported = PORTED.contains(name);
+        let in_core = ported.contains(name);
         match result {
-            Err(e) if e.code == "op.not_ported" => assert!(!ported, "{name} is listed as ported but answers op.not_ported"),
-            _ => assert!(ported, "{name} answered although it is not listed as ported"),
+            Err(e) if e.code == "op.not_ported" => assert!(!in_core, "{name} is listed as ported but answers op.not_ported"),
+            _ => assert!(in_core, "{name} answered although it is not listed as ported"),
         }
     }
 }
@@ -55,7 +83,8 @@ fn enums_and_defaults_equal_the_typescript_ones() {
 #[test]
 fn the_input_keys_of_ported_operations_are_the_schema_keys() {
     let f = common::fresh();
-    for op in contract()["ops"].as_array().unwrap().iter().filter(|o| PORTED.contains(&o["name"].as_str().unwrap())) {
+    let ported = kb_core::ported();
+    for op in contract()["ops"].as_array().unwrap().iter().filter(|o| ported.contains(&o["name"].as_str().unwrap())) {
         let name = op["name"].as_str().unwrap();
         let props = op["input"]["properties"].as_object().cloned().unwrap_or_default();
         // An unknown key is always refused...

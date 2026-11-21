@@ -1,18 +1,42 @@
-// The window: Lock, Setup, loading view or the shell with the Overview, over the design system. The screens are bound
+// The window: Lock, Setup, loading view, welcome or the shell with its pages, over the design system. The screens are bound
 // to the globals of state.slint (generated binding lists, kept in step by hand).
 import { Theme, Session, ToastHost, ToastItem, UiText, Rules, DateCheck } from "@kb-ui";
 import { Tx } from "tx.slint";
 import { LockScreen, SetupScreen, LoadingScreen } from "auth.slint";
 import { Shell } from "shell.slint";
 import { OverviewPage } from "overview.slint";
-import { SecurityPage, AccountsPage } from "pages.slint";
-import { Lock, SetupState, Loading, ShellState, Ov, Recovery, Totp, Sec, Acc } from "state.slint";
-export { Theme, Session, UiText, Rules, DateCheck, Tx, ToastItem, Lock, SetupState, Loading, ShellState, Ov, Recovery, Totp, Sec, Acc }
-export { AlertRow, TipRow, AccountRow, RuleRow, QrRun, AccountLine } from "state.slint";
+import { SettingsPage, SettingsState } from "pages.slint";
+import { WelcomeScreen, WelcomeState } from "welcome.slint";
+import { AssistantPanelState } from "assistant/panel.slint";
+import { TransactionsPage, TransactionsState } from "pages/transactions.slint";
+import { BudgetsPage, BudgetsState } from "pages/budgets.slint";
+import { RecurringPage, RecurringState } from "pages/recurring.slint";
+import { GoalsPage, GoalsState } from "pages/goals.slint";
+import { YearPage, YearState } from "pages/year.slint";
+import { NetworthPage, NetworthState } from "pages/networth.slint";
+import { ImportPage, ImportState } from "pages/import.slint";
+import { AccountsState } from "pages/settings/accounts.slint";
+import { AppearanceState } from "pages/settings/appearance.slint";
+import { FormatsState } from "pages/settings/formats.slint";
+import { CurrenciesState } from "pages/settings/currencies.slint";
+import { Sec } from "pages/settings/security.slint";
+import { BackupsState } from "pages/settings/backups.slint";
+import { TransferState } from "pages/settings/transfer.slint";
+import { SyncState } from "pages/settings/sync.slint";
+import { InsightsState } from "pages/settings/insights.slint";
+import { AssistantSettingsState } from "pages/settings/assistant.slint";
+import { MemoryState } from "pages/settings/memory.slint";
+import { AboutState } from "pages/settings/about.slint";
+import { Lock, SetupState, Loading, ShellState, Ov, Recovery, Totp } from "state.slint";
+export { Theme, Session, UiText, Rules, DateCheck, Tx, ToastItem, Lock, SetupState, Loading, ShellState, Ov, Recovery, Totp }
+// The global of every page, section and panel (each is defined in the file of its page).
+export { Sec, SettingsState, WelcomeState, AssistantPanelState, TransactionsState, BudgetsState, RecurringState, GoalsState, YearState, NetworthState, ImportState }
+export { AccountsState, AppearanceState, FormatsState, CurrenciesState, BackupsState, TransferState, SyncState, InsightsState, AssistantSettingsState, MemoryState, AboutState }
+export { AlertRow, TipRow, AccountRow, RuleRow, QrRun } from "state.slint";
 export { CategoryBar, MonthDatum } from "@kb-ui";
 
 export component App inherits Window {
-    // "lock" | "setup" | "loading" | "shell".
+    // "lock" | "setup" | "loading" | "welcome" | "shell".
     in-out property <string> screen: "lock";
     in property <bool> dark: false;
     in property <string> window-title: "Kasboek";
@@ -122,7 +146,7 @@ export component App inherits Window {
         step-text: Loading.step-text;
         value: Loading.value;
     }
-    if root.screen == "shell": Shell {
+    if root.screen == "shell": shell := Shell {
         width: parent.width;
         height: parent.height;
         page <=> ShellState.page;
@@ -130,9 +154,6 @@ export component App inherits Window {
         caption-inset: ShellState.caption-inset;
         sidebar-top: ShellState.sidebar-top;
         version-text: ShellState.version-text;
-        placeholder-heading: ShellState.placeholder-heading;
-        placeholder-body: ShellState.placeholder-body;
-        assistant-note: ShellState.assistant-note;
         lock => {
             ShellState.lock();
         }
@@ -140,6 +161,7 @@ export component App inherits Window {
             ShellState.go(p);
         }
         about => {
+            SettingsState.tab = 5;
             ShellState.about();
         }
         if ShellState.page == "overview": OverviewPage {
@@ -215,14 +237,42 @@ export component App inherits Window {
                 ShellState.go(p);
             }
         }
-        if ShellState.page == "settings": SecurityPage {
-            width: parent.width;
-            height: parent.height;
+        if ShellState.page == "transactions": TransactionsPage {
+            width: shell.content-width;
+            height: shell.content-height;
         }
-        if ShellState.page == "accounts": AccountsPage {
-            width: parent.width;
-            height: parent.height;
+        if ShellState.page == "budgets": BudgetsPage {
+            width: shell.content-width;
+            height: shell.content-height;
         }
+        if ShellState.page == "recurring": RecurringPage {
+            width: shell.content-width;
+            height: shell.content-height;
+        }
+        if ShellState.page == "goals": GoalsPage {
+            width: shell.content-width;
+            height: shell.content-height;
+        }
+        if ShellState.page == "year": YearPage {
+            width: shell.content-width;
+            height: shell.content-height;
+        }
+        if ShellState.page == "networth": NetworthPage {
+            width: shell.content-width;
+            height: shell.content-height;
+        }
+        if ShellState.page == "import": ImportPage {
+            width: shell.content-width;
+            height: shell.content-height;
+        }
+        if ShellState.page == "settings": SettingsPage {
+            width: shell.content-width;
+            height: shell.content-height;
+        }
+    }
+    if root.screen == "welcome": WelcomeScreen {
+        width: parent.width;
+        height: parent.height;
     }
     ToastHost {
         toasts: root.toasts;

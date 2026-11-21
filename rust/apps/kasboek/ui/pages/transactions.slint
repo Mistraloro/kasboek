@@ -1,0 +1,14 @@
+// Transactions page: a stub until it is ported (the global is the page's own; the page batch replaces both).
+import { PlaceholderPage } from "../page.slint";
+import { Tx } from "../tx.slint";
+
+export global TransactionsState {
+    in property <string> heading;
+    in property <string> body;
+}
+
+export component TransactionsPage inherits PlaceholderPage {
+    title: Tx.tr("nav.transactions");
+    heading: TransactionsState.heading;
+    body: TransactionsState.body;
+}

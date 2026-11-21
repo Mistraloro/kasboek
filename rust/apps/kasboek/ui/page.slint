@@ -1,0 +1,69 @@
+// What the pages share: the card of a Settings section, and the stubs of pages and sections that are not ported yet. Every page
+// has its own file (pages/, pages/settings/, assistant/panel.slint, welcome.slint) with its own global.
+import { Theme, Icons, Label, PageHeader, Card, EmptyState } from "@kb-ui";
+
+export component Section inherits Card {
+    in property <string> title;
+    in property <string> hint;
+    height: col.preferred-height + 2px;
+    col := VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+        Label {
+            text: root.title;
+            font-family: Theme.serif;
+            font-size: Theme.fs-card-title;
+            font-weight: 600;
+            lh: Theme.lh-card-title;
+            accessible-role: AccessibleRole.text;
+        }
+        if root.hint != "": Label {
+            text: root.hint;
+            font-size: Theme.fs-ui;
+            lh: Theme.lh-ui;
+            color: Theme.muted;
+            wrap: word-wrap;
+            accessible-role: AccessibleRole.text;
+        }
+        @children
+    }
+}
+
+// A Settings section that is not ported yet: its card with the "not available" text.
+export component SectionStub inherits Section {
+    in property <string> body;
+    Label {
+        text: root.body;
+        font-size: Theme.fs-ui;
+        lh: Theme.lh-ui;
+        color: Theme.muted;
+        wrap: word-wrap;
+        accessible-role: AccessibleRole.text;
+    }
+}
+
+// A page that is not ported yet: the header and the empty-state card (App.tsx keeps the pages in `max-w-5xl`).
+export component PlaceholderPage inherits Rectangle {
+    in property <string> title;
+    in property <string> heading;
+    in property <string> body;
+    VerticalLayout {
+        x: (parent.width - self.width) / 2;
+        y: 16px;
+        width: min(944px, parent.width - 80px);
+        PageHeader {
+            title: root.title;
+        }
+        Rectangle {
+            height: 32px;
+        }
+        Card {
+            height: empty.preferred-height + 2px;
+            empty := EmptyState {
+                icon: Icons.circle-dashed;
+                title: root.heading;
+                body: root.body;
+            }
+        }
+    }
+}

@@ -6,6 +6,12 @@
 // Masked on both sides, because they are random or follow the wall clock: `uid` values (32 hex digits), every column named
 // `at` or ending in `_at`, and the keys createdAt / updatedAt / committedAt and sessionId of results. A string `"$session"` in
 // the input of a step stands for the sessionId the latest result had (the id of the open import).
+//
+// Desktop and network, served the same way by `kb-cli scenario` (scenario.rs documents the keys): `dialogs` answers the file
+// dialogs in order (null cancels), `http` answers the requests of `net.fetch` in order (a request for another URL fails) and
+// the requests seen are returned as `requests`, `readFiles` returns those files as `files`. `$tmp` in any string of the
+// scenario is its temporary folder, and that folder in a result string is printed as `$tmp` again. `service` is for the Rust
+// side only (the app's `dispatch` has the desktop operations itself).
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -13,7 +19,7 @@ import { vi } from 'vitest'
 import type { Db, openDatabase } from '@core/database'
 import type { fxChanged } from '@core/fx'
 import type { resetImportedSettings } from '@core/settings'
-import type { MockState } from './electron-mock'
+import type { HttpEntry, MockState } from './electron-mock'
 
 /** An invented key that protects nothing (the same as scenario.rs). */
 export const SCENARIO_KEY = '5a5a5a5a5a5a5a5a00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff'
@@ -30,11 +36,18 @@ export interface Scenario {
   languages?: string[]
   prefs?: string | null
   steps: Step[]
+  /** Rust side: run the steps through the service (service operations on job threads) instead of a bare core. */
+  service?: boolean
+  dialogs?: (string | null)[]
+  http?: HttpEntry[]
+  readFiles?: string[]
 }
 export interface Outcome {
   results: unknown[]
   dump: Record<string, { columns: string[]; rows: unknown[][] }>
   prefsFile: string | null
+  requests?: { method: string; url: string; body: string | null }[]
+  files?: Record<string, string | null>
 }
 
 type Dispatch = (op: string, input: unknown, actor: 'user' | 'assistant' | 'system') => Promise<unknown>
@@ -66,6 +79,14 @@ function maskResult(value: unknown): unknown {
       Object.entries(value).map(([k, v]) => [k, (k === 'createdAt' || k === 'updatedAt' || k === 'committedAt') && typeof v === 'string' ? '<time>' : k === 'sessionId' && typeof v === 'string' ? '<session>' : maskResult(v)])
     )
   }
+  return value
+}
+
+/** Replaces `$tmp` in every string by `dir`, or (reverse) `dir` by `$tmp`. */
+function mapStrings(value: unknown, f: (s: string) => string): unknown {
+  if (typeof value === 'string') return f(value)
+  if (Array.isArray(value)) return value.map((v) => mapStrings(v, f))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, mapStrings(v, f)]))
   return value
 }
 
@@ -107,9 +128,15 @@ export interface RunnerEnv {
   load: () => Promise<AppModules>
 }
 
-export async function runScenario(scenario: Scenario, env: RunnerEnv): Promise<Outcome> {
+export async function runScenario(original: Scenario, env: RunnerEnv): Promise<Outcome> {
   const dir = mkdtempSync(join(process.env.KB_PARITY_TMP ?? tmpdir(), 'kb-scn-'))
+  const scenario = mapStrings(original, (s) => s.replaceAll('$tmp', dir)) as Scenario
+  const unTmp = (v: unknown): unknown => mapStrings(v, (s) => s.replaceAll(dir, '$tmp'))
   const { state } = env
+  state.dialogs = [...(scenario.dialogs ?? [])]
+  state.http = [...(scenario.http ?? [])]
+  const requests: NonNullable<Outcome['requests']> = []
+  state.requests = requests
   state.userData = dir
   state.languages = scenario.languages ?? ['en']
   state.unlocked = true
@@ -153,7 +180,7 @@ export async function runScenario(scenario: Scenario, env: RunnerEnv): Promise<O
       }
       const found = (result as { ok?: boolean; data?: { sessionId?: unknown } } | undefined)?.data?.sessionId
       if (typeof found === 'string') session = found
-      results.push(maskResult(JSON.parse(JSON.stringify(result))))
+      results.push(unTmp(maskResult(JSON.parse(JSON.stringify(result)))))
     }
     let prefsFile: string | null = null
     try {
@@ -161,7 +188,20 @@ export async function runScenario(scenario: Scenario, env: RunnerEnv): Promise<O
     } catch {
       prefsFile = null
     }
-    return { results, dump: dump(db), prefsFile }
+    const outcome: Outcome = { results, dump: dump(db), prefsFile }
+    if (requests.length > 0) outcome.requests = unTmp(requests) as typeof requests
+    if (scenario.readFiles) {
+      outcome.files = Object.fromEntries(
+        scenario.readFiles.map((path, i) => {
+          try {
+            return [original.readFiles![i]!, readFileSync(path, 'utf8')]
+          } catch {
+            return [original.readFiles![i]!, null]
+          }
+        })
+      )
+    }
+    return outcome
   } finally {
     vi.useRealTimers()
     db.close()

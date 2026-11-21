@@ -187,3 +187,18 @@ pub fn delete<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
         json(&list_rules(db)?)
     })
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["rules.list", "rules.create", "rules.preview", "rules.update", "rules.reorder", "rules.delete"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "rules.list" => list::<S>,
+        "rules.create" => create::<S>,
+        "rules.preview" => preview::<S>,
+        "rules.update" => update::<S>,
+        "rules.reorder" => reorder::<S>,
+        "rules.delete" => delete::<S>,
+        _ => return None,
+    })
+}

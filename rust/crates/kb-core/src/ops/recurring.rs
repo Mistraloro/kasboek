@@ -46,3 +46,14 @@ struct HideIn {
 pub fn hide<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: HideIn| json(&set_recurring_hidden(core, &i.key.0, i.hidden, &core.today())?))
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["recurring.list", "recurring.hide"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "recurring.list" => list::<S>,
+        "recurring.hide" => hide::<S>,
+        _ => return None,
+    })
+}

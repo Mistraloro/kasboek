@@ -18,4 +18,7 @@ sha2.workspace = true
 unicode-normalization.workspace = true
 
 [dev-dependencies]
+# The contract test counts the operations the other crates serve (kb-service depends on this crate: a dev-dependency cycle is fine).
+kb-service.workspace = true
+kb-session.workspace = true
 tempfile.workspace = true

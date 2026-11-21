@@ -75,6 +75,8 @@ export function comparer(state: MockState, tmpDir: string) {
     const dump = firstDifference(canonical(ts.dump), canonical(rust.dump))
     if (dump) expect.fail(`database dump: ${dump}`)
     expect(canonical(rust.prefsFile)).toEqual(canonical(ts.prefsFile))
+    expect(canonical(rust.requests)).toEqual(canonical(ts.requests))
+    expect(canonical(rust.files)).toEqual(canonical(ts.files))
     return { ...ts, rustMs, tsMs }
   }
 }

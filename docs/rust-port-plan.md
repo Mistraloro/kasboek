@@ -970,6 +970,176 @@ New texts for the release branch's locale files (the app keeps them in `crates/k
 - `account.electron.json` is deleted after the first native unlock that saved, and on every credential change; erase/restore carry it.
 - Wrap key: created only when absent (Keychain `SecItemAdd`; Secret Service oldest-item-wins), deleted and recreated when the data folder has no native account (nor an erased one) yet; `usable()` neither prompts nor remembers a "no". macOS and Linux keyring behaviour is untested on real machines.
 
+## 11. Remaining work: ops and pages (batches)
+
+**Status (Nov 2026).** kb-core answers 68 of 154 ops (`rust/crates/kb-core/src/ops/mod.rs:57`). Of the other 86, 17 already run outside
+kb-core: the 14 `auth.*` ops (`kb-session::ops::register_ops`, routed in `kb-service/src/core_service.rs:414`) and `app.info/ready/milestone`
+(`core_service.rs:360`). **69 remain**: 10 are pure core logic (memory, local insights; `src/core/ops.ts:258-271`), 59 are desktop ops of
+`src/main/ipc.ts` (dialogs, files, network, child processes, background jobs). Those belong in `kb-service` and new crates, not in kb-core.
+
+### 11.1 Rules for parallel batches
+
+- One batch = one implementer owning the files listed. Shared files are edited only by the prep batches **O0** and **P0** and by the
+  integration batch **Z** (after each wave).
+- kb-core: one file `ops/<area>.rs` per area with its own `handler()` and `PORTED` slice; `ops/mod.rs` only chains them (O0).
+- kb-db: each area adds its own trait in `src/queries/<area>.rs` (trait + `impl for SqliteStore` in the same file). SQL is copied verbatim
+  from the TS, with the same `ORDER BY` and no extra tie-breaks: the engine order must equal the TS order.
+- kb-service: desktop ops live in `src/ops/<area>.rs`, each with `register(&mut ServiceTable)`, the way auth is registered. They run on a
+  **job thread**, never on the DB worker (`core_service.rs:410` serialises everything today; a dialog or a 60 s PDF read would freeze the
+  app). They reach the database through `JobCtx::with_core`, and every job is cancelled on lock (as `cancelRunningJobs` does).
+- Each op batch: test-writer first (scenarios in its own number range in `rust/parity/scenarios/`, vitest tests ported to Rust), then
+  implementer, then code-reviewer. Security-reviewer where marked (S).
+- New UI text: pages use the existing locale keys. Native-only keys are listed in the batch report; Z adds them to
+  `kb-i18n/locales/extra.*.json`.
+
+### 11.2 Op batches
+
+**O0 Ops prep** (first; 8–12 h). Files: `kb-core/src/ops/mod.rs`, `kb-core/tests/contract.rs` (drop the fixed `68` at `:31`; count
+kb-core + `kb_service::SERVICE_OPS` + auth so the total reaches 154), `kb-db/src/lib.rs` + empty `src/queries/{memory,insights,sync,assistant}.rs`,
+`kb-service/src/{lib.rs,core_service.rs}`, new `kb-service/src/{desktop.rs,http.rs,jobs.rs,ops/mod.rs}` + empty area files,
+`kb-cli/src/scenario.rs` (a `"service": true` scenario runs through the service table with `FakeDesktop` + `FakeHttp`),
+`rust/parity/{electron-mock.ts,scenario-runner.ts}` (scenario keys `dialogs: [path|null…]` and `http: [{url,status,body|sse}]`, served on
+both sides; `$tmp` for file paths), `rust/Cargo.toml` (the one HTTP client for ECB, providers, updater and WebDAV). Architect review before merge.
+
+**O0 decisions (done).**
+- **HTTP client: blocking `ureq` 3** (`rust/Cargo.toml`, used in `kb-service/src/http.rs` as `UreqHttp`), features `rustls-no-provider`, `platform-verifier`,
+  `win-system-proxy`, plus `rustls` 0.23 with `ring` only. Reasons: (1) it adds 17 small crates to the lock file (`ureq`, `ureq-proto`, `http`,
+  `httparse`, `rustls`, `rustls-webpki`, `rustls-pki-types`, `ring`, `untrusted`, `rustls-platform-verifier`, `rustls-native-certs`, `openssl-probe`,
+  `schannel`, `winreg`, ...), where blocking `reqwest` brings `tokio`, `hyper`, `h2`, `tower` and `futures` for a client that only ever runs on job
+  threads; (2) the job threads of 11.1 are plain threads, so no async runtime is wanted; (3) the OS trust store is `rustls-platform-verifier`
+  (Windows CryptoAPI, macOS Security.framework, the system certificate files on Linux), not the bundled Mozilla list, which `ureq`'s default `rustls`
+  feature would pull in (`webpki-roots`, licence CDLA-Permissive-2.0, not on the allow-list of `rust/deny.toml`); (4) `ring` rather than `aws-lc-rs`
+  avoids a CMake/NASM build; its licence expression `Apache-2.0 AND ISC` is on the allow-list, and `about.toml` already has the `ring` workaround.
+  `webpki-root-certs` (CDLA-Permissive-2.0) is in `Cargo.lock` only as a `wasm32` and dev dependency of the platform verifier; the `[graph]` targets
+  of `deny.toml` are the six desktop targets. `cargo deny` itself was not run (not installed where O0 was built): CI must confirm.
+  Proxies: `HTTPS_PROXY` / `ALL_PROXY` and the Windows registry; **PAC scripts and the macOS/GNOME system proxy are not read** (a known gap against
+  `net.fetch`). Cancel inside a stream is checked between lines; a silent server is bounded by the 60 s default timeout.
+- **Deviations from the sketch above.** `JobCtx::with_core` takes `'static` closures and returns `Result<R, AppError>` (`job.cancelled` once the job is
+  cancelled, `op.failed` when the worker ended); `Worker` is public with `core()` and `session()`. `Cancel::check()` gives `job.cancelled`.
+  `Desktop::save_file` filters are `&[Filter]` (`(&str, &[&str])`).
+- **Routing** (`core_service.rs`): `app.*`/`prefs.*` first as before, then the service table (job thread; the lock state is read on the worker after the job is
+  registered, so a lock in between cancels it), then the worker (`auth.*`, then kb-core). A lock cancels every job (`sync_core` on the locked branch).
+  `kb_service::SERVICE_OPS` is `app.*` plus the registered names; the contract test counts kb-core + `SERVICE_OPS` + `auth.*` and has an `#[ignore]`d
+  `all_154_operations_are_served` for the end state.
+- **Scenario keys** (`scenario.rs` and `scenario-runner.ts`): `service`, `dialogs`, `http`, `readFiles` (printed as `files`), `$tmp`; the requests seen
+  are printed as `requests` (method, url, body). Number range 190 is the O0 plumbing smoke; batches use their own.
+
+    pub trait Desktop: Send + Sync {                       // NoDesktop, FakeDesktop (answer queue); the app's impl runs dialogs on the main thread
+        fn save_file(&self, title: &str, default_name: &str, filters: &[(&str, &[&str])]) -> Option<PathBuf>;
+        fn open_file(&self, title: &str, filters: &[(&str, &[&str])]) -> Option<PathBuf>;
+        fn pick_folder(&self, title: &str) -> Option<PathBuf>;
+        fn open_path(&self, path: &Path) -> bool;
+        fn open_url(&self, url: &str) -> bool;
+    }
+    pub trait Http: Send + Sync {                          // FakeHttp replays the scenario's `http` list
+        fn send(&self, req: HttpRequest) -> Result<HttpResponse, HttpError>;          // body size cap
+        fn stream(&self, req: HttpRequest, cancel: &Cancel, line: &mut dyn FnMut(&str)) -> Result<u16, HttpError>; // SSE
+    }
+    pub type ServiceHandler = fn(&JobCtx, Value) -> Result<Value, AppError>;
+    impl JobCtx { fn with_core<R: Send>(&self, f: impl FnOnce(&mut Worker) -> R + Send) -> R; fn emit(&self, e: AppEvent);
+                  fn cancel(&self) -> &Cancel; fn desktop(&self) -> &dyn Desktop; fn http(&self) -> &dyn Http; }
+
+| Batch | Ops | TS sources | Rust files (owned) | Parity (scenario numbers) | Depends | Hours | Risks |
+|---|---|---|---|---|---|---|---|
+| **B1** Memory | `memory.list/remember/add/update/forget/forgetAll/setEnabled` (7) | `core/memory.ts`, `shared/sensitive.ts`, `maskPrivate` | `kb-core/src/memory.rs`, `ops/memory.rs`, `kb-db/src/queries/memory.rs` | 200–219: limit 50, length 300, card/IBAN refusal, source person/assistant, disabled, unknown ids, audit | O0 | 3–5 | Lengths in UTF-16 units vs code points; `looksSensitive` regexes |
+| **B2** Local insights | `insights.get/feedback/restoreDismissed/preview` (4) | `core/insights.ts`, `core/insight-plan.ts` (`factsPayload`), `ipc.ts:482-483` (prefs language) | `kb-core/src/{insights.rs,insight_plan.rs}`, `ops/insights.rs`, `kb-db/src/queries/insights.rs` | 220–259: facts over 14 months, dismissed/not useful, stale data or language, preview text byte-equal in 8 languages | O0 | 6–9 | `localeCompare` (ICU) at `insights.ts:112,210`; `Math.round` of negative halves (`js_round`); `hashFacts` key order; `Date.parse` days |
+| **B3** Export CSV, ECB, restart | `export.csv`, `fx.updateEcb`, `app.restart` (3) | `core/finance.ts:612` (`transactionsCsv`), `main/export.ts`, `main/fx/ecb.ts`, `ipc.ts:182` | `kb-core/src/export.rs`, `kb-service/src/ops/{export.rs,ecb.rs}`; restart: the service answers ok, the app relaunches (`current_exe`) in P2 | 260–279: decimal comma/point, labels, quotes, filters, dialog cancel; ECB XML from a recorded fixture, duplicates, bad XML | O0 | 5–7 | Number formatting of amounts; ECB XML via the kb-import XML reader; proxy |
+| **B4** PDF import (S) | `import.analyzePdf`, `import.pdfCancel` (2) | `ipc.ts:499-524`, `main/pdf/{open,run,handle,protocol}.ts` | `kb-core/src/import_pdf.rs` (session from a grid), `kb-service/src/ops/pdf.rs` (child read on a job thread, `import.pdfProgress`, `import.pdf_busy`), `apps/kasboek/src/main.rs` (`--pdf-reader` mode + `CappedAlloc`), `kb-cli` same mode | `pdf.spec.ts`: analyze → preview → commit over the 63-PDF corpus, equal dumps; cancel; busy; reader missing (`import.pdf_reader_unavailable`) | O0 | 6–9 | Child path inside the mac bundle and MSI; empty environment on Windows; the allocator only in the app binary |
+| **B5** Transfer + backup (S) | `transfer.export/pick/import`, `backup.status/chooseFolder/configureAuto/runNow/list/pick/revealFolder` (10) | `main/transfer/{service,scheduler}.ts`, `core/backup-tiers.ts`, `ipc.ts:319-353,556-575,615-624` | `kb-service/src/ops/{transfer,backup}.rs`, `kb-service/src/backup_scheduler.rs`, `kb-core/src/backup_tiers.rs`; `kb-session` adopt/replace path (B5 owns those edits) | 300–339: export TS → import Rust and back (password, recovery, 2FA), `KASBOEK1` refused, `UNTRUSTED_AFTER_IMPORT` reset, retention tiers on a fixed clock, `timeFromName`, `pick` path traversal refused, events `backup.completed/failed` | O0 | 10–14 | **Local time** in file names (`transfer/service.ts:27`): `Clock` has only a fixed offset, so use the OS offset now and test DST; DB replaced while a job runs; atomic replace on Windows |
+| **B6** Sync (S) | `sync.status/start/pickJoin/cancelJoin/attach/now/stop/dismissConflicts` (8) | `core/{sync,sync-store,sync-store-folder}.ts`, `main/sync/service.ts` (638), `WebDav.tsx` | new crate `kb-sync` (engine: HLC, flush, apply, conflicts; folder + WebDAV stores; service), `kb-db/src/queries/sync.rs`, `kb-service/src/ops/sync.rs` | 340–379, plus `rust/parity/sync.spec.ts` **mixed fleet**: one TS and one Rust DB alternate flush/apply over one folder with edits, deletes and clashes until both dumps and conflicts are equal; join through `transfer.import` | O0; join part after B5 | 20–30 (engine first, then service) | JS numbers vs SQLite INTEGER/REAL in change JSON (`1` vs `1.0`); HLC string format; apply order; WebDAV TLS/proxy; cancel on lock |
+| **A1** Assistant base (S) | `assistant.status/setKey/models/clearKey/addProvider/renameProvider/removeProvider/configure` (8) | `main/assistant/{claude,openai,provider,models,json}.ts`, `core/secrets.ts`, `ipc.ts:355-448`; `tools.ts` (tool table + `needsApproval`) | new crate `kb-assistant` (`providers/`, `sse.rs`, `tools.rs` from `contract.json` schemas + permissions + guard), `kb-db/src/queries/assistant.rs` (secrets), `kb-service/src/ops/assistant.rs` | 380–399: key check against a recorded server, provider list edits, models parse, `assistant.update` events, keys never in results or audit | O0 | 12–18 | API key stays in the DB `secrets` table, zeroized; errors mapped to the same codes; `KASBOEK_SKIP_KEY_CHECK` dev rule |
+| **A2** Chat loop (S) | `assistant.send/confirm/stop/reset` (4) | `main/assistant/chat.ts`, `core/assistant-loop.ts`, `core/page-context.ts`, `main/assistant-guard.ts` | `kb-assistant/src/{chat.rs,loop.rs,page_context.rs}`, `kb-service/src/ops/assistant_chat.rs` | 400–419: request bodies **byte-equal** for scripted SSE replies, tool calls as `Actor::Assistant`, confirmation, stop mid-stream, reset | A1 | 12–18 | JSON key order and float printing in bodies; stream cancellation; masking |
+| **B8** AI jobs (S) | `import.assist/assistPreview/assistStatus/assistCancel/pdfAssistPreview/pdfAssist`, `insights.run/status/cancel` (9) | `main/assistant/{csv,pdf,insights,jobs}.ts`, `core/{assist-plan,pdf-plan}.ts` (`parsePdfPlan`, `applyRowsPlan`), `insight-plan.ts` parse/verify | `kb-assistant/src/{import_check.rs,pdf_assist.rs,insights_run.rs,jobs.rs}`, `kb-service/src/ops/ai_jobs.rs` | 420–449: previews byte-equal (the masking guarantee, section 6), proposals parsed and applied, `import.checkProgress/checkDone`, `insights.updated`, cancel. Previews can merge before the runs | A1, B2, B4 | 16–24 | Byte identity of the text sent; partial answers; job state cleared on lock |
+| **M1** MCP setup | `mcp.setupStatus/desktopRunning/desktopAdd/desktopRemove/codeAdd/codeRemove` (6) | `core/mcp-config.ts`, `main/mcp/setup.ts` | new crate `kb-mcp` (`config.rs`, `setup.rs`), `kb-service/src/ops/mcp_setup.rs` | 450–459: Claude Desktop config edits keep other keys and order, overwritten/missing helper, `claude` CLI calls faked | O0 | 5–8 | Config paths per OS; helper exe path = install layout |
+| **M2** MCP bridge (S) | `mcp.clients/respond` (2), plus the bridge server | `main/mcp/{bridge,channel}.ts` | `kb-mcp/src/{bridge.rs,channel.rs}`, `kb-service/src/ops/mcp_bridge.rs` | 460–479: Go helper `list`/`call` against Rust, approval through `mcp.request/expired/respond`, wrong token refused | A1 | 8–12 | Socket and pipe permissions, discovery file `mcp-bridge.json`; Go helper protocol unchanged |
+| **B10** Updater (S) | `update.status/check/download/install/openPage` (5) | `core/update.ts`, `main/update.ts`, `update-texts.ts` | new crate `kb-update`, `kb-service/src/ops/update.rs` | 480–499: recorded GitHub API, `pickAsset`, SHA256SUMS mismatch, MSI outcomes, `update.changed` | O0 | 10–14 | Asset names must match section 11.5; install step needs the real installers |
+| **B11** Year PDF | `export.pdf` (1) | `Year.tsx` report HTML, `main/export.ts:27` | `kb-service/src/ops/report_pdf.rs` (`krilla` or `printpdf`, embedded fonts, A4 margins 0.6 in) | 500–509: content snapshot of the text in the PDF | owner decision on the contract change (section 4) | 8–12 | Input changes from HTML to structured data: a visible difference, goes in the release notes |
+
+### 11.3 Pages
+
+Native today: Lock, Setup (no import, no restore-erased), loading view, Overview (tips, review and feedback answer "not ported"),
+Settings → Security (minimal), Accounts "Developer preview" (a nav item the Electron app does not have), shell with placeholders.
+
+**P0 Page scaffold** (first, parallel with O0; 5–8 h). Owns `apps/kasboek/ui/{app.slint,shell.slint,state.slint,pages.slint}` and
+`apps/kasboek/src/{app.rs,main.rs}`. It creates one stub per page with its own global in the same file:
+- `ui/pages/{transactions,budgets,recurring,goals,year,networth,import}.slint`
+- `ui/pages/settings/{accounts,appearance,formats,currencies,security,backups,transfer,sync,insights,assistant,memory,about}.slint`
+- `ui/assistant/panel.slint`, `ui/welcome.slint`
+- `src/pages/<page>.rs` with `wire()`, `show()` and `on_data_changed()`; `app.rs` only calls `pages::wire_all` / `pages::show`.
+
+It also moves `SecurityPage` into `settings/security.slint`, splits `tools/gen-fixtures.mjs` input into per-page op lists
+(`fixtures/pages/<page>.json`), and adds `src/desktop.rs` (rfd `Desktop` running dialogs on the Slint event loop, needed on macOS) once O0
+has merged. After P0, a page batch touches only its own files.
+
+**Shared components (kb-ui).**
+- **U1** (14–20 h). First commit: export the components that exist but are not in `ui/lib.slint` (Select, Popover, Tip, HoverTip,
+  Modal, ConfirmDialog, DateInput, ListView, Tabs, TableRow/Cell, Meter, TrendLine, RadioGroup, Segmented). Then:
+  - **DataTable**: header, column widths computed in Rust, numbers right-aligned, checkbox and shift-range selection, keyboard, accessible
+    row labels, on the virtualised ListView.
+  - **PagedModel** (`src/paged.rs`): 200-row pages, LRU of 10, invalidated on `data.changed`.
+  - **Menu/ContextMenu** (row actions).
+  - **TextArea**.
+  - **AmountInput**: format-aware; move `parse_cents` from `apps/kasboek/src/accounts.rs:11`.
+  - **FormDialog**.
+  - Toast with an action (Undo).
+  - Gallery and React-twin cases for each.
+- **U2** (12–16 h): chat message list with the minimal markdown of `AssistantPanel.tsx:33`, streaming append, tool-confirmation card,
+  composer; Tour spotlight; Update dialog with progress.
+- **No date picker needed**: `DateInput` exists, and Electron's `DateInput.tsx` is a text field too. The three existing charts cover the
+  Overview, Year and Net worth.
+
+| # | Page (Electron source) | Ops (missing ones in bold) | Depends | Hours |
+|---|---|---|---|---|
+| P1 | Transactions (`Transactions.tsx` 582): filters, saved searches, paging, edit, split, rename, bulk, rule from row, transfers pairing and cost | transactions.*, searches.*, settings.get, accounts/categories.list, rules.create, transfers.*, **export.csv** (B3; button disabled until then) | P0, U1 | 16–22; exit: 500k scroll p95 ≤ 16 ms |
+| P2 | Settings basics: Accounts (replaces the dev preview and its nav item), Appearance, Formats, Currencies, Security finished (forget computer, auto-lock) | accounts.*, prefs.*, settings.*, fx.status/rates/setRate/deleteRate, auth.*, **fx.updateEcb**, **app.restart** (B3) | P0, U1 exports | 10–14 |
+| P3 | Budgets with categories and rules (`Budgets.tsx`) | budgets.*, categories.*, rules.* | P0, U1 | 10–14 |
+| P4 | Import (`Import.tsx`, `import-parts/*`): pick file, mapping modal, preview grid, fix date/amount, commit, batches, undo; PDF after B4; AI check after B8 | import.* (13 ported), **import.analyzePdf/pdfCancel** (B4), **import.assist*/pdfAssist*** (B8) | P0, U1 | 16–22 (+3 PDF) |
+| P5 | Recurring + Goals | recurring.*, rules.create/preview, transactions.categorize, goals.*, accounts.list | P0, U1 | 10–14 |
+| P6 | Year + Net worth + BankBalance | summary.year, networth.summary, valuations.*, balances.*, **export.csv** (B3), **export.pdf** (B11) | P0, U1 | 10–14 |
+| P7 | Settings rest: Backups, Transfer, Sync (+WebDAV), Insights, Memory, About; Setup ImportFlow, RecoveredModal, restore erased | **backup.*, transfer.*** (B5), **sync.*** (B6), **insights.restoreDismissed** (B2), **memory.*** (B1), app.info, **update.check** (B10) | P0, U1; sections land as their batch merges | 16–22 |
+| P8 | Assistant: panel, PromptModal, McpRequests; Settings → Claude (providers, ModelPicker, ClaudeApps, MCP); Overview tips/review; Import CheckSummaryCard and ConsentModals | **assistant.*** (A1, A2), **mcp.*** (M1, M2), **insights.run/status/cancel**, **import.assist*** (B8) | U2, A1, A2, B8, M1, M2 | 22–30 (split: Settings Claude / panel + MCP requests / tips + import check) |
+| P9 | Welcome + Tour + Update button | settings.*, backup.*, fx.updateEcb, mcp.setupStatus/desktopAdd/codeAdd, sync.start/status, assistant.configure/setKey, **update.*** (B10) | U2, B5, B6, M1, A1, B10 | 10–14 |
+
+Page exit test: fixture screenshot and geometry against Electron stills, the `a11y-flow.sh` walk of the page, and a run on `core-temp` (seeded household).
+
+### 11.4 Waves (what runs at the same time)
+
+- **Wave 0:** O0, P0 (disjoint files).
+- **Wave 1 (recommended first four):** U1, P2, B5, B2.
+- **Wave 2:** P1, P3, B1, B3, B4; start B6 and A1 (long, highest risk).
+- **Wave 3:** P4, P5, P6, A2, M1, B10.
+- **Wave 4:** B8, M2, U2, P7, B11.
+- **Wave 5:** P8, P9.
+- **Z after every wave:** locale keys, contract count, remove `native.notPorted*` placeholders that are no longer reachable, docs.
+- Done when `op.not_ported` cannot be reached from any screen and the contract test counts 154 served ops.
+
+**Cross-cutting risks**
+- **Numbers:** f64 sums as in JS; `Math.round` is half toward +∞ (`kb_rules::js_round`, not `f64::round`); whole floats print as integers
+  (`numbers.rs`); NaN/Infinity become `null`; `Number()` parsing (`js_number`).
+- **Dates:** `toISOString` with ms and `Z`; local time only through the clock; file names and the backup scheduler use the OS offset at
+  that moment (DST).
+- **SQL:** statements copied verbatim, same order; `fx()` UDF; no new indexes without a migration in both apps (schema lockstep).
+- **Ordering:** ICU `localeCompare` (insights); stable JS sort; integer-like object keys first in JSON built from objects (AI payloads,
+  sync changes).
+- **Concurrency:** service ops off the worker; `transfer.import` and restore replace the DB while jobs run; lock cancels jobs.
+- **Desktop:** dialogs on the macOS main thread; Slint 1.19 does not seem to pass dropped files through (unverified), so the Import drop
+  zone may become a picker only (a known difference).
+- **Network:** system proxy/PAC and OS trust store (section 7 risk 10); one HTTP client.
+
+### 11.5 Installers and updater (later, M6/M7)
+
+- **MSI:** WiX, same UpgradeCode `7f3c2a1e-…`, per-user, `%LOCALAPPDATA%\Programs\Kasboek\Kasboek.exe`, `resources\kasboek-mcp.exe`,
+  art from `build/msi-project.cjs`; x64 + arm64.
+- **macOS:** `.app` with bundle id `app.kasboek`, `kasboek.icns` (exists), Resources layout, ad-hoc or Developer ID signing +
+  notarisation; dmg arm64 + x64.
+- **Linux:** AppImage + deb (`/opt/Kasboek`, same package name), x64 + arm64.
+- **Release assets:** named exactly as `pickAsset` expects (`src/core/update.ts:25`), plus `SHA256SUMS`, notices (`rust/about.hbs`).
+  Version mirrored from package.json (CLAUDE.md rule).
+- **Updater (B10 + platform):** Electron → Rust upgrade by the Electron updater; MSI applied through the Go helper; AppImage self-replace;
+  dmg/deb opened; pending marker in `updates/`. Downgrade to Electron keeps the data (`account.electron.json`).
+- **Release channel:** pre-releases only until M7 (the Electron updater reads only `releases/latest`).
+- **Before MCP launch and the tray work:** single instance, `--background` and tray (M5 `kb-platform`).
+
 ## Appendix: not verified offline (each is a spike or M1 task)
 
 - Slint: Skia prebuilt binaries for aarch64-pc-windows-msvc (Skia did not run in the spike), tooltip and popover

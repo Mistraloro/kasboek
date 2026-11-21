@@ -27,7 +27,14 @@ pub enum Cell {
     Blob(Vec<u8>),
 }
 
-pub trait Store: Sized + crate::Queries {
+pub trait Store:
+    Sized
+    + crate::Queries
+    + crate::queries::memory::MemoryQueries
+    + crate::queries::insights::InsightsQueries
+    + crate::queries::sync::SyncQueries
+    + crate::queries::assistant::AssistantQueries
+{
     /// Opens or creates the encrypted database: cipher, key, probe (fails with `db.locked` on a wrong key), pragmas,
     /// migrations (unless switched off), then the `fx()` SQL function.
     fn open(file: &Path, key: &DbKey, options: OpenOptions) -> DbResult<Self>;

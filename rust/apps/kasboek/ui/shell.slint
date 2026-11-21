@@ -1,9 +1,9 @@
 // App.tsx `Shell`: sidebar (mark, nav items, Settings, Lock, version), top bar with the assistant toggle, the content area
-// with the pages, and the assistant panel place. Pages other than the Overview are placeholder cards.
-import { Theme, Icons, Icon, Label, PageHeader, Card, EmptyState, PressTarget, Button } from "@kb-ui";
+// with the pages (its children), and the assistant panel.
+import { Theme, Icons, Icon, Label, PressTarget } from "@kb-ui";
 import { Tx } from "tx.slint";
 import { Mark } from "parts.slint";
-import { OverviewPage, AlertRow, TipRow, AccountRow } from "overview.slint";
+import { AssistantPanel } from "assistant/panel.slint";
 
 component NavItem inherits Rectangle {
     in property <string> text;
@@ -44,34 +44,9 @@ component NavItem inherits Rectangle {
     }
 }
 
-export component PlaceholderPage inherits Rectangle {
-    in property <string> title;
-    in property <string> body;
-    in property <string> heading;
-    VerticalLayout {
-        x: (parent.width - self.width) / 2;
-        y: 16px;
-        width: min(944px, parent.width - 80px);
-        PageHeader {
-            title: root.title;
-        }
-        Rectangle {
-            height: 32px;
-        }
-        Card {
-            height: empty.preferred-height + 2px;
-            empty := EmptyState {
-                icon: Icons.circle-dashed;
-                title: root.heading;
-                body: root.body;
-            }
-        }
-    }
-}
-
 export component Shell inherits Rectangle {
-    // "overview" | "transactions" | "budgets" | "recurring" | "goals" | "year" | "networth" | "import" | "accounts" | "settings".
-    // The Overview, Accounts and Settings pages are children of the shell; the others are placeholders.
+    // "overview" | "transactions" | "budgets" | "recurring" | "goals" | "year" | "networth" | "import" | "settings".
+    // The pages are children of the shell (app.slint).
     in-out property <string> page: "overview";
     in-out property <bool> assistant-open: false;
     // Room the window controls take at the right of the top bar when they are drawn into it (Electron: 148px).
@@ -79,18 +54,13 @@ export component Shell inherits Rectangle {
     // Room above the sidebar mark for macOS traffic lights drawn into the window (0 with a standard title bar).
     in property <length> sidebar-top: 0px;
     in property <string> version-text;
-    in property <string> placeholder-heading;
-    in property <string> placeholder-body;
-    in property <string> assistant-note;
+    // The room of a page: what is left of the window beside the sidebar, under the top bar and beside the assistant panel.
+    out property <length> content-width: root.width - 224px - (root.assistant-open ? 320px : 0px);
+    out property <length> content-height: root.height - 44px;
     callback lock();
     callback go(string);
     callback about();
     background: Theme.bg;
-
-    // The content of the Overview is `overview`, set by the app (it is the same element for every page change).
-    pure function title-of(p: string) -> string {
-        return Tx.tr("nav." + p);
-    }
 
     HorizontalLayout {
         // Sidebar: `w-56 border-r border-border bg-bg`.
@@ -197,14 +167,6 @@ export component Shell inherits Rectangle {
                         active: root.page == "import";
                         clicked => {
                             root.go("import");
-                        }
-                    }
-                    NavItem {
-                        text: Tx.tr("settings.accounts");
-                        icon: Icons.landmark;
-                        active: root.page == "accounts";
-                        clicked => {
-                            root.go("accounts");
                         }
                     }
                 }
@@ -315,39 +277,8 @@ export component Shell inherits Rectangle {
                     horizontal-stretch: 1;
                     clip: true;
                     @children
-                    if root.page != "overview" && root.page != "accounts" && root.page != "settings": PlaceholderPage {
-                        title: title-of(root.page);
-                        heading: root.placeholder-heading;
-                        body: root.placeholder-body.replace-all("{{page}}", title-of(root.page));
-                    }
                 }
-                if root.assistant-open: Rectangle {
-                    width: 320px;
-                    background: Theme.surface;
-                    Rectangle {
-                        width: 1px;
-                        background: Theme.border;
-                    }
-                    VerticalLayout {
-                        padding: 20px;
-                        Label {
-                            text: Tx.tr("nav.assistant");
-                            font-family: Theme.serif;
-                            font-size: Theme.fs-card-title;
-                            font-weight: 600;
-                            lh: Theme.lh-card-title;
-                            accessible-role: AccessibleRole.text;
-                        }
-                        Label {
-                            text: root.assistant-note;
-                            font-size: Theme.fs-ui;
-                            lh: Theme.lh-ui;
-                            color: Theme.muted;
-                            wrap: word-wrap;
-                            accessible-role: AccessibleRole.text;
-                        }
-                    }
-                }
+                if root.assistant-open: AssistantPanel { }
             }
         }
     }

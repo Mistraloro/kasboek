@@ -3,7 +3,8 @@
 //! listeners get [`AppEvent`]s. [`FixtureService`] answers from JSON fixtures (the invented household of the release
 //! screenshots), [`CoreService`] owns a `kb-session` `Session` and a `kb-core` `Core` on the real data folder: the
 //! `auth.*` operations and all ported operations, with the dispatch rules of `ipc.ts`. The login operations of the
-//! fixture are stand-ins. Operations the core has not ported answer `op.not_ported`.
+//! fixture are stand-ins. Operations the core has not ported answer `op.not_ported`. Desktop operations (`ops/`) run on job
+//! threads of their own (`jobs.rs`), with the app's [`Desktop`] and [`Http`].
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::future::Future;
@@ -12,15 +13,23 @@ use std::sync::Arc;
 use std::time::Duration;
 
 mod core_service;
+mod desktop;
 mod exec;
 mod fixture;
+mod http;
+mod jobs;
+mod ops;
 mod paths;
 mod prefs_store;
 
-pub use core_service::{ClockAdapter, CoreOptions, CoreService, NoOsEvents, OsEvents};
+pub use core_service::{ClockAdapter, CoreOptions, CoreService, NoOsEvents, OsEvents, Worker};
+pub use desktop::{Desktop, DesktopCall, FakeDesktop, Filter, NoDesktop};
 pub use exec::block_on;
 pub use fixture::{FixtureConfig, FixtureService, DEMO_PASSWORD};
+pub use http::{FakeHttp, Http, HttpError, HttpRequest, HttpResponse, NoHttp, Recorded, UreqHttp, DEFAULT_MAX_BODY};
+pub use jobs::{Cancel, JobCtx, ServiceHandler, ServiceTable};
 pub use kb_core::AppError;
+pub use ops::{table as service_table, SERVICE_OPS};
 pub use paths::resolve_data_dir;
 
 /// Whether the operating system can seal the account file of `data_dir` (Windows DPAPI, macOS Keychain, a Secret Service

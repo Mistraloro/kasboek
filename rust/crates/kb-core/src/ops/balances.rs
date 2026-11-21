@@ -76,3 +76,17 @@ struct DeleteIn {
 pub fn valuations_delete<S: Store>(core: &Core<S>, raw: Value) -> AppResult<Done> {
     run(raw, |i: DeleteIn| json(&delete_valuation(core.db()?, i.account_id.0, &i.date.0)?))
 }
+
+/// The operations of this file, for the test that compares them with the contract.
+pub(super) const PORTED: &[&str] = &["balances.list", "balances.set", "valuations.list", "valuations.set", "valuations.delete"];
+
+pub(super) fn handler<S: Store>(name: &str) -> Option<super::Handler<S>> {
+    Some(match name {
+        "balances.list" => list::<S>,
+        "balances.set" => set::<S>,
+        "valuations.list" => valuations_list::<S>,
+        "valuations.set" => valuations_set::<S>,
+        "valuations.delete" => valuations_delete::<S>,
+        _ => return None,
+    })
+}

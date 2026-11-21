@@ -3,6 +3,7 @@
 use crate::device::{self, Event, Outcome, Report};
 use crate::format::Formats;
 use crate::loading::{self, Gate, Progress};
+use crate::pages;
 use crate::prefs::{LastAuth, Prefs};
 use crate::setup_rules::{recovery_key_confirmed, recovery_key_tail, TotpBegin};
 use crate::view::{self, OverviewData, Res};
@@ -118,9 +119,7 @@ impl Ctl {
         ctl.set_theme(ui, prefs.first_frame_dark());
         ui.global::<ShellState>().set_caption_inset(ctl.cfg.caption_inset);
         ui.global::<ShellState>().set_version_text(ctl.cat.tv("app.versionShort", &[("version", env!("CARGO_PKG_VERSION"))]).into());
-        ui.global::<ShellState>().set_placeholder_heading(ctl.cat.t("native.notPortedTitle").into());
-        ui.global::<ShellState>().set_placeholder_body(ctl.cat.t("native.notPortedBody").into());
-        ui.global::<ShellState>().set_assistant_note(ctl.cat.t("native.assistantNote").into());
+        pages::show(&ctl, ui, "assistant");
         ui.set_window_title(ctl.cat.t("app.name").into());
         // The first frame is the Lock screen in the cached mode; the real status corrects it.
         let status = match &prefs.last_auth {
@@ -180,8 +179,7 @@ impl Ctl {
         recovery.on_edited(|saved, typed| with(|c| c.recovery_edited(saved, &typed)));
         recovery.on_done(|| with(|c| c.recovery_done()));
         ui.global::<Totp>().on_enable(|code| with(|c| c.totp_enable(&code)));
-        self.wire_security(ui);
-        self.wire_accounts(ui);
+        pages::wire_all(self, ui);
         let shell = ui.global::<ShellState>();
         shell.on_go(|page| with(|c| c.go(&page)));
         shell.on_about(|| with(|c| c.go("settings")));
@@ -213,6 +211,7 @@ impl Ctl {
             AppEvent::DataChanged { .. } | AppEvent::SettingsChanged | AppEvent::InsightsUpdated { .. } => {
                 if ui.get_screen() == "shell" {
                     self.reload(None);
+                    pages::on_data_changed(self, ui);
                 }
             }
             AppEvent::Locked { .. } => {
@@ -669,7 +668,7 @@ impl Ctl {
         let session = ui.global::<crate::Session>();
         session.set_hide_secrets(session.get_hide_secrets() + 1);
         self.hide_recovery(ui);
-        self.clear_security(ui);
+        pages::on_lock(self, ui);
     }
 
     /// Writes a key that is not a preference of the contract into prefs.json (the service owns the file when it can).
@@ -836,6 +835,7 @@ impl Ctl {
         self.service.activity();
         if let Some(ui) = self.ui.upgrade() {
             ui.global::<ShellState>().set_page(s(page));
+            pages::show(self, &ui, page);
         }
     }
 }

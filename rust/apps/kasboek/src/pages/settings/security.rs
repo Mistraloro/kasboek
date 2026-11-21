@@ -6,33 +6,44 @@ use serde_json::{json, Value};
 use slint::{ComponentHandle, ModelRc, VecModel};
 use std::rc::Rc;
 
-impl Ctl {
-    pub(crate) fn wire_security(self: &Rc<Self>, ui: &App) {
-        let sec = ui.global::<Sec>();
-        sec.on_opened(|| with(|c| c.refresh_security_now()));
-        sec.on_password_edited(|t| with(|c| c.sec_password_edited(&t)));
-        sec.on_change_password(|current, next| with(|c| c.change_password(&current, &next)));
-        sec.on_use_passwordless(|current| with(|c| c.use_passwordless(&current)));
-        sec.on_new_recovery_key(|current| with(|c| c.new_recovery_key(&current)));
-        sec.on_totp_begin(|| {
-            with(|c| {
-                if let Some(ui) = c.ui.upgrade() {
-                    ui.global::<Sec>().set_view(s("totp"));
-                }
-                c.totp_begin();
-            })
-        });
-        sec.on_totp_disable(|code| with(|c| c.totp_disable(&code)));
-        sec.on_back(|| {
-            with(|c| {
-                if let Some(ui) = c.ui.upgrade() {
-                    ui.global::<Sec>().set_view(s("main"));
-                    ui.global::<Totp>().set_secret(s(""));
-                }
-            })
-        });
-    }
+pub fn wire(_ctl: &Rc<Ctl>, ui: &App) {
+    let sec = ui.global::<Sec>();
+    sec.on_opened(|| with(|c| c.refresh_security_now()));
+    sec.on_password_edited(|t| with(|c| c.sec_password_edited(&t)));
+    sec.on_change_password(|current, next| with(|c| c.change_password(&current, &next)));
+    sec.on_use_passwordless(|current| with(|c| c.use_passwordless(&current)));
+    sec.on_new_recovery_key(|current| with(|c| c.new_recovery_key(&current)));
+    sec.on_totp_begin(|| {
+        with(|c| {
+            if let Some(ui) = c.ui.upgrade() {
+                ui.global::<Sec>().set_view(s("totp"));
+            }
+            c.totp_begin();
+        })
+    });
+    sec.on_totp_disable(|code| with(|c| c.totp_disable(&code)));
+    sec.on_back(|| {
+        with(|c| {
+            if let Some(ui) = c.ui.upgrade() {
+                ui.global::<Sec>().set_view(s("main"));
+                ui.global::<Totp>().set_secret(s(""));
+            }
+        })
+    });
+}
 
+/// Nothing to set when Settings opens: the section reads the status itself when its tab shows (`Sec.opened`).
+pub fn show(_ctl: &Ctl, _ui: &App) {}
+
+/// The status of the account does not depend on the book.
+pub fn on_data_changed(_ctl: &Rc<Ctl>, _ui: &App) {}
+
+/// A lock drops what was typed on the page.
+pub fn on_lock(ctl: &Ctl, ui: &App) {
+    ctl.clear_security(ui);
+}
+
+impl Ctl {
     fn refresh_security_now(self: &Rc<Self>) {
         if let Some(ui) = self.ui.upgrade() {
             self.refresh_security(&ui);

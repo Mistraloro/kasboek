@@ -69,57 +69,6 @@ export global Totp {
     callback enable(string);
 }
 
-// Settings -> Security (minimal). Messages and errors come as toasts.
-export global Sec {
-    // "main" | "recovery" | "totp"
-    in-out property <string> view: "main";
-    in property <string> mode;
-    in property <bool> two-factor;
-    in property <bool> need-current;
-    in property <bool> busy;
-    in property <string> key-storage;
-    in property <string> device-title;
-    in property <string> device-note;
-    in property <bool> device-enabled;
-    in property <int> strength;
-    in property <string> strength-text;
-    in property <[RuleRow]> rules;
-    in-out property <string> current;
-    in-out property <string> next-a;
-    in-out property <string> next-b;
-    in-out property <string> off-code;
-    callback opened();
-    callback password-edited(string);
-    callback change-password(string, string);
-    callback use-passwordless(string);
-    callback new-recovery-key(string);
-    callback totp-begin();
-    callback totp-disable(string);
-    callback back();
-}
-
-export struct AccountLine {
-    id: int,
-    name: string,
-    balance: string,
-}
-
-// Accounts (developer preview): add an account and a transaction, to see real numbers on the Overview.
-export global Acc {
-    in property <[AccountLine]> rows;
-    in property <string> error;
-    in property <bool> busy;
-    in-out property <int> selected: 0;
-    in-out property <string> name;
-    in-out property <string> opening;
-    in-out property <string> date;
-    in-out property <string> description;
-    in-out property <string> amount;
-    callback opened();
-    callback add-account(string, string);
-    callback add-transaction(int, string, string, string);
-}
-
 export global Loading {
     in property <string> step-text;
     in property <float> value;
@@ -131,9 +80,6 @@ export global ShellState {
     in property <length> caption-inset;
     in property <length> sidebar-top;
     in property <string> version-text;
-    in property <string> placeholder-heading;
-    in property <string> placeholder-body;
-    in property <string> assistant-note;
     callback lock();
     callback go(string);
     callback about();

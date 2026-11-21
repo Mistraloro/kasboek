@@ -4,12 +4,18 @@
 //!
 //! - `app.*` and `prefs.*` go ahead of the session (they only need `prefs.json`);
 //! - every other operation waits until the account file was read (the worker reads it first, the queue holds the rest);
-//! - while locked only the login operations run, everything else answers `auth.locked`.
+//! - while locked only the login operations run, everything else answers `auth.locked`;
+//! - service operations (`ops/`: dialogs, files, network) are answered first, on a job thread of their own and not on the
+//!   worker; they reach the database through `JobCtx::with_core`, and the lock cancels them. Then the `auth.*` operations, then
+//!   `kb-core`.
 //!
 //! The database is opened by the session on unlock (the vault's key), the core gets its own handle to the same file,
 //! and both are dropped when the session locks (the session wipes its key material; the core's copy of the key is a
 //! `DbKey`, wiped on drop, and only lives while the handle is opened). The idle timer and the lock/suspend events of
 //! the system lock the session from the same worker.
+use crate::desktop::{Desktop, NoDesktop};
+use crate::http::{Http, NoHttp, UreqHttp};
+use crate::jobs::{CoreJob, JobCtx, Jobs, ServiceHandler, ServiceTable};
 use crate::prefs_store::PrefsStore;
 use crate::{AppError, AppEvent, AppService, Listener, Listeners, LoadStep, OpFuture, DEMO_PASSWORD};
 use kb_core::{locked_refusal, Actor, Core, CoreConfig, Rng, SeededRng};
@@ -34,6 +40,8 @@ type Reply = Sender<Result<Value, AppError>>;
 
 enum Msg {
     Op(String, Value, Reply),
+    /// Work of a job thread that needs the session or the core.
+    Core(CoreJob),
     /// The idle timer: check the auto-lock.
     Tick,
     /// The system locked the screen or went to sleep.
@@ -106,6 +114,12 @@ pub struct CoreOptions {
     pub tick: Duration,
     /// Minutes the person's clock is ahead of UTC.
     pub utc_offset_minutes: i32,
+    /// Dialogs and "open with the system" for the service operations. The app sets its own; none by default.
+    pub desktop: Arc<dyn Desktop>,
+    /// The network for the service operations: the real client from `native`, none from `new`.
+    pub http: Arc<dyn Http>,
+    /// The service operations (`ops::table()`); a test may add its own.
+    pub service_ops: ServiceTable,
 }
 
 impl CoreOptions {
@@ -114,6 +128,7 @@ impl CoreOptions {
         let mut options = Self::new(data_dir);
         options.seal = kb_oseal::select_os_seal_for(&options.data_dir);
         options.migrate_electron = true;
+        options.http = Arc::new(UreqHttp::new());
         options
     }
 
@@ -128,6 +143,9 @@ impl CoreOptions {
             cost: None,
             tick: Duration::from_secs(15),
             utc_offset_minutes: 0,
+            desktop: Arc::new(NoDesktop),
+            http: Arc::new(NoHttp),
+            service_ops: crate::ops::table(),
         }
     }
 }
@@ -138,6 +156,10 @@ pub struct CoreService {
     prefs: Arc<PrefsStore>,
     data_dir: PathBuf,
     last_activity: Arc<Mutex<Instant>>,
+    services: ServiceTable,
+    jobs: Arc<Jobs>,
+    desktop: Arc<dyn Desktop>,
+    http: Arc<dyn Http>,
     worker: Mutex<Option<JoinHandle<()>>>,
     // Dropping this stops the idle timer thread (`shutdown` drops it too).
     ticker: Mutex<Option<Sender<()>>>,
@@ -179,7 +201,20 @@ impl CoreService {
     }
 
     fn start(options: CoreOptions, rng: Box<dyn Rng>, temp: Option<tempfile::TempDir>) -> Result<Self, AppError> {
-        let CoreOptions { data_dir, seal, migrate_electron, device, os_events, clock, cost, tick, utc_offset_minutes } = options;
+        let CoreOptions {
+            data_dir,
+            seal,
+            migrate_electron,
+            device,
+            os_events,
+            clock,
+            cost,
+            tick,
+            utc_offset_minutes,
+            desktop,
+            http,
+            service_ops,
+        } = options;
         crate::paths::create_private_dir(&data_dir).map_err(|_| AppError::failed())?;
         let listeners = Arc::new(Listeners::default());
         let prefs = Arc::new(PrefsStore::new(data_dir.join("prefs.json"), system_languages(), utc_offset_minutes));
@@ -193,9 +228,10 @@ impl CoreService {
         let (tx, rx) = channel::<Msg>();
         let (stop_tx, stop_rx) = channel::<()>();
         let activity = Arc::new(Mutex::new(Instant::now()));
+        let jobs = Arc::new(Jobs::default());
         let worker = {
             let (listeners, prefs, data_dir) = (listeners.clone(), prefs.clone(), data_dir.clone());
-            let (activity, os_events) = (activity.clone(), os_events.clone());
+            let (activity, os_events, jobs) = (activity.clone(), os_events.clone(), jobs.clone());
             let clock = session_clock.clone();
             std::thread::Builder::new()
                 .name("kb-service".into())
@@ -223,7 +259,7 @@ impl CoreService {
                         .filter(|o| o.in_contract)
                         .map(|o| (o.name, (o.mutates, o.handler)))
                         .collect();
-                    Worker { session, core, auth, listeners, prefs, activity, os_events, clock, attempts, migration_error }.run(rx);
+                    Worker { session, core, auth, listeners, jobs, prefs, activity, os_events, clock, attempts, migration_error }.run(rx);
                 })
                 .map_err(|_| AppError::failed())?
         };
@@ -253,6 +289,10 @@ impl CoreService {
             prefs,
             data_dir,
             last_activity: activity,
+            services: service_ops,
+            jobs,
+            desktop,
+            http,
             worker: Mutex::new(Some(worker)),
             ticker: Mutex::new(Some(stop_tx)),
             _temp: temp,
@@ -285,8 +325,69 @@ impl CoreService {
         Ok(service)
     }
 
+    /// A service for the scenario harness (`kb-cli scenario` with `"service": true`): `data_dir` holds one account (password
+    /// `DEMO_PASSWORD`, no 2FA, a cheap key derivation) and the service is unlocked, on a clock that stands still at `clock_ms`,
+    /// with a seeded random source and the given desktop and network.
+    pub fn scenario(data_dir: PathBuf, clock_ms: i64, desktop: Arc<dyn Desktop>, http: Arc<dyn Http>) -> Result<Self, AppError> {
+        let mut options = CoreOptions::new(data_dir);
+        options.seal = Box::new(FileSeal::new([7; 32]));
+        options.clock = Some(Arc::new(ManualClock::new(clock_ms)));
+        options.cost = Some(Argon2Cost { m: 64, t: 1, p: 1 });
+        options.tick = Duration::from_secs(3600);
+        options.desktop = desktop;
+        options.http = http;
+        let service = Self::start(options, Box::new(SeededRng::new(1)), None)?;
+        crate::block_on(service.invoke("auth.setup", json!({ "mode": "password", "password": DEMO_PASSWORD })))?;
+        Ok(service)
+    }
+
+    /// Runs `f` on the database worker, like `JobCtx::with_core` does for a service operation (for tests and the scenario
+    /// harness, which are not jobs). `op.failed` when the worker has ended.
+    pub fn with_core<R: Send + 'static>(&self, f: impl FnOnce(&mut Worker) -> R + Send + 'static) -> Result<R, AppError> {
+        let (reply, answer) = channel();
+        let job: CoreJob = Box::new(move |worker| {
+            let _ = reply.send(f(worker));
+        });
+        self.tx.lock().unwrap_or_else(|e| e.into_inner()).send(Msg::Core(job)).map_err(|_| AppError::failed())?;
+        answer.recv().map_err(|_| AppError::failed())
+    }
+
     pub fn data_dir(&self) -> &std::path::Path {
         &self.data_dir
+    }
+
+    /// Runs a service operation on a job thread and waits for its answer (the caller's thread may block, see `invoke`). The
+    /// job is registered before the lock state is read, so a lock in between cancels it.
+    fn run_service(&self, op: &str, handler: ServiceHandler, input: Value) -> Result<Value, AppError> {
+        self.activity();
+        let (guard, cancel) = self.jobs.start();
+        let tx = Mutex::new(self.tx.lock().unwrap_or_else(|e| e.into_inner()).clone());
+        let submit = move |job: CoreJob| tx.lock().unwrap_or_else(|e| e.into_inner()).send(Msg::Core(job)).is_ok();
+        let ctx = JobCtx::new(cancel, self.desktop.clone(), self.http.clone(), self.listeners.clone(), Arc::new(submit));
+        let (reply, answer) = channel();
+        let name = op.to_owned();
+        let listeners = self.listeners.clone();
+        std::thread::Builder::new()
+            .name(format!("kb-job {op}"))
+            .spawn(move || {
+                let _guard = guard;
+                let locked = ctx.with_core({
+                    let name = name.clone();
+                    move |worker| locked_refusal(&name, worker.session.is_unlocked())
+                });
+                let result = match locked {
+                    Ok(Some(refusal)) => Err(refusal),
+                    Ok(None) => handler(&ctx, input),
+                    Err(e) => Err(e),
+                };
+                let mutates = kb_core::table::OPS.iter().any(|(n, m, _)| *n == name && *m);
+                if result.is_ok() && mutates {
+                    listeners.emit(AppEvent::DataChanged { actor: "user".into() });
+                }
+                let _ = reply.send(result);
+            })
+            .map_err(|_| AppError::failed())?;
+        answer.recv().map_err(|_| AppError::failed())?
     }
 
     fn send(&self, op: String, input: Value) -> Result<Value, AppError> {
@@ -334,6 +435,9 @@ impl AppService for CoreService {
             if op != "auth.status" {
                 self.activity();
             }
+            if let Some(handler) = self.services.get(&op) {
+                return self.run_service(&op, handler, input);
+            }
             self.send(op, input)
         })
     }
@@ -372,11 +476,14 @@ impl CoreService {
     }
 }
 
-struct Worker {
+/// The thread that owns the session and the core. Service operations reach it through `JobCtx::with_core`.
+pub struct Worker {
     session: Session<SqliteStore>,
     core: Core<SqliteStore>,
     auth: HashMap<&'static str, (bool, OpHandler<SqliteStore>)>,
     listeners: Arc<Listeners>,
+    /// The running service jobs; the lock cancels them.
+    jobs: Arc<Jobs>,
     prefs: Arc<PrefsStore>,
     /// When the person last did something in the app.
     activity: Arc<Mutex<Instant>>,
@@ -390,6 +497,14 @@ struct Worker {
 }
 
 impl Worker {
+    pub fn core(&self) -> &Core<SqliteStore> {
+        &self.core
+    }
+
+    pub fn session(&mut self) -> &mut Session<SqliteStore> {
+        &mut self.session
+    }
+
     fn run(mut self, rx: Receiver<Msg>) {
         while let Ok(msg) = rx.recv() {
             match msg {
@@ -398,6 +513,7 @@ impl Worker {
                     let answer = self.op(&op, input);
                     let _ = reply.send(answer);
                 }
+                Msg::Core(job) => job(&mut self),
                 Msg::Tick => self.tick(),
                 Msg::SystemLock => self.system_lock(),
             }
@@ -508,6 +624,8 @@ impl Worker {
         let open = self.session.is_unlocked();
         if !open {
             self.close_core();
+            // `cancelRunningJobs`: nothing keeps running against a locked app.
+            self.jobs.cancel_all();
             return Ok(());
         }
         if self.core.is_unlocked() {
